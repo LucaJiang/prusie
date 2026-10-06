@@ -1,0 +1,13 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "expected_native.json": {
+      "sha256": "5b928617a3d3de5346e5dba02201ee45eae81b16b3ebc24d6b80843aad5f483e",
+      "bytes": 34617
+    },
+    "expected_native.npz": {
+      "sha256": "ff561c36bf1a7cce342c98342c97c8a648b901a6a3a797ef1b98e138c54fc2c4",
+      "bytes": 190917
+    }
+  }
+}

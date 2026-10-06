@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
+<title>Build and preview these pages · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
+<span class="version">0.2.3rc4 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html" aria-current="page">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="pages.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#regenerate">Regenerate</a></li>
+<li><a href="#preview-offline">Preview offline</a></li>
+<li><a href="#configure-github-pages">Configure GitHub Pages</a></li>
+</ul>
+</div>
+</details><h1 id="build-and-preview-these-pages">Build and preview these pages</h1>
+<p>The site is static HTML in <code>docs/</code>, with local CSS and optional JavaScript.
+Its Markdown sources are maintained alongside the generated pages. Navigation,
+tables, code and reports remain readable without JavaScript. No remote fonts,
+CDN or network connection is needed to read it.</p>
+<h2 id="regenerate">Regenerate</h2>
+<p>From the repository root, use the pinned lightweight renderer:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python -m pip install -r tools/docs-requirements.txt
+python tools/build_docs.py
+python tools/build_docs.py --check
+python tools/check_docs.py
+python tools/check_checkout.py --output-dir .ci-check
+</code></pre>
+<p><code>--check</code> verifies generated HTML without writing. <code>check_docs.py</code> validates
+relative links, anchors, local assets, image alternative text and version
+consistency. It does not claim to check external links or replace a browser
+review. Identical Markdown, configuration and renderer produce identical HTML;
+the build adds no timestamp or network-dependent content.</p>
+<h2 id="preview-offline">Preview offline</h2>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python -m http.server 8000 --bind 127.0.0.1 --directory docs
+</code></pre>
+<p>Open <code>http://127.0.0.1:8000/</code>. Opening <code>docs/index.html</code> directly also works;
+clipboard buttons depend on browser permissions, while commands remain
+selectable text. The site uses relative paths and also works below a repository
+subpath. Press Tab to reach navigation, code and scrollable tables.</p>
+<h2 id="configure-github-pages">Configure GitHub Pages</h2>
+<p>For <a href="https://github.com/LucaJiang/prusie">prusie</a>, open <strong>Settings → Pages → Build and deployment</strong>.
+Select <strong>Source: Deploy from a branch</strong>, <strong>Branch: main</strong>, and <strong>Folder: /docs</strong>,
+then click <strong>Save</strong>. The committed <code>docs/.nojekyll</code> serves the prebuilt static files.
+The expected address after a successful deployment is <code>https://LucaJiang.github.io/prusie/</code>.</p>
+<p>Repository upload and Pages deployment are separate steps. This source delivery
+prepares the site but does not claim an enabled Pages setting or a successful live
+build. Check the repository's Pages status after saving the setting. SSH Git access
+does not grant access to the Pages administration API.</p></article>
+<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>

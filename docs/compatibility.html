@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
+<title>Supported Gaussian compatibility · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
+<span class="version">0.2.3rc4 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html" aria-current="page">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="compatibility.md">Markdown source</a></div>
+<article><h1 id="supported-gaussian-compatibility">Supported Gaussian compatibility</h1>
+<p>The release targets official susieR 0.16.6 at immutable commit
+<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>. Supported entry points are
+<code>susie_rss(z,R,n)</code>, <code>susie_rss(bhat,shat,R,n,var_y)</code>, the explicit missing-n
+noncentrality likelihood, and centered <code>susie_suff_stat</code> (R <code>susie_ss</code>).
+Known-n calls use the finite-sample Wald adjustment. Supplied <code>var_y</code> sets
+the response variance even with z-only input, as in the new reference.</p>
+<p>Scalar Gaussian priors support fixed V, optim, EM and simple updates; fixed or
+estimated residual variance; normalized prior weights and null weight; L,
+iteration cap and tolerance; ELBO, CS and PIP. RSS now defaults to cap 50,
+sufficient statistics to cap 100, and both to Gaussian tolerance 0.0001.
+The measured comparison explicitly uses cap 100 and tolerance 0.001 everywhere.</p>
+<p>Finite ELBO convergence requires a nonnegative increase below tolerance.
+Nonfinite ELBO differences use the current alpha/PIP fallback with warnings.
+After iteration, components with V &lt; prior_tol reset alpha to the normalized
+prior and zero V, moments, BFs and KL, including at the iteration cap. The
+ELBO trace and XtXr cache retain pre-trim iteration values, following upstream.
+XtXr is crossproduct times posterior coefficients, not the residual vector.</p>
+<p>Degenerate columns have zero Gaussian BF and posterior moments and retain their
+prior contribution to posterior odds. As in the reference, the SER adds
+sqrt(machine epsilon) before logging prior weights; final null trimming restores
+the exact normalized prior, including supplied zeros.</p>
+<p>Matrix-input CS purity always uses the full selected submatrix, including when
+a finite n_purity is supplied. No random sampling occurs. CS coverage follows
+the surviving original component. Low-V PIP and null-column exclusions match
+the supported reference path. None for coverage or min_abs_corr disables CS.</p>
+<p>Intentional API boundaries:</p>
+<ul>
+<li>Arrays must be finite and symmetric; invalid input errors rather than silent
+  missing-value replacement, symmetrization, eigenvalue clipping or LD repair.</li>
+<li>Python keeps named check_input/r_tol/check_prior options; R moves RSS options
+  into a control object. Internal matrix products remain CPU float64.</li>
+<li>Result indices are zero-based; original variant IDs exclude the optional null.
+  Empty CSs have explicit empty arrays, and the requested threshold remains
+  metadata even when R returns NULL for the whole sets object. PIP is retained.</li>
+<li>sets.coverage is actual posterior mass; actual_coverage is an equal alias,
+  requested_coverage is the target. This agrees with the latest coverage fix.</li>
+<li>Nonpositive residual-variance estimates error instead of propagating invalid
+  posteriors. Nondefault initialization/refinement, MAF filtering, verbose output
+  and trace snapshots remain unsupported.</li>
+</ul>
+<p>Unsupported keywords and methods fail explicitly: no NIG, infinitesimal effects,
+mixture priors, greedy components, slot priors, LD-mismatch model, low-rank X,
+individual-level regression, trend filtering or diagnostic kriging API is claimed.
+Scientific and performance acceptance comes from independent validation, not
+from this source mapping. Historical 0.14.2 evidence remains in the pre-edit
+checkpoint and changelog; the original lock and installed 0.1.2 are unchanged.</p>
+<p>The release numerical contract uses PIP absolute error ≤1e-5, rtol=0. Intermediate and CS differences remain diagnostic. See release_notes.md for version history.</p></article>
+<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>

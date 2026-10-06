@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "Please cite the original statistical methods and identify this software version. No DOI is assigned."
+title: "prusie: Native summary-statistics SuSiE"
+type: software
+version: "0.2.3rc4"
+license: GPL-3.0-or-later
+authors:
+  - family-names: Jiang
+    given-names: Wenxin
+repository-code: "https://github.com/LucaJiang/prusie"
+url: "https://github.com/LucaJiang/prusie"

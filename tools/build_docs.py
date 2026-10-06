@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+"""Render all docs/*.md deterministically; pip install -r tools/docs-requirements.txt."""
+from __future__ import annotations
+
+import argparse
+import html
+import json
+import re
+from pathlib import Path
+
+import markdown
+
+ROOT = Path(__file__).resolve().parents[1]
+DOCS = ROOT / "docs"
+
+
+def build(check: bool = False) -> None:
+    config = json.loads((ROOT / "tools/site_config.json").read_text())
+    version = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M)[1]
+    stale = []
+    for path in sorted(DOCS.glob("*.md")):
+        md = markdown.Markdown(extensions=["fenced_code", "tables", "toc", "sane_lists", "attr_list"],
+                               extension_configs={"toc": {"toc_depth": "2-3", "permalink": False}})
+        body = md.convert(path.read_text())
+        body = body.replace('<pre>', '<pre tabindex="0" aria-label="Code example; scroll horizontally if needed">')
+        # Markdown sources remain readable; Pages links resolve within docs/.
+        body = re.sub(r'(href="[^"#?:]+)\.md(?=[#"])', r'\1.html', body)
+        body = re.sub(r"(<table>.*?</table>)", r'<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0">\1</div>', body, flags=re.S)
+        title = re.search(r"<h1[^>]*>(.*?)</h1>", body)
+        title = re.sub("<[^>]+>", "", title[1]) if title else path.stem
+        nav = []
+        for group, entries in config["navigation"]:
+            links = []
+            for label, target in entries:
+                active = ' aria-current="page"' if target == path.with_suffix(".html").name else ""
+                links.append(f'<a href="{html.escape(target)}"{active}>{html.escape(label)}</a>')
+            nav.append(f'<div class="nav-group"><p class="nav-label">{html.escape(group)}</p>{"".join(links)}</div>')
+        toc = f'<details class="on-this-page"><summary>On this page</summary>{md.toc}</details>' if md.toc_tokens else ""
+        output = f'''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="{html.escape(config['description'])}">
+<title>{html.escape(title)} · {html.escape(config['package'])}</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="{html.escape(config['package'])}">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">{config['mark']}</span><span>{config['package']}<small>{html.escape(config['tagline'])}</small></span></a>
+<span class="version">{version} <span>release candidate</span></span>
+<nav aria-label="Documentation">{''.join(nav)}</nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>{html.escape(config['section'])}</span><a href="{path.name}">Markdown source</a></div>
+<article>{toc}{body}</article>
+<footer><p>{config['package']} {version} · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>
+'''
+        dest = path.with_suffix(".html")
+        if check:
+            if not dest.exists() or dest.read_text() != output:
+                stale.append(str(dest.relative_to(ROOT)))
+        else:
+            dest.write_text(output)
+    if stale:
+        raise SystemExit("Stale rendered documentation: " + ", ".join(stale))
+    if not check:
+        (DOCS / ".nojekyll").write_text("# Serve this directory as static GitHub Pages content.\n")
+    print(f"{'Checked' if check else 'Built'} {len(list(DOCS.glob('*.md')))} static pages")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true", help="Fail if committed HTML differs; do not write")
+    build(parser.parse_args().check)

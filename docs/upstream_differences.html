@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
+<title>Historical 0.14.2 findings (not the current release contract) · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
+<span class="version">0.2.3rc4 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html" aria-current="page">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="upstream_differences.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#pinned-upstream-behavior-and-explicit-differences">Pinned upstream behavior and explicit differences</a></li>
+<li><a href="#susier-cs-coverage-index-confirmed-implementation-bug">SUSIER-CS-COVERAGE-INDEX: confirmed implementation bug</a></li>
+<li><a href="#numerical-reduction-order-resolved-implementation-discrepancy">Numerical reduction order: resolved implementation discrepancy</a></li>
+<li><a href="#api-domain-and-model-choices">API-domain and model choices</a></li>
+</ul>
+</div>
+</details><h1 id="historical-0142-findings-not-the-current-release-contract">Historical 0.14.2 findings (not the current release contract)</h1>
+<p>The current pinned0.16.6 reference and numerical contract are documented in compatibility.md and release_notes.md. The reduction-order repair below describes earlier
+versions, not a requirement imposed on the current native implementation.</p>
+<h2 id="pinned-upstream-behavior-and-explicit-differences">Pinned upstream behavior and explicit differences</h2>
+<p>The reference is untouched CRAN susieR 0.14.2, archive SHA256
+<code>ba02322eb1f7a7cc024c9278aa7903a34d8ad5d6f3b12c168374bc6214ed2c6e</code>.
+These findings apply to that version. They do not assert complete API parity.</p>
+<h2 id="susier-cs-coverage-index-confirmed-implementation-bug">SUSIER-CS-COVERAGE-INDEX: confirmed implementation bug</h2>
+<p>Definition: <code>sets.coverage[k]</code> is the sum of <code>alpha[sets.cs_index[k], j]</code> over
+members of the returned set <code>sets.cs[k]</code>, using the original component ID.
+This fitted posterior mass is distinct from the requested threshold and is not
+empirical repeated-sampling coverage.</p>
+<p>Minimal input: alpha rows (0.48, 0.48, 0.04) and (0.01, 0.01, 0.98), V=(1,1),
+identity correlation, requested coverage 0.95 and min_abs_corr=0.5. Component 0's
+set {0,1}, mass 0.96, fails purity. Component 1's singleton {2}, mass 0.98,
+remains. The historical independently executed R probe uses (0.51, 0.45, 0.04)
+as its first row and establishes the same discrepancy.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Pinned R</th>
+<th>pyrsusie 0.1.0</th>
+<th>pyrsusie 0.1.1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Original component (zero-based)</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>CS members (zero-based)</td>
+<td>{2}</td>
+<td>{2}</td>
+<td>{2}</td>
+</tr>
+<tr>
+<td>coverage</td>
+<td>0.96</td>
+<td>0.96</td>
+<td>0.98</td>
+</tr>
+<tr>
+<td>actual_coverage (native alias)</td>
+<td>unavailable</td>
+<td>0.98</td>
+<td>0.98</td>
+</tr>
+<tr>
+<td>requested_coverage</td>
+<td>0.95</td>
+<td>0.95</td>
+<td>0.95</td>
+</tr>
+</tbody>
+</table></div>
+<p>In <code>R/susie_utils.R:susie_get_cs</code>, claimed_coverage is subset by include_idx but
+not is_pure before final ordering. Python 0.1.1 sums from the final returned CS
+and original alpha row. Set selection, stable purity sorting and numerical
+fitting remain unchanged. The obsolete warning asking users to use the extra
+field has been removed. This affected field is correctness PASS with
+EXPECTED_DIFFERENCE against the pinned erroneous return when the bug manifests;
+unaffected fields must still satisfy their frozen comparisons individually.</p>
+<p>Private historical audit outputs remain preserved. Package regression tests include <code>test_coverage_tracks_original_components</code>,
+<code>test_empty_coverage</code>, and the independent
+<code>test_official_cs_coverage_indexing_discrepancy</code>. Analytic expectations are explicit
+posterior masses; independent oracles do not call production coverage helpers.</p>
+<h2 id="numerical-reduction-order-resolved-implementation-discrepancy">Numerical reduction order: resolved implementation discrepancy</h2>
+<p>The original row-major ndarray dot implementation accumulated eight partial sums.
+The locked R environment uses netlib BLAS 3.9.0 forward accumulation. On the first
+real GWAS region, early residual differences around floating precision perturbed
+an almost-flat optimized V, amplifying into an XtXr difference around 1.05e-5.
+Isolated SER calls matched exactly for identical binary input arrays, and all
+standardized kernel input values matched exactly, localizing the difference to
+matrix-vector reduction order.</p>
+<p>The solver stores one exact-valued column-major matrix copy and uses ndarray's
+forward reduction. The previously failing XtXr became bit-exact in the historical
+repair. All 18 original real cases and 432 field comparisons then passed the
+frozen thresholds. Original diagnostics remain in
+private historical reports. The correctness
+patch leaves this solver and reduction order unchanged. This is not a newly
+claimed upstream bug or permission to relax tolerances.</p>
+<h2 id="api-domain-and-model-choices">API-domain and model choices</h2>
+<p>Full purity replaces upstream random subsampling by default; missing and
+asymmetric inputs raise errors; PIP remains available when CS is disabled.
+Refinement, custom initialization, trace capture, MAF filtering, random purity
+subsampling and nonzero legacy z_ld_weight explicitly error. These are documented
+API boundaries, not confirmed statistical bugs. See compatibility.md.</p></article>
+<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>

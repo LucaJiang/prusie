@@ -1,0 +1,15 @@
+.venv/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+target/
+*.so
+*.pyd
+*.orig
+*.rej
+
+.ci-check/
+example-results/

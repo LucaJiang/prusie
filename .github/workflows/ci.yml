@@ -1,0 +1,29 @@
+name: tests-and-packages
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  linux-python312:
+    runs-on: ubuntu-24.04
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      PRUSIE_NUM_THREADS: '1'
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: rustup show
+      - run: python -m pip install -c requirements-dev.lock maturin==1.9.6 '.[test]'
+      - run: python -m pip install -r tools/docs-requirements.txt
+      - run: python -m pytest tests
+      - run: PRUSIE_SER_MATH=scalar python -m pytest tests
+      - run: cargo test --locked --lib --no-default-features -- --test-threads=1
+      - run: cargo test --locked --lib --no-default-features --features vector-math -- --test-threads=1
+      - run: python examples/quickstart.py
+      - run: python tools/check_checkout.py --output-dir .ci-check
+      - run: maturin build --release --locked --out dist
+      - run: maturin sdist --out dist

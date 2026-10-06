@@ -1,0 +1,88 @@
+{
+  "package": "prusie",
+  "mark": "Su",
+  "tagline": "Native summary fine-mapping",
+  "description": "SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.",
+  "section": "Fine-mapping \u00b7 Python + Rust",
+  "navigation": [
+    [
+      "Start here",
+      [
+        [
+          "Overview",
+          "index.html"
+        ],
+        [
+          "Install",
+          "install.html"
+        ],
+        [
+          "Run the 500-SNP check",
+          "example.html"
+        ],
+        [
+          "R agreement report",
+          "r_agreement.html"
+        ],
+        [
+          "GitHub repository",
+          "https://github.com/LucaJiang/prusie"
+        ]
+      ]
+    ],
+    [
+      "Use prusie",
+      [
+        [
+          "Inputs and priors",
+          "inputs.html"
+        ],
+        [
+          "API reference",
+          "api.html"
+        ],
+        [
+          "Result schema",
+          "results.html"
+        ],
+        [
+          "Scope and limitations",
+          "compatibility.html"
+        ]
+      ]
+    ],
+    [
+      "Reproduce and review",
+      [
+        [
+          "Tests and reproducibility",
+          "testing.html"
+        ],
+        [
+          "Method mapping",
+          "reference_mapping.html"
+        ],
+        [
+          "Performance evidence",
+          "performance.html"
+        ],
+        [
+          "Release notes",
+          "release_notes.html"
+        ],
+        [
+          "Build these pages",
+          "pages.html"
+        ],
+        [
+          "Historical differences",
+          "upstream_differences.html"
+        ],
+        [
+          "Name migration",
+          "migration.html"
+        ]
+      ]
+    ]
+  ]
+}

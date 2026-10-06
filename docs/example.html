@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
+<title>Run the 500-SNP offline check · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
+<span class="version">0.2.3rc4 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html" aria-current="page">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="example.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#install-then-disconnect">Install, then disconnect</a></li>
+<li><a href="#read-pass-and-fail">Read PASS and FAIL</a></li>
+<li><a href="#the-declared-cases">The declared cases</a></li>
+<li><a href="#three-distinct-kinds-of-expectation">Three distinct kinds of expectation</a></li>
+<li><a href="#interpret-the-edge-cases">Interpret the edge cases</a></li>
+<li><a href="#reproduce-the-reference-only-if-needed">Reproduce the reference only if needed</a></li>
+</ul>
+</div>
+</details><h1 id="run-the-500-snp-offline-check">Run the 500-SNP offline check</h1>
+<p>This example uses all 500 synthetic variables in each of the four stored
+official coloc teaching datasets, D1–D4. It is an existing fixed software
+fixture, not human-study data and not a new simulation. No variables were
+selected, padded or generated for agreement with Python.</p>
+<h2 id="install-then-disconnect">Install, then disconnect</h2>
+<p>From a clean source checkout or extracted source archive:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python -m venv .venv
+. .venv/bin/activate
+python -m pip install .
+python examples/check_example.py --help
+python examples/check_example.py --output-dir example-results
+</code></pre>
+<p>Installation may download build/runtime dependencies; <a href="install.html">installation</a>
+also describes a matching wheel. Once prusie and NumPy are installed, the
+check is completely offline. It does not need R, pandas, plotting libraries,
+pycoloc or the original development workspace. It imports the installed package
+and calls the public <code>susie_rss</code> API.</p>
+<p>To run just the multi-signal teaching dataset:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python examples/check_example.py --case D3 --output-dir example-D3
+</code></pre>
+<p>The complete check runs all seven declared cases. <code>--case</code> is a convenience for
+inspection; the executed report and release checks include the complete set.
+Use an output directory outside <code>examples/data/</code>. The runner never overwrites
+input, reference or native expectation files.</p>
+<h2 id="read-pass-and-fail">Read PASS and FAIL</h2>
+<p>Each line gives the maximum absolute PIP error against frozen official R,
+the posterior-validity status, credible-set count, iteration count and
+convergence flag. <code>example-results/report.json</code> stores exact parameters,
+input/order/model hashes, runtime/backend/version, warnings, per-field errors
+and CS comparisons by original component ID. <code>actual_native.npz</code> contains
+the newly computed numeric output, with no pickle objects.</p>
+<p>A substantive PIP mismatch, failed input/reference checksum or invalid
+input/model/probability structure produces <strong>FAIL</strong> and a nonzero process exit.
+PIP acceptance is absolute error ≤1e-5, rtol=0. Intermediate arrays, iteration
+counts and CS membership differences are diagnostics; they are not silently
+used to change this gate. Internal posterior and coverage identities are checked
+separately at a fixed 1e-10 absolute arithmetic tolerance.</p>
+<p>The caller's version is recorded. A different package version from the frozen
+native snapshot does not itself cause FAIL. Read the numerical and structural
+results before interpreting a version difference.</p>
+<h2 id="the-declared-cases">The declared cases</h2>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Purpose</th>
+<th>Difference from primary parameters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>Standard quantitative single-signal teaching data</td>
+<td>None</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>A second single-signal dataset on the same variable convention</td>
+<td>None</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>Two stored causal teaching variables</td>
+<td>None</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>A further single-signal dataset</td>
+<td>None</td>
+</tr>
+<tr>
+<td>D1_partial_zero</td>
+<td>Prior-weight edge case</td>
+<td>Every seventh one-based SNP weight is zero; the others are one</td>
+</tr>
+<tr>
+<td>D3_strict_purity</td>
+<td>No returned credible set</td>
+<td><code>min_abs_corr=1</code></td>
+</tr>
+<tr>
+<td>D3_one_iteration</td>
+<td>Visible nonconvergence diagnostic</td>
+<td><code>max_iter=1</code>; explicitly not a primary fit</td>
+</tr>
+</tbody>
+</table></div>
+<p>The primary model uses <code>z=beta/sqrt(varbeta)</code>, the stored signed LD <strong>r</strong>,
+<code>n=1000</code>, <code>L=10</code>, <code>max_iter=100</code>, <code>tol=0.001</code>, <code>coverage=0.95</code>,
+<code>min_abs_corr=0.5</code>, <code>n_purity=500</code>, standardization, estimated prior variance
+using <code>optim</code> with initial <code>scaled_prior_variance=0.2</code>, fixed residual variance,
+<code>prior_tol=1e-9</code>, no null column and no refinement. The authoritative complete
+arguments are <code>examples/data/parameters.json</code>.</p>
+<p>The stored sample size is known. This RSS demonstration does not pass <code>var_y</code>
+or infer phenotype variance. It uses the finite-sample z-RSS path. LD comes
+from the upstream synthetic reference construction, so residual variance stays
+fixed. The data do not establish ancestry, genome build, effect/counting alleles
+or real genomic coordinates. Variable names <code>s1</code>–<code>s500</code> and positions 1–500 are
+synthetic identities and indices.</p>
+<h2 id="three-distinct-kinds-of-expectation">Three distinct kinds of expectation</h2>
+<ol>
+<li><code>r_fits.npz</code> and <code>r_fits.json</code> are official susieR 0.16.6 outputs and supply
+   the PIP comparison. <code>r_coloc.json</code> retains separate coloc results for the
+   companion example.</li>
+<li><code>expected_native.npz</code> and <code>expected_native.json</code> record an explicitly labelled
+   executed prusie snapshot. The check compares its new PIPs to that snapshot
+   as an additional diagnostic; this is not an independent R reference.</li>
+<li>The checker independently sums posterior mass from each original alpha row,
+   recomputes marginal PIP across active components, and computes purity from
+   the signed LD submatrix. These checks do not call package summary helpers.
+   <code>independent_oracles.json</code> contains separate coloc-specific mathematical
+   counterexamples for the companion package.</li>
+</ol>
+<p><code>manifest.json</code>, <code>checksums.json</code> and <code>native_checksums.json</code> keep identities
+explicit. Input NPZ arrays retain the upstream float64 values. The TSV files
+are readable views; <code>variants.tsv</code> specifies ordering on both matrix axes.</p>
+<h2 id="interpret-the-edge-cases">Interpret the edge cases</h2>
+<p>In the pinned reference, active SER adds √ε to normalized prior weights before
+taking logarithms. A supplied zero prior weight is therefore <strong>not a hard
+exclusion</strong>. Final low-variance trimming restores the exact normalized prior.
+This differs from zero-weight semantics in a colocalisation prior.</p>
+<p>No-CS results have empty member, index, coverage and purity collections, while
+PIPs remain available. Returned <code>sets.coverage</code> is actual posterior mass for
+its original component, not the requested 0.95 and not repeated-sampling
+coverage. The one-iteration diagnostic remains <code>converged=False</code>; the runner
+does not silently retry it or present it as a converged scientific fit.</p>
+<h2 id="reproduce-the-reference-only-if-needed">Reproduce the reference only if needed</h2>
+<p>Users never need R to check an installation. Maintainers can separately use
+<code>examples/data/export_reference.R</code>, <code>convert_exports.py</code>,
+<code>verify_reference_input.py</code>, <code>reference.lock.json</code> and
+<code>reference_environment.json</code>. The <a href="example_provenance.html">provenance guide</a>
+gives the exact pinned versions, archive/data hashes and commands. Regeneration
+writes a new directory and does not update the shipped goldens.</p>
+<p>Read the <a href="r_agreement.html">executed agreement report</a> for measured errors and
+the <a href="compatibility.html">compatibility guide</a> before analyzing your own data.</p></article>
+<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>

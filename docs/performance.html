@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
+<title>Performance and its limits · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
+<span class="version">0.2.3rc4 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html" aria-current="page">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="performance.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#candidate-selection-rule">Candidate selection rule</a></li>
+<li><a href="#fresh-measured-outcome">Fresh measured outcome</a></li>
+</ul>
+</div>
+</details><h1 id="performance-and-its-limits">Performance and its limits</h1>
+<p>Every public call validates inputs, performs its matrix setup, runs sequential
+IBSS and constructs results and complete retained credible sets. No fitted
+result cache crosses calls. Fit-local reuse and exactly verified signed matrix
+redundancy preserve every original SNP. Dense fallback handles matrices without
+useful exact redundancy; gains on redundant LD do not establish speed on all
+populations or loci. Float64 and the model/convergence settings are unchanged.</p>
+<p><code>PRUSIE_NUM_THREADS</code> explicitly requests 1–32 native threads (default1).
+Small matrices stay serial; matrix setup/validation may use scoped workers.
+Components remain sequential. Set NumPy/BLAS/OpenMP thread counts separately
+before importing numerical libraries. More requested threads can increase CPU
+and allocation costs or slow small regions; thread counts alone are not proof
+of speedup. Optional runtime vector math has scalar and missing-library fallbacks.</p>
+<p>The extension keeps the Python GIL while borrowing input arrays. Use independent
+processes for independent regions and budget their total threads and memory.
+Do not mutate arrays concurrently during a call. No universal host-utilization
+or hard aggregate-memory guarantee is supplied by the package.</p>
+<p>An R comparison must identify actual loaded BLAS, R, susieR and dependency
+versions. A Netlib baseline does not predict performance against optimized BLAS.
+Measure complete calls with input loading/imports/export outside clocks and
+validation, setup and result construction inside. Use one warmup, retained
+outputs and repeated measurements; report CPU as well as wall time, unfavorable
+cases, convergence and iteration counts. Profiling identifies costs but cannot
+establish a public-call gain by itself.</p>
+<p>The release notes distinguish measured results from historical implementation
+changes. Public documentation includes no private cohort identifiers, genomic
+windows or machine paths; private benchmark inputs are not distributed.</p>
+<h2 id="candidate-selection-rule">Candidate selection rule</h2>
+<p>Each proposed optimization needs a <strong>strict majority of faster applicable cases</strong>
+against its appropriate parent on a fixed, outcome-independent panel. A win
+means a lower median complete-call runtime; ties and slower cases do not count.
+Report the full denominator, wins/ties/regressions, absolute medians and repeat
+variability. Aggregate time, memory savings and correctness tests cannot replace
+this rule. There is no additional invented significance or percentage threshold.</p>
+<p>The 0.2.3rc4 candidate excludes B01's known-phenotype-variance allocation change:
+that branch had analytical memory and correctness evidence but no applicable
+runtime-majority evidence. The historical rc3 A02+B01 bundle had135 wins and65
+losses out of200; that observed majority did not qualify its unmeasured B01 branch.
+Those historical artifacts remain experimental.</p>
+<p>The current A02 package is compared as a complete change against rc17, without
+B01. Its earlier pilot had8/8 wins versus rc17 and5/8 incrementally versus A01.
+Those pilot counts are not an isolated all200 A01 ablation. Final selection used the bounded predeclared200-case fresh campaign described in the
+<a href="release_notes.html">release notes</a>: one warmup, seven retained full-call
+repetitions, one numerical thread and two independent regions, with each region's
+backends run sequentially. There is no new optimization search in this release.</p>
+<h2 id="fresh-measured-outcome">Fresh measured outcome</h2>
+<p>A02 only meets the literal majority gate: <strong>118 faster,0 tied,82 slower of200</strong>
+fixed trait cases versus rc17. All200 PIP/input/model checks passed, all repeat
+outputs were retained and valid, and quiet-window audits passed. The sample is
+the predeclared100-region/200-trait panel; no cases were dropped after timing.
+This is observed case counting, not a statistical-significance claim.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Stratum</th>
+<th>Cases</th>
+<th>Faster / tied / slower</th>
+<th>rc17 summed medians (seconds)</th>
+<th>rc4 summed medians (seconds)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All fixed cases</td>
+<td>200</td>
+<td>118 /0 /82</td>
+<td>1.839772626</td>
+<td>1.707386992</td>
+</tr>
+<tr>
+<td>Mutually converged</td>
+<td>199</td>
+<td>117 /0 /82</td>
+<td>1.494473075</td>
+<td>1.461272684</td>
+</tr>
+<tr>
+<td>Same iteration count</td>
+<td>200</td>
+<td>118 /0 /82</td>
+<td>1.839772626</td>
+<td>1.707386992</td>
+</tr>
+</tbody>
+</table></div>
+<p><a href="assets/performance_cases.tsv">All200 anonymized case medians and repeat variability</a>
+include every regression. They expose runtime measurements, not private study
+inputs, genomic locations or frozen biological outputs. Raw per-repeat results
+and source/affinity/quiet-window audits are retained in the private release record.</p>
+<p>Each case uses one warmup and seven complete calls. Lower median means faster;
+exact ties and regressions do not count as wins. Shared-host variability remains
+a limitation even with quiet task controls, and another machine or model may
+produce different outcomes. No whole-host utilization guarantee is claimed.</p>
+<p>This measurement qualifies the A02 package change versus rc17. The only
+incremental A02-versus-A01 evidence remains the earlier5/8 pilot; there is no
+isolated all200 A01 ablation. B01 and the other excluded layout experiments do
+not inherit this package's runtime acceptance.</p></article>
+<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>

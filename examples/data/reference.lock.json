@@ -1,0 +1,40 @@
+{
+  "coloc": {
+    "version": "6.0.3",
+    "commit": "8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45",
+    "archive_sha256": "f6580ab471e1bd9f3acc45e23a73bb2ee16fe3c0a45e01cd8cc008854661b479",
+    "archive_url": "https://api.github.com/repos/chr1swallace/coloc/tarball/8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45",
+    "license_declared": "GPL"
+  },
+  "susieR": {
+    "version": "0.16.6",
+    "commit": "8e56a8e038e989856d106d9ca5175cc664fea9d2",
+    "archive_sha256": "c88c6324da061c83ac9fbac23972cd1e501210c916596ea7678c3115b33f6971",
+    "archive_url": "https://codeload.github.com/stephenslab/susieR/tar.gz/8e56a8e038e989856d106d9ca5175cc664fea9d2",
+    "license_declared": "BSD_3_clause + file LICENSE"
+  },
+  "fixture": {
+    "path_in_coloc_source": "data/coloc_test_data.rda",
+    "sha256": "81ddbbe3af502779da76d57a7e1bcc4d3a8d172fcf79bcbe15c8151915dad2c1",
+    "blob_git_sha1": "c0580965f341c997b4e47d18604ae427b144546b",
+    "source_url": "https://github.com/chr1swallace/coloc/blob/8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45/data/coloc_test_data.rda",
+    "nature": "synthetic existing upstream teaching example",
+    "selection": "Entire stored D1/D2/D3/D4, 500 variants each; no selection, resimulation, padding or duplicate manufacture."
+  },
+  "historical_root_lock_unchanged": true,
+  "R_version": "4.4.0",
+  "float_format": "float64",
+  "threads": 1,
+  "PIP_acceptance": {
+    "atol": 1e-05,
+    "rtol": 0
+  },
+  "fixed_bf_hypothesis_acceptance": {
+    "atol": 1e-10,
+    "rtol": 0
+  },
+  "abf_logBF_acceptance": {
+    "atol": 1e-10,
+    "rtol": 1e-10
+  }
+}

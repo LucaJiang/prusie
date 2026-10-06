@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
+<title>Executed agreement with official R · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
+<span class="version">0.2.3rc4 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html" aria-current="page">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="r_agreement.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#reference-and-source-identity">Reference and source identity</a></li>
+<li><a href="#reproduce-the-offline-check">Reproduce the offline check</a></li>
+<li><a href="#exact-model-and-cases">Exact model and cases</a></li>
+<li><a href="#measured-pip-and-structural-results">Measured PIP and structural results</a></li>
+<li><a href="#returned-coverage-and-purity">Returned coverage and purity</a></li>
+<li><a href="#raw-numerical-diagnostics">Raw numerical diagnostics</a></li>
+<li><a href="#boundaries-and-intentional-behavior">Boundaries and intentional behavior</a></li>
+<li><a href="#reference-regeneration-and-review">Reference regeneration and review</a></li>
+</ul>
+</div>
+</details><h1 id="executed-agreement-with-official-r">Executed agreement with official R</h1>
+<blockquote>
+<p>Prior-version evidence: the measurements and downloadable records below were
+executed before the public package rename. Historical <code>pyrsusie</code> labels
+identify those original binaries. The current package is <code>prusie</code>; see
+the <a href="migration.html">rename and migration checks</a> for the new installation
+and unchanged numerical-source verification.</p>
+</blockquote>
+<p>The installed <strong>pyrsusie 0.2.3rc4</strong> candidate passed the predeclared
+PIP check on all seven fixed public teaching cases below, with input, model and
+posterior validity checks. These are executed results, not an assertion of exact
+equivalence for every field or every possible input. The capped one-iteration
+case remains a nonconverged diagnostic.</p>
+<h2 id="reference-and-source-identity">Reference and source identity</h2>
+<p>The reference is official susieR <strong>0.16.6</strong>, commit
+<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>, executed by the independent reference
+lane in R 4.4.0 with Netlib BLAS and one numerical thread. The data are the
+unmodified stored D1–D4 teaching fixtures from official coloc <strong>6.0.3</strong>, commit
+<code>8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45</code>. Each has exactly <strong>500</strong> distinct
+synthetic variables and stored n=1000. No resimulation, padding, SNP subsetting
+or selection based on agreement was performed. These are synthetic software
+examples, not new biological evidence.</p>
+<p>The tested numerical source is the A02-only candidate: B01's unmeasured
+known-variance allocation change was reversed, and its correctness tests were
+retained. Numerical-source manifest SHA256:
+<code>c2e7334b3f4655cd6e36b5d528567c65e54ae9de4120cbeeda3521a01b44b91c</code>. <a href="assets/numerical_source.json">Exact source hashes</a> identify
+the Python, Rust and build files. Final performance selection is documented
+separately; this numerical example is not a timing experiment.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Runtime field</th>
+<th>Observed value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td>3.12.2</td>
+</tr>
+<tr>
+<td>NumPy</td>
+<td>2.2.6</td>
+</tr>
+<tr>
+<td>Native backend</td>
+<td>pyrsusie-rust/0.2.3-rc.4; susieR-reference/0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2</td>
+</tr>
+<tr>
+<td>SER math route</td>
+<td>optional_glibc_libmvec_avx2_masked_exp</td>
+</tr>
+<tr>
+<td>Architecture</td>
+<td>x86_64</td>
+</tr>
+<tr>
+<td>Input/reference manifest SHA256</td>
+<td><code>c3485fe1c5da1bd7012401eb4d85cc860cc1c2fdbc26f055f4b25240cca66abe</code></td>
+</tr>
+<tr>
+<td>Shared checksum manifest SHA256</td>
+<td><code>2e084ad2c77ecd48e8d07cddff8ea332c18efa93672141cf7e562fec3e8071ee</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The <a href="assets/example_evidence.json">complete machine-readable evidence</a> records
+the executed parameters, per-input and order hashes, every compared field,
+warnings and component-aligned diagnostics. The bundled <code>reference.lock.json</code>
+and <code>reference_environment.json</code> provide pinned source archive/data hashes and
+the actual R dependency versions. See <a href="example_provenance.html">provenance</a>.</p>
+<h2 id="reproduce-the-offline-check">Reproduce the offline check</h2>
+<p>After installing the package from a source checkout or extracted archive:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python examples/check_example.py --output-dir example-results
+</code></pre>
+<p>Only the installed package and NumPy are required. The checker verifies
+checksums, calls <code>prusie.susie_rss</code>, compares its newly computed PIPs to
+independent frozen R outputs, writes numeric actual output and a JSON report,
+and exits nonzero on a substantive mismatch. It never invokes R or refreshes
+goldens. A version change is recorded rather than treated as a numerical failure.</p>
+<h2 id="exact-model-and-cases">Exact model and cases</h2>
+<p>Primary fits use signed z = beta / √varbeta, stored signed LD r, n=1000, L=10,
+max_iter=100, tol=0.001, coverage=0.95, min_abs_corr=0.5, n_purity=500,
+standardize=True, estimate_prior_variance=True, estimate_prior_method="optim",
+scaled_prior_variance=0.2, estimate_residual_variance=False,
+check_null_threshold=0, prior_tol=1e-9, null_weight=0, refine=False,
+track_fit=False and verbose=False. Float64 IBSS updates remain sequential.
+No phenotype variance is guessed; this is the known-n z-RSS model.</p>
+<p>D1/D2/D4 are stored single-signal teaching datasets; D3 has two stored causal
+variables. D1_partial_zero changes only the prior weights: zero at every seventh
+one-based index, one elsewhere. D3_strict_purity changes only min_abs_corr to1.
+D3_one_iteration changes only max_iter to1 and is an explicit nonconvergence
+diagnostic, excluded from the primary100-iteration scientific-fit description.
+Full arguments and input metadata are frozen in <code>examples/data/parameters.json</code>
+and <code>metadata.json</code>. The original variable order is fixed by <code>variants.tsv</code> on
+both LD axes.</p>
+<h2 id="measured-pip-and-structural-results">Measured PIP and structural results</h2>
+<p>The numerical gate is <strong>PIP absolute error ≤1e-5, rtol=0</strong>, with input/model and
+probability validity. Convergence, iterations, component arrays and CS differences
+remain diagnostics. CS return order is immaterial: rows are compared by the
+original zero-based component ID, without relabeling effects.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Maximum PIP error</th>
+<th>Iterations native / R</th>
+<th>Converged native / R</th>
+<th>Native CS count</th>
+<th>CS IDs and members</th>
+<th>Gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>5.47e-10</td>
+<td>2 / 2</td>
+<td>True / True</td>
+<td>1</td>
+<td>same</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>2.01e-10</td>
+<td>2 / 2</td>
+<td>True / True</td>
+<td>1</td>
+<td>same</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>4.84e-10</td>
+<td>8 / 8</td>
+<td>True / True</td>
+<td>2</td>
+<td>same</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>8.81e-10</td>
+<td>2 / 2</td>
+<td>True / True</td>
+<td>1</td>
+<td>same</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td>D1_partial_zero</td>
+<td>1.6e-10</td>
+<td>2 / 2</td>
+<td>True / True</td>
+<td>1</td>
+<td>same</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td>D3_strict_purity</td>
+<td>4.84e-10</td>
+<td>8 / 8</td>
+<td>True / True</td>
+<td>0</td>
+<td>same</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td>D3_one_iteration</td>
+<td>3.55e-09</td>
+<td>1 / 1</td>
+<td>False / False</td>
+<td>1</td>
+<td>same</td>
+<td>PASS</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="PIP curves and absolute errors for the fixed D1 and D3 synthetic teaching datasets; the error panels show the predeclared1e-5 threshold." src="assets/r_agreement.svg" /></p>
+<p><em>D1 and D3 display the single- and multi-signal examples. Every case remains in
+the table; the plot is not a selected acceptance panel. The error axis is
+symmetric-log with a linear region below1e-12 so exact zeros remain visible.
+The horizontal index is synthetic, not a genomic position.</em></p>
+<h2 id="returned-coverage-and-purity">Returned coverage and purity</h2>
+<p>Returned coverage is the alpha mass of each actual CS in its original component.
+The checker independently uses that row and the returned members, and recomputes
+complete-pair purity from signed LD. It does not replace returned coverage with
+the requested0.95. These identity checks use fixed absolute1e-10 arithmetic
+tolerance; they are distinct from the PIP comparison gate.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Original component (0-based)</th>
+<th>Members (0-based)</th>
+<th>Returned native mass</th>
+<th>Absolute mass difference from R</th>
+<th>Minimum absolute r</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>0</td>
+<td>104</td>
+<td>0.959396812596</td>
+<td>5.47e-10</td>
+<td>1</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>0</td>
+<td>102, 104, 108, 115</td>
+<td>0.965522548049</td>
+<td>7.82e-11</td>
+<td>0.834750954</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>0</td>
+<td>81, 102, 104</td>
+<td>0.962856945063</td>
+<td>3.31e-11</td>
+<td>0.771180152</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>1</td>
+<td>57, 67, 68, 72, 74, 79, 80, 83, 86, 88, 96, 107, 112</td>
+<td>0.951751227277</td>
+<td>1.96e-10</td>
+<td>0.676934006</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>0</td>
+<td>104, 155</td>
+<td>0.965753529562</td>
+<td>4.87e-10</td>
+<td>0.710430289</td>
+</tr>
+<tr>
+<td>D1_partial_zero</td>
+<td>0</td>
+<td>81, 82, 102</td>
+<td>0.994879557081</td>
+<td>1.75e-11</td>
+<td>0.784894594</td>
+</tr>
+<tr>
+<td>D3_one_iteration</td>
+<td>0</td>
+<td>102, 104</td>
+<td>0.969776865766</td>
+<td>7.79e-11</td>
+<td>0.915096146</td>
+</tr>
+</tbody>
+</table></div>
+<p>D3_strict_purity has <strong>no credible sets</strong>: member/index/coverage/purity arrays
+are empty and coverage is unavailable, not zero. Its PIPs remain available.
+The one-iteration diagnostic is not silently refitted; its returned values and
+nonconvergence warnings remain in the evidence.</p>
+<h2 id="raw-numerical-diagnostics">Raw numerical diagnostics</h2>
+<p>These maxima are recorded even though intermediate equality is not the release
+gate. No tolerance is increased after observing a difference. Additional lbf,
+sigma2 and KL errors and native-snapshot comparisons appear in the JSON record.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Case</th>
+<th>alpha</th>
+<th>mu</th>
+<th>mu2</th>
+<th>lbf_variable</th>
+<th>V</th>
+<th>ELBO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>5.47e-10</td>
+<td>8.49e-10</td>
+<td>4.28e-10</td>
+<td>1.07e-07</td>
+<td>1.38e-08</td>
+<td>4.09e-12</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>2.01e-10</td>
+<td>1.15e-10</td>
+<td>5.37e-11</td>
+<td>1.32e-08</td>
+<td>1.44e-09</td>
+<td>6.82e-13</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>4.84e-10</td>
+<td>3.59e-10</td>
+<td>1.29e-10</td>
+<td>1.58e-07</td>
+<td>9e-09</td>
+<td>3.36e-08</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>8.81e-10</td>
+<td>5.37e-10</td>
+<td>2.11e-10</td>
+<td>5.25e-08</td>
+<td>4.09e-09</td>
+<td>2.27e-12</td>
+</tr>
+<tr>
+<td>D1_partial_zero</td>
+<td>1.6e-10</td>
+<td>1.35e-10</td>
+<td>6.8e-11</td>
+<td>1.49e-08</td>
+<td>1.68e-09</td>
+<td>3.41e-12</td>
+</tr>
+<tr>
+<td>D3_strict_purity</td>
+<td>4.84e-10</td>
+<td>3.59e-10</td>
+<td>1.29e-10</td>
+<td>1.58e-07</td>
+<td>9e-09</td>
+<td>3.36e-08</td>
+</tr>
+<tr>
+<td>D3_one_iteration</td>
+<td>3.55e-09</td>
+<td>1.07e-09</td>
+<td>2.34e-10</td>
+<td>3.69e-08</td>
+<td>6.46e-09</td>
+<td>7.2e-09</td>
+</tr>
+</tbody>
+</table></div>
+<p>The checker recomputes alpha row sums, marginal PIP from active components,
+returned CS coverage and purity; verifies SNP order, immutable input arrays,
+model options and valid variances; and keeps official-R outputs, native frozen
+snapshots and mathematical identities distinct. The native snapshot is useful
+for reproducibility but is not an independent statistical oracle.</p>
+<h2 id="boundaries-and-intentional-behavior">Boundaries and intentional behavior</h2>
+<ul>
+<li>The reference adds √ε before logging SER prior weights. A supplied zero weight
+  is not a hard exclusion from active component posteriors. Final low-V trimming
+  restores the exact normalized prior. Partial-zero weights here are an
+  index-defined software edge case, not biological prior information.</li>
+<li>The native interface uses zero-based components and members and explicit empty
+  CS arrays. R raw sets and one-based IDs are preserved separately in the bundle.</li>
+<li>Nonconvergence is a distinct status. Passing an arithmetic comparison does
+  not make the one-iteration result a converged scientific inference.</li>
+<li>The teaching data do not provide genome build, ancestry, real coordinates or
+  counted/effect alleles. Their synthetic variable identities must not be
+  presented as real biological annotations. Stored sdY is retained, but the
+  demonstrated z-RSS fit does not use a supplied phenotype variance.</li>
+<li>The supported Gaussian scope excludes nondefault initialization/refinement,
+  individual-level regression, LD-mismatch models, mixture/infinitesimal priors,
+  greedy updates and the other methods listed in <a href="compatibility.html">compatibility</a>.
+  Invalid data are rejected rather than silently repairing LD.</li>
+<li>The separate private100-region/200-trait validation panel is real-region
+  evidence and is not redistributed here. It is distinct from these synthetic
+  public examples. Final-source PIP/model checks and downstream integration are
+  accounted for by the independent release review; this report alone does not
+  certify that panel or establish performance acceptance.</li>
+</ul>
+<h2 id="reference-regeneration-and-review">Reference regeneration and review</h2>
+<p>The <a href="example_provenance.html">provenance guide</a> and bundled regeneration scripts
+describe the pinned R4.4.0/coloc6.0.3/susieR0.16.6 environment, exact archive/data
+hashes and conversion. No floating reference installation is used. R input
+round-trip doubles are preserved; exported reference arrays retain about15
+significant digits, far below the frozen error thresholds.</p>
+<p>The independent statistician reviews the actual fixture, parameters, source
+hashes and outputs; the engineering review checks installation, useful negative
+failures, offline execution and Pages. Their completed release records are
+separate from this executed comparison. See <a href="testing.html">testing</a> for the
+reproducible failure controls and <a href="release_notes.html">release notes</a> for selection.</p></article>
+<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>

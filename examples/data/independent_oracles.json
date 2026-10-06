@@ -1,0 +1,95 @@
+{
+  "method": "70-digit Decimal enumeration of all two-variant H0-H4 configurations; no pycoloc/pyrsusie calls. H4 conditional SNP probability is proportional to q12[j]*exp(lbf1[j]+lbf2[j]).",
+  "cases": {
+    "weighted_equal_bf_counterexample": {
+      "log_bf1": [
+        0,
+        0
+      ],
+      "log_bf2": [
+        0,
+        0
+      ],
+      "snp": [
+        "a",
+        "b"
+      ],
+      "prior_weights1": [
+        9.0,
+        1.0
+      ],
+      "prior_weights2": [
+        1,
+        1
+      ],
+      "priors": {
+        "p1": 0.0001,
+        "p2": 0.0001,
+        "p12": 5e-06
+      },
+      "H_mass_decimal": [
+        "1",
+        "0.00020",
+        "0.0002",
+        "2.0E-8",
+        "0.0000100"
+      ],
+      "hypothesis_posterior": [
+        0.9995901480474976,
+        0.00019991802960949952,
+        0.00019991802960949952,
+        1.9991802960949953e-08,
+        9.995901480474975e-06
+      ],
+      "conditional_shared_posterior": [
+        0.9,
+        0.1
+      ]
+    },
+    "partial_zero_bf_counterexample": {
+      "log_bf1": [
+        0,
+        0
+      ],
+      "log_bf2": [
+        0,
+        0
+      ],
+      "snp": [
+        "a",
+        "b"
+      ],
+      "prior_weights1": [
+        1.0,
+        0.0
+      ],
+      "prior_weights2": [
+        1,
+        1
+      ],
+      "priors": {
+        "p1": 0.0001,
+        "p2": 0.0001,
+        "p12": 5e-06
+      },
+      "H_mass_decimal": [
+        "1",
+        "0.0002",
+        "0.0002",
+        "2E-8",
+        "0.000010"
+      ],
+      "hypothesis_posterior": [
+        0.9995901480474976,
+        0.00019991802960949952,
+        0.00019991802960949952,
+        1.9991802960949953e-08,
+        9.995901480474975e-06
+      ],
+      "conditional_shared_posterior": [
+        1.0,
+        0.0
+      ]
+    }
+  }
+}

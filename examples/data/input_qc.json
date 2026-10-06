@@ -1,0 +1,62 @@
+{
+  "D1": {
+    "m": 500,
+    "finite": true,
+    "symmetric_exact": true,
+    "diag_max_abs_error": 0.0,
+    "minimum_eigenvalue": 0.00310308184877944,
+    "maximum_eigenvalue": 195.33227560886445,
+    "r_min": -0.019765844396004078,
+    "r_max": 1.0,
+    "positive_varbeta": true,
+    "MAF_range": [
+      0.016,
+      0.3325
+    ]
+  },
+  "D2": {
+    "m": 500,
+    "finite": true,
+    "symmetric_exact": true,
+    "diag_max_abs_error": 0.0,
+    "minimum_eigenvalue": 0.00310308184877944,
+    "maximum_eigenvalue": 195.33227560886445,
+    "r_min": -0.019765844396004078,
+    "r_max": 1.0,
+    "positive_varbeta": true,
+    "MAF_range": [
+      0.016,
+      0.3325
+    ]
+  },
+  "D3": {
+    "m": 500,
+    "finite": true,
+    "symmetric_exact": true,
+    "diag_max_abs_error": 0.0,
+    "minimum_eigenvalue": 0.0022777920396099766,
+    "maximum_eigenvalue": 195.2845305822255,
+    "r_min": -0.04508934964672256,
+    "r_max": 1.0,
+    "positive_varbeta": true,
+    "MAF_range": [
+      0.019,
+      0.3175
+    ]
+  },
+  "D4": {
+    "m": 500,
+    "finite": true,
+    "symmetric_exact": true,
+    "diag_max_abs_error": 0.0,
+    "minimum_eigenvalue": 0.0022777920396099766,
+    "maximum_eigenvalue": 195.2845305822255,
+    "r_min": -0.04508934964672256,
+    "r_max": 1.0,
+    "positive_varbeta": true,
+    "MAF_range": [
+      0.019,
+      0.3175
+    ]
+  }
+}

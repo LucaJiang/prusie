@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
+<title>SusieResult schema · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
+<span class="version">0.2.3rc4 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html" aria-current="page">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="results.md">Markdown source</a></div>
+<article><h1 id="susieresult-schema">SusieResult schema</h1>
+<p>All indices are zero-based. m is the number of biological variants; q=m+1 when
+an explicit null column is present, otherwise q=m. L is the returned effect
+count, capped at the available columns. <code>as_dict()</code> returns a shallow mapping
+without copying arrays. Results are mutable; callers own any copies they need.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Shape/type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>variant_ids</td>
+<td>(m,) strings</td>
+<td>Original caller SNP order, excluding null</td>
+</tr>
+<tr>
+<td>alpha</td>
+<td>(L,q) float64</td>
+<td>Single-effect posterior probabilities</td>
+</tr>
+<tr>
+<td>mu</td>
+<td>(L,q) float64</td>
+<td>Conditional effect means on fitted predictor scale</td>
+</tr>
+<tr>
+<td>mu2</td>
+<td>(L,q) float64</td>
+<td>Conditional second moments, not variances</td>
+</tr>
+<tr>
+<td>lbf_variable</td>
+<td>(L,q) float64</td>
+<td>Natural-log component/SNP Bayes factors</td>
+</tr>
+<tr>
+<td>lbf</td>
+<td>(L,) float64</td>
+<td>Component log Bayes factors</td>
+</tr>
+<tr>
+<td>V</td>
+<td>(L,) float64</td>
+<td>Component prior variances after final trimming</td>
+</tr>
+<tr>
+<td>sigma2</td>
+<td>float</td>
+<td>Residual variance</td>
+</tr>
+<tr>
+<td>pip</td>
+<td>(m,) float64</td>
+<td>Marginal inclusion probability; null excluded</td>
+</tr>
+<tr>
+<td>elbo</td>
+<td>(niter,) float64</td>
+<td>IBSS objective trace before final low-V trim</td>
+</tr>
+<tr>
+<td>niter, converged</td>
+<td>int, bool</td>
+<td>Iterations executed and convergence status</td>
+</tr>
+<tr>
+<td>null_index</td>
+<td>int or None</td>
+<td>Last internal null-column index when enabled</td>
+</tr>
+<tr>
+<td>sets</td>
+<td>mapping</td>
+<td>Credible-set data below</td>
+</tr>
+<tr>
+<td>params</td>
+<td>mapping</td>
+<td>Actual model/options, including effective prior weights</td>
+</tr>
+<tr>
+<td>backend_version</td>
+<td>string</td>
+<td>Installed native implementation version</td>
+</tr>
+<tr>
+<td>warnings</td>
+<td>list of strings</td>
+<td>Numerical/model/convergence warnings</td>
+</tr>
+<tr>
+<td>qc</td>
+<td>mapping</td>
+<td>Per-call input/transform diagnostics; not external alignment proof</td>
+</tr>
+<tr>
+<td>variant_metadata</td>
+<td>mapping of (m,) arrays</td>
+<td>Caller metadata copied into result</td>
+</tr>
+<tr>
+<td>X_column_scale_factors</td>
+<td>(q,) float64</td>
+<td>Predictor scaling, including null when present</td>
+</tr>
+<tr>
+<td>intercept</td>
+<td>float</td>
+<td>Original-scale intercept using supplied means; NaN if means unavailable</td>
+</tr>
+<tr>
+<td>KL</td>
+<td>(L,) float64</td>
+<td>Component divergence terms</td>
+</tr>
+<tr>
+<td>XtXr</td>
+<td>(q,) float64</td>
+<td>Crossproduct times posterior coefficients, not a residual vector</td>
+</tr>
+<tr>
+<td>coef</td>
+<td>(m,) property</td>
+<td>Σ(alpha*mu) divided by original predictor scales</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>sets.cs[k]</code> contains members for original effect <code>sets.cs_index[k]</code>.
+Indices need not be consecutive and return order is not a relabeling.
+<code>coverage</code> and its equal alias <code>actual_coverage</code> are posterior mass of each
+returned set. <code>requested_coverage</code> is the target. <code>purity</code> holds
+min_abs_corr, mean_abs_corr and median_abs_corr for complete retained sets.
+Complete purity includes every selected pair; n_purity never subsamples the
+supplied matrix. No correlation matrix is returned inside sets.</p>
+<p>No-CS returns empty member/index/coverage/purity collections while preserving
+PIP and the requested threshold. <code>coverage=None</code> or <code>min_abs_corr=None</code> disables
+CS construction. A CS is not a marginal region posterior and its posterior mass
+is not empirical frequentist coverage. Nonconvergence is independent of no-CS.</p>
+<p>After iteration, V&lt;prior_tol components have zero V/moments/BFs/KL and alpha
+restored to the normalized prior. ELBO and XtXr preserve pre-trim iteration
+values. Compare final PIPs under the release tolerance; intermediate and CS
+differences remain diagnostics. Persist arrays with NPZ plus JSON metadata if
+needed; pickle and R are not required by this result contract.</p></article>
+<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>

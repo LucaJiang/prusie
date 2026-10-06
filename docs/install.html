@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
+<title>Installation and development · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
+<span class="version">0.2.3rc4 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html" aria-current="page">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="install.md">Markdown source</a></div>
+<article><h1 id="installation-and-development">Installation and development</h1>
+<p>The package metadata requires Python ≥3.10 and NumPy ≥1.26,&lt;3. The release
+checks use CPython 3.12 on Linux x86-64 and NumPy 2.2.6. Other Python versions and
+operating systems are metadata targets, not locally verified binary platforms.
+The supplied CPython 3.12 Linux wheel must match your interpreter, architecture
+and manylinux tag; pip rejects incompatible tags. No package-index availability
+is implied.</p>
+<p>From the repository root:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python -m pip install .
+python -m pip install -c requirements-dev.lock '.[test]'
+python -m pytest tests
+python examples/quickstart.py
+python examples/check_example.py --output-dir example-results
+</code></pre>
+<p>Source builds use maturin 1.9.6 and the Rust toolchain pinned in rust-toolchain.toml.
+Install that toolchain with rustup in your own environment; a C linker and Python
+headers are required. Cargo.lock fixes native dependency versions. Dependencies
+must be available locally or downloadable by pip/Cargo.</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python -m pip install maturin==1.9.6
+maturin build --release --locked --out dist
+maturin sdist --out dist
+python -m pip install --no-deps dist/prusie-*.whl
+</code></pre>
+<p>Alternatively install the supplied source archive with
+<code>python -m pip install path/to/prusie-VERSION.tar.gz</code>, using its real filename.
+The wheel carries the native extension; it needs neither Rust nor R at runtime.
+NumPy is the only required Python runtime dependency. pytest is the test extra.
+There is no mandatory BLAS development library: optional glibc vector math is
+discovered at runtime, with a scalar fallback. AVX2 is runtime guarded; no
+unconditional <code>target-cpu=native</code> build is required.</p>
+<p>The source archive includes the <a href="example.html">500-SNP offline check</a>, its complete
+input/reference bundle and the static site. Execute the runner from the checkout
+or extracted source archive using the installed package; a wheel installs the
+library, while the source archive supplies these repository-level examples.
+After installing the library and NumPy, example execution needs no network or R.</p>
+<p>The local CI-equivalent checks and artifact member audits are documented in
+<a href="testing.html">testing</a>. CI configuration is supplied for later remote execution;
+local success does not imply GitHub Actions has run.</p>
+<p>To obtain the source and its frozen offline example:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">git clone https://github.com/LucaJiang/prusie.git
+cd prusie
+python -m pip install .
+</code></pre>
+<p>This installs from the checkout; it does not require or imply a PyPI release.</p></article>
+<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>

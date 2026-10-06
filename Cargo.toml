@@ -1,0 +1,23 @@
+[package]
+name = "prusie-native"
+version = "0.2.3-rc.4"
+edition = "2021"
+publish = false
+license = "GPL-3.0-or-later"
+
+[lib]
+name = "_native"
+crate-type = ["cdylib", "rlib"]
+path = "bindings/lib.rs"
+
+[dependencies]
+pyo3 = { version = "=0.23.5" }
+numpy = "=0.23.0"
+ndarray = "=0.16.1"
+
+[features]
+vector-math = []
+extension-module = ["pyo3/extension-module"]
+
+[profile.release]
+codegen-units = 1

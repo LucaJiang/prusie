@@ -1,0 +1,32 @@
+[build-system]
+requires = ["maturin==1.9.6"]
+build-backend = "maturin"
+
+[project]
+authors = [{name = "Wenxin Jiang"}]
+maintainers = [{name = "Wenxin Jiang"}]
+name = "prusie"
+version = "0.2.3rc4"
+description = "SuSiE summary-statistics inference with a native Rust IBSS core"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.26,<3"]
+readme = "README.md"
+license = { file = "LICENSE" }
+
+[project.urls]
+Repository = "https://github.com/LucaJiang/prusie"
+Documentation = "https://github.com/LucaJiang/prusie/tree/main/docs"
+Issues = "https://github.com/LucaJiang/prusie/issues"
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
+
+[tool.maturin]
+python-source = "src"
+module-name = "prusie._native"
+features = ["extension-module", "vector-math"]
+exclude = ["dist/**", "target/**", "**/*.orig", "**/*.rej", "**/__pycache__/**", ".pytest_cache/**"]
+include = [{path = "docs/**", format = "sdist"}, {path = "docs/.nojekyll", format = "sdist"}, {path = "tests/**", format = "sdist"}, {path = "examples/**", format = "sdist"}, {path = "tools/**", format = "sdist"}, {path = ".github/**", format = "sdist"}, {path = ".github/workflows/ci.yml", format = "sdist"}, {path = "requirements-dev.lock", format = "sdist"}, {path = "CITATION.cff", format = "sdist"}, {path = "CHANGELOG.md", format = "sdist"}, {path = "THIRD_PARTY_NOTICES.md", format = "sdist"}]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

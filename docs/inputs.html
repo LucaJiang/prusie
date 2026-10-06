@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
+<title>Inputs, alignment and priors · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
+<span class="version">0.2.3rc4 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html" aria-current="page">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="inputs.md">Markdown source</a></div>
+<article><h1 id="inputs-alignment-and-priors">Inputs, alignment and priors</h1>
+<p><code>susie_rss</code> accepts signed z and a signed correlation matrix R. Alternatively
+provide bhat and positive shat; known n is needed for finite-sample adjustment.
+The bhat/shat+var_y branch uses the declared phenotype variance. Never infer
+var_y=1 from a trait name or normalized-looking statistics. With n omitted,
+the explicit noncentrality likelihood is a distinct model path. Supplying z
+takes precedence over bhat/shat; see the exact signature and branch description
+in <a href="api.html">API</a>.</p>
+<p>For m biological variants, z/bhat/shat and variant_ids have length m; R has
+shape (m,m). IDs must be distinct and nonempty. variant_metadata contains
+length-m columns copied into the result. It records caller metadata and does
+not establish allele correctness. Preserve genome build, counted allele,
+summary effect allele, population, reference sample selection and SNP order.
+Unknown strand/palindromic orientation needs evidence before fitting.</p>
+<p>A SNP permutation must be applied to both R axes, every vector and metadata.
+For allele recoding with signs d[j]∈{−1,1}, use z_new=d<em>z and
+R_new=d[:,None]</em>R*d[None,:], and update allele metadata consistently. Neither
+transformation means deleting variants. Singular LD is allowed; approximate LD,
+automatic ridge, eigenvalue clipping and silent symmetrization are not performed.
+Finite/symmetry/diagonal/range checks remain active even with check_input=False;
+that option controls additional sufficient-statistic consistency diagnostics.</p>
+<p><code>susie_suff_stat</code> takes centered XtX, Xty, positive yty and n&gt;1. Supply original
+X_colmeans and y_mean if an original-scale intercept is needed. Standardization
+changes the fitted predictor scale; use result.coef to recover original-scale
+posterior coefficients. All numerical work uses float64 and sequential IBSS
+component updates.</p>
+<p><code>prior_weights</code> are finite nonnegative SNP weights with a positive total.
+They are normalized; partial-zero priors are supported. The SER reference
+semantics add sqrt(machine epsilon) before taking logarithms, so a supplied
+zero is not a hard exclusion from every component posterior. Final low-V trim
+restores the exact normalized prior. An optional null_weight∈[0,1) adds a last
+null column; do not append null IDs or allele records yourself.</p>
+<p>Fine-mapping prior_weights and pycoloc's prior_weights1/2 act at different
+statistical stages. Do not automatically reuse them or multiply them into the
+component log Bayes factors. A PIP is marginal across effects; component BFs
+describe one effect's evidence, and credible sets select within a component.
+None is interchangeable with another.</p>
+<p>Keep residual variance fixed for external reference LD unless the model and
+data justify estimation. The RSS default does this. Sufficient-statistic
+residual-variance estimation defaults to enabled. Primary release comparisons
+explicitly use L=5, max_iter=100, tol=.001 and fixed residual variance1; public
+RSS defaults are max_iter=50 and tol=.0001. A nonconverged result remains
+nonconverged and emits a warning; the library does not silently refit it.</p></article>
+<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>

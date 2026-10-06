@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
+<title>Rename to prusie · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
+<span class="version">0.2.3rc4 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html" aria-current="page">Name migration</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="migration.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#saved-results-and-prior-evidence">Saved results and prior evidence</a></li>
+<li><a href="#rename-verification-scope">Rename verification scope</a></li>
+<li><a href="#license-status">License status</a></li>
+</ul>
+</div>
+</details><h1 id="rename-to-prusie">Rename to prusie</h1>
+<p>The repository, distribution and Python import are now all <strong>prusie</strong>. The
+renamed distribution keeps version <strong>0.2.3rc4</strong>; its name and artifact hashes
+distinguish it from the earlier <code>pyrsusie 0.2.3rc4</code> distribution. Install the
+provided local wheel or source archive using its actual filename, or run
+<code>python -m pip install .</code> from this repository. No PyPI publication is implied.</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-python">import prusie
+from importlib.metadata import version
+
+assert prusie.__version__ == version(&quot;prusie&quot;)
+from prusie import _native
+print(_native.backend_version())
+</code></pre>
+<p>Change old <code>import pyrsusie</code> statements to <code>import prusie</code>, and imports from
+its submodules likewise. There are no compatibility alias packages. Use a
+fresh environment to avoid accidentally retaining the old distribution.
+The native module is <code>prusie._native</code>, the Cargo package is <code>prusie-native</code>,
+and new fit backend strings start with <code>prusie-rust/</code>.</p>
+<p>Rename environment settings to <code>PRUSIE_NUM_THREADS</code> and <code>PRUSIE_SER_MATH</code>.
+Their behavior is unchanged; old environment variable names are not aliases.
+Public functions, arguments, numerical arrays and result fields are unchanged.
+Use the accompanying <strong>pycoloc 0.2.2rc3</strong> for the updated optional fitting example.</p>
+<h2 id="saved-results-and-prior-evidence">Saved results and prior evidence</h2>
+<p><code>SusieResult</code> is now defined in <code>prusie.result</code>. Python pickles store module
+paths, so old class pickles referring to <code>pyrsusie.result</code> will not load in a
+clean prusie-only environment. The package does not remap old pickle imports.
+For existing trusted results, use the original environment to export the
+documented arrays and metadata, then consume those portable data in the new
+environment. Avoid unpickling data from untrusted sources. New prusie result
+pickles use the new module path; portable arrays plus JSON remain preferable.</p>
+<p>Frozen R outputs, teaching inputs, native goldens, source hashes and historical
+performance records retain their original bytes and labels. The example checker
+reads the old <code>runtime.pyrsusie</code> key solely to identify the preserved native
+snapshot; all newly generated runtime metadata uses <code>prusie</code>. This metadata
+adapter neither imports the old package nor changes numerical comparisons.</p>
+<p>The R-agreement report and its downloadable records describe the pre-rename
+binaries. The 118/200 timing majority remains that historical measurement;
+the renamed binary has not undergone another timing campaign. B01 remains
+excluded. This naming change introduces no optimization, statistical change,
+approximation or tolerance change.</p>
+<h2 id="rename-verification-scope">Rename verification scope</h2>
+<p>Release checks cover isolated wheel and source-distribution installations,
+native loading, absent alias imports, distribution identity, the existing full
+test suites, offline 500-SNP examples and optional native pair, and both static
+documentation sites. Source comparison permits only the declared name symbols
+and pycoloc version update. PIP acceptance stays atol=1e-5, rtol=0; pycoloc
+retains its frozen comparison tolerances. The prior independent statistical
+and engineering reviews remain prior-version evidence; this mechanical rename
+review is not a new independent statistical sign-off.</p>
+<h2 id="license-status">License status</h2>
+<p>The user accepted the existing <strong>GPL-3.0-or-later</strong> package licensing after
+initially requesting MIT. Existing notices and upstream license/version terms
+remain intact; this rename does not relicense third-party code or data.
+The concrete retained provenance includes the native R 4.4 <code>Brent_fmin</code>
+adaptation (GPL-2-or-later), pycoloc's adaptation from GPL coloc R files, and
+the GPL coloc teaching fixture. Mathematical-method agreement alone is not
+the reason for those notices. The earlier MIT preference is resolved by the
+explicit GPL decision; no licensing rewrite is part of this release.</p></article>
+<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+</main>
+</div>
+</body>
+</html>
