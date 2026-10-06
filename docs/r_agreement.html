@@ -14,96 +14,35 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
 <span class="version">0.2.3rc4 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html" aria-current="page">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Offline example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="r_agreement.html" aria-current="page">R agreement</a><a href="compatibility.html">Scope and limitations</a><a href="performance.html">Performance</a><a href="contributing.html">Contributing</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="r_agreement.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#reference-and-source-identity">Reference and source identity</a></li>
 <li><a href="#reproduce-the-offline-check">Reproduce the offline check</a></li>
 <li><a href="#exact-model-and-cases">Exact model and cases</a></li>
 <li><a href="#measured-pip-and-structural-results">Measured PIP and structural results</a></li>
 <li><a href="#returned-coverage-and-purity">Returned coverage and purity</a></li>
 <li><a href="#raw-numerical-diagnostics">Raw numerical diagnostics</a></li>
 <li><a href="#boundaries-and-intentional-behavior">Boundaries and intentional behavior</a></li>
-<li><a href="#reference-regeneration-and-review">Reference regeneration and review</a></li>
+<li><a href="#reproducibility-appendix">Reproducibility appendix</a></li>
 </ul>
 </div>
 </details><h1 id="executed-agreement-with-official-r">Executed agreement with official R</h1>
-<blockquote>
-<p>Prior-version evidence: the measurements and downloadable records below were
-executed before the public package rename. Historical <code>pyrsusie</code> labels
-identify those original binaries. The current package is <code>prusie</code>; see
-the <a href="migration.html">rename and migration checks</a> for the new installation
-and unchanged numerical-source verification.</p>
-</blockquote>
-<p>The installed <strong>pyrsusie 0.2.3rc4</strong> candidate passed the predeclared
-PIP check on all seven fixed public teaching cases below, with input, model and
-posterior validity checks. These are executed results, not an assertion of exact
-equivalence for every field or every possible input. The capped one-iteration
-case remains a nonconverged diagnostic.</p>
-<h2 id="reference-and-source-identity">Reference and source identity</h2>
-<p>The reference is official susieR <strong>0.16.6</strong>, commit
-<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>, executed by the independent reference
-lane in R 4.4.0 with Netlib BLAS and one numerical thread. The data are the
-unmodified stored D1–D4 teaching fixtures from official coloc <strong>6.0.3</strong>, commit
-<code>8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45</code>. Each has exactly <strong>500</strong> distinct
-synthetic variables and stored n=1000. No resimulation, padding, SNP subsetting
-or selection based on agreement was performed. These are synthetic software
-examples, not new biological evidence.</p>
-<p>The tested numerical source is the A02-only candidate: B01's unmeasured
-known-variance allocation change was reversed, and its correctness tests were
-retained. Numerical-source manifest SHA256:
-<code>c2e7334b3f4655cd6e36b5d528567c65e54ae9de4120cbeeda3521a01b44b91c</code>. <a href="assets/numerical_source.json">Exact source hashes</a> identify
-the Python, Rust and build files. Final performance selection is documented
-separately; this numerical example is not a timing experiment.</p>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
-<thead>
-<tr>
-<th>Runtime field</th>
-<th>Observed value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Python</td>
-<td>3.12.2</td>
-</tr>
-<tr>
-<td>NumPy</td>
-<td>2.2.6</td>
-</tr>
-<tr>
-<td>Native backend</td>
-<td>pyrsusie-rust/0.2.3-rc.4; susieR-reference/0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2</td>
-</tr>
-<tr>
-<td>SER math route</td>
-<td>optional_glibc_libmvec_avx2_masked_exp</td>
-</tr>
-<tr>
-<td>Architecture</td>
-<td>x86_64</td>
-</tr>
-<tr>
-<td>Input/reference manifest SHA256</td>
-<td><code>c3485fe1c5da1bd7012401eb4d85cc860cc1c2fdbc26f055f4b25240cca66abe</code></td>
-</tr>
-<tr>
-<td>Shared checksum manifest SHA256</td>
-<td><code>2e084ad2c77ecd48e8d07cddff8ea332c18efa93672141cf7e562fec3e8071ee</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>The <a href="assets/example_evidence.json">complete machine-readable evidence</a> records
-the executed parameters, per-input and order hashes, every compared field,
-warnings and component-aligned diagnostics. The bundled <code>reference.lock.json</code>
-and <code>reference_environment.json</code> provide pinned source archive/data hashes and
-the actual R dependency versions. See <a href="example_provenance.html">provenance</a>.</p>
+<p><strong>All seven fixed 500-SNP teaching cases passed the PIP comparison with official
+susieR 0.16.6</strong>, with maximum absolute errors from 1.6e-10 to 3.55e-9, below
+atol=1e-5, rtol=0. Input/model and probability checks also passed. The deliberately
+capped one-iteration case remains nonconverged, and the strict-purity case returns
+no credible sets. These synthetic software examples do not establish a universal
+error bound or identical intermediate arrays, credible sets, Bayes factors or
+downstream posteriors.</p>
+<p>The tables record the original executed binary, identified in the reproducibility
+appendix. The command below checks your installed version against the same frozen
+R outputs; it does not rerun R or overwrite expectations.</p>
 <h2 id="reproduce-the-offline-check">Reproduce the offline check</h2>
-<p>After installing the package from a source checkout or extracted archive:</p>
+<p>After following <a href="install.html">installation</a>, run from the checkout:</p>
 <pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python examples/check_example.py --output-dir example-results
 </code></pre>
 <p>Only the installed package and NumPy are required. The checker verifies
@@ -400,23 +339,70 @@ for reproducibility but is not an independent statistical oracle.</p>
   individual-level regression, LD-mismatch models, mixture/infinitesimal priors,
   greedy updates and the other methods listed in <a href="compatibility.html">compatibility</a>.
   Invalid data are rejected rather than silently repairing LD.</li>
-<li>The separate private100-region/200-trait validation panel is real-region
-  evidence and is not redistributed here. It is distinct from these synthetic
-  public examples. Final-source PIP/model checks and downstream integration are
-  accounted for by the independent release review; this report alone does not
-  certify that panel or establish performance acceptance.</li>
+<li>The separate real-region performance panel is not redistributed with these
+  synthetic examples. See <a href="performance.html">performance</a> for its denominator,
+  baseline and convergence limits.</li>
 </ul>
-<h2 id="reference-regeneration-and-review">Reference regeneration and review</h2>
-<p>The <a href="example_provenance.html">provenance guide</a> and bundled regeneration scripts
-describe the pinned R4.4.0/coloc6.0.3/susieR0.16.6 environment, exact archive/data
-hashes and conversion. No floating reference installation is used. R input
-round-trip doubles are preserved; exported reference arrays retain about15
-significant digits, far below the frozen error thresholds.</p>
-<p>The independent statistician reviews the actual fixture, parameters, source
-hashes and outputs; the engineering review checks installation, useful negative
-failures, offline execution and Pages. Their completed release records are
-separate from this executed comparison. See <a href="testing.html">testing</a> for the
-reproducible failure controls and <a href="release_notes.html">release notes</a> for selection.</p></article>
+<h2 id="reproducibility-appendix">Reproducibility appendix</h2>
+<p>The reference is official susieR <strong>0.16.6</strong>, commit
+<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>, executed independently in R 4.4.0 with Netlib BLAS and one numerical thread. The data are the
+unmodified stored D1–D4 teaching fixtures from official coloc <strong>6.0.3</strong>, commit
+<code>8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45</code>. Each has exactly <strong>500</strong> distinct
+synthetic variables and stored n=1000. No resimulation, padding, SNP subsetting
+or selection based on agreement was performed. These are synthetic software
+examples, not new biological evidence.</p>
+<p>The original binary was <code>pyrsusie 0.2.3rc4</code>, before the public rename.
+<a href="assets/numerical_source.json">Exact source hashes</a> identify its Python, Rust and
+build files (manifest SHA256
+<code>c2e7334b3f4655cd6e36b5d528567c65e54ae9de4120cbeeda3521a01b44b91c</code>).
+The recorded measurements retain that identity; this report is not a timing run.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Runtime field</th>
+<th>Observed value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td>3.12.2</td>
+</tr>
+<tr>
+<td>NumPy</td>
+<td>2.2.6</td>
+</tr>
+<tr>
+<td>Native backend</td>
+<td>pyrsusie-rust/0.2.3-rc.4; susieR-reference/0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2</td>
+</tr>
+<tr>
+<td>SER math route</td>
+<td>optional_glibc_libmvec_avx2_masked_exp</td>
+</tr>
+<tr>
+<td>Architecture</td>
+<td>x86_64</td>
+</tr>
+<tr>
+<td>Input/reference manifest SHA256</td>
+<td><code>c3485fe1c5da1bd7012401eb4d85cc860cc1c2fdbc26f055f4b25240cca66abe</code></td>
+</tr>
+<tr>
+<td>Shared checksum manifest SHA256</td>
+<td><code>2e084ad2c77ecd48e8d07cddff8ea332c18efa93672141cf7e562fec3e8071ee</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The <a href="assets/example_evidence.json">complete machine-readable evidence</a> records
+the executed parameters, per-input and order hashes, every compared field,
+warnings and component-aligned diagnostics. The bundled <code>reference.lock.json</code>
+and <code>reference_environment.json</code> provide pinned source archive/data hashes and
+the actual R dependency versions. See the <a href="https://github.com/LucaJiang/prusie/blob/main/examples/data/README.md">frozen data provenance and regeneration recipe</a>.
+Regeneration uses pinned R 4.4.0, coloc 6.0.3 and susieR 0.16.6 in a separate
+directory. Exported reference arrays retain about 15 significant digits, well
+below the frozen comparison tolerances. The <a href="contributing.html">contributor guide</a>
+describes checksum and numerical failure controls.</p></article>
 <footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
 </main>
 </div>

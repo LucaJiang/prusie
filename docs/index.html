@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
-<title>Fine-map with a traceable result · prusie</title>
+<title>SuSiE fine-mapping · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <script src="assets/site.js" defer></script>
 </head>
@@ -14,7 +14,7 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
 <span class="version">0.2.3rc4 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html" aria-current="page">Overview</a><a href="install.html">Install</a><a href="example.html">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html" aria-current="page">Overview</a><a href="install.html">Install</a><a href="example.html">Offline example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="r_agreement.html">R agreement</a><a href="compatibility.html">Scope and limitations</a><a href="performance.html">Performance</a><a href="contributing.html">Contributing</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -28,7 +28,7 @@
 </div>
 </details><p class="eyebrow">Python + Rust / SuSiE summary statistics</p>
 
-<h1 id="fine-map-with-a-traceable-result">Fine-map with a traceable result</h1>
+<h1 id="susie-fine-mapping">SuSiE fine-mapping</h1>
 <p class="intro">prusie fits the Gaussian SuSiE summary-statistics model with a native Rust core. Work with signed association statistics and LD, inspect PIPs and credible sets, and check your installation against frozen official-R results.</p>
 
 <div class="cards">
@@ -38,7 +38,7 @@
 </div>
 
 <h2 id="quick-start">Quick start</h2>
-<p>From a source checkout or extracted source archive, after <a href="install.html">installation</a>:</p>
+<p>Follow <a href="install.html">installation</a> to clone the repository and install its dependencies, then run from the checkout:</p>
 <pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python examples/check_example.py --output-dir example-results
 </code></pre>
 <p>The check fits the bundled data using the installed package, verifies input and
@@ -81,14 +81,12 @@ signed z = beta / SE. Supply known sample size and retain its provenance.
 prusie validates arrays; it does not harmonize alleles, infer ancestry or repair
 LD. Read <a href="inputs.html">inputs and priors</a> before fitting your own region.</p>
 <p>The reference scope is Gaussian summary-statistics SuSiE against pinned susieR
-0.16.6. The observed numerical gate is PIP absolute error ≤1e-5, rtol=0 plus
-input, probability and model validity. It is not a guarantee for every possible
-input, and intermediate arrays or credible sets can differ.</p>
-<div class="callout"><p><strong>One package name throughout.</strong> The repository, distribution and Python import are all <code>prusie</code>. The separate <code>pycoloc</code> package can consume these results for colocalisation.</p></div>
-
-<p>Maintained by Wenxin Jiang. The source repository is <a href="https://github.com/LucaJiang/prusie">LucaJiang/prusie</a>. No package-index release is claimed. See <a href="release_notes.html">release notes</a>, <a href="compatibility.html">supported scope</a>
-and <a href="performance.html">performance evidence</a>.</p>
-<p>Source: <a href="https://github.com/LucaJiang/prusie">prusie on GitHub</a>. Related package: <a href="https://github.com/LucaJiang/pycoloc">pycoloc</a>.</p></article>
+0.16.6. The executed comparison uses PIP absolute error ≤1e-5, rtol=0, with
+input, probability and model validity checks. It is not a guarantee for every possible
+input, and intermediate arrays, credible sets, Bayes factors or downstream posteriors can differ.</p>
+<p>See <a href="compatibility.html">supported models and limitations</a>,
+<a href="performance.html">performance evidence</a>, and <a href="contributing.html">contributing</a>.
+Maintained by Wenxin Jiang. Source: <a href="https://github.com/LucaJiang/prusie">GitHub</a>.</p></article>
 <footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
 </main>
 </div>

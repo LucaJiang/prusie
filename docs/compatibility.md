@@ -5,11 +5,11 @@ The release targets official susieR 0.16.6 at immutable commit
 `susie_rss(z,R,n)`, `susie_rss(bhat,shat,R,n,var_y)`, the explicit missing-n
 noncentrality likelihood, and centered `susie_suff_stat` (R `susie_ss`).
 Known-n calls use the finite-sample Wald adjustment. Supplied `var_y` sets
-the response variance even with z-only input, as in the new reference.
+the response variance even with z-only input, as in the pinned reference.
 
 Scalar Gaussian priors support fixed V, optim, EM and simple updates; fixed or
 estimated residual variance; normalized prior weights and null weight; L,
-iteration cap and tolerance; ELBO, CS and PIP. RSS now defaults to cap 50,
+iteration cap and tolerance; ELBO, CS and PIP. RSS defaults to cap 50,
 sufficient statistics to cap 100, and both to Gaussian tolerance 0.0001.
 The measured comparison explicitly uses cap 100 and tolerance 0.001 everywhere.
 
@@ -40,7 +40,7 @@ Intentional API boundaries:
   Empty CSs have explicit empty arrays, and the requested threshold remains
   metadata even when R returns NULL for the whole sets object. PIP is retained.
 - sets.coverage is actual posterior mass; actual_coverage is an equal alias,
-  requested_coverage is the target. This agrees with the latest coverage fix.
+  requested_coverage is the target.
 - Nonpositive residual-variance estimates error instead of propagating invalid
   posteriors. Nondefault initialization/refinement, MAF filtering, verbose output
   and trace snapshots remain unsupported.
@@ -48,8 +48,12 @@ Intentional API boundaries:
 Unsupported keywords and methods fail explicitly: no NIG, infinitesimal effects,
 mixture priors, greedy components, slot priors, LD-mismatch model, low-rank X,
 individual-level regression, trend filtering or diagnostic kriging API is claimed.
-Scientific and performance acceptance comes from independent validation, not
-from this source mapping. Historical 0.14.2 evidence remains in the pre-edit
-checkpoint and changelog; the original lock and installed 0.1.2 are unchanged.
+The [executed R comparison](r_agreement.md) uses PIP absolute error ≤1e-5,
+rtol=0, with input/model/probability validity. Passing this criterion does not
+prove identical intermediate arrays, credible sets, Bayes factors or downstream
+posteriors, and does not bound error on untested inputs.
 
-The release numerical contract uses PIP absolute error ≤1e-5, rtol=0. Intermediate and CS differences remain diagnostic. See release_notes.md for version history.
+Returned CS coverage is computed from each surviving original alpha component.
+This avoids a filtering/indexing error in the older susieR 0.14.2 reference;
+the current 0.16.6 reference includes the coverage correction. The independent
+coverage regressions remain in `tests/test_coverage.py`.

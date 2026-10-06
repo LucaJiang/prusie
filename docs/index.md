@@ -1,6 +1,6 @@
 <p class="eyebrow">Python + Rust / SuSiE summary statistics</p>
 
-# Fine-map with a traceable result
+# SuSiE fine-mapping
 
 <p class="intro">prusie fits the Gaussian SuSiE summary-statistics model with a native Rust core. Work with signed association statistics and LD, inspect PIPs and credible sets, and check your installation against frozen official-R results.</p>
 
@@ -12,7 +12,7 @@
 
 ## Quick start
 
-From a source checkout or extracted source archive, after [installation](install.md):
+Follow [installation](install.md) to clone the repository and install its dependencies, then run from the checkout:
 
 ```sh
 python examples/check_example.py --output-dir example-results
@@ -44,13 +44,10 @@ prusie validates arrays; it does not harmonize alleles, infer ancestry or repair
 LD. Read [inputs and priors](inputs.md) before fitting your own region.
 
 The reference scope is Gaussian summary-statistics SuSiE against pinned susieR
-0.16.6. The observed numerical gate is PIP absolute error ≤1e-5, rtol=0 plus
-input, probability and model validity. It is not a guarantee for every possible
-input, and intermediate arrays or credible sets can differ.
+0.16.6. The executed comparison uses PIP absolute error ≤1e-5, rtol=0, with
+input, probability and model validity checks. It is not a guarantee for every possible
+input, and intermediate arrays, credible sets, Bayes factors or downstream posteriors can differ.
 
-<div class="callout"><p><strong>One package name throughout.</strong> The repository, distribution and Python import are all <code>prusie</code>. The separate <code>pycoloc</code> package can consume these results for colocalisation.</p></div>
-
-Maintained by Wenxin Jiang. The source repository is [LucaJiang/prusie](https://github.com/LucaJiang/prusie). No package-index release is claimed. See [release notes](release_notes.md), [supported scope](compatibility.md)
-and [performance evidence](performance.md).
-
-Source: [prusie on GitHub](https://github.com/LucaJiang/prusie). Related package: [pycoloc](https://github.com/LucaJiang/pycoloc).
+See [supported models and limitations](compatibility.md),
+[performance evidence](performance.md), and [contributing](contributing.md).
+Maintained by Wenxin Jiang. Source: [GitHub](https://github.com/LucaJiang/prusie).

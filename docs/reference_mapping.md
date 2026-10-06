@@ -3,7 +3,6 @@
 Reference: official susieR 0.16.6 commit
 `8e56a8e038e989856d106d9ca5175cc664fea9d2`; source archive SHA256
 `c88c6324da061c83ac9fbac23972cd1e501210c916596ea7678c3115b33f6971`.
-The old CRAN 0.14.2 lock is immutable historical evidence, not the new target.
 
 | Python/Rust | Pinned R source and responsibility |
 | --- | --- |
@@ -25,8 +24,7 @@ frozen absolute-error contract; R accumulation order is not an API guarantee.
 
 Current finite stopping requires 0 ≤ ELBO increment < tol after the first
 iteration. Invalid increments use alpha/PIP fallback and retain diagnostics.
-Final trimming runs after the stored trace and before CS/PIP. Its reset is an
-intentional semantic migration, not output rounding or a numerical waiver.
+Final trimming runs after the stored trace and before CS/PIP. Its reset is part of the pinned Gaussian model semantics.
 
 The package remains a native Python/Rust implementation. It never invokes R
-at runtime. Unsupported SuSiE2 extensions are listed in compatibility.md.
+at runtime. Unsupported SuSiE2 extensions are listed in [compatibility](compatibility.md).

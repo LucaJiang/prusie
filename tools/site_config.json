@@ -6,7 +6,7 @@
   "section": "Fine-mapping \u00b7 Python + Rust",
   "navigation": [
     [
-      "Start here",
+      "Get started",
       [
         [
           "Overview",
@@ -17,70 +17,50 @@
           "install.html"
         ],
         [
-          "Run the 500-SNP check",
+          "Offline example",
           "example.html"
-        ],
-        [
-          "R agreement report",
-          "r_agreement.html"
-        ],
-        [
-          "GitHub repository",
-          "https://github.com/LucaJiang/prusie"
         ]
       ]
     ],
     [
-      "Use prusie",
+      "Use the package",
       [
         [
           "Inputs and priors",
           "inputs.html"
         ],
         [
-          "API reference",
+          "API",
           "api.html"
         ],
         [
-          "Result schema",
+          "Results",
           "results.html"
-        ],
-        [
-          "Scope and limitations",
-          "compatibility.html"
         ]
       ]
     ],
     [
-      "Reproduce and review",
+      "Understand and contribute",
       [
         [
-          "Tests and reproducibility",
-          "testing.html"
+          "R agreement",
+          "r_agreement.html"
         ],
         [
-          "Method mapping",
-          "reference_mapping.html"
+          "Scope and limitations",
+          "compatibility.html"
         ],
         [
-          "Performance evidence",
+          "Performance",
           "performance.html"
         ],
         [
-          "Release notes",
-          "release_notes.html"
+          "Contributing",
+          "contributing.html"
         ],
         [
-          "Build these pages",
-          "pages.html"
-        ],
-        [
-          "Historical differences",
-          "upstream_differences.html"
-        ],
-        [
-          "Name migration",
-          "migration.html"
+          "GitHub",
+          "https://github.com/LucaJiang/prusie"
         ]
       ]
     ]

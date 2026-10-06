@@ -5,23 +5,19 @@ official coloc teaching datasets, D1–D4. It is an existing fixed software
 fixture, not human-study data and not a new simulation. No variables were
 selected, padded or generated for agreement with Python.
 
-## Install, then disconnect
+## Run offline after installation
 
-From a clean source checkout or extracted source archive:
+Follow [installation](install.md) to clone the repository, create an environment
+and install the package. From that checkout:
 
 ```sh
-python -m venv .venv
-. .venv/bin/activate
-python -m pip install .
 python examples/check_example.py --help
 python examples/check_example.py --output-dir example-results
 ```
 
-Installation may download build/runtime dependencies; [installation](install.md)
-also describes a matching wheel. Once prusie and NumPy are installed, the
-check is completely offline. It does not need R, pandas, plotting libraries,
-pycoloc or the original development workspace. It imports the installed package
-and calls the public `susie_rss` API.
+Installation may download dependencies. Once installed, the check runs offline
+without R or external study data. It imports the installed package and uses the
+frozen files in `examples/data/`.
 
 To run just the multi-signal teaching dataset:
 
@@ -91,8 +87,7 @@ synthetic identities and indices.
 3. The checker independently sums posterior mass from each original alpha row,
    recomputes marginal PIP across active components, and computes purity from
    the signed LD submatrix. These checks do not call package summary helpers.
-   `independent_oracles.json` contains separate coloc-specific mathematical
-   counterexamples for the companion package.
+
 
 `manifest.json`, `checksums.json` and `native_checksums.json` keep identities
 explicit. Input NPZ arrays retain the upstream float64 values. The TSV files
@@ -103,7 +98,7 @@ are readable views; `variants.tsv` specifies ordering on both matrix axes.
 In the pinned reference, active SER adds √ε to normalized prior weights before
 taking logarithms. A supplied zero prior weight is therefore **not a hard
 exclusion**. Final low-variance trimming restores the exact normalized prior.
-This differs from zero-weight semantics in a colocalisation prior.
+
 
 No-CS results have empty member, index, coverage and purity collections, while
 PIPs remain available. Returned `sets.coverage` is actual posterior mass for
@@ -116,7 +111,7 @@ does not silently retry it or present it as a converged scientific fit.
 Users never need R to check an installation. Maintainers can separately use
 `examples/data/export_reference.R`, `convert_exports.py`,
 `verify_reference_input.py`, `reference.lock.json` and
-`reference_environment.json`. The [provenance guide](example_provenance.md)
+`reference_environment.json`. The [frozen data README](https://github.com/LucaJiang/prusie/blob/main/examples/data/README.md)
 gives the exact pinned versions, archive/data hashes and commands. Regeneration
 writes a new directory and does not update the shipped goldens.
 

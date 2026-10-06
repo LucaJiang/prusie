@@ -1,54 +1,20 @@
 # Executed agreement with official R
 
-> Prior-version evidence: the measurements and downloadable records below were
-> executed before the public package rename. Historical `pyrsusie` labels
-> identify those original binaries. The current package is `prusie`; see
-> the [rename and migration checks](migration.md) for the new installation
-> and unchanged numerical-source verification.
+**All seven fixed 500-SNP teaching cases passed the PIP comparison with official
+susieR 0.16.6**, with maximum absolute errors from 1.6e-10 to 3.55e-9, below
+atol=1e-5, rtol=0. Input/model and probability checks also passed. The deliberately
+capped one-iteration case remains nonconverged, and the strict-purity case returns
+no credible sets. These synthetic software examples do not establish a universal
+error bound or identical intermediate arrays, credible sets, Bayes factors or
+downstream posteriors.
 
-The installed **pyrsusie 0.2.3rc4** candidate passed the predeclared
-PIP check on all seven fixed public teaching cases below, with input, model and
-posterior validity checks. These are executed results, not an assertion of exact
-equivalence for every field or every possible input. The capped one-iteration
-case remains a nonconverged diagnostic.
-
-## Reference and source identity
-
-The reference is official susieR **0.16.6**, commit
-`8e56a8e038e989856d106d9ca5175cc664fea9d2`, executed by the independent reference
-lane in R 4.4.0 with Netlib BLAS and one numerical thread. The data are the
-unmodified stored D1–D4 teaching fixtures from official coloc **6.0.3**, commit
-`8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45`. Each has exactly **500** distinct
-synthetic variables and stored n=1000. No resimulation, padding, SNP subsetting
-or selection based on agreement was performed. These are synthetic software
-examples, not new biological evidence.
-
-The tested numerical source is the A02-only candidate: B01's unmeasured
-known-variance allocation change was reversed, and its correctness tests were
-retained. Numerical-source manifest SHA256:
-`c2e7334b3f4655cd6e36b5d528567c65e54ae9de4120cbeeda3521a01b44b91c`. [Exact source hashes](assets/numerical_source.json) identify
-the Python, Rust and build files. Final performance selection is documented
-separately; this numerical example is not a timing experiment.
-
-| Runtime field | Observed value |
-| --- | --- |
-| Python | 3.12.2 |
-| NumPy | 2.2.6 |
-| Native backend | pyrsusie-rust/0.2.3-rc.4; susieR-reference/0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2 |
-| SER math route | optional_glibc_libmvec_avx2_masked_exp |
-| Architecture | x86_64 |
-| Input/reference manifest SHA256 | `c3485fe1c5da1bd7012401eb4d85cc860cc1c2fdbc26f055f4b25240cca66abe` |
-| Shared checksum manifest SHA256 | `2e084ad2c77ecd48e8d07cddff8ea332c18efa93672141cf7e562fec3e8071ee` |
-
-The [complete machine-readable evidence](assets/example_evidence.json) records
-the executed parameters, per-input and order hashes, every compared field,
-warnings and component-aligned diagnostics. The bundled `reference.lock.json`
-and `reference_environment.json` provide pinned source archive/data hashes and
-the actual R dependency versions. See [provenance](example_provenance.md).
+The tables record the original executed binary, identified in the reproducibility
+appendix. The command below checks your installed version against the same frozen
+R outputs; it does not rerun R or overwrite expectations.
 
 ## Reproduce the offline check
 
-After installing the package from a source checkout or extracted archive:
+After following [installation](install.md), run from the checkout:
 
 ```sh
 python examples/check_example.py --output-dir example-results
@@ -166,22 +132,42 @@ for reproducibility but is not an independent statistical oracle.
   individual-level regression, LD-mismatch models, mixture/infinitesimal priors,
   greedy updates and the other methods listed in [compatibility](compatibility.md).
   Invalid data are rejected rather than silently repairing LD.
-- The separate private100-region/200-trait validation panel is real-region
-  evidence and is not redistributed here. It is distinct from these synthetic
-  public examples. Final-source PIP/model checks and downstream integration are
-  accounted for by the independent release review; this report alone does not
-  certify that panel or establish performance acceptance.
+- The separate real-region performance panel is not redistributed with these
+  synthetic examples. See [performance](performance.md) for its denominator,
+  baseline and convergence limits.
 
-## Reference regeneration and review
+## Reproducibility appendix
 
-The [provenance guide](example_provenance.md) and bundled regeneration scripts
-describe the pinned R4.4.0/coloc6.0.3/susieR0.16.6 environment, exact archive/data
-hashes and conversion. No floating reference installation is used. R input
-round-trip doubles are preserved; exported reference arrays retain about15
-significant digits, far below the frozen error thresholds.
+The reference is official susieR **0.16.6**, commit
+`8e56a8e038e989856d106d9ca5175cc664fea9d2`, executed independently in R 4.4.0 with Netlib BLAS and one numerical thread. The data are the
+unmodified stored D1–D4 teaching fixtures from official coloc **6.0.3**, commit
+`8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45`. Each has exactly **500** distinct
+synthetic variables and stored n=1000. No resimulation, padding, SNP subsetting
+or selection based on agreement was performed. These are synthetic software
+examples, not new biological evidence.
 
-The independent statistician reviews the actual fixture, parameters, source
-hashes and outputs; the engineering review checks installation, useful negative
-failures, offline execution and Pages. Their completed release records are
-separate from this executed comparison. See [testing](testing.md) for the
-reproducible failure controls and [release notes](release_notes.md) for selection.
+The original binary was `pyrsusie 0.2.3rc4`, before the public rename.
+[Exact source hashes](assets/numerical_source.json) identify its Python, Rust and
+build files (manifest SHA256
+`c2e7334b3f4655cd6e36b5d528567c65e54ae9de4120cbeeda3521a01b44b91c`).
+The recorded measurements retain that identity; this report is not a timing run.
+
+| Runtime field | Observed value |
+| --- | --- |
+| Python | 3.12.2 |
+| NumPy | 2.2.6 |
+| Native backend | pyrsusie-rust/0.2.3-rc.4; susieR-reference/0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2 |
+| SER math route | optional_glibc_libmvec_avx2_masked_exp |
+| Architecture | x86_64 |
+| Input/reference manifest SHA256 | `c3485fe1c5da1bd7012401eb4d85cc860cc1c2fdbc26f055f4b25240cca66abe` |
+| Shared checksum manifest SHA256 | `2e084ad2c77ecd48e8d07cddff8ea332c18efa93672141cf7e562fec3e8071ee` |
+
+The [complete machine-readable evidence](assets/example_evidence.json) records
+the executed parameters, per-input and order hashes, every compared field,
+warnings and component-aligned diagnostics. The bundled `reference.lock.json`
+and `reference_environment.json` provide pinned source archive/data hashes and
+the actual R dependency versions. See the [frozen data provenance and regeneration recipe](https://github.com/LucaJiang/prusie/blob/main/examples/data/README.md).
+Regeneration uses pinned R 4.4.0, coloc 6.0.3 and susieR 0.16.6 in a separate
+directory. Exported reference arrays retain about 15 significant digits, well
+below the frozen comparison tolerances. The [contributor guide](contributing.md)
+describes checksum and numerical failure controls.

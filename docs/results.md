@@ -46,6 +46,13 @@ is not empirical frequentist coverage. Nonconvergence is independent of no-CS.
 
 After iteration, V<prior_tol components have zero V/moments/BFs/KL and alpha
 restored to the normalized prior. ELBO and XtXr preserve pre-trim iteration
-values. Compare final PIPs under the release tolerance; intermediate and CS
-differences remain diagnostics. Persist arrays with NPZ plus JSON metadata if
+values. PIP agreement alone does not establish equality of intermediate arrays,
+credible sets, Bayes factors or downstream posteriors. Persist arrays with NPZ plus JSON metadata if
 needed; pickle and R are not required by this result contract.
+
+## Saving results
+
+Prefer NPZ arrays plus JSON metadata for portable results. Python pickles retain
+class module paths and require a compatible environment. For trusted results
+saved by an older package, export portable arrays using that original environment;
+old class paths are not automatically remapped.

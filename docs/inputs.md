@@ -5,8 +5,7 @@ provide bhat and positive shat; known n is needed for finite-sample adjustment.
 The bhat/shat+var_y branch uses the declared phenotype variance. Never infer
 var_y=1 from a trait name or normalized-looking statistics. With n omitted,
 the explicit noncentrality likelihood is a distinct model path. Supplying z
-takes precedence over bhat/shat; see the exact signature and branch description
-in [API](api.md).
+together with bhat or shat raises an error; choose one input route. See [API](api.md).
 
 For m biological variants, z/bhat/shat and variant_ids have length m; R has
 shape (m,m). IDs must be distinct and nonempty. variant_metadata contains
@@ -36,15 +35,13 @@ zero is not a hard exclusion from every component posterior. Final low-V trim
 restores the exact normalized prior. An optional null_weight∈[0,1) adds a last
 null column; do not append null IDs or allele records yourself.
 
-Fine-mapping prior_weights and pycoloc's prior_weights1/2 act at different
-statistical stages. Do not automatically reuse them or multiply them into the
-component log Bayes factors. A PIP is marginal across effects; component BFs
+Prior weights enter fitting; do not multiply them into the returned component
+log Bayes factors again. A PIP is marginal across effects; component BFs
 describe one effect's evidence, and credible sets select within a component.
 None is interchangeable with another.
 
 Keep residual variance fixed for external reference LD unless the model and
 data justify estimation. The RSS default does this. Sufficient-statistic
-residual-variance estimation defaults to enabled. Primary release comparisons
-explicitly use L=5, max_iter=100, tol=.001 and fixed residual variance1; public
-RSS defaults are max_iter=50 and tol=.0001. A nonconverged result remains
+residual-variance estimation defaults to enabled. Public RSS defaults are max_iter=50 and tol=.0001; validation settings
+are recorded separately in the [agreement report](r_agreement.md). A nonconverged result remains
 nonconverged and emits a warning; the library does not silently refit it.

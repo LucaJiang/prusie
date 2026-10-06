@@ -2,7 +2,7 @@
 
 `susie_rss`, `susie_suff_stat` and `SusieResult` are top-level exports. Posterior helpers are in `prusie.posterior`.
 
-The following signatures and parameter descriptions come from the selected public source. See the input and result guides for alignment and interpretation.
+The following signatures and parameter descriptions describe the public API. See the input and result guides for alignment and interpretation.
 
 ## susie_rss
 

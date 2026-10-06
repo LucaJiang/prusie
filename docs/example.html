@@ -14,14 +14,14 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
 <span class="version">0.2.3rc4 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html" aria-current="page">Run the 500-SNP check</a><a href="r_agreement.html">R agreement report</a><a href="https://github.com/LucaJiang/prusie">GitHub repository</a></div><div class="nav-group"><p class="nav-label">Use prusie</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API reference</a><a href="results.html">Result schema</a><a href="compatibility.html">Scope and limitations</a></div><div class="nav-group"><p class="nav-label">Reproduce and review</p><a href="testing.html">Tests and reproducibility</a><a href="reference_mapping.html">Method mapping</a><a href="performance.html">Performance evidence</a><a href="release_notes.html">Release notes</a><a href="pages.html">Build these pages</a><a href="upstream_differences.html">Historical differences</a><a href="migration.html">Name migration</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html" aria-current="page">Offline example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="r_agreement.html">R agreement</a><a href="compatibility.html">Scope and limitations</a><a href="performance.html">Performance</a><a href="contributing.html">Contributing</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="example.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#install-then-disconnect">Install, then disconnect</a></li>
+<li><a href="#run-offline-after-installation">Run offline after installation</a></li>
 <li><a href="#read-pass-and-fail">Read PASS and FAIL</a></li>
 <li><a href="#the-declared-cases">The declared cases</a></li>
 <li><a href="#three-distinct-kinds-of-expectation">Three distinct kinds of expectation</a></li>
@@ -34,19 +34,15 @@
 official coloc teaching datasets, D1–D4. It is an existing fixed software
 fixture, not human-study data and not a new simulation. No variables were
 selected, padded or generated for agreement with Python.</p>
-<h2 id="install-then-disconnect">Install, then disconnect</h2>
-<p>From a clean source checkout or extracted source archive:</p>
-<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python -m venv .venv
-. .venv/bin/activate
-python -m pip install .
-python examples/check_example.py --help
+<h2 id="run-offline-after-installation">Run offline after installation</h2>
+<p>Follow <a href="install.html">installation</a> to clone the repository, create an environment
+and install the package. From that checkout:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python examples/check_example.py --help
 python examples/check_example.py --output-dir example-results
 </code></pre>
-<p>Installation may download build/runtime dependencies; <a href="install.html">installation</a>
-also describes a matching wheel. Once prusie and NumPy are installed, the
-check is completely offline. It does not need R, pandas, plotting libraries,
-pycoloc or the original development workspace. It imports the installed package
-and calls the public <code>susie_rss</code> API.</p>
+<p>Installation may download dependencies. Once installed, the check runs offline
+without R or external study data. It imports the installed package and uses the
+frozen files in <code>examples/data/</code>.</p>
 <p>To run just the multi-signal teaching dataset:</p>
 <pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python examples/check_example.py --case D3 --output-dir example-D3
 </code></pre>
@@ -139,9 +135,7 @@ synthetic identities and indices.</p>
    as an additional diagnostic; this is not an independent R reference.</li>
 <li>The checker independently sums posterior mass from each original alpha row,
    recomputes marginal PIP across active components, and computes purity from
-   the signed LD submatrix. These checks do not call package summary helpers.
-   <code>independent_oracles.json</code> contains separate coloc-specific mathematical
-   counterexamples for the companion package.</li>
+   the signed LD submatrix. These checks do not call package summary helpers.</li>
 </ol>
 <p><code>manifest.json</code>, <code>checksums.json</code> and <code>native_checksums.json</code> keep identities
 explicit. Input NPZ arrays retain the upstream float64 values. The TSV files
@@ -149,8 +143,7 @@ are readable views; <code>variants.tsv</code> specifies ordering on both matrix 
 <h2 id="interpret-the-edge-cases">Interpret the edge cases</h2>
 <p>In the pinned reference, active SER adds √ε to normalized prior weights before
 taking logarithms. A supplied zero prior weight is therefore <strong>not a hard
-exclusion</strong>. Final low-variance trimming restores the exact normalized prior.
-This differs from zero-weight semantics in a colocalisation prior.</p>
+exclusion</strong>. Final low-variance trimming restores the exact normalized prior.</p>
 <p>No-CS results have empty member, index, coverage and purity collections, while
 PIPs remain available. Returned <code>sets.coverage</code> is actual posterior mass for
 its original component, not the requested 0.95 and not repeated-sampling
@@ -160,7 +153,7 @@ does not silently retry it or present it as a converged scientific fit.</p>
 <p>Users never need R to check an installation. Maintainers can separately use
 <code>examples/data/export_reference.R</code>, <code>convert_exports.py</code>,
 <code>verify_reference_input.py</code>, <code>reference.lock.json</code> and
-<code>reference_environment.json</code>. The <a href="example_provenance.html">provenance guide</a>
+<code>reference_environment.json</code>. The <a href="https://github.com/LucaJiang/prusie/blob/main/examples/data/README.md">frozen data README</a>
 gives the exact pinned versions, archive/data hashes and commands. Regeneration
 writes a new directory and does not update the shipped goldens.</p>
 <p>Read the <a href="r_agreement.html">executed agreement report</a> for measured errors and

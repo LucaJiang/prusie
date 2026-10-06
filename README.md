@@ -1,56 +1,69 @@
 # prusie
 
-Python summary-statistics fine-mapping with a Rust SuSiE/IBSS core. The repository, distribution and Python import are all **prusie**. Software author
-and maintainer: Wenxin Jiang. Release candidate 0.2.3rc4. No package-index publication is claimed.
+SuSiE summary-statistics fine-mapping in Python with a Rust inference core.
+Fit signed association statistics and linkage disequilibrium (LD) to estimate
+variant inclusion probabilities and credible sets. R is not needed at runtime.
+
+## Install and run
+
+Source installation requires Python ≥3.10, the Rust toolchain specified in
+`rust-toolchain.toml`, a C linker and Python development headers. See
+[installation](docs/install.md) for dependencies and tested platforms.
 
 ```sh
+git clone https://github.com/LucaJiang/prusie.git
+cd prusie
 python -m venv .venv
 . .venv/bin/activate
 python -m pip install .
 python examples/check_example.py --output-dir example-results
 ```
 
-Source builds need Rust, a C linker and Python development headers. A matching
-prebuilt wheel needs only Python and NumPy. See [installation](docs/install.md)
-for tested versions, platform limits and wheel/source commands.
+The included check runs offline after installation. It fits seven cases from a
+frozen, explicitly **synthetic 500-SNP teaching fixture** and compares PIPs with
+official susieR outputs. It prints PASS/FAIL and writes a detailed JSON report.
+Source installation is the supported download route; no PyPI release or public
+wheel download is provided.
 
-The [500-SNP offline check](docs/example.md) calls the installed public API on
-the fixed official synthetic teaching data and compares its PIPs to frozen R
-outputs. R is not a runtime dependency. Read the [executed R agreement report](docs/r_agreement.md)
-and open [the static documentation site](docs/index.html) for results and
-limitations. The example exits nonzero on a substantive mismatch.
+## Fit a region
 
 ```python
-import numpy as np
-from prusie import susie_rss
+import prusie
 
-# Hand-written analytical example, not biological evidence or a simulated study.
-fit = susie_rss(z=[4., .5, -.2],
-    R=[[1., .2, 0.], [.2, 1., .1], [0., .1, 1.]], n=191,
-    L=2, max_iter=100, tol=.001, estimate_residual_variance=False,
-    variant_ids=['a', 'b', 'c'])
-print(fit.pip, fit.converged, fit.sets['cs_index'])
+# Small analytical illustration; these are not biological data.
+fit = prusie.susie_rss(
+    z=[4., .5, -.2],
+    R=[[1., .2, 0.], [.2, 1., .1], [0., .1, 1.]],
+    n=191, L=2, max_iter=100, tol=.001,
+    estimate_residual_variance=False, variant_ids=['a', 'b', 'c'],
+)
+print(fit.pip)
+print(fit.converged, fit.niter, fit.sets['cs_index'])
 ```
 
-Use signed correlation **r**, with exactly the same SNP and counted-allele order
-as signed z=beta/SE. Do not supply r². The caller supplies sample size, ancestry,
-build and allele provenance. This package does not align variants or repair LD.
+Use signed LD correlation **r**, not r², in exactly the same SNP and counted-allele
+order as signed z = beta/SE. Supply sample-size and allele/build/ancestry provenance;
+the package does not harmonize variants or repair LD. Alternatives accept
+beta/SE or centered sufficient statistics. Read [inputs](docs/inputs.md) before
+using your own data.
 
-The supported statistical reference is official susieR 0.16.6, commit
-`8e56a8e038e989856d106d9ca5175cc664fea9d2`. The numerical acceptance contract is
-PIP absolute error ≤1e-5, rtol=0, plus valid probabilities and unchanged inputs
-and model semantics. It is an empirical validation contract, not a bound for
-all possible inputs. Intermediate arrays and credible sets may differ.
+`pip` is the marginal inclusion probability for each variant. Credible sets use
+original component IDs and report actual posterior mass and purity. Inspect
+convergence and warnings: no credible set means unavailable set evidence, and
+a reproducible nonconverged fit is still nonconverged.
 
-Read [inputs and priors](docs/inputs.md), [API](docs/api.md),
-[result schema](docs/results.md), [reference compatibility](docs/compatibility.md),
-[performance limits](docs/performance.md), and [testing](docs/testing.md).
-See [release notes](docs/release_notes.md), [changelog](CHANGELOG.md),
-[license](LICENSE), [attribution](THIRD_PARTY_NOTICES.md), and [citation](CITATION.cff).
-The separate pycoloc package consumes these fits for colocalisation; it is not
-needed for fine-mapping.
+## Documentation and validation
 
-See the [name migration and license status](docs/migration.md) for the public rename, saved-result compatibility and retained licensing constraints.
+Read the [documentation site](https://lucajiang.github.io/prusie/), or the
+Markdown [example](docs/example.md), [API](docs/api.md),
+[results](docs/results.md) and [supported scope](docs/compatibility.md).
+The [executed R agreement report](docs/r_agreement.md) compares with susieR 0.16.6
+using PIP absolute error ≤1e-5, rtol=0. This is a tested-case criterion, not a
+universal bound or proof of identical Bayes factors, credible sets or downstream
+posteriors. [Performance evidence](docs/performance.md) includes slower cases
+and identifies its earlier native baseline; it is not an R speedup benchmark.
 
-Source repository: [prusie](https://github.com/LucaJiang/prusie). For Pages setup, see [the guide](docs/pages.md).
-Related package: [pycoloc](https://github.com/LucaJiang/pycoloc).
+Maintained by Wenxin Jiang. See [contributing](docs/contributing.md),
+[changelog](CHANGELOG.md) and [citation](CITATION.cff).
+GPL-3.0-or-later; [license](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md)
+retain the upstream code and teaching-data terms.
