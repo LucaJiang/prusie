@@ -7,8 +7,9 @@ var_y=1 from a trait name or normalized-looking statistics. With n omitted,
 the explicit noncentrality likelihood is a distinct model path. Supplying z
 together with bhat or shat raises an error; choose one input route. See [API](api.md).
 
-For m biological variants, z/bhat/shat and variant_ids have length m; R has
-shape (m,m). IDs must be distinct and nonempty. variant_metadata contains
+For m biological variants, z or bhat and variant_ids have length m; R has
+shape (m,m). shat can be a positive scalar shared by all variants or a
+length-m vector of positive standard errors. IDs must be distinct and nonempty. variant_metadata contains
 length-m columns copied into the result. It records caller metadata and does
 not establish allele correctness. Preserve genome build, counted allele,
 summary effect allele, population, reference sample selection and SNP order.
