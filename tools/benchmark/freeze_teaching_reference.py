@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Freeze a separately executed teaching reference; never touches older fixtures."""
+"""Freeze a separately executed toy example reference; never touches older fixtures."""
 import argparse,hashlib,json
 from pathlib import Path
 import numpy as np
@@ -18,7 +18,7 @@ def freeze(record_path, destination):
         parameters=record['parameters'],niter=fit['niter'],converged=fit['converged'],cs=fit['cs'],
         variant_ids=fit['variant_ids'],requested_coverage=fit['requested_coverage'],
         reference_arrays_sha256=hashlib.sha256((destination/'reference.npz').read_bytes()).hexdigest(),
-        source='New independent teaching fit executed by tools/benchmark/fine_mapping.R',
+        source='Independent toy example fit executed by tools/benchmark/fine_mapping.R',
         regeneration='Prepare inputs using tools/benchmark/prepare_teaching.py; run fine_mapping.R in a new output directory; inspect differences before changing this reference.')
     (destination/'reference.json').write_text(json.dumps(meta,indent=2)+'\n')
     print('Frozen new reference:',fit['niter'],'iterations;',len(fit['cs']),'credible sets')

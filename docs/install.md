@@ -48,4 +48,4 @@ print(fit.converged, fit.niter, fit.pip.max())
 
 The package contains the inputs, metadata and frozen reference for this example.
 No source checkout, R installation or network is needed to load and fit it.
-Continue with the [tutorial](example.md).
+Continue with the [toy example tutorial](example.md).

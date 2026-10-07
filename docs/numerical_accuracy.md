@@ -77,24 +77,24 @@ correlation. The retained numerical records include independent checks of PIP
 identity, alpha normalization, actual set mass and purity, including empty sets.
 Convergence and the presence of a credible set are different properties.
 
-## Independent teaching example
+## Independent toy example
 
 <!-- generated:teaching:start -->
-The independent 500-variant teaching fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
+The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
 <!-- generated:teaching:end -->
 
-![Signed association statistics and fitted PIPs for the independent synthetic example, with its two true effect positions marked.](assets/teaching_fit.svg)
+![Signed association statistics and fitted PIPs for the independent synthetic toy example, with its two true effect positions marked.](assets/teaching_fit.svg)
 
-The dashed lines mark the two simulated nonzero effects. This single teaching
+The dashed lines mark the two simulated nonzero effects. This single toy
 example has its own newly executed reference, generation script and packaged
-inputs. See the [tutorial](example.md) and [vector PDF](assets/teaching_fit.pdf).
+inputs. See the [toy example tutorial](example.md) and [vector PDF](assets/teaching_fit.pdf).
 
 ## Reproduce the comparisons
 
 [Retained records](assets/r_comparison_numerical.json) include the real panel
 and a separately identified older synthetic regression panel. The older fixture
 and references remain byte-for-byte regression inputs. The installed package's
-independent teaching example is checked against its separate packaged R reference
+independent toy example is checked against its separate packaged R reference
 by `tests/test_packaged_example.py`.
 
 The [reproducibility guide](reproducibility.md) distinguishes regeneration from

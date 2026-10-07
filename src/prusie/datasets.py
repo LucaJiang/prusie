@@ -1,4 +1,4 @@
-"""Small packaged datasets for offline teaching and installation checks."""
+"""Packaged toy examples for offline use and installation checks."""
 from importlib.resources import files
 import hashlib
 import io
@@ -7,7 +7,7 @@ import numpy as np
 
 
 def load_example():
-    """Load an independent 500-variant synthetic example from package resources.
+    """Load an independent 500-variant synthetic toy example from package resources.
 
     Returns a new dictionary with ``inputs`` (z, signed R, n, variant_ids),
     ``parameters`` (explicit fitting options), and ``metadata`` (generation

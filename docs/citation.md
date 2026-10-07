@@ -19,6 +19,6 @@ prusie is GPL-3.0-or-later. The susieR-derived portions retain BSD-3-Clause
 attribution; the R optimizer adaptation retains GPL-2.0-or-later terms. Full
 notices and texts are in [LICENSE](https://github.com/LucaJiang/prusie/blob/main/LICENSE)
 and [THIRD_PARTY_NOTICES.md](https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md),
-and are included in package artifacts. The independent teaching example has
+and are included in package artifacts. The independent toy example has
 GPL-3.0-or-later terms. The older attributed regression fixture retains its
 original data notices separately.

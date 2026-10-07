@@ -40,7 +40,7 @@ and the environments tested.
 
 ## Quick start
 
-The installed package includes an independent 500-variant synthetic example.
+The installed package includes an independent 500-variant synthetic toy example.
 Run this from any directory, offline:
 
 ```python
@@ -58,7 +58,7 @@ for k, component in enumerate(fit.sets["cs_index"]):
 ```
 
 A PIP summarizes variant inclusion across effects; each credible set belongs to
-an original SuSiE component. The [tutorial](docs/example.md) explains input
+an original SuSiE component. The [toy example tutorial](docs/example.md) explains input
 preparation, convergence, posterior mass, purity and saving results.
 
 ## Documentation

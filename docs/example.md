@@ -1,6 +1,6 @@
-# A 500-variant fine-mapping example
+# A 500-variant fine-mapping toy example
 
-The package contains one independent synthetic teaching dataset: 1000 simulated
+The package contains one independent synthetic toy example: 1000 simulated
 observations and 500 correlated Gaussian predictors. Two predictors have nonzero
 effects. Its fixed seed, generation method, LD, true effects and synthetic IDs
 are packaged with the inputs. No human study data or genome build is implied.
@@ -24,8 +24,8 @@ print("Converged:", fit.converged, "Iterations:", fit.niter)
 The signed statistic is beta/SE from marginal Gaussian regression. R is the
 sample Pearson correlation from those same standardized predictors, in the
 same variant order. The example uses L=5, at most 100 iterations, tolerance
-0.001, coverage 0.95, minimum absolute correlation 0.5, optimized prior variance
-and fixed residual variance 1. These explicit teaching settings are distinct
+0.001, requested credible-set coverage 0.95, minimum absolute correlation 0.5, optimized prior variance
+and fixed residual variance 1. These explicit toy settings are distinct
 from the public RSS defaults in the [API](api.md).
 
 For your own inputs, supply effect-aligned signed z and LD r, plus sample size;
@@ -45,7 +45,7 @@ for k, component in enumerate(fit.sets["cs_index"]):
 ```
 
 <!-- generated:teaching:start -->
-The independent 500-variant teaching fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
+The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
 <!-- generated:teaching:end -->
 
 <!-- generated:teaching-cs:start -->
@@ -89,11 +89,11 @@ metadata = {"prusie_version": prusie.__version__, "parameters": fit.params,
 `tools/generate_example.py` uses NumPy PCG64 seed 20261007, stationary AR(1)
 correlation 0.85, sample-standardized predictors, nonzero coefficients 0.35 and
 −0.30 at zero-based indices 99 and 349, and independent unit-variance Gaussian
-noise. Coordinates are arbitrary teaching positions at 1000-unit intervals.
+noise. Coordinates are arbitrary synthetic positions at 1000-unit intervals.
 `tools/generate_example.py --check` verifies the exact frozen-file SHA256 hashes
 and checks regenerated numerical values within tight floating-point roundoff
 bounds. Compressed archive bytes can vary across numerical libraries; see
-[the regeneration criteria](reproducibility.md#teaching-data-regeneration).
+[the regeneration criteria](reproducibility.md#toy-data-regeneration).
 
 The packaged reference was separately fitted with susieR 0.16.6 using the same
 inputs and options. Input and reference hashes, parameters, convergence and

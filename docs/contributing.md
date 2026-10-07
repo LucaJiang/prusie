@@ -21,7 +21,7 @@ maturin build --release --locked --out dist
 maturin sdist --out dist
 ```
 
-The installed-resource test fits the independent teaching example and compares
+The installed-resource test fits the independent toy example and compares
 it with its packaged R reference. The older attributed fixture supplies seven
 unchanged regression cases, including partial-zero priors, empty credible sets
 and an iteration-limit diagnostic. Native tests exercise exact-column discovery,

@@ -2,7 +2,7 @@
   "package": "prusie",
   "mark": "Su",
   "tagline": "SuSiE fine-mapping",
-  "description": "SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible example, numerical accuracy and performance.",
+  "description": "SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.",
   "section": "Fine-mapping \u00b7 Python + Rust",
   "navigation": [
     [
@@ -17,7 +17,7 @@
           "install.html"
         ],
         [
-          "Tutorial",
+          "Toy example",
           "example.html"
         ]
       ]

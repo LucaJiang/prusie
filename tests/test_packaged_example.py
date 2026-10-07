@@ -1,4 +1,4 @@
-"""Installed-resource teaching example and independent reference checks."""
+"""Installed-resource toy example and independent reference checks."""
 from importlib.resources import files
 import io,json
 import numpy as np

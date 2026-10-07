@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible example, numerical accuracy and performance.">
-<title>A 500-variant fine-mapping example · prusie</title>
+<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
+<title>A 500-variant fine-mapping toy example · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
 <script src="assets/site.js" defer></script>
@@ -15,7 +15,7 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
 <span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html" aria-current="page">Tutorial</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html" aria-current="page">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -28,8 +28,8 @@
 <li><a href="#generation-and-reference">Generation and reference</a></li>
 </ul>
 </div>
-</details><h1 id="a-500-variant-fine-mapping-example">A 500-variant fine-mapping example</h1>
-<p>The package contains one independent synthetic teaching dataset: 1000 simulated
+</details><h1 id="a-500-variant-fine-mapping-toy-example">A 500-variant fine-mapping toy example</h1>
+<p>The package contains one independent synthetic toy example: 1000 simulated
 observations and 500 correlated Gaussian predictors. Two predictors have nonzero
 effects. Its fixed seed, generation method, LD, true effects and synthetic IDs
 are packaged with the inputs. No human study data or genome build is implied.</p>
@@ -49,8 +49,8 @@ The resource loader returns independent arrays owned by the caller.</p>
 <p>The signed statistic is beta/SE from marginal Gaussian regression. R is the
 sample Pearson correlation from those same standardized predictors, in the
 same variant order. The example uses L=5, at most 100 iterations, tolerance
-0.001, coverage 0.95, minimum absolute correlation 0.5, optimized prior variance
-and fixed residual variance 1. These explicit teaching settings are distinct
+0.001, requested credible-set coverage 0.95, minimum absolute correlation 0.5, optimized prior variance
+and fixed residual variance 1. These explicit toy settings are distinct
 from the public RSS defaults in the <a href="api.html">API</a>.</p>
 <p>For your own inputs, supply effect-aligned signed z and LD r, plus sample size;
 r² removes information needed by the model. Read <a href="inputs.html">inputs</a> before
@@ -66,7 +66,7 @@ substituting association or LD files.</p>
 </code></pre></div>
 
 <!-- generated:teaching:start -->
-<p>The independent 500-variant teaching fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
+<p>The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
 <!-- generated:teaching:end -->
 
 <!-- generated:teaching-cs:start -->
@@ -125,11 +125,11 @@ returns a set. <a href="results.html">Results</a> describes the full schema.</p>
 <p><code>tools/generate_example.py</code> uses NumPy PCG64 seed 20261007, stationary AR(1)
 correlation 0.85, sample-standardized predictors, nonzero coefficients 0.35 and
 −0.30 at zero-based indices 99 and 349, and independent unit-variance Gaussian
-noise. Coordinates are arbitrary teaching positions at 1000-unit intervals.
+noise. Coordinates are arbitrary synthetic positions at 1000-unit intervals.
 <code>tools/generate_example.py --check</code> verifies the exact frozen-file SHA256 hashes
 and checks regenerated numerical values within tight floating-point roundoff
 bounds. Compressed archive bytes can vary across numerical libraries; see
-<a href="reproducibility.html#teaching-data-regeneration">the regeneration criteria</a>.</p>
+<a href="reproducibility.html#toy-data-regeneration">the regeneration criteria</a>.</p>
 <p>The packaged reference was separately fitted with susieR 0.16.6 using the same
 inputs and options. Input and reference hashes, parameters, convergence and
 credible sets accompany the resources. The dataset and generation script are

@@ -1,8 +1,8 @@
 # Examples
 
 Run `python examples/quickstart.py` after installation to analyze the complete
-500-SNP D3 teaching dataset and inspect PIPs, credible sets and convergence.
-The files in `data/` are the fixed, licensed synthetic teaching fixture from
+500-SNP D3 toy dataset and inspect PIPs, credible sets and convergence.
+The files in `data/` are the fixed, licensed synthetic toy fixture from
 official coloc. See `data/README.md` for provenance.
 
 Run `python examples/check_example.py --output-dir example-results` to validate

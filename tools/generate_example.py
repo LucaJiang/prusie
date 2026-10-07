@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate one independent Gaussian SuSiE teaching dataset (not a study)."""
+"""Generate one independent Gaussian SuSiE toy example."""
 from __future__ import annotations
 import argparse, hashlib, io, json
 from pathlib import Path
@@ -28,6 +28,7 @@ def generate():
     R=Q/np.sqrt(np.outer(np.diag(Q),np.diag(Q)))
     arrays=dict(z=bhat/shat,R=R,bhat=bhat,shat=shat,true_beta=beta,
                 position=np.arange(1,p+1,dtype=np.int64)*1000)
+    # Preserve original frozen generation labels verbatim; CLI/docs use toy example.
     metadata=dict(name='Independent Gaussian teaching example',synthetic=True,seed=seed,
         generator='NumPy PCG64; tools/generate_example.py',numpy_version=np.__version__,n=n,p=p,
         method='Stationary Gaussian AR(1) predictors, centered and sample-standardized; y=X beta + independent N(0,1) noise; signed z=bhat/shat from marginal t statistics; LD is sample Pearson correlation',
@@ -51,7 +52,7 @@ def validate_arrays(frozen, regenerated):
         if actual.shape!=expected.shape or actual.dtype!=expected.dtype:
             raise ValueError(f'Regenerated shape/dtype changed: {name}')
         if not np.all(np.isfinite(actual)) or not np.all(np.isfinite(expected)):
-            raise ValueError(f'Non-finite teaching data: {name}')
+            raise ValueError(f'Non-finite toy example data: {name}')
         error=float(np.max(np.abs(actual-expected)))
         if name in REGEN_ATOL:
             if error>REGEN_ATOL[name]:
@@ -70,7 +71,7 @@ def check_frozen(directory, arrays, metadata):
     hashes=json.loads(manifest)
     for name,expected in hashes.items():
         if hashlib.sha256((directory/name).read_bytes()).hexdigest()!=expected:
-            raise ValueError(f'Frozen teaching checksum mismatch: {name}')
+            raise ValueError(f'Frozen toy example checksum mismatch: {name}')
     # numpy_version identifies the original generator, not the current host.
     # Require the pinned generation version rather than relabeling provenance.
     expected_metadata=json.loads((directory/'metadata.json').read_text())

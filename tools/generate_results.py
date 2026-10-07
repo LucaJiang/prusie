@@ -134,7 +134,7 @@ def main():
         for ax in axes:
             for pos in [100,350]:ax.axvline(pos,color='#777777',ls='--',lw=.7)
         save(fig,'teaching_fit')
-        info=f"The independent 500-variant teaching fit converged in {t['niter']} iterations and returned {len(t['cs'])} credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was {t['comparison']['errors']['pip']['max_abs_error']:.3g}."
+        info=f"The independent 500-variant toy example fit converged in {t['niter']} iterations and returned {len(t['cs'])} credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was {t['comparison']['errors']['pip']['max_abs_error']:.3g}."
         for page in ['docs/example.md','docs/numerical_accuracy.md']:fragment(page,'teaching',info)
         cs=table(['Original component','Synthetic variants','Returned posterior mass','Minimum |r|'],[[c['component_id_0based'],', '.join(f'syn{j+1:04d}' for j in c['members_0based']),f"{c['coverage']:.6f}",f"{c['purity']['min_abs_corr']:.6f}"] for c in t['cs']]);fragment('docs/example.md','teaching-cs',cs)
     stale=[]

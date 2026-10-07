@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fit a frozen 500-SNP teaching fixture and check it offline against official R.
+"""Fit a frozen 500-SNP synthetic toy fixture and check it offline against official R.
 
 Requires only the installed prusie package and NumPy. This program never
 downloads data, calls R, imports source from this checkout or regenerates goldens.

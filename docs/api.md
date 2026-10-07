@@ -114,8 +114,8 @@ example = prusie.load_example()
 fit = prusie.susie_rss(**example["inputs"], **example["parameters"])
 ```
 
-The returned mapping has `inputs`, `parameters` and `metadata`. Inputs contain
+The synthetic toy example is loaded as a mapping with `inputs`, `parameters` and `metadata`. Inputs contain
 z, R, n and variant IDs; metadata includes the synthetic method, seed, true
 effects and sample size. Input bytes are checked against packaged hashes and
 returned arrays are owned by the caller. The loader works from any directory
-without network access. See the [tutorial](example.md).
+without network access. See the [toy example tutorial](example.md).

@@ -4,7 +4,7 @@ These scripts compare installed prusie with susieR **0.16.6**, commit
 `8e56a8e038e989856d106d9ca5175cc664fea9d2`. Use R with the pinned package and
 jsonlite; retain package source provenance as well as its version.
 
-## Independent teaching example
+## Independent toy example
 
 From the checkout, prepare a Linux high-resolution clock/BLAS probe outside
 measurement and run the comparison:
@@ -17,7 +17,7 @@ python tools/benchmark/compare_r.py --rscript Rscript \
   --blas-probe benchmark-work/blas_probe.so --output-dir benchmark-results
 ```
 
-The default input is the independently generated 500-variant teaching example
+The default input is the independently generated 500-variant toy example
 in `src/prusie/data/teaching`. Set `R_LIBS_USER` for your intended R library.
 The output directory must be new. `--validation-only` skips clocks and memory
 measurement and needs no BLAS probe. `--fixture regression` instead uses the

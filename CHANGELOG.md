@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.2.3rc6 — portable teaching-data validation
+## 0.2.3rc6 — portable toy example validation
 
-- Verify frozen teaching-file hashes separately from numerical regeneration,
+- Verify frozen toy example file hashes separately from numerical regeneration,
   allowing only measured BLAS roundoff instead of requiring compressed bytes
   to match across CPU kernels.
 - Preserve all frozen inputs, reference outputs and statistical tolerances;
@@ -10,7 +10,7 @@
 
 ## 0.2.3rc5 — documentation and packaged example
 
-- Add an independent, deterministic 500-variant synthetic teaching example,
+- Add an independent, deterministic 500-variant synthetic toy example,
   installed-resource loader and separately executed susieR reference.
 - Organize the documentation around the statistical model, numerical accuracy,
   fine-mapping performance, implementation and reproducibility.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Manual comparison of the complete public 500-SNP fixture with pinned R.
 
-The independent teaching example is the default; --fixture regression uses
+The independent toy example is the default; --fixture regression uses
 four older timed fixtures plus three predefined numerical diagnostics.
 Backend processes run sequentially. This is deliberately outside default CI.
 """

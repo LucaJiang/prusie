@@ -109,7 +109,7 @@ The [TSV case table](assets/r_comparison_cases.tsv),
 [summary with operators](assets/r_comparison_summary.json) and
 [numerical diagnostics](assets/r_comparison_numerical.json) contain full
 fine-mapping records. The separate synthetic regression panel retains four
-timed teaching cases and three numerical diagnostics; it does not enter either
+timed toy cases and three numerical diagnostics; it does not enter either
 real-data group. The new [packaged example](example.md) has its own reference
 and is not assigned those older timing values.
 

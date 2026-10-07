@@ -2,7 +2,7 @@
 
 There are two complementary entrances: reproduce the published summaries from
 retained records, or rerun fitting from numerical inputs. The independent
-synthetic example supports both entirely offline after software installation.
+synthetic toy example supports both entirely offline after software installation.
 The real-data panel has public result records and separately obtained inputs.
 
 ## Regenerate tables and figures
@@ -23,7 +23,7 @@ complete fine-mapping stage C, with explicit study groups, case/backend statuses
 retained repeats, numerical diagnostics and measured identities. The generator
 recomputes case medians before paired group statistics, and creates README
 highlights, document tables, SVG/PDF figures and downloadable records. Fixed
-plot seeds make jitter reproducible. The accompanying new teaching-result record
+plot seeds make jitter reproducible. The accompanying toy example result record
 has a separately identified execution and input/reference checksums.
 
 Anonymized real-panel records include source hashes and positional error traces;
@@ -58,9 +58,9 @@ python tools/generate_example.py --check
 
 The frozen-reference check needs no R. To generate inputs again, use
 `python tools/generate_example.py --output-dir NEW_DIRECTORY` with NumPy 2.2.6.
-This is one deterministic teaching example, rather than a simulation study.
+This is one deterministic toy example, rather than a simulation study.
 
-### Teaching data regeneration
+### Toy data regeneration
 
 `--check` independently verifies the original SHA256 manifest and the exact
 frozen input, metadata and license bytes. It then regenerates the data with
@@ -117,7 +117,7 @@ Use the portable case drivers to record the new hashes and full parameters.
 The retained real-panel records identify prusie 0.2.3rc4, its measured native
 hash, Python/NumPy versions and loaded numerical libraries, plus susieR 0.16.6
 commit `8e56a8e038e989856d106d9ca5175cc664fea9d2`, R and BLAS versions.
-The new teaching reference uses the same pinned R source and records its own
+The toy example reference uses the same pinned R source and records its own
 raw-record hash. The original attributed regression inputs and R outputs remain
 separate in `examples/data` with their existing license and checksums.
 
