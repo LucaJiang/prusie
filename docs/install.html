@@ -21,21 +21,12 @@
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="install.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#install-a-prepared-wheel">Install a prepared wheel</a></li>
 <li><a href="#install-from-source">Install from source</a></li>
 <li><a href="#check-your-installation">Check your installation</a></li>
 </ul>
 </div>
 </details><h1 id="installation">Installation</h1>
-<h2 id="install-a-prepared-wheel">Install a prepared wheel</h2>
-<p>For a locally supplied Linux x86-64, CPython 3.12 wheel:</p>
-<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python -m pip install ./prusie-0.2.3rc4-cp312-cp312-manylinux_2_34_x86_64.whl
-</code></pre>
-<p>The wheel contains the Python interface and compiled Rust extension. This
-installation needs Python and NumPy, without Rust, Cargo or a compiler.
-The platform tag specifies glibc 2.34 or later; use the asset matching your
-Python and platform. Public wheel downloads are not yet available.
-Source is available from the repository below.</p>
+<p>Install this release candidate from source.</p>
 <h2 id="install-from-source">Install from source</h2>
 <p>The package declares Python ≥3.10 and NumPy ≥1.26,&lt;3. Executed installation
 checks cover CPython 3.12 on Linux x86-64 with NumPy 2.2.6. Build checks for

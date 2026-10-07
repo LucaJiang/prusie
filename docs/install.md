@@ -1,18 +1,6 @@
 # Installation
 
-## Install a prepared wheel
-
-For a locally supplied Linux x86-64, CPython 3.12 wheel:
-
-```sh
-python -m pip install ./prusie-0.2.3rc4-cp312-cp312-manylinux_2_34_x86_64.whl
-```
-
-The wheel contains the Python interface and compiled Rust extension. This
-installation needs Python and NumPy, without Rust, Cargo or a compiler.
-The platform tag specifies glibc 2.34 or later; use the asset matching your
-Python and platform. Public wheel downloads are not yet available.
-Source is available from the repository below.
+Install this release candidate from source.
 
 ## Install from source
 

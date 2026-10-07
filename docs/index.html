@@ -106,13 +106,8 @@ linkage disequilibrium (LD). Obtain variant posterior inclusion probabilities
 <p><img alt="Runtime and peak process RSS ratios for every measured real case, including slower and higher-memory cases." src="assets/r_comparison.svg" /></p>
 <p>Peak process RSS includes imports, inputs and full results, measured in a separate fresh process. <a href="performance.html">Methods, all cases, repeat variability and public-fixture results</a> give the comparison scope.</p>
 <h2 id="installation">Installation</h2>
-<p>A locally supplied CPython 3.12 Linux x86-64 wheel can be installed directly,
-without Rust on the target system:</p>
-<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python -m pip install ./prusie-0.2.3rc4-cp312-cp312-manylinux_2_34_x86_64.whl
-</code></pre>
-<p>Public wheel downloads are not yet available. To install from the source
-repository, use Python ≥3.10, the pinned Rust toolchain, a C linker and Python
-development headers:</p>
+<p>Install this release candidate from source with Python ≥3.10, the pinned Rust
+toolchain, a C linker and Python development headers:</p>
 <pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">git clone https://github.com/LucaJiang/prusie.git
 cd prusie
 python -m venv .venv

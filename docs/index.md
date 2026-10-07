@@ -41,16 +41,8 @@ Peak process RSS includes imports, inputs and full results, measured in a separa
 
 ## Installation
 
-A locally supplied CPython 3.12 Linux x86-64 wheel can be installed directly,
-without Rust on the target system:
-
-```sh
-python -m pip install ./prusie-0.2.3rc4-cp312-cp312-manylinux_2_34_x86_64.whl
-```
-
-Public wheel downloads are not yet available. To install from the source
-repository, use Python ≥3.10, the pinned Rust toolchain, a C linker and Python
-development headers:
+Install this release candidate from source with Python ≥3.10, the pinned Rust
+toolchain, a C linker and Python development headers:
 
 ```sh
 git clone https://github.com/LucaJiang/prusie.git
