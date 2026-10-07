@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible example, numerical accuracy and performance.">
+<title>Numerical accuracy · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/highlight.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<span class="version">0.2.3rc5 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Tutorial</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html" aria-current="page">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="numerical_accuracy.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#variant-inclusion-probabilities">Variant inclusion probabilities</a></li>
+<li><a href="#posterior-arrays-bayes-factors-and-objective">Posterior arrays, Bayes factors and objective</a></li>
+<li><a href="#credible-sets">Credible sets</a></li>
+<li><a href="#independent-teaching-example">Independent teaching example</a></li>
+<li><a href="#reproduce-the-comparisons">Reproduce the comparisons</a></li>
+</ul>
+</div>
+</details><h1 id="numerical-accuracy">Numerical accuracy</h1>
+<p>The real-data comparison uses prusie 0.2.3rc4 and susieR 0.16.6 at commit
+<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>. It reanalyzes saved full fits from
+6 October 2026 using the matched inputs and parameters described in
+<a href="performance.html#methods">performance methods</a>. Inference source has not changed.</p>
+<h2 id="variant-inclusion-probabilities">Variant inclusion probabilities</h2>
+<!-- generated:maxima:start -->
+
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Analysis</th>
+<th>Analyses</th>
+<th>Variants per analysis</th>
+<th>Maximum absolute PIP difference</th>
+<th>Trace: case / variant index (zero-based)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GWAS</td>
+<td>100</td>
+<td>103–4162</td>
+<td>9.14e-09</td>
+<td>region16/gwas / 49</td>
+</tr>
+<tr>
+<td>eQTL</td>
+<td>100</td>
+<td>103–4162</td>
+<td>1.22e-08</td>
+<td>region31/eqtl / 238</td>
+</tr>
+</tbody>
+</table></div>
+<p>Across the evaluated GWAS analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 9.1396109e-09. Across the evaluated eQTL analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 1.2204966e-08.</p>
+<!-- generated:maxima:end -->
+
+<p>The numerical criterion is absolute PIP difference ≤10⁻⁵ with zero relative
+tolerance, together with input/model/probability validity. The table reports
+observed elementwise maxima, rather than that threshold. Each maximum is
+traceable to a zero-based variant index, both fitted values and hashes of the
+two raw fit records in the <a href="assets/r_comparison_summary.json">machine summary</a>.</p>
+<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Each analysis's maximum absolute PIP difference against its variant count, separated into GWAS and eQTL." src="assets/pip_accuracy.svg" /></p></div>
+<p>The vertical axis is symmetric-log with a linear interval below 10⁻¹⁴; exact
+zeros are retained at zero. <a href="assets/pip_accuracy.pdf">Vector PDF</a>.</p>
+<!-- generated:limits:start -->
+<p>region25/gwas: prusie 100 iterations, susieR 100 iterations, both unconverged. Both calls completed and their outputs enter the numerical maxima and timing summaries.</p>
+<!-- generated:limits:end -->
+
+<h2 id="posterior-arrays-bayes-factors-and-objective">Posterior arrays, Bayes factors and objective</h2>
+<!-- generated:errors:start -->
+
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Quantity</th>
+<th>Scale / units</th>
+<th>GWAS maximum absolute difference</th>
+<th>eQTL maximum absolute difference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>alpha</td>
+<td>Probability</td>
+<td>9.14e-09</td>
+<td>1.22e-08</td>
+</tr>
+<tr>
+<td>mu</td>
+<td>Standardized effect</td>
+<td>5.26e-10</td>
+<td>2.34e-08</td>
+</tr>
+<tr>
+<td>mu2</td>
+<td>Squared standardized effect</td>
+<td>1.39e-10</td>
+<td>3.7e-09</td>
+</tr>
+<tr>
+<td>lbf_variable</td>
+<td>Natural-log BF</td>
+<td>2.82e-05</td>
+<td>3.39e-07</td>
+</tr>
+<tr>
+<td>lbf</td>
+<td>Natural-log BF</td>
+<td>2.82e-05</td>
+<td>2.74e-07</td>
+</tr>
+<tr>
+<td>V</td>
+<td>Squared effect</td>
+<td>4.08e-06</td>
+<td>1.49e-07</td>
+</tr>
+<tr>
+<td>sigma2</td>
+<td>Phenotype variance</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>elbo</td>
+<td>Natural-log objective</td>
+<td>1e-05</td>
+<td>3.92e-08</td>
+</tr>
+<tr>
+<td>KL</td>
+<td>Natural-log divergence</td>
+<td>7.01e-08</td>
+<td>1.17e-07</td>
+</tr>
+</tbody>
+</table></div>
+<p>Maxima are computed elementwise across every valid analysis, including iteration-limit outputs. The machine summary includes the case, array index, both values at the maximum and reference magnitude for each field. ELBO traces are compared only with matching shapes; per-case records retain any shape mismatch.</p>
+<!-- generated:errors:end -->
+
+<p>PIP and alpha differences have probability units. Conditional effects are on
+the fitted standardized predictor/phenotype scale for these z-input analyses;
+mu2 is a second moment, not a variance. Component and variant log Bayes factors
+use natural logarithms. Their numerical differences are recorded separately
+from PIP. ELBO is the iteration objective before final low-variance trimming;
+V, moments, Bayes factors and KL follow the finalization semantics described in
+<a href="results.html">results</a>.</p>
+<h2 id="credible-sets">Credible sets</h2>
+<!-- generated:cs:start -->
+
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Analysis</th>
+<th>prusie sets</th>
+<th>susieR sets</th>
+<th>Component/member differences</th>
+<th>Maximum mass difference</th>
+<th>Maximum purity difference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GWAS</td>
+<td>154</td>
+<td>154</td>
+<td>0</td>
+<td>2.14e-09</td>
+<td>8.88e-16</td>
+</tr>
+<tr>
+<td>eQTL</td>
+<td>97</td>
+<td>97</td>
+<td>0</td>
+<td>2.59e-09</td>
+<td>8.88e-16</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sets are matched by original component ID and compared as member sets; returned ordering does not affect the comparison. All actual masses, purity statistics and zero-based members are retained.</p>
+<!-- generated:cs:end -->
+
+<p>The requested mass is 0.95. Returned mass is the sum of the selected alpha
+entries in the original component; purity uses every selected pair's absolute
+correlation. The retained numerical records include independent checks of PIP
+identity, alpha normalization, actual set mass and purity, including empty sets.
+Convergence and the presence of a credible set are different properties.</p>
+<h2 id="independent-teaching-example">Independent teaching example</h2>
+<!-- generated:teaching:start -->
+<p>The independent 500-variant teaching fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
+<!-- generated:teaching:end -->
+
+<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Signed association statistics and fitted PIPs for the independent synthetic example, with its two true effect positions marked." src="assets/teaching_fit.svg" /></p></div>
+<p>The dashed lines mark the two simulated nonzero effects. This single teaching
+example has its own newly executed reference, generation script and packaged
+inputs. See the <a href="example.html">tutorial</a> and <a href="assets/teaching_fit.pdf">vector PDF</a>.</p>
+<h2 id="reproduce-the-comparisons">Reproduce the comparisons</h2>
+<p><a href="assets/r_comparison_numerical.json">Retained records</a> include the real panel
+and a separately identified older synthetic regression panel. The older fixture
+and references remain byte-for-byte regression inputs. The installed package's
+independent teaching example is checked against its separate packaged R reference
+by <code>tests/test_packaged_example.py</code>.</p>
+<p>The <a href="reproducibility.html">reproducibility guide</a> distinguishes regeneration from
+saved records, offline frozen-reference checks, and live-R fitting.
+<code>tools/benchmark/compare_fits.py</code> compares original component IDs and retains all
+field diagnostics. Existing frozen references and tolerances are unchanged.</p></article>
+<footer><p>prusie 0.2.3rc5 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+</main>
+</div>
+</body>
+</html>

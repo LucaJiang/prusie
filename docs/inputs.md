@@ -44,9 +44,8 @@ None is interchangeable with another.
 Keep residual variance fixed for external reference LD unless the model and
 data justify estimation. The RSS default does this. Sufficient-statistic
 residual-variance estimation defaults to enabled. Public RSS defaults are max_iter=50 and tol=.0001; validation settings
-are recorded separately in the [agreement report](r_agreement.md). A nonconverged result remains
+are recorded separately in the [numerical accuracy](numerical_accuracy.md). A nonconverged result remains
 nonconverged and emits a warning; the library does not silently refit it.
 
 A dense float64 LD matrix uses 8m² bytes for m variants, before fitting workspace
-and results. Reuse each completed trait/gene fit for downstream pairing instead
-of fitting again for each partner; see the [integration example](example.md#reuse-fits-for-colocalisation).
+and results. See [implementation](implementation.md) for memory layouts and working arrays.

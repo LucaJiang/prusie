@@ -1,81 +1,72 @@
 # Contributing
 
-Start with the checkout, environment and compiler requirements in
-[installation](install.md). Keep inference changes separate from documentation
-changes, preserve sequential component updates, and validate affected model paths.
+Use the build requirements in [installation](install.md). Changes to inference
+should retain sequential component updates and verify every affected model path
+against independently identified references. Keep numerical tolerances and
+reference changes explicit.
 
 ## Tests and packages
 
 ```sh
 python -m pip install -c requirements-dev.lock '.[test]' maturin==1.9.6
+python -m pip install -r tools/docs-requirements.txt -r tools/results-requirements.txt
 python -m pytest tests
 PRUSIE_SER_MATH=scalar python -m pytest tests
 cargo test --locked --lib --no-default-features -- --test-threads=1
 cargo test --locked --lib --no-default-features --features vector-math -- --test-threads=1
 python examples/quickstart.py
-python examples/check_example.py --output-dir example-results
+python examples/check_example.py --output-dir regression-results
+python tools/check_checkout.py --output-dir checkout-check
 maturin build --release --locked --out dist
 maturin sdist --out dist
 ```
 
-The build writes local artifacts into `dist/`; install your wheel by its actual
-filename. A wheel contains the library, while the source distribution includes
-repository examples. These commands do not publish artifacts. Native tests may
-need the Python interpreter library on the linker search path. Runtime CPU
-feature checks may explicitly skip a path when the feature is absent.
+The installed-resource test fits the independent teaching example and compares
+it with its packaged R reference. The older attributed fixture supplies seven
+unchanged regression cases, including partial-zero priors, empty credible sets
+and an iteration-limit diagnostic. Native tests exercise exact-column discovery,
+SER workspaces, array boundaries, scalar/vector math and supported variance paths.
 
-`tests/test_offline_example.py` covers all seven fixed cases without R, corrupted
-input/reference checksums, a rehashed numerical mismatch and a version-only
-change. A changed label alone must not cause numerical failure.
-`python tools/check_checkout.py --output-dir .ci-check` copies source into a new
-directory and checks installed-package examples and docs there with R absent
-from the executable path; the output directory must be new. This reuses the
-installed environment rather than testing a fresh installation.
+`tools/check_artifacts.py --wheel FILE --sdist FILE --work-dir NEW_DIRECTORY`
+inspects license/data payloads, installs binary wheels in clean environments
+without Rust on PATH, runs examples from an independent directory, rebuilds the
+sdist and checks the rebuilt wheel. On Linux it also records auditwheel output.
+The CI workflow runs these checks; actual workflow status is separate from local
+verification.
 
-Each proposed optimization must improve median complete-call time for more than
-half of a fixed, outcome-independent applicable panel against its appropriate
-parent. Publish wins, ties, regressions and repeat variability. Correctness,
-memory savings and aggregate time alone do not establish that runtime gate.
-See [performance](performance.md) for the existing measurements and limits.
-
-## Documentation
-
-Markdown in `docs/` is the source for the committed static HTML. From the
-repository root:
+## Documentation and figures
 
 ```sh
-python -m pip install -r tools/docs-requirements.txt
+python tools/generate_example.py --check
+python tools/generate_results.py
+python tools/generate_results.py --check
 python tools/build_docs.py
 python tools/build_docs.py --check
 python tools/check_docs.py
 python -m http.server 8000 --bind 127.0.0.1 --directory docs
 ```
 
-Open `http://127.0.0.1:8000/`, or open `docs/index.html` directly. Navigation,
-code and tables work without JavaScript; Tab reaches the skip link and scrollable
-content. Links are relative so the site also works below a repository subpath.
-`--check` detects stale HTML; the link checker validates local pages, anchors,
-assets and metadata. Review desktop and mobile rendering after layout changes.
-When merging a page, remove its obsolete HTML and update inbound links too.
+Markdown is the source for generated HTML. Pinned Markdown and Pygments produce
+local token-level highlighting with language guessing disabled. Code copying
+returns the original code, without line numbers. Mathematical notation is static
+Unicode and remains readable offline. Review desktop and mobile rendering after
+layout changes. Check the result generator before the HTML generator so tables,
+figures and rendered pages stay synchronized.
 
-The published site is [prusie documentation](https://lucajiang.github.io/prusie/).
-An owner can configure it under **Settings → Pages → Build and deployment**:
-**Deploy from a branch → main → /docs → Save**. `docs/.nojekyll` serves the
-prebuilt files. Committing source and deploying Pages are separate operations;
-check deployment status after publishing changes.
+`docs/assets/benchmark_records.json` is the normalized retained-measurement
+source. The generator produces both README and Overview highlights, detailed
+tables, machine summaries and SVG/PDF figures. `--check` detects stale outputs.
+[Reproducibility](reproducibility.md) describes what can be regenerated from
+public records and which fits require separately obtained inputs.
 
-## Scientific checks and provenance
+## Scientific references and attribution
 
-The [R agreement report](r_agreement.md) identifies the measured versions,
-parameters, tolerances, corrected behavior and limits. Keep official-R outputs,
-mathematical expectations and native regression snapshots distinct. Never
-refresh frozen outputs merely to make a failed check pass. Reference regeneration
-uses a separate directory and the pinned recipe in
-[the data README](https://github.com/LucaJiang/prusie/blob/main/examples/data/README.md).
-See [source mapping](reference_mapping.md) for implementation responsibilities.
+Use [source mapping](reference_mapping.md) and
+[implementation](implementation.md) when changing a computational path. Preserve
+independent frozen references; regenerate a new reference into a separate
+location and explain its source. Whole-call comparisons and isolated mechanism
+measurements answer different questions.
 
-Retain GPL and third-party notices with code and data. Cite the statistical
-methods as well as the software version. Tests use redistributable analytical
-inputs and the fixed synthetic teaching fixture; they do not need private study
-data or an R installation. The workflow in `.github/workflows/ci.yml` runs local
-build/test/doc commands on GitHub; consult the actual workflow run for CI status.
+Keep the GPL license, BSD susieR notices, R optimizer attribution and dataset
+licenses in both source and binary distributions. Cite the statistical methods
+and identify the software version as described in [citation](citation.md).

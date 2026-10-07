@@ -8,3 +8,14 @@
 
 td,th{overflow-wrap:normal}.table-wrap:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
 @media(max-width:640px){.table-wrap table{min-width:38rem}.table-wrap th:first-child,.table-wrap td:first-child{white-space:nowrap}}
+
+/* Build-time token colors come from the local Pygments stylesheet. */
+.highlight { background:#f7f9fc; border-radius:9px; min-width:0; }
+.highlight pre { background:#f7f9fc; color:#172b40; border:1px solid #d8e1e9; font-size:.85rem; line-height:1.6; }
+.highlight pre code { color:inherit; background:transparent; }
+.highlight .copy-code { background:#fff; color:#263d55; border-color:#bac9d7; }
+@media(max-width:640px){.highlight pre{font-size:.76rem}.highlight pre code{font-size:inherit}}
+
+.figure-wrap{max-width:100%;overflow-x:auto}.figure-wrap:focus-visible{outline:2px solid var(--accent)}
+@media(max-width:640px){.figure-wrap img{max-width:none;width:690px;height:auto}}
+@media(max-width:640px){.figure-wrap::after{content:"Scroll horizontally to view the full figure →";display:block;position:sticky;left:0;width:100%;font-size:.72rem;color:var(--muted);padding:0 0 8px}.figure-wrap:focus-visible,.table-wrap:focus-visible{outline:2px solid var(--accent);outline-offset:2px}}

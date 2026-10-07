@@ -1,8 +1,8 @@
 {
   "package": "prusie",
   "mark": "Su",
-  "tagline": "Native summary fine-mapping",
-  "description": "SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.",
+  "tagline": "SuSiE fine-mapping",
+  "description": "SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible example, numerical accuracy and performance.",
   "section": "Fine-mapping \u00b7 Python + Rust",
   "navigation": [
     [
@@ -17,7 +17,7 @@
           "install.html"
         ],
         [
-          "Offline example",
+          "Tutorial",
           "example.html"
         ]
       ]
@@ -36,6 +36,10 @@
         [
           "Results",
           "results.html"
+        ],
+        [
+          "Reproducibility",
+          "reproducibility.html"
         ]
       ]
     ],
@@ -43,20 +47,37 @@
       "Understand and contribute",
       [
         [
-          "R agreement",
-          "r_agreement.html"
+          "Statistical model",
+          "model.html"
         ],
         [
-          "Scope and limitations",
-          "compatibility.html"
+          "Numerical accuracy",
+          "numerical_accuracy.html"
         ],
         [
           "Performance",
           "performance.html"
         ],
         [
+          "Implementation and optimizations",
+          "implementation.html"
+        ],
+        [
+          "Model support",
+          "compatibility.html"
+        ],
+        [
           "Contributing",
           "contributing.html"
+        ]
+      ]
+    ],
+    [
+      "Project",
+      [
+        [
+          "Citation and license",
+          "citation.html"
         ],
         [
           "GitHub",

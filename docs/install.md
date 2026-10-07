@@ -1,16 +1,13 @@
 # Installation
 
-Install this release candidate from source.
+Install prusie from source with Python ≥3.10. NumPy ≥1.26,<3 is the only Python
+runtime dependency; fitting does not invoke R.
 
-## Install from source
+## Build from source
 
-The package declares Python ≥3.10 and NumPy ≥1.26,<3. Executed installation
-checks cover CPython 3.12 on Linux x86-64 with NumPy 2.2.6. Build checks for
-other Python versions and platforms are separate from this evidence.
-
-Source builds need the Rust toolchain pinned in `rust-toolchain.toml`
-(currently 1.98.1), a C linker and Python development headers. The build uses
-maturin 1.9.6 and the native dependency versions in `Cargo.lock`.
+Source builds need the Rust toolchain pinned in `rust-toolchain.toml` (1.98.1),
+a C linker and Python development headers. The build uses maturin 1.9.6 and
+locked Cargo dependencies.
 
 ```sh
 git clone https://github.com/LucaJiang/prusie.git
@@ -18,23 +15,37 @@ cd prusie
 python -m venv .venv
 . .venv/bin/activate
 python -m pip install .
-python examples/quickstart.py
 ```
 
-pip and Cargo need cached dependencies or network access during installation.
-NumPy is the only required Python runtime dependency. An installed package
-runs without R; optional glibc vector math uses runtime CPU checks and a scalar
-fallback. No BLAS development library is required for the native extension.
+pip and Cargo need network access or cached build dependencies. Install the
+pinned Rust toolchain using your usual Rust installation before building.
+No BLAS development library is required by the extension. Runtime CPU checks
+select optional system vector math where available, with a scalar fallback.
 
-## Check your installation
+## Use an available wheel
 
-Keep the repository checkout for the bundled examples. After installation,
-the following check runs offline using all seven fixed examples:
+When you have a wheel built for your Python and platform, install its actual
+file with `python -m pip install PATH_TO_WHEEL`. A wheel installation requires
+neither Cargo nor a compiler. Locally prepared artifacts are distinct from a
+published binary release; the source route above is the documented distribution
+route.
 
-```sh
-python examples/check_example.py --output-dir example-results
+Executed package checks cover CPython 3.12 on GNU Linux x86-64 with NumPy 2.2.6.
+Wheel filenames specify their Python ABI and minimum manylinux platform tag.
+See [contributing](contributing.md) for reproducible builds and payload checks.
+
+## Run the installed example
+
+This works from any directory after installation:
+
+```python
+import prusie
+
+example = prusie.load_example()
+fit = prusie.susie_rss(**example["inputs"], **example["parameters"])
+print(fit.converged, fit.niter, fit.pip.max())
 ```
 
-Read the [analysis example](example.md) and [input guide](inputs.md) before
-fitting your own data. The [contributor guide](contributing.md) covers source
-builds, tests and locally prepared distribution artifacts.
+The package contains the inputs, metadata and frozen reference for this example.
+No source checkout, R installation or network is needed to load and fit it.
+Continue with the [tutorial](example.md).

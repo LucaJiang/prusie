@@ -1,138 +1,100 @@
-# Analyze the 500-SNP example
+# A 500-variant fine-mapping example
 
-Fit and interpret the complete **500-SNP synthetic teaching datasets** D1–D4
-bundled from official coloc. These fixed examples preserve the stored variable
-order and include single- and multiple-signal cases.
+The package contains one independent synthetic teaching dataset: 1000 simulated
+observations and 500 correlated Gaussian predictors. Two predictors have nonzero
+effects. Its fixed seed, generation method, LD, true effects and synthetic IDs
+are packaged with the inputs. No human study data or genome build is implied.
 
-## Fit a region
+## Load inputs and fit
 
-After [installation](install.md), run this from the repository root. All 500
-variables are fitted in their stored order.
+After [installation](install.md), the example works offline from any directory.
+The resource loader returns independent arrays owned by the caller.
+
+```python
+import numpy as np
+import prusie
+
+example = prusie.load_example()
+inputs = example["inputs"]
+print(inputs["R"].shape, inputs["n"])
+fit = prusie.susie_rss(**inputs, **example["parameters"])
+print("Converged:", fit.converged, "Iterations:", fit.niter)
+```
+
+The signed statistic is beta/SE from marginal Gaussian regression. R is the
+sample Pearson correlation from those same standardized predictors, in the
+same variant order. The example uses L=5, at most 100 iterations, tolerance
+0.001, coverage 0.95, minimum absolute correlation 0.5, optimized prior variance
+and fixed residual variance 1. These explicit teaching settings are distinct
+from the public RSS defaults in the [API](api.md).
+
+For your own inputs, supply effect-aligned signed z and LD r, plus sample size;
+r² removes information needed by the model. Read [inputs](inputs.md) before
+substituting association or LD files.
+
+## Read the posterior
+
+```python
+lead = int(np.argmax(fit.pip))
+print(f"{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.3f}")
+for k, component in enumerate(fit.sets["cs_index"]):
+    members = fit.variant_ids[fit.sets["cs"][k]].tolist()
+    print("Component:", int(component), "Variants:", members,
+          "Posterior mass:", float(fit.sets["coverage"][k]),
+          "Minimum |r|:", float(fit.sets["purity"]["min_abs_corr"][k]))
+```
+
+<!-- generated:teaching:start -->
+The independent 500-variant teaching fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
+<!-- generated:teaching:end -->
+
+<!-- generated:teaching-cs:start -->
+
+| Original component | Synthetic variants | Returned posterior mass | Minimum &#124;r&#124; |
+| --- | --- | --- | --- |
+| 0 | syn0100 | 0.969674 | 1.000000 |
+| 1 | syn0350 | 0.999937 | 1.000000 |
+<!-- generated:teaching-cs:end -->
+
+![Signed z and fitted PIPs, with the two synthetic true effects marked.](assets/teaching_fit.svg)
+
+A PIP summarizes a variant's inclusion across active components. Credible-set
+mass belongs to one original component, and may exceed requested coverage.
+The component IDs need not be consecutive. An empty set collection leaves
+PIPs available; a nonconverged fit needs further investigation even if it
+returns a set. [Results](results.md) describes the full schema.
+
+## Save arrays and metadata
 
 ```python
 import json
 from pathlib import Path
-import numpy as np
-import prusie
 
-data = Path("examples/data")
-metadata = json.loads((data / "metadata.json").read_text())["D3"]
-with np.load(data / "inputs.npz", allow_pickle=False) as arrays:
-    z = arrays["D3_beta"] / np.sqrt(arrays["D3_varbeta"])
-    R = arrays["D3_LD"]
-
-fit = prusie.susie_rss(
-    z=z, R=R, n=metadata["N"], variant_ids=metadata["snp"],
-    L=10, max_iter=100, tol=0.001, estimate_residual_variance=False,
-    coverage=0.95, min_abs_corr=0.5, n_purity=500,
-)
-lead = int(np.argmax(fit.pip))
-print(f"{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.3f}")
-print("Converged:", fit.converged, "Iterations:", fit.niter)
-for k, component in enumerate(fit.sets["cs_index"]):
-    members = fit.variant_ids[fit.sets["cs"][k]].tolist()
-    print("Component:", int(component), "SNPs:", members,
-          "Posterior mass:", round(float(fit.sets["coverage"][k]), 3))
+out = Path("fine-mapping-result")
+out.mkdir(exist_ok=True)
+np.savez_compressed(out / "posterior.npz", pip=fit.pip, alpha=fit.alpha,
+                    mu=fit.mu, mu2=fit.mu2, lbf_variable=fit.lbf_variable,
+                    V=fit.V, elbo=fit.elbo, variant_ids=fit.variant_ids)
+sets = [{"component": int(c), "members": fit.sets["cs"][k].tolist(),
+         "posterior_mass": float(fit.sets["coverage"][k])}
+        for k, c in enumerate(fit.sets["cs_index"])]
+metadata = {"prusie_version": prusie.__version__, "parameters": fit.params,
+            "converged": fit.converged, "niter": fit.niter, "sets": sets,
+            "generation": example["metadata"]}
+(out / "metadata.json").write_text(json.dumps(metadata, indent=2))
 ```
 
-The D3 fit returns two credible sets and converges in eight iterations in the
-recorded environment. The leading PIP describes marginal variant inclusion;
-`fit.sets["coverage"]` is the posterior mass of each set within its original
-component. Read `fit.sets["purity"]` alongside that mass and the convergence flag.
+## Generation and reference
 
-## Reuse fits for colocalisation
+`tools/generate_example.py` uses NumPy PCG64 seed 20261007, stationary AR(1)
+correlation 0.85, sample-standardized predictors, nonzero coefficients 0.35 and
+−0.30 at zero-based indices 99 and 349, and independent unit-variance Gaussian
+noise. Coordinates are arbitrary teaching positions at 1000-unit intervals.
+`tools/generate_example.py --check` reproduces the packaged input bytes with
+the pinned generation dependencies.
 
-With [pycoloc](https://github.com/LucaJiang/pycoloc) installed, the following
-continues the example with the stored D4 dataset. Each trait is fitted once;
-`coloc_susie` reuses component Bayes factors and retained set identities.
-
-```python
-from pycoloc import coloc_susie
-
-metadata4 = json.loads((data / "metadata.json").read_text())["D4"]
-with np.load(data / "inputs.npz", allow_pickle=False) as arrays:
-    z4 = arrays["D4_beta"] / np.sqrt(arrays["D4_varbeta"])
-    R4 = arrays["D4_LD"]
-fit4 = prusie.susie_rss(
-    z=z4, R=R4, n=metadata4["N"], variant_ids=metadata4["snp"],
-    L=10, max_iter=100, tol=0.001, estimate_residual_variance=False,
-    coverage=0.95, min_abs_corr=0.5, n_purity=500,
-)
-paired = coloc_susie(fit, fit4)
-print(paired.status)
-print(paired.summary[["idx1", "idx2", "PP.H4.abf"]])
-```
-
-`idx1` and `idx2` retain original zero-based component IDs. Each PP.H4 is a
-signal-pair posterior, not a region-wide posterior. The associated `SNP.PP.H4`
-values are conditional on H4 and differ in meaning from fine-mapping PIP.
-No-CS and inadequate-overlap statuses need inspection before interpretation.
-Keep the original SNP/effect-allele alignment and full Bayes-factor arrays when
-saving fits for reuse. See [results](results.md) for portable storage.
-
-## Validate the installation
-
-From the checkout, run:
-
-```sh
-python examples/check_example.py --output-dir example-results
-```
-
-The check runs offline after installation and needs only prusie and NumPy.
-It uses all seven fixed cases and checks source/reference hashes, SNP order,
-model parameters, PIP validity, actual CS mass and complete-pair purity.
-`example-results/report.json` records the installed version, warnings and
-per-field differences; `actual_native.npz` contains the computed arrays.
-The input and reference files stay unchanged.
-
-PIP acceptance is absolute error ≤1e-5, rtol=0. Posterior and coverage
-identities have a separate fixed 1e-10 arithmetic tolerance. A changed
-version string is recorded; an invalid input/probability structure or failed
-PIP comparison produces FAIL and a nonzero exit. Component BFs, iterations
-and credible sets retain their own diagnostics in the [agreement report](r_agreement.md).
-
-| Case | Purpose | Change from primary settings |
-| --- | --- | --- |
-| D1 | Single-signal teaching data | None |
-| D2 | Second single-signal dataset | None |
-| D3 | Two stored causal variables | None |
-| D4 | Further single-signal dataset | None |
-| D1_partial_zero | Prior-weight diagnostic | Every seventh one-based SNP weight is zero |
-| D3_strict_purity | No returned credible set | `min_abs_corr=1` |
-| D3_one_iteration | Nonconvergence diagnostic | `max_iter=1` |
-
-All primary cases use signed z = beta / √varbeta, stored signed LD r,
-n=1000, L=10, max_iter=100, tol=0.001, coverage=0.95 and min_abs_corr=0.5.
-`examples/data/parameters.json` records all arguments, including complete
-matrix purity, fixed residual variance and estimated prior variance. The
-RSS call uses the known-n adjustment and no supplied phenotype variance.
-
-## Interpret the diagnostics
-
-A credible set's coverage is its returned posterior mass in the original
-component; it is distinct from frequentist repeated-sampling coverage.
-A no-CS fit retains PIPs but has empty member/coverage/purity collections.
-The one-iteration case remains nonconverged and is excluded from primary
-scientific-fit summaries.
-
-The pinned reference adds √ε before logging active-component prior weights.
-A supplied zero weight therefore permits a small posterior contribution; final
-low-variance trimming restores the exact normalized prior.
-
-## Data and reference provenance
-
-The fixture preserves all 500 variables in stored upstream D1–D4. Its synthetic
-IDs and indices carry no biological build, ancestry, allele or coordinate
-annotations. Full metadata, data licensing and regeneration commands are in
-the [data README](https://github.com/LucaJiang/prusie/blob/main/examples/data/README.md).
-
-`r_fits.npz` and `r_fits.json` are official susieR 0.16.6 reference outputs.
-`expected_native.*` separately records an earlier native execution; it is an
-additional reproducibility check. Independent probability and CS identities
-use the returned alpha and signed LD, without calling production summary
-helpers. Source/archive hashes and R dependencies are in `reference.lock.json`
-and `reference_environment.json`. Regeneration uses the supplied export and
-conversion scripts in a new directory, preserving shipped expectations.
-
-Read [inputs](inputs.md) and [supported scope](compatibility.md) before
-substituting your own aligned data.
+The packaged reference was separately fitted with susieR 0.16.6 using the same
+inputs and options. Input and reference hashes, parameters, convergence and
+credible sets accompany the resources. The dataset and generation script are
+GPL-3.0-or-later. [Reproducibility](reproducibility.md) provides offline and
+live-R commands; [numerical accuracy](numerical_accuracy.md) gives measured errors.

@@ -18,11 +18,13 @@ jobs:
           python-version: '3.12'
       - run: rustup show
       - run: python -m pip install -c requirements-dev.lock maturin==1.9.6 '.[test]'
-      - run: python -m pip install -r tools/docs-requirements.txt
+      - run: python -m pip install -r tools/docs-requirements.txt -r tools/results-requirements.txt
       - run: python -m pytest tests
       - run: PRUSIE_SER_MATH=scalar python -m pytest tests
       - run: cargo test --locked --lib --no-default-features -- --test-threads=1
       - run: cargo test --locked --lib --no-default-features --features vector-math -- --test-threads=1
+      - run: python tools/generate_example.py --check
+      - run: python tools/generate_results.py --check
       - run: python examples/quickstart.py
       - run: python tools/check_checkout.py --output-dir .ci-check
       - run: maturin build --release --locked --out dist

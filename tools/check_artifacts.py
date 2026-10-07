@@ -31,7 +31,10 @@ def inspect_wheel(path):
         dist = next(n.rsplit('/', 1)[0] for n in names if n.endswith('.dist-info/WHEEL'))
         metadata = archive.read(dist + '/METADATA').decode()
         wheel = archive.read(dist + '/WHEEL').decode()
-        required = ['prusie/__init__.py', 'prusie/api.py', 'prusie/result.py',
+        required = ['prusie/datasets.py', 'prusie/data/teaching/inputs.npz',
+                    'prusie/data/teaching/metadata.json', 'prusie/data/teaching/reference.npz',
+                    'prusie/data/teaching/reference.json', 'prusie/data/teaching/checksums.json',
+                    'prusie/data/teaching/LICENSE.txt', 'prusie/__init__.py', 'prusie/api.py', 'prusie/result.py',
                     'prusie/_licenses/LICENSE-R', 'prusie/_licenses/LICENSE-susieR',
                     'prusie/_licenses/LICENSE-susieR-0.16.6',
                     'prusie/_licenses/THIRD_PARTY_NOTICES.md',
@@ -97,7 +100,9 @@ def main():
         source = sources[0].parent
         config = tomllib.loads(sources[0].read_text())
         version = config['project']['version']
-        required = ['Cargo.toml', 'Cargo.lock', 'build.rs', 'rust-toolchain.toml',
+        required = ['src/prusie/data/teaching/inputs.npz', 'src/prusie/data/teaching/reference.npz',
+                    'src/prusie/data/teaching/metadata.json', 'src/prusie/data/teaching/LICENSE.txt',
+                    'tools/generate_example.py', 'tools/generate_results.py', 'Cargo.toml', 'Cargo.lock', 'build.rs', 'rust-toolchain.toml',
                     'bindings/lib.rs', 'rust/core.rs', 'rust/optimizer.rs', 'rust/vector_math.c',
                     'rust/LICENSE-R', 'rust/LICENSE-susieR', 'rust/LICENSE-susieR-0.16.6',
                     'LICENSE', 'THIRD_PARTY_NOTICES.md', 'src/prusie/_licenses/THIRD_PARTY_NOTICES.md',
@@ -123,6 +128,9 @@ assert pathlib.Path(prusie.__file__).resolve().is_relative_to(prefix)
 assert pathlib.Path(_native.__file__).resolve().is_relative_to(prefix)
 assert not any(shutil.which(x) for x in ('rustc','cargo','maturin','R'))
 assert prusie.__version__ == sys.argv[1] == importlib.metadata.version('prusie')
+example=prusie.load_example()
+fit=prusie.susie_rss(**example['inputs'], **example['parameters'])
+assert fit.pip.shape == (500,) and fit.converged
 print(json.dumps(dict(version=prusie.__version__,module=prusie.__file__,native=_native.__file__,native_sha256=hashlib.sha256(pathlib.Path(_native.__file__).read_bytes()).hexdigest(),rust_on_path=False)))
 """
             run(label + '-identity', [python, '-I', '-c', probe, version], overrides={'PATH': path})

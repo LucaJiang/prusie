@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 
 import markdown
+from pygments.formatters import HtmlFormatter
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
@@ -19,13 +20,14 @@ def build(check: bool = False) -> None:
     version = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M)[1]
     stale = []
     for path in sorted(DOCS.glob("*.md")):
-        md = markdown.Markdown(extensions=["fenced_code", "tables", "toc", "sane_lists", "attr_list"],
-                               extension_configs={"toc": {"toc_depth": "2-3", "permalink": False}})
+        md = markdown.Markdown(extensions=["fenced_code", "tables", "toc", "sane_lists", "attr_list", "codehilite"],
+                               extension_configs={"codehilite": {"guess_lang": False, "linenums": False, "css_class": "highlight", "pygments_style": "friendly"}, "toc": {"toc_depth": "2-3", "permalink": False}})
         body = md.convert(path.read_text())
         body = body.replace('<pre>', '<pre tabindex="0" aria-label="Code example; scroll horizontally if needed">')
         # Markdown sources remain readable; Pages links resolve within docs/.
         body = re.sub(r'(href="[^"#?:]+)\.md(?=[#"])', r'\1.html', body)
         body = re.sub(r"(<table>.*?</table>)", r'<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0">\1</div>', body, flags=re.S)
+        body = re.sub(r'(<p><img [^>]+></p>)', r'<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0">\1</div>', body)
         title = re.search(r"<h1[^>]*>(.*?)</h1>", body)
         title = re.sub("<[^>]+>", "", title[1]) if title else path.stem
         nav = []
@@ -44,6 +46,7 @@ def build(check: bool = False) -> None:
 <meta name="description" content="{html.escape(config['description'])}">
 <title>{html.escape(title)} · {html.escape(config['package'])}</title>
 <link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/highlight.css">
 <script src="assets/site.js" defer></script>
 </head>
 <body class="{html.escape(config['package'])}">
@@ -58,7 +61,7 @@ def build(check: bool = False) -> None:
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>{html.escape(config['section'])}</span><a href="{path.name}">Markdown source</a></div>
 <article>{toc}{body}</article>
-<footer><p>{config['package']} {version} · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+<footer><p>{config['package']} {version} · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>
 </body>
@@ -70,6 +73,13 @@ def build(check: bool = False) -> None:
                 stale.append(str(dest.relative_to(ROOT)))
         else:
             dest.write_text(output)
+    css = HtmlFormatter(style="friendly").get_style_defs('.highlight') + "\n"
+    css_path = DOCS / "assets/highlight.css"
+    if check:
+        if not css_path.exists() or css_path.read_text() != css:
+            stale.append("docs/assets/highlight.css")
+    else:
+        css_path.write_text(css)
     if stale:
         raise SystemExit("Stale rendered documentation: " + ", ".join(stale))
     if not check:

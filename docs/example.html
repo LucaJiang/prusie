@@ -3,181 +3,137 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
-<title>Analyze the 500-SNP example · prusie</title>
+<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible example, numerical accuracy and performance.">
+<title>A 500-variant fine-mapping example · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/highlight.css">
 <script src="assets/site.js" defer></script>
 </head>
 <body class="prusie">
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
-<span class="version">0.2.3rc4 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html" aria-current="page">Offline example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="r_agreement.html">R agreement</a><a href="compatibility.html">Scope and limitations</a><a href="performance.html">Performance</a><a href="contributing.html">Contributing</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<span class="version">0.2.3rc5 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html" aria-current="page">Tutorial</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="example.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#fit-a-region">Fit a region</a></li>
-<li><a href="#reuse-fits-for-colocalisation">Reuse fits for colocalisation</a></li>
-<li><a href="#validate-the-installation">Validate the installation</a></li>
-<li><a href="#interpret-the-diagnostics">Interpret the diagnostics</a></li>
-<li><a href="#data-and-reference-provenance">Data and reference provenance</a></li>
+<li><a href="#load-inputs-and-fit">Load inputs and fit</a></li>
+<li><a href="#read-the-posterior">Read the posterior</a></li>
+<li><a href="#save-arrays-and-metadata">Save arrays and metadata</a></li>
+<li><a href="#generation-and-reference">Generation and reference</a></li>
 </ul>
 </div>
-</details><h1 id="analyze-the-500-snp-example">Analyze the 500-SNP example</h1>
-<p>Fit and interpret the complete <strong>500-SNP synthetic teaching datasets</strong> D1–D4
-bundled from official coloc. These fixed examples preserve the stored variable
-order and include single- and multiple-signal cases.</p>
-<h2 id="fit-a-region">Fit a region</h2>
-<p>After <a href="install.html">installation</a>, run this from the repository root. All 500
-variables are fitted in their stored order.</p>
-<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-python">import json
-from pathlib import Path
-import numpy as np
-import prusie
+</details><h1 id="a-500-variant-fine-mapping-example">A 500-variant fine-mapping example</h1>
+<p>The package contains one independent synthetic teaching dataset: 1000 simulated
+observations and 500 correlated Gaussian predictors. Two predictors have nonzero
+effects. Its fixed seed, generation method, LD, true effects and synthetic IDs
+are packaged with the inputs. No human study data or genome build is implied.</p>
+<h2 id="load-inputs-and-fit">Load inputs and fit</h2>
+<p>After <a href="install.html">installation</a>, the example works offline from any directory.
+The resource loader returns independent arrays owned by the caller.</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 
-data = Path(&quot;examples/data&quot;)
-metadata = json.loads((data / &quot;metadata.json&quot;).read_text())[&quot;D3&quot;]
-with np.load(data / &quot;inputs.npz&quot;, allow_pickle=False) as arrays:
-    z = arrays[&quot;D3_beta&quot;] / np.sqrt(arrays[&quot;D3_varbeta&quot;])
-    R = arrays[&quot;D3_LD&quot;]
+<span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_example</span><span class="p">()</span>
+<span class="n">inputs</span> <span class="o">=</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;R&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;n&quot;</span><span class="p">])</span>
+<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Converged:&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">converged</span><span class="p">,</span> <span class="s2">&quot;Iterations:&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="p">)</span>
+</code></pre></div>
 
-fit = prusie.susie_rss(
-    z=z, R=R, n=metadata[&quot;N&quot;], variant_ids=metadata[&quot;snp&quot;],
-    L=10, max_iter=100, tol=0.001, estimate_residual_variance=False,
-    coverage=0.95, min_abs_corr=0.5, n_purity=500,
-)
-lead = int(np.argmax(fit.pip))
-print(f&quot;{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.3f}&quot;)
-print(&quot;Converged:&quot;, fit.converged, &quot;Iterations:&quot;, fit.niter)
-for k, component in enumerate(fit.sets[&quot;cs_index&quot;]):
-    members = fit.variant_ids[fit.sets[&quot;cs&quot;][k]].tolist()
-    print(&quot;Component:&quot;, int(component), &quot;SNPs:&quot;, members,
-          &quot;Posterior mass:&quot;, round(float(fit.sets[&quot;coverage&quot;][k]), 3))
-</code></pre>
-<p>The D3 fit returns two credible sets and converges in eight iterations in the
-recorded environment. The leading PIP describes marginal variant inclusion;
-<code>fit.sets["coverage"]</code> is the posterior mass of each set within its original
-component. Read <code>fit.sets["purity"]</code> alongside that mass and the convergence flag.</p>
-<h2 id="reuse-fits-for-colocalisation">Reuse fits for colocalisation</h2>
-<p>With <a href="https://github.com/LucaJiang/pycoloc">pycoloc</a> installed, the following
-continues the example with the stored D4 dataset. Each trait is fitted once;
-<code>coloc_susie</code> reuses component Bayes factors and retained set identities.</p>
-<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-python">from pycoloc import coloc_susie
+<p>The signed statistic is beta/SE from marginal Gaussian regression. R is the
+sample Pearson correlation from those same standardized predictors, in the
+same variant order. The example uses L=5, at most 100 iterations, tolerance
+0.001, coverage 0.95, minimum absolute correlation 0.5, optimized prior variance
+and fixed residual variance 1. These explicit teaching settings are distinct
+from the public RSS defaults in the <a href="api.html">API</a>.</p>
+<p>For your own inputs, supply effect-aligned signed z and LD r, plus sample size;
+r² removes information needed by the model. Read <a href="inputs.html">inputs</a> before
+substituting association or LD files.</p>
+<h2 id="read-the-posterior">Read the posterior</h2>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">lead</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">[</span><span class="n">lead</span><span class="p">]</span><span class="si">}</span><span class="s2">: PIP=</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">[</span><span class="n">lead</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">component</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;cs_index&quot;</span><span class="p">]):</span>
+    <span class="n">members</span> <span class="o">=</span> <span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">[</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Component:&quot;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">component</span><span class="p">),</span> <span class="s2">&quot;Variants:&quot;</span><span class="p">,</span> <span class="n">members</span><span class="p">,</span>
+          <span class="s2">&quot;Posterior mass:&quot;</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]),</span>
+          <span class="s2">&quot;Minimum |r|:&quot;</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;purity&quot;</span><span class="p">][</span><span class="s2">&quot;min_abs_corr&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]))</span>
+</code></pre></div>
 
-metadata4 = json.loads((data / &quot;metadata.json&quot;).read_text())[&quot;D4&quot;]
-with np.load(data / &quot;inputs.npz&quot;, allow_pickle=False) as arrays:
-    z4 = arrays[&quot;D4_beta&quot;] / np.sqrt(arrays[&quot;D4_varbeta&quot;])
-    R4 = arrays[&quot;D4_LD&quot;]
-fit4 = prusie.susie_rss(
-    z=z4, R=R4, n=metadata4[&quot;N&quot;], variant_ids=metadata4[&quot;snp&quot;],
-    L=10, max_iter=100, tol=0.001, estimate_residual_variance=False,
-    coverage=0.95, min_abs_corr=0.5, n_purity=500,
-)
-paired = coloc_susie(fit, fit4)
-print(paired.status)
-print(paired.summary[[&quot;idx1&quot;, &quot;idx2&quot;, &quot;PP.H4.abf&quot;]])
-</code></pre>
-<p><code>idx1</code> and <code>idx2</code> retain original zero-based component IDs. Each PP.H4 is a
-signal-pair posterior, not a region-wide posterior. The associated <code>SNP.PP.H4</code>
-values are conditional on H4 and differ in meaning from fine-mapping PIP.
-No-CS and inadequate-overlap statuses need inspection before interpretation.
-Keep the original SNP/effect-allele alignment and full Bayes-factor arrays when
-saving fits for reuse. See <a href="results.html">results</a> for portable storage.</p>
-<h2 id="validate-the-installation">Validate the installation</h2>
-<p>From the checkout, run:</p>
-<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python examples/check_example.py --output-dir example-results
-</code></pre>
-<p>The check runs offline after installation and needs only prusie and NumPy.
-It uses all seven fixed cases and checks source/reference hashes, SNP order,
-model parameters, PIP validity, actual CS mass and complete-pair purity.
-<code>example-results/report.json</code> records the installed version, warnings and
-per-field differences; <code>actual_native.npz</code> contains the computed arrays.
-The input and reference files stay unchanged.</p>
-<p>PIP acceptance is absolute error ≤1e-5, rtol=0. Posterior and coverage
-identities have a separate fixed 1e-10 arithmetic tolerance. A changed
-version string is recorded; an invalid input/probability structure or failed
-PIP comparison produces FAIL and a nonzero exit. Component BFs, iterations
-and credible sets retain their own diagnostics in the <a href="r_agreement.html">agreement report</a>.</p>
+<!-- generated:teaching:start -->
+<p>The independent 500-variant teaching fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
+<!-- generated:teaching:end -->
+
+<!-- generated:teaching-cs:start -->
+
 <div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
 <thead>
 <tr>
-<th>Case</th>
-<th>Purpose</th>
-<th>Change from primary settings</th>
+<th>Original component</th>
+<th>Synthetic variants</th>
+<th>Returned posterior mass</th>
+<th>Minimum &#124;r&#124;</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>D1</td>
-<td>Single-signal teaching data</td>
-<td>None</td>
+<td>0</td>
+<td>syn0100</td>
+<td>0.969674</td>
+<td>1.000000</td>
 </tr>
 <tr>
-<td>D2</td>
-<td>Second single-signal dataset</td>
-<td>None</td>
-</tr>
-<tr>
-<td>D3</td>
-<td>Two stored causal variables</td>
-<td>None</td>
-</tr>
-<tr>
-<td>D4</td>
-<td>Further single-signal dataset</td>
-<td>None</td>
-</tr>
-<tr>
-<td>D1_partial_zero</td>
-<td>Prior-weight diagnostic</td>
-<td>Every seventh one-based SNP weight is zero</td>
-</tr>
-<tr>
-<td>D3_strict_purity</td>
-<td>No returned credible set</td>
-<td><code>min_abs_corr=1</code></td>
-</tr>
-<tr>
-<td>D3_one_iteration</td>
-<td>Nonconvergence diagnostic</td>
-<td><code>max_iter=1</code></td>
+<td>1</td>
+<td>syn0350</td>
+<td>0.999937</td>
+<td>1.000000</td>
 </tr>
 </tbody>
 </table></div>
-<p>All primary cases use signed z = beta / √varbeta, stored signed LD r,
-n=1000, L=10, max_iter=100, tol=0.001, coverage=0.95 and min_abs_corr=0.5.
-<code>examples/data/parameters.json</code> records all arguments, including complete
-matrix purity, fixed residual variance and estimated prior variance. The
-RSS call uses the known-n adjustment and no supplied phenotype variance.</p>
-<h2 id="interpret-the-diagnostics">Interpret the diagnostics</h2>
-<p>A credible set's coverage is its returned posterior mass in the original
-component; it is distinct from frequentist repeated-sampling coverage.
-A no-CS fit retains PIPs but has empty member/coverage/purity collections.
-The one-iteration case remains nonconverged and is excluded from primary
-scientific-fit summaries.</p>
-<p>The pinned reference adds √ε before logging active-component prior weights.
-A supplied zero weight therefore permits a small posterior contribution; final
-low-variance trimming restores the exact normalized prior.</p>
-<h2 id="data-and-reference-provenance">Data and reference provenance</h2>
-<p>The fixture preserves all 500 variables in stored upstream D1–D4. Its synthetic
-IDs and indices carry no biological build, ancestry, allele or coordinate
-annotations. Full metadata, data licensing and regeneration commands are in
-the <a href="https://github.com/LucaJiang/prusie/blob/main/examples/data/README.md">data README</a>.</p>
-<p><code>r_fits.npz</code> and <code>r_fits.json</code> are official susieR 0.16.6 reference outputs.
-<code>expected_native.*</code> separately records an earlier native execution; it is an
-additional reproducibility check. Independent probability and CS identities
-use the returned alpha and signed LD, without calling production summary
-helpers. Source/archive hashes and R dependencies are in <code>reference.lock.json</code>
-and <code>reference_environment.json</code>. Regeneration uses the supplied export and
-conversion scripts in a new directory, preserving shipped expectations.</p>
-<p>Read <a href="inputs.html">inputs</a> and <a href="compatibility.html">supported scope</a> before
-substituting your own aligned data.</p></article>
-<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+<!-- generated:teaching-cs:end -->
+
+<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Signed z and fitted PIPs, with the two synthetic true effects marked." src="assets/teaching_fit.svg" /></p></div>
+<p>A PIP summarizes a variant's inclusion across active components. Credible-set
+mass belongs to one original component, and may exceed requested coverage.
+The component IDs need not be consecutive. An empty set collection leaves
+PIPs available; a nonconverged fit needs further investigation even if it
+returns a set. <a href="results.html">Results</a> describes the full schema.</p>
+<h2 id="save-arrays-and-metadata">Save arrays and metadata</h2>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;fine-mapping-result&quot;</span><span class="p">)</span>
+<span class="n">out</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">np</span><span class="o">.</span><span class="n">savez_compressed</span><span class="p">(</span><span class="n">out</span> <span class="o">/</span> <span class="s2">&quot;posterior.npz&quot;</span><span class="p">,</span> <span class="n">pip</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span>
+                    <span class="n">mu</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="n">mu2</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">mu2</span><span class="p">,</span> <span class="n">lbf_variable</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">lbf_variable</span><span class="p">,</span>
+                    <span class="n">V</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">V</span><span class="p">,</span> <span class="n">elbo</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">elbo</span><span class="p">,</span> <span class="n">variant_ids</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">)</span>
+<span class="n">sets</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;component&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="s2">&quot;members&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+         <span class="s2">&quot;posterior_mass&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">])}</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;cs_index&quot;</span><span class="p">])]</span>
+<span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;prusie_version&quot;</span><span class="p">:</span> <span class="n">prusie</span><span class="o">.</span><span class="n">__version__</span><span class="p">,</span> <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">params</span><span class="p">,</span>
+            <span class="s2">&quot;converged&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">converged</span><span class="p">,</span> <span class="s2">&quot;niter&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="p">,</span> <span class="s2">&quot;sets&quot;</span><span class="p">:</span> <span class="n">sets</span><span class="p">,</span>
+            <span class="s2">&quot;generation&quot;</span><span class="p">:</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">]}</span>
+<span class="p">(</span><span class="n">out</span> <span class="o">/</span> <span class="s2">&quot;metadata.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+</code></pre></div>
+
+<h2 id="generation-and-reference">Generation and reference</h2>
+<p><code>tools/generate_example.py</code> uses NumPy PCG64 seed 20261007, stationary AR(1)
+correlation 0.85, sample-standardized predictors, nonzero coefficients 0.35 and
+−0.30 at zero-based indices 99 and 349, and independent unit-variance Gaussian
+noise. Coordinates are arbitrary teaching positions at 1000-unit intervals.
+<code>tools/generate_example.py --check</code> reproduces the packaged input bytes with
+the pinned generation dependencies.</p>
+<p>The packaged reference was separately fitted with susieR 0.16.6 using the same
+inputs and options. Input and reference hashes, parameters, convergence and
+credible sets accompany the resources. The dataset and generation script are
+GPL-3.0-or-later. <a href="reproducibility.html">Reproducibility</a> provides offline and
+live-R commands; <a href="numerical_accuracy.html">numerical accuracy</a> gives measured errors.</p></article>
+<footer><p>prusie 0.2.3rc5 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>
 </body>

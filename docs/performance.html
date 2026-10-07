@@ -3,296 +3,194 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
-<title>Runtime and peak process RSS · prusie</title>
+<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible example, numerical accuracy and performance.">
+<title>Performance · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/highlight.css">
 <script src="assets/site.js" defer></script>
 </head>
 <body class="prusie">
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>Native summary fine-mapping</small></span></a>
-<span class="version">0.2.3rc4 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Offline example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="r_agreement.html">R agreement</a><a href="compatibility.html">Scope and limitations</a><a href="performance.html" aria-current="page">Performance</a><a href="contributing.html">Contributing</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<span class="version">0.2.3rc5 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Tutorial</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html" aria-current="page">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="performance.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#new-fixed-r-measurements">New fixed-R measurements</a><ul>
-<li><a href="#public-500-snp-fixture">Public 500-SNP fixture</a></li>
-<li><a href="#complete-records-and-counterexamples">Complete records and counterexamples</a></li>
-</ul>
-</li>
-<li><a href="#reproduce-with-r">Reproduce with R</a></li>
-<li><a href="#historical-native-comparison">Historical native comparison</a><ul>
-<li><a href="#recorded-complete-call-runtimes">Recorded complete-call runtimes</a></li>
-</ul>
-</li>
-<li><a href="#threads-and-memory">Threads and memory</a><ul>
-<li><a href="#historical-evidence-identities">Historical evidence identities</a></li>
-</ul>
-</li>
+<li><a href="#real-data-panel">Real-data panel</a></li>
+<li><a href="#runtime-and-peak-memory">Runtime and peak memory</a></li>
+<li><a href="#methods">Methods</a></li>
+<li><a href="#repeat-variability-and-retained-records">Repeat variability and retained records</a></li>
 </ul>
 </div>
-</details><h1 id="runtime-and-peak-process-rss">Runtime and peak process RSS</h1>
-<h2 id="new-fixed-r-measurements">New fixed-R measurements</h2>
-<p>These full-call measurements use pycoloc 0.2.2rc3 and prusie 0.2.3rc4, R 4.4.0 with OpenBLAS 0.3.20, coloc 6.0.3 and susieR 0.16.6. Each backend uses one numerical thread. The fixed real panel has 100 regions, 200 traits and 103–4162 SNPs per region. It consists of previously selected association windows from one disease/cell-type pairing; it is not a random sample of all loci.</p>
+</details><h1 id="performance">Performance</h1>
+<p>The comparison measures complete fine-mapping calls in prusie 0.2.3rc4 and
+susieR 0.16.6. The results below reanalyze retained measurements from 6 October
+2026; they retain the original executable identities.</p>
+<h2 id="real-data-panel">Real-data panel</h2>
+<!-- generated:panel:start -->
+<p>The fixed panel contains 100 genomic windows: 100 analyses of one FinnGen R10 inflammatory bowel disease GWAS (K11_IBD_STRICT; n = 412181) and 100 BLUEPRINT monocyte eQTL analyses (QTD000021; n = 191), representing 83 distinct genes. The interval metadata contain 0 overlapping window pairs. Analyses share study participants and reference samples; the 200 trait analyses are not 200 independent loci.</p>
+<!-- generated:panel:end -->
+
+<p>Signed LD was calculated from external 1000 Genomes reference samples: 99 FIN
+founders for GWAS and 525 EUR founders for eQTL. Both analyses use the same
+aligned variant intersection within each window, with their respective LD.
+The input manifest preserves allele/order checks, exclusions and source hashes.</p>
+<h2 id="runtime-and-peak-memory">Runtime and peak memory</h2>
+<!-- generated:absolute:start -->
+
 <div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
 <thead>
 <tr>
-<th>Task</th>
-<th style="text-align: right;">Comparable cases</th>
-<th style="text-align: right;">Median time, R → Python (ms)</th>
-<th style="text-align: right;">Paired speedup¹</th>
-<th style="text-align: right;">Faster / tied / slower</th>
+<th>Analysis</th>
+<th>prusie time (ms)</th>
+<th>susieR time (ms)</th>
+<th>prusie peak memory (MiB)</th>
+<th>susieR peak memory (MiB)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>SuSiE-RSS fine-mapping</td>
-<td style="text-align: right;">199/200</td>
-<td style="text-align: right;">86.9 → 2.52</td>
-<td style="text-align: right;">35.2×</td>
-<td style="text-align: right;">199 / 0 / 0</td>
+<td>GWAS</td>
+<td>2.98</td>
+<td>106</td>
+<td>37.8</td>
+<td>266</td>
+</tr>
+<tr>
+<td>eQTL</td>
+<td>2.28</td>
+<td>80</td>
+<td>37.7</td>
+<td>262</td>
 </tr>
 </tbody>
 </table></div>
-<p>¹ Geometric mean of per-case median R / median Python runtime. The two displayed time columns are separate medians across cases, so their ratio need not equal the paired summary.</p>
+<p>Runtime columns are medians across cases of each case’s median retained-repeat time. Memory columns are separate across-case medians of fresh-process peaks.</p>
 <div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
 <thead>
 <tr>
-<th>Task</th>
-<th style="text-align: right;">Median peak process RSS, R → Python (MiB)</th>
-<th style="text-align: right;">Lower / tied / higher in Python</th>
+<th>Analysis</th>
+<th>Runtime speedup, geometric mean</th>
+<th>Per-case speedup median [Q1, Q3]</th>
+<th>Speedup range</th>
+<th>Median memory ratio</th>
+<th>Median memory reduction</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>SuSiE-RSS fine-mapping</td>
-<td style="text-align: right;">266 → 37.7</td>
-<td style="text-align: right;">199 / 0 / 0</td>
+<td>GWAS</td>
+<td>37.4×</td>
+<td>36.7 [28.1, 45.1]</td>
+<td>16.6–133</td>
+<td>6.94×</td>
+<td>85.6%</td>
+</tr>
+<tr>
+<td>eQTL</td>
+<td>33.6×</td>
+<td>31.3 [26.9, 40.2]</td>
+<td>18.6–139</td>
+<td>6.8×</td>
+<td>85.3%</td>
 </tr>
 </tbody>
 </table></div>
-<p>The primary subset requires both calls to succeed and converge, with an available pairing result. Every excluded state remains in the complete table. ABF includes all successful comparisons. Fitting is excluded on both sides of the BF/CS pairing comparisons.</p>
+<!-- generated:absolute:end -->
+
+<p>For case i, speedup si is median(time_susieR,i) / median(time_prusie,i), calculated
+from retained repeats before grouping. The primary runtime summary is
+<strong>exp(mean(log si))</strong>. This paired geometric mean differs from the ratio of
+across-case median runtimes. Memory ratio is peak_susieR,i / peak_prusie,i;
+reduction is 1 − peak_prusie,i / peak_susieR,i. The reported median ratios and
+reductions each summarize those per-case values.</p>
+<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Per-case runtime and peak-memory ratios, separated by analysis type." src="assets/r_comparison.svg" /></p></div>
+<p>Boxes show median and quartiles; points show every eligible pair with deterministic
+jitter. Ratios above the dashed 1× line favor prusie. Ratio axes are logarithmic.
+<a href="assets/r_comparison.pdf">Vector PDF</a>.</p>
+<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Complete-call median runtime against variant count, with separate GWAS and eQTL panels." src="assets/runtime_by_variants.svg" /></p></div>
+<p>Both axes are logarithmic; each point represents one analysis/backend.
+<a href="assets/runtime_by_variants.pdf">Vector PDF</a>.</p>
+<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Full-process peak memory against variant count for prusie and susieR." src="assets/memory_by_variants.svg" /></p></div>
+<p>Peak memory includes interpreters, imports, inputs and the retained fit.
+It describes process memory rather than algorithm workspace.
+<a href="assets/memory_by_variants.pdf">Vector PDF</a>.</p>
+<h2 id="methods">Methods</h2>
+<p>Every successful pair with matching settings and seven finite positive retained
+times is included, regardless of convergence, credible-set presence or numerical
+difference. Each fit has a <strong>100-iteration maximum</strong>, with early convergence
+using its actual iteration count. The pair reaching 100 iterations on both sides
+is included. Failed or missing records retain explicit statuses and null metrics.
+Numerical validity and timing eligibility are separate fields.</p>
+<p>Timing surrounds the full public <code>susie_rss</code> call: validation, RSS preparation,
+IBSS and posterior/credible-set summaries. Imports, file reads, explicit garbage
+collection and exports are outside the clock. After one warmup, seven calls are
+retained with one result held at a time. Backends run sequentially, with their
+order alternating between cases; one numerical thread is used. Runtime uses a
+monotonic high-resolution clock. Peak memory is measured independently in a
+fresh process per case/backend, fitting once and retaining the full result;
+Linux process high-water KiB is divided by 1024 to obtain MiB. SuSiE-RSS names
+the summary-statistic model; process RSS in the measurement record means
+resident set size.</p>
+<p>The machine was an AMD EPYC 9754 system running Linux x86-64 with glibc 2.35.
+The measured software was CPython 3.12.2, NumPy 2.2.6 and R 4.4.0. R loaded
+OpenBLAS 0.3.20 (Zen, one thread); NumPy loaded its packaged OpenBLAS and the
+native SER used the recorded optional glibc libmvec AVX2 path. Full loaded-library
+identities, dependency versions and executable hashes are in the
+<a href="assets/r_comparison_protocol.json">protocol and environment record</a>.
+These measurements apply to the recorded binary and machine.</p>
+<p>Real analyses use L=5, <code>tol=0.001</code>, <code>max_iter=100</code>, <code>scaled_prior_variance=0.2</code>,
+fixed residual variance 1, optimized prior variance, normalized uniform priors,
+no null column, standardization, coverage 0.95 and minimum absolute correlation
+0.5. Complete matrix purity is used. <code>check_input=False</code> leaves finite,
+symmetry, diagonal and range validation active; additional eigenvalue/projection
+diagnostics are disabled in both compared settings. All parameters are in the
+<a href="assets/r_comparison_cases.json">case records</a>.</p>
+<h2 id="repeat-variability-and-retained-records">Repeat variability and retained records</h2>
+<!-- generated:variability:start -->
+
 <div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
 <thead>
 <tr>
-<th>Task / subset</th>
-<th style="text-align: right;">Count</th>
-<th>Speedup median [Q1, Q3]; range</th>
-<th style="text-align: right;">Relative repeat IQR, R / Python (median)</th>
+<th>Analysis</th>
+<th>prusie repeat IQR/median</th>
+<th>susieR repeat IQR/median</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>SuSiE-RSS fine-mapping / primary comparable</td>
-<td style="text-align: right;">199</td>
-<td>33.1 [27.6, 43.6]; 16.6–139</td>
-<td style="text-align: right;">0.0867 / 0.0685</td>
+<td>GWAS</td>
+<td>0.0617</td>
+<td>0.0858</td>
 </tr>
 <tr>
-<td>SuSiE-RSS fine-mapping / all measured</td>
-<td style="text-align: right;">200</td>
-<td>33.1 [27.6, 43.9]; 16.6–139</td>
-<td style="text-align: right;">0.0863 / 0.0685</td>
+<td>eQTL</td>
+<td>0.0714</td>
+<td>0.0867</td>
 </tr>
 </tbody>
 </table></div>
-<p>Relative repeat IQR is (Q3−Q1)/median across the seven retained times. A runtime ratio below one favors R; ties use exact median equality. These are observed counts without a significance or minimum-percentage threshold.</p>
-<h3 id="public-500-snp-fixture">Public 500-SNP fixture</h3>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
-<thead>
-<tr>
-<th>Task</th>
-<th style="text-align: right;">Comparable cases</th>
-<th style="text-align: right;">Median time, R → Python (ms)</th>
-<th style="text-align: right;">Paired speedup¹</th>
-<th style="text-align: right;">Faster / tied / slower</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>SuSiE-RSS fine-mapping</td>
-<td style="text-align: right;">4/4</td>
-<td style="text-align: right;">120 → 4.1</td>
-<td style="text-align: right;">32.7×</td>
-<td style="text-align: right;">4 / 0 / 0</td>
-</tr>
-</tbody>
-</table></div>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
-<thead>
-<tr>
-<th>Task</th>
-<th style="text-align: right;">Median peak process RSS, R → Python (MiB)</th>
-<th style="text-align: right;">Lower / tied / higher in Python</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>SuSiE-RSS fine-mapping</td>
-<td style="text-align: right;">267 → 39.3</td>
-<td style="text-align: right;">4 / 0 / 0</td>
-</tr>
-</tbody>
-</table></div>
-<p>These are the full existing synthetic teaching datasets, separately reported from the real panel. D1–D4 are the fine-mapping timing panel; D1/D2 and D3/D4 are the pairing panel. The three additional diagnostic fits are numerically checked but not timed.</p>
-<h3 id="complete-records-and-counterexamples">Complete records and counterexamples</h3>
-<p>The per-case table (<a href="assets/r_comparison_cases.tsv">TSV</a>, <a href="assets/r_comparison_cases.json">JSON</a>), <a href="assets/r_comparison_repeats.json">all retained repeats</a>, <a href="assets/r_comparison_summary.json">summary</a> and <a href="assets/r_comparison_protocol.json">parameters/protocol</a> preserve all workloads and statuses. Per-repeat rows link to separate numerical validation and separate case/backend memory measurements; those quantities are not measured inside every timing repetition. Private genotypes, association files, variant IDs and input paths are not redistributed.</p>
-<ul>
-<li><strong>SuSiE-RSS fine-mapping:</strong> 0/199 slower primary cases (first IDs: none); 0/199 higher-RSS cases (first IDs: none). Lowest speed ratio: region77/gwas, 16.6×; lowest memory ratio: region08/gwas, 5.1×. Paired memory ratio median 6.89 [Q1 6.65, Q3 7.04], range 5.1–7.52; median per-case RSS reduction 85.5%. Summed case medians: R 49.5 s, Python 1.06 s.</li>
-</ul>
-<p>An OS peak includes imports, inputs, the full return and native allocations; it is not incremental algorithm memory. BF/CS consumers load matched complete BF matrices, variant IDs, original CS/member IDs and convergence metadata, without the unused coefficient arrays of an upstream fitting workspace. Fine-mapping retains its full standard result. Runtime and memory conclusions apply to this panel and environment.</p>
-<p>All formal calls ran sequentially in one reserved measurement window. The audit recorded 0 pressure-contaminated attempts and 0 process-failed attempts. The predeclared rule retains contaminated attempts and repeats both backends; all original records remain available. Shared-host load monitoring is best effort. The default NumPy coloc path was measured; no fresh Numba compilation or warm-JIT performance claim is made.</p>
-<h2 id="reproduce-with-r">Reproduce with R</h2>
-<p>The manual scripts in <code>tools/benchmark/</code> compare the installed prusie with
-<strong>susieR 0.16.6</strong> using full public <code>susie_rss</code> calls. They separate numerical
-validation, warm timing and fresh-process peak memory. Use the optimized BLAS
-installation and fixed R library documented with the results.</p>
-<p>From the repository root, after installing R, the pinned susieR and jsonlite:</p>
-<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">mkdir -p benchmark-work
-cp tools/benchmark/blas_probe.c benchmark-work/
-(cd benchmark-work &amp;&amp; R CMD SHLIB blas_probe.c -o blas_probe.so -ldl)
-python tools/benchmark/compare_r.py --rscript Rscript \
-  --blas-probe benchmark-work/blas_probe.so --output-dir benchmark-results
-</code></pre>
-<p>This uses all 500 SNPs in each of the four public teaching datasets. All seven
-frozen cases are numerically checked; the three edge-case diagnostics are
-separate from the primary timing panel. Inputs and the case order are frozen
-before fitting. Every backend uses one warmup, seven retained full calls and
-one numerical thread. Backend order alternates across datasets. Imports, reads,
-explicit garbage collection and exports are outside the clock; validation,
-RSS transformations, IBSS and standard result/CS construction are inside.</p>
-<p>Memory uses a separate fresh process for each case/backend and one complete
-fit. <strong>Peak process RSS</strong> includes imports, inputs and native allocations; it
-is recorded before numerical export. It is a process high-water mark, with
-no historical-maximum subtraction. Both backends retain one LD matrix in
-their native storage layout and all normal fit outputs. Dense float64 LD alone
-requires 8m² bytes for m variants; fitting workspace and results add to this.</p>
-<p>Raw per-repeat records, actual backend/library identities, failures and
-convergence statuses are retained. Speedup is median R time / median Python
-time; memory ratio is peak R / peak Python. A ratio below one favors R.
-Report the fixed denominator, geometric mean, median/IQR, range and
-faster/tied/slower counts; read memory and runtime as separate outcomes.</p>
-<h2 id="historical-native-comparison">Historical native comparison</h2>
-<p>A historical comparison of fit-local single-effect-regression storage reuse
-against an <strong>earlier native implementation</strong> found <strong>118 faster, 0 tied and
-82 slower cases out of 200</strong>. This is not a speed comparison with R, and the
-historical binaries were measured separately from the new R comparison above. The evidence identifies the original
-binaries below rather than relabeling them as a new measurement.</p>
-<h3 id="recorded-complete-call-runtimes">Recorded complete-call runtimes</h3>
-<p>The fixed panel contains 100 real regions and two traits per region. Each case
-used one warmup and seven retained complete calls, one numerical thread and
-<code>L=5</code>, <code>max_iter=100</code>, <code>tol=0.001</code>, with fixed residual variance. Two independent
-regions could run concurrently; each region's backends ran sequentially. Imports,
-input loading and exports were outside clocks; input validation, matrix setup,
-IBSS and result/credible-set construction were inside. No cases were removed
-after observing outcomes.</p>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
-<thead>
-<tr>
-<th>Stratum</th>
-<th>Cases</th>
-<th>Faster / tied / slower</th>
-<th>Baseline summed medians (s)</th>
-<th>Storage-reuse summed medians (s)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>All fixed cases</td>
-<td>200</td>
-<td>118 / 0 / 82</td>
-<td>1.839772626</td>
-<td>1.707386992</td>
-</tr>
-<tr>
-<td>Both fits converged</td>
-<td>199</td>
-<td>117 / 0 / 82</td>
-<td>1.494473075</td>
-<td>1.461272684</td>
-</tr>
-<tr>
-<td>Same iteration count</td>
-<td>200</td>
-<td>118 / 0 / 82</td>
-<td>1.839772626</td>
-<td>1.707386992</td>
-</tr>
-</tbody>
-</table></div>
-<p><a href="assets/performance_cases.tsv">All 200 case medians and repeat variability</a>
-include every regression. All PIP/input/model checks passed at absolute PIP error
-≤1e-5, rtol=0; one case reached the 100-iteration cap without convergence.
-Matching PIPs does not imply identical intermediate arrays, credible sets,
-Bayes factors or downstream posteriors.</p>
-<p>A win means a lower per-case median, with no minimum percentage or significance
-threshold. The observed majority applies to this complete change versus its
-baseline, not to every constituent optimization. Shared-host variability and
-private, nonredistributed input data limit independent reproduction; the public
-500-SNP fixture is a separate software example. The anonymized table preserves
-repeat variability without disclosing study inputs or locations.</p>
-<h2 id="threads-and-memory">Threads and memory</h2>
-<p><code>PRUSIE_NUM_THREADS</code> requests 1–32 native threads (default 1). Small matrices stay
-serial; setup and validation may use scoped workers. Set NumPy/BLAS/OpenMP thread
-counts separately before importing numerical libraries. More threads can cost
-additional memory and slow small regions; no universal speedup is claimed.
-IBSS components remain sequential and computations use float64.</p>
-<p>Each call validates its input and constructs complete retained credible sets.
-Fit-local reuse and verified exact signed matrix redundancy preserve all original
-SNPs; dense fallback handles matrices without useful redundancy. No fitted-result
-cache crosses calls. Gains on redundant LD need not generalize to other regions.
-Optional runtime vector math has scalar and missing-library fallbacks.</p>
-<p>The extension keeps the Python GIL while borrowing arrays. Use independent
-processes for independent regions, budget their total threads/memory, and do not
-mutate input arrays during a call. The package does not control whole-host load.
-Any separate R benchmark must identify loaded BLAS, R and dependency versions:
-a Netlib baseline does not predict performance against optimized BLAS.</p>
-<h3 id="historical-evidence-identities">Historical evidence identities</h3>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
-<thead>
-<tr>
-<th>Item</th>
-<th>Historical identity and scope</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Baseline</td>
-<td><code>pyrsusie 0.2.2rc17</code>, preceding native implementation</td>
-</tr>
-<tr>
-<td>Measured change</td>
-<td><code>pyrsusie 0.2.3rc4</code>, A02-only fit-local SER storage; before the public rename</td>
-</tr>
-<tr>
-<td>Numerical source</td>
-<td><a href="assets/numerical_source.json">Preserved source hashes</a></td>
-</tr>
-<tr>
-<td>Measurements</td>
-<td><a href="assets/performance_cases.tsv">Full case table</a>, one warmup and seven repetitions</td>
-</tr>
-<tr>
-<td>Incremental evidence</td>
-<td>A02 versus the intermediate A01 change was only an eight-case pilot (5 wins); no isolated 200-case A01 ablation</td>
-</tr>
-<tr>
-<td>Excluded experiment</td>
-<td>B01 reused known-phenotype-variance RSS allocations; memory/correctness checks did not establish its runtime gate</td>
-</tr>
-</tbody>
-</table></div>
-<p>The earlier combined A02+B01 experiment had 135 wins and 65 regressions on the
-z-RSS panel, which did not exercise the changed known-variance branch. That
-result cannot qualify B01 separately. The current source excludes it.
-See <a href="contributing.html">contributing</a> for the per-optimization majority criterion.</p></article>
-<footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
+<p>Each entry is the median across cases of its seven-repeat IQR/median. Individual repeat times and case ranges are retained in the downloadable records.</p>
+<!-- generated:variability:end -->
+
+<p>The <a href="assets/r_comparison_cases.tsv">TSV case table</a>,
+<a href="assets/r_comparison_repeats.json">retained repeats</a>,
+<a href="assets/r_comparison_summary.json">summary with operators</a> and
+<a href="assets/r_comparison_numerical.json">numerical diagnostics</a> contain full
+fine-mapping records. The separate synthetic regression panel retains four
+timed teaching cases and three numerical diagnostics; it does not enter either
+real-data group. The new <a href="example.html">packaged example</a> has its own reference
+and is not assigned those older timing values.</p>
+<p><a href="reproducibility.html">Reproducibility</a> explains result-only regeneration and
+input-level reruns. <a href="implementation.html">Implementation</a> explains computational
+mechanisms; the whole-call timings do not provide individual ablation estimates.</p></article>
+<footer><p>prusie 0.2.3rc5 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>
 </body>

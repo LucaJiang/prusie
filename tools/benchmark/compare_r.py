@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Manual comparison of the complete public 500-SNP fixture with pinned R.
 
-Four primary datasets are timed; three predefined diagnostics are validated.
+The independent teaching example is the default; --fixture regression uses
+four older timed fixtures plus three predefined numerical diagnostics.
 Backend processes run sequentially. This is deliberately outside default CI.
 """
 import argparse
@@ -15,6 +16,7 @@ import numpy as np
 
 from compare_fits import compare
 from prepare_fixture import prepare, ROOT
+from prepare_teaching import prepare as prepare_teaching
 
 HERE = Path(__file__).resolve().parent
 
@@ -39,12 +41,17 @@ def main():
     parser.add_argument('--output-dir', type=Path, required=True)
     parser.add_argument('--repeats', type=int, default=7)
     parser.add_argument('--validation-only', action='store_true')
+    parser.add_argument('--fixture', choices=('independent', 'regression'), default='independent')
     args = parser.parse_args()
     if not args.validation_only and (args.repeats < 7 or args.blas_probe is None):
         parser.error('Timing requires --blas-probe and at least seven retained repeats')
     out = args.output_dir.resolve()
     out.mkdir(parents=True, exist_ok=False)
-    manifest = prepare(ROOT / 'examples/data', out / 'inputs')
+    if args.fixture == 'independent':
+        case_file = prepare_teaching(ROOT / 'src/prusie/data/teaching', out / 'inputs')
+        manifest = {'cases': [case_file.name], 'timed_cases': [case_file.name]}
+    else:
+        manifest = prepare(ROOT / 'examples/data', out / 'inputs')
     env = os.environ.copy()
     for name in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
                  'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'PRUSIE_NUM_THREADS',
@@ -55,7 +62,7 @@ def main():
     protocol = dict(cases=manifest['cases'], timed_cases=manifest['timed_cases'],
                     warmups=1, retained_repeats=args.repeats,
                     backend_order='Even case index: R then Python; odd: Python then R',
-                    primary='D1-D4 with successful, mutually converged fits; all statuses retained',
+                    primary='All timed, completed settings-matched pairs with valid times; convergence, CS and PIP error do not select timing cases',
                     timing='Full public API; imports/input reads/exports/explicit GC excluded',
                     memory='One separate fresh process and one full fit per case/backend; process HWM includes imports/loading',
                     summary='Geometric mean paired median-R/median-Python runtime; memory ratios reported separately',
@@ -89,8 +96,13 @@ def main():
                 (out / 'commands.json').write_text(json.dumps(commands, indent=2) + '\n')
         agreement = compare(measurements['python', 'validate'], measurements['R', 'validate'])
         (case_dir / 'agreement.json').write_text(json.dumps(agreement, indent=2) + '\n')
-        row = dict(case_id=case['case_id'], n_variants=500, L=case['parameters']['L'],
+        row = dict(case_id=case['case_id'], n_variants=case['n_variants'], L=case['parameters']['L'],
+                   settings_match=all(v.get('parameters') == case['parameters'] for v in measurements.values()),
+                   measurement_status_ok=all(v.get('status') == 'ok' for v in measurements.values()),
                    PIP_passed=agreement['passed'], numerical_errors=agreement['errors'],
+                   max_iter=case['parameters']['max_iter'],
+                   niter={k:measurements[k, 'validate'].get('niter') for k in ('R','python')},
+                   converged={k:measurements[k, 'validate'].get('converged') for k in ('R','python')},
                    mutually_converged=agreement.get('converged_python', False) and agreement.get('converged_R', False),
                    timed=filename in manifest['timed_cases'] and not args.validation_only,
                    median_seconds={}, repeat_seconds={}, peak_rss_mib={}, speedup=None, memory_ratio=None)
@@ -100,7 +112,7 @@ def main():
                 memory = measurements[backend, 'memory']
                 samples = [s['time_seconds'] for s in timing.get('samples', []) if not s['warmup']]
                 row['repeat_seconds'][backend] = samples
-                row['median_seconds'][backend] = float(np.median(samples)) if samples and timing['status'] == 'ok' else None
+                row['median_seconds'][backend] = float(np.median(samples)) if len(samples) >= 7 and all(t is not None and np.isfinite(t) and t > 0 for t in samples) and timing['status'] == 'ok' else None
                 row['peak_rss_mib'][backend] = memory.get('peak_rss_mib') if memory['status'] == 'ok' else None
             r, p = (row['median_seconds'][k] for k in ('R', 'python'))
             if r is not None and p is not None and r > 0 and p > 0:
@@ -111,7 +123,7 @@ def main():
                 row['memory_reduction'] = 1 - p / r
         rows.append(row)
         (out / 'cases.json').write_text(json.dumps(rows, indent=2) + '\n')
-    primary = [r for r in rows if r['timed'] and r['PIP_passed'] and r['mutually_converged'] and r['speedup'] is not None]
+    primary = [r for r in rows if r['timed'] and r['settings_match'] and r['measurement_status_ok'] and r['speedup'] is not None]
     ratios = np.asarray([r['speedup'] for r in primary])
     summary = dict(cases=len(rows), agreement_passed=sum(r['PIP_passed'] for r in rows),
                    timing_primary_count=len(primary),

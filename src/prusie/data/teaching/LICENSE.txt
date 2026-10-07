@@ -1,0 +1,2 @@
+Copyright (c) 2026 Wenxin Jiang
+This independently generated teaching data and its generator are licensed under GPL-3.0-or-later. See the package LICENSE for the full terms.

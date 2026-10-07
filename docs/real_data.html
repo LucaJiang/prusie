@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible example, numerical accuracy and performance.">
+<title>Real GWAS and eQTL recipes · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/highlight.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<span class="version">0.2.3rc5 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Tutorial</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="real_data.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#gwas-finngen-r10-inflammatory-bowel-disease">GWAS: FinnGen R10 inflammatory bowel disease</a></li>
+<li><a href="#eqtl-blueprint-monocytes">eQTL: BLUEPRINT monocytes</a></li>
+<li><a href="#align-summaries-and-ld-before-fitting">Align summaries and LD before fitting</a></li>
+</ul>
+</div>
+</details><h1 id="real-gwas-and-eqtl-recipes">Real GWAS and eQTL recipes</h1>
+<p>The examples below describe two real-data entry points. They require separately
+obtained association data and allele-aligned signed LD. The packaged tutorial
+is synthetic; the downloadable benchmark records contain results, not these
+human association or genotype inputs.</p>
+<h2 id="gwas-finngen-r10-inflammatory-bowel-disease">GWAS: FinnGen R10 inflammatory bowel disease</h2>
+<p>The evaluated GWAS is <code>K11_IBD_STRICT</code> from FinnGen R10, with 9083 cases and
+403098 controls (n=412181). FinnGen provides a
+<a href="https://finngen.gitbook.io/documentation/r10/data-download">download access form and R10 instructions</a>.
+Follow its access and use conditions, acknowledge participants and investigators,
+and cite the FinnGen publication. A server returning a public URL does not
+replace those data-use requirements.</p>
+<p>The <a href="https://storage.googleapis.com/finngen-public-data-r10/summary_stats/R10_manifest.tsv">R10 manifest</a>
+identifies the release-specific file. After obtaining access under those terms,
+download the endpoint named by the manifest and retain its checksum. The
+<a href="https://finngen.gitbook.io/documentation/r10/data-description">R10 field description</a>
+defines <code>alt</code> as the effect allele; <code>beta</code> is log odds ratio and <code>sebeta</code> its
+standard error. Calculate <strong>signed z = beta / sebeta</strong>. Record chromosome,
+position, reference/alternate alleles and genome build for every variant.
+The Gaussian summary model here uses n=412181, not an inferred effective sample
+size or the number of LD samples.</p>
+<p>Select a declared genomic window before inspecting fit outcomes, retain all
+eligible variants in it, and align against a Finnish reference panel. The
+benchmark used 99 recorded FIN founders with mean-imputed centered dosages and
+Pearson signed r. A new reference release or sample selection creates a new
+analysis; record those differences in its manifest.</p>
+<h2 id="eqtl-blueprint-monocytes">eQTL: BLUEPRINT monocytes</h2>
+<p>The evaluated expression dataset is eQTL Catalogue <code>QTD000021</code>, BLUEPRINT
+monocytes, n=191. Its summary data are
+<a href="https://www.ebi.ac.uk/eqtl/License/">CC BY 4.0</a>; cite the Catalogue and original
+study and retain their attribution. The Catalogue's
+<a href="https://www.ebi.ac.uk/eqtl/Data_access/">data-access page</a> supplies dataset
+metadata, file formats and indexed downloads. Its former REST API is retired.</p>
+<p>A concrete source example from the Catalogue queries rs4239702 on chromosome
+20. With HTSlib/tabix installed, query the documented index:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>tabix<span class="w"> </span>https://ftp.ebi.ac.uk/pub/databases/spot/eQTL/sumstats/QTS000002/QTD000021/QTD000021.all.tsv.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span><span class="m">20</span>:46120612-46120613
+</code></pre></div>
+
+<p>This query is an association-record example, not a complete fine-mapping region.
+For fitting, choose one gene and a prespecified cis window, fetch all its nominal
+records in that window, and use beta/SE with ALT as the effect allele. Deduplicate
+by full chromosome/position/REF/ALT identity for that gene, rather than by rsID
+alone. Do not use an unsigned z reconstructed from a two-sided P value. Respect
+the Catalogue's guidance on request frequency when making regional downloads.</p>
+<p>Use an ancestry-matched LD reference on the same genome build. The benchmark
+used 525 recorded EUR founders. Record expression quantification, normalization,
+sample size and gene ID. The z-based RSS route does not require an invented
+phenotype variance; provide <code>var_y</code> only when known for the actual phenotype.</p>
+<h2 id="align-summaries-and-ld-before-fitting">Align summaries and LD before fitting</h2>
+<ol>
+<li>Confirm build and chromosome/position/allele identities in both sources.
+   State the reference sample selection and dosage-counted allele.</li>
+<li>Restrict to the prespecified window, resolve duplicates, and document absent,
+   multiallelic or ambiguous variants. Exclude unresolved palindromic orientation.</li>
+<li>If the effect allele is swapped relative to counted dosage, multiply z by −1.
+   If recoding an existing LD matrix with signs d, apply Rnew = diag(d) R diag(d).</li>
+<li>Apply one final variant order to z, both R axes, IDs and metadata. Verify
+   finite values, symmetry, unit diagonal, correlation range and the resulting
+   byte/order hashes before fitting.</li>
+</ol>
+<p>1000 Genomes reference data are available through
+<a href="https://www.internationalgenome.org/data">IGSR</a>. Check the collection's
+<a href="https://www.internationalgenome.org/faq/is-there-any-fee-associated-with-using-andor-reproducing-the-data/">data reuse policy</a>
+and retain sample/build provenance. LD is Pearson <strong>r</strong>, not r². Reference sample
+size is separate from the association study's n.</p>
+<p>Once prepared, both examples use the same API:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
+
+<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="n">signed_z</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">signed_ld</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">study_sample_size</span><span class="p">,</span>
+                       <span class="n">variant_ids</span><span class="o">=</span><span class="n">ordered_variant_ids</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                       <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+                       <span class="n">estimate_residual_variance</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</code></pre></div>
+
+<p>The placeholders are the aligned arrays from your own preparation. The portable
+case format and backend drivers are described in the
+<a href="https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md">benchmark guide</a>.
+The source endpoints and indexed eQTL file were accessible by bounded HTTP
+range requests during documentation preparation. That check verifies download
+access, not a newly executed end-to-end real-data fit. Exact reruns of the
+retained panel still require its original frozen inputs and permission to use
+them; see <a href="reproducibility.html">reproducibility</a>.</p></article>
+<footer><p>prusie 0.2.3rc5 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+</main>
+</div>
+</body>
+</html>

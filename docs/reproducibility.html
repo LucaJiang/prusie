@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible example, numerical accuracy and performance.">
+<title>Reproducibility · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/highlight.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<span class="version">0.2.3rc5 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Tutorial</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html" aria-current="page">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="reproducibility.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#regenerate-tables-and-figures">Regenerate tables and figures</a></li>
+<li><a href="#rerun-the-independent-example">Rerun the independent example</a></li>
+<li><a href="#real-gwas-and-eqtl-inputs">Real GWAS and eQTL inputs</a></li>
+<li><a href="#software-and-reference-identities">Software and reference identities</a></li>
+</ul>
+</div>
+</details><h1 id="reproducibility">Reproducibility</h1>
+<p>There are two complementary entrances: reproduce the published summaries from
+retained records, or rerun fitting from numerical inputs. The independent
+synthetic example supports both entirely offline after software installation.
+The real-data panel has public result records and separately obtained inputs.</p>
+<h2 id="regenerate-tables-and-figures">Regenerate tables and figures</h2>
+<p>From the source checkout:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>tools/results-requirements.txt<span class="w"> </span>-r<span class="w"> </span>tools/docs-requirements.txt
+python<span class="w"> </span>tools/generate_results.py
+python<span class="w"> </span>tools/generate_results.py<span class="w"> </span>--check
+python<span class="w"> </span>tools/build_docs.py
+python<span class="w"> </span>tools/build_docs.py<span class="w"> </span>--check
+python<span class="w"> </span>tools/check_docs.py
+</code></pre></div>
+
+<p>The normalized source is <code>docs/assets/benchmark_records.json</code>. It contains only
+complete fine-mapping stage C, with explicit study groups, case/backend statuses,
+retained repeats, numerical diagnostics and measured identities. The generator
+recomputes case medians before paired group statistics, and creates README
+highlights, document tables, SVG/PDF figures and downloadable records. Fixed
+plot seeds make jitter reproducible. The accompanying new teaching-result record
+has a separately identified execution and input/reference checksums.</p>
+<p>Anonymized real-panel records include source hashes and positional error traces;
+they do not contain association vectors or LD matrices. Regenerating these
+figures is result-level reproducibility, not a rerun of the private input archive.
+The old measured native SHA256 remains identified in the protocol; new local
+builds do not acquire the old timing identity.</p>
+<h2 id="rerun-the-independent-example">Rerun the independent example</h2>
+<p>The wheel includes <code>prusie/data/teaching</code>: input arrays, generation metadata,
+checksums, the R reference arrays and reference metadata. <code>load_example()</code> uses
+<code>importlib.resources</code>, so no repository path is required. To inspect the
+resources:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">importlib.resources</span><span class="w"> </span><span class="kn">import</span> <span class="n">files</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+<span class="n">resources</span> <span class="o">=</span> <span class="n">files</span><span class="p">(</span><span class="s2">&quot;prusie&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;data/teaching&quot;</span><span class="p">)</span>
+<span class="n">reference</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">resources</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;reference.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">reference</span><span class="p">[</span><span class="s2">&quot;susieR_version&quot;</span><span class="p">],</span> <span class="n">reference</span><span class="p">[</span><span class="s2">&quot;susieR_commit&quot;</span><span class="p">])</span>
+</code></pre></div>
+
+<p>From a checkout with the package installed:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>examples/quickstart.py
+python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_packaged_example.py
+python<span class="w"> </span>tools/generate_example.py<span class="w"> </span>--check
+</code></pre></div>
+
+<p>The frozen-reference check needs no R. To generate inputs again, use
+<code>python tools/generate_example.py --output-dir NEW_DIRECTORY</code> with NumPy 2.2.6.
+This is one deterministic teaching example, rather than a simulation study.</p>
+<p>For a live comparison, install susieR 0.16.6 at the recorded commit and jsonlite
+in your chosen R library. Check the R installation:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="nf">library</span><span class="p">(</span><span class="n">susieR</span><span class="p">)</span>
+<span class="nf">packageVersion</span><span class="p">(</span><span class="s">&quot;susieR&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Then use:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/benchmark/compare_r.py<span class="w"> </span>--rscript<span class="w"> </span>Rscript<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--validation-only<span class="w"> </span>--output-dir<span class="w"> </span>new-reference-comparison
+</code></pre></div>
+
+<p>The <a href="https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md">benchmark guide</a>
+describes the high-resolution clock, seven-repeat timing, fresh-process memory
+measurement and portable case format. Generated references go to a new output
+directory; the shipped reference is unchanged.</p>
+<h2 id="real-gwas-and-eqtl-inputs">Real GWAS and eQTL inputs</h2>
+<p>The <a href="real_data.html">real-data recipes</a> identify distinct GWAS and eQTL sources,
+access conditions and preprocessing requirements. The evaluated panel consists
+of one FinnGen R10 study and one BLUEPRINT monocyte eQTL dataset across 100
+windows (83 distinct genes). Its manifest was fixed before the original
+comparison. It uses external FIN/EUR reference LD and shares participants across
+analyses.</p>
+<p>An exact input-level rerun needs the original aligned summaries, LD, variant
+order and frozen options. A newly downloaded dataset or a newly constructed LD
+panel is a separately identified analysis, even when it concerns the same locus.
+Use the portable case drivers to record the new hashes and full parameters.</p>
+<h2 id="software-and-reference-identities">Software and reference identities</h2>
+<p>The retained real-panel records identify prusie 0.2.3rc4, its measured native
+hash, Python/NumPy versions and loaded numerical libraries, plus susieR 0.16.6
+commit <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>, R and BLAS versions.
+The new teaching reference uses the same pinned R source and records its own
+raw-record hash. The original attributed regression inputs and R outputs remain
+separate in <code>examples/data</code> with their existing license and checksums.</p>
+<p>See <a href="numerical_accuracy.html">numerical accuracy</a>,
+<a href="performance.html">performance</a> and <a href="contributing.html">contributing</a>.</p></article>
+<footer><p>prusie 0.2.3rc5 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+</main>
+</div>
+</body>
+</html>

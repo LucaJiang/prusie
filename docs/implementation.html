@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible example, numerical accuracy and performance.">
+<title>Implementation and optimizations · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/highlight.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<span class="version">0.2.3rc5 <span>release candidate</span></span>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Tutorial</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html" aria-current="page">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="implementation.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#source-map">Source map</a></li>
+<li><a href="#sequential-updates-and-matrix-products">Sequential updates and matrix products</a></li>
+<li><a href="#ser-and-prior-variance-workspace">SER and prior-variance workspace</a></li>
+<li><a href="#matrix-scaling-exact-redundancy-and-fallback">Matrix scaling, exact redundancy and fallback</a></li>
+<li><a href="#layout-and-memory">Layout and memory</a></li>
+<li><a href="#floating-point-calculations-and-portability">Floating-point calculations and portability</a></li>
+<li><a href="#threads-and-the-python-boundary">Threads and the Python boundary</a></li>
+</ul>
+</div>
+</details><h1 id="implementation-and-optimizations">Implementation and optimizations</h1>
+<p>The public call performs input validation, summary-statistic preparation,
+sequential native inference and posterior summaries. Python owns the API and
+result objects; Rust owns the IBSS loop and single-effect regression (SER).
+Several numerical helpers are also implemented in Rust. These are engineering
+implementations of the established SuSiE updates.</p>
+<h2 id="source-map">Source map</h2>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Executed functions</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python API</td>
+<td><a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py">susie_rss and _susie_suff_stat</a></td>
+<td>Validate options, transform summaries, normalize priors, choose matrix representation and assemble SusieResult</td>
+</tr>
+<tr>
+<td>Array preparation</td>
+<td><a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/_array_layout.py">_array_layout.py</a>, <a href="https://github.com/LucaJiang/prusie/blob/main/bindings/prepare_helpers.rs">prepare_helpers.rs</a></td>
+<td>Normalize incompatible arrays; scan matrix entries; prepare scaled crossproducts when needed</td>
+</tr>
+<tr>
+<td>NumPy boundary</td>
+<td><a href="https://github.com/LucaJiang/prusie/blob/main/bindings/lib.rs">bindings/lib.rs::fit</a></td>
+<td>Validate dtype, dimensions, alignment and strides after option conversion; borrow input arrays; transfer output buffers</td>
+</tr>
+<tr>
+<td>Inference</td>
+<td><a href="https://github.com/LucaJiang/prusie/blob/main/rust/core.rs">core.rs::fit_layout_operator and single_effect</a></td>
+<td>Sequential IBSS, SER, prior/residual variance and ELBO</td>
+</tr>
+<tr>
+<td>Prior variance search</td>
+<td><a href="https://github.com/LucaJiang/prusie/blob/main/rust/optimizer.rs">optimizer.rs::minimize</a></td>
+<td>Brent search adapted from R's optimizer, with retained attribution</td>
+</tr>
+<tr>
+<td>Posterior summaries</td>
+<td><a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/posterior.py">posterior.py</a>, <a href="https://github.com/LucaJiang/prusie/blob/main/bindings/summary_helpers.rs">summary_helpers.rs</a></td>
+<td>Python PIP and CS ordering/filtering; native complete pairwise purity extraction</td>
+</tr>
+</tbody>
+</table></div>
+<p>The path is <strong>Python API → validated arrays/working quantities → PyO3/NumPy
+boundary → Rust IBSS/SER → Python posterior summaries → SusieResult</strong>.
+No R interpreter participates in fitting.</p>
+<h2 id="sequential-updates-and-matrix-products">Sequential updates and matrix products</h2>
+<p>Let Q = XᵀX, g = Xᵀy and mℓ = αℓ ⊙ μℓ. The crossproduct residual for component ℓ is</p>
+<p><strong>rℓ = g − Q ∑k≠ℓ mk</strong>.</p>
+<p><code>component_products</code> stores Qmℓ for each component, and <code>output.xtxr</code> stores
+their running sum. At each update the old Qmℓ is subtracted, SER is evaluated
+on rℓ, and the new Qmℓ is added. Initially all coefficient means and products
+are zero. A product remains valid until that component's mean changes. The
+matrix and its scaling stay fixed during one fit; no cache survives a public
+call. Thus each component needs one new matrix-vector product, without a second
+product to remove its old contribution.</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="c1"># Mathematical pseudocode for the native sequential loop.</span>
+<span class="n">fitted</span> <span class="o">-=</span> <span class="n">component_products</span><span class="p">[</span><span class="n">ell</span><span class="p">]</span>
+<span class="n">residual</span> <span class="o">=</span> <span class="n">g</span> <span class="o">-</span> <span class="n">fitted</span>
+<span class="n">alpha</span><span class="p">[</span><span class="n">ell</span><span class="p">],</span> <span class="n">mu</span><span class="p">[</span><span class="n">ell</span><span class="p">],</span> <span class="n">mu2</span><span class="p">[</span><span class="n">ell</span><span class="p">]</span> <span class="o">=</span> <span class="n">SER</span><span class="p">(</span><span class="n">residual</span><span class="p">,</span> <span class="n">diagonal</span><span class="p">,</span> <span class="n">sigma2</span><span class="p">,</span> <span class="n">V</span><span class="p">[</span><span class="n">ell</span><span class="p">])</span>
+<span class="n">component_products</span><span class="p">[</span><span class="n">ell</span><span class="p">]</span> <span class="o">=</span> <span class="n">Q</span> <span class="o">@</span> <span class="p">(</span><span class="n">alpha</span><span class="p">[</span><span class="n">ell</span><span class="p">]</span> <span class="o">*</span> <span class="n">mu</span><span class="p">[</span><span class="n">ell</span><span class="p">])</span>
+<span class="n">fitted</span> <span class="o">+=</span> <span class="n">component_products</span><span class="p">[</span><span class="n">ell</span><span class="p">]</span>
+</code></pre></div>
+
+<p><code>expected_residual_sum_squares</code> reuses those products for the total quadratic
+form and component corrections, with <code>ResidualScratch</code> vectors for total means,
+fitted values, quadratic terms and second moments. This uses matrix linearity
+without refitting components. Dense multiplication accumulates nonzero columns,
+four at a time where possible, to reduce repeated output loads and stores;
+it does not prune small nonzero coefficients.</p>
+<p>For dense Q, a sweep is O(Lp²) plus SER searches and summaries. The cached
+products cost O(Lp). Iteration count and prior-variance search evaluations remain
+data dependent.</p>
+<h2 id="ser-and-prior-variance-workspace">SER and prior-variance workspace</h2>
+<p>In <code>single_effect</code>, per-variant marginal estimates are rebuilt from the current
+residual. <code>SerSampling</code> holds σ²/Qjj and exact-equality groups of the finite
+sampling variances (clipped to machine epsilon for the likelihood calculation).
+At most 16 distinct groups are used; otherwise the generic calculation applies.
+The cache is rebuilt whenever σ² changes. The diagonal stays fixed within a fit.</p>
+<p><code>SerBuffers</code> reuses the capacity of <code>half_beta_squared</code>, <code>group_index</code>,
+<code>safe_groups</code>, <code>terms</code> and <code>group_max_half_beta_squared</code>. Each SER rebuilds the
+residual-dependent terms and maxima. Equal sampling variances share logarithms
+and denominators during the search over V; no rounding or binning forms groups.
+Fixed-V and EM paths avoid constructing an unused search workspace. The <code>optim</code>
+path retains the already evaluated winning objective for the null comparison,
+while preserving the reference's comparison with the initial V.</p>
+<p>These allocations and common subexpressions concern the same SER likelihood.
+They do not reuse another component's posterior or alter its prior weights.
+The Rust tests compare reused and newly constructed likelihood workspaces;
+Python reference tests exercise fixed, optimized and EM variance paths.</p>
+<h2 id="matrix-scaling-exact-redundancy-and-fallback">Matrix scaling, exact redundancy and fallback</h2>
+<p>The Python preparation can pass the validated unscaled matrix with scalar and
+diagonal factors through <code>MatrixScaling</code>. Products apply the factors to the
+coefficient vector and output, avoiding a second dense scaled matrix. This
+route requires a global multiplier between 1 and 10⁹, scales and inverse scales
+between 0.5 and 2, and every raw entry satisfying |Mij| ≤ 2 in
+<code>operator_entries_bounded</code>. Outside these bounds, <code>materialize_scaled</code> evaluates
+the ordered dense preparation. A nonfinite intermediate in a factored product
+also uses this dense fallback. The factorization is algebraically equivalent;
+floating-point association can differ.</p>
+<p>For p ≥ 1024 and a component with at least ⌈p/8⌉ nonzero means, lazy discovery
+can use exact signed matrix-column equality. Sampled hashes propose candidate
+classes; full float64 equality verifies every accepted relation. The plan is
+used only when the number of representatives is at most 7p/8. In a class with
+column j = sj times its representative, multiplication first sums sj vj,
+then multiplies representative columns. Additional full row checks determine
+whether a compact representative matrix can be used; otherwise full-length
+representative columns remain available.</p>
+<p>All original variants, their priors and their posterior arrays remain in the
+SER. This compresses a matrix operation, not the statistical model. It is
+neither an approximate low-rank method nor an LD threshold. Matrices with no
+useful exact redundancy retain dense multiplication. Tests include sign flips,
+zeros, hash collisions, dense fallback and the original variant order.</p>
+<h2 id="layout-and-memory">Layout and memory</h2>
+<p>Compatible aligned arrays can be borrowed at the binding. Public normalization
+converts dtype/layout when required; C-contiguous inputs have a transposed
+column-major view for the native column traversal. Direct native row-major
+inputs can require a column-major copy. Null-column augmentation, incompatible
+strides, known-phenotype-variance RSS and scaled-matrix fallback can allocate
+dense arrays. This is not a zero-copy public call.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Memory category</th>
+<th>Main objects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O(p²)</td>
+<td>Retained input matrix; any required prepared matrix; optional exact representative matrix; optional eigendecomposition for check_input</td>
+</tr>
+<tr>
+<td>O(Lp)</td>
+<td>alpha, mu, mu2, variant log BFs, cached component products and previous alpha</td>
+</tr>
+<tr>
+<td>O(p)</td>
+<td>Residuals, one-component means/products, SER scratch, sampling quantities and predictor scales</td>
+</tr>
+<tr>
+<td>Data dependent</td>
+<td>CS pair correlations (O(k²) for a k-member set), optional nonfinite-convergence history and iteration trace</td>
+</tr>
+</tbody>
+</table></div>
+<p>Rust-owned result vectors are transferred into NumPy arrays through
+<code>IntoPyArray</code>. The result retains scientific summaries rather than Q itself.
+The <a href="performance.html">performance</a> measurements are full-process peak memory,
+which also includes interpreters, imports and input loading.</p>
+<h2 id="floating-point-calculations-and-portability">Floating-point calculations and portability</h2>
+<p>SER log weights use max-shifted exponentials before normalization. Likelihood
+log-sum-exp uses balanced reduction of nonnegative exponential terms; signed
+posterior, KL and residual sums use the compensated <code>sum</code> helper where called.
+These operations reduce numerical loss without requiring R's accumulation order.</p>
+<p>The optional <code>vector-math</code> feature builds a small C helper only for native GNU
+Linux x86-64. <a href="https://github.com/LucaJiang/prusie/blob/main/rust/vector_math.rs">vector_math.rs</a>
+and <a href="https://github.com/LucaJiang/prusie/blob/main/rust/vector_math.c">vector_math.c</a>
+load system libmvec symbols and detect AVX2 at runtime; SSE2 is available on
+x86-64. Missing symbols, unsupported builds or <code>PRUSIE_SER_MATH=scalar</code> select
+scalar exponentials. Nondefault floating-point rounding or flush modes also use
+scalar behavior. Tail elements and representable subnormals have explicit tests.
+Generic builds do not require an AVX2 CPU to import or fit.</p>
+<h2 id="threads-and-the-python-boundary">Threads and the Python boundary</h2>
+<p>The IBSS component loop is serial. <code>PRUSIE_NUM_THREADS</code> defaults to one and accepts
+integer values from 1 to 32 (invalid values fall back to one); it controls independent exact-column discovery and representative
+verification work on sufficiently large matrices. It does not parallelize
+component updates or launch a fit cache. NumPy's optional eigenvalue checks may
+use its loaded BLAS threads, configured separately.</p>
+<p>The binding <strong>retains the GIL while borrowing NumPy arrays and running the
+native fit</strong>. Python threads therefore do not provide concurrent public fits
+through this binding. Independent processes can run separate regions, subject
+to memory and thread budgeting. <a href="performance.html">Performance</a> uses one numerical
+thread. Whole-call speedups compare complete implementations; the retained
+measurements do not isolate the contribution of an individual mechanism.</p></article>
+<footer><p>prusie 0.2.3rc5 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+</main>
+</div>
+</body>
+</html>

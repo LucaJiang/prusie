@@ -68,6 +68,19 @@ def check():
                 errors.append(f'{path.relative_to(ROOT)}: missing {target}')
         if '/home/' in text or '/opt/anaconda' in text:
             errors.append(f'{path.relative_to(ROOT)}: private path')
+    for path in docs.glob('*.md'):
+        source = path.read_text()
+        fences = re.findall(r'^```([^\n]*)', source, re.M)
+        for language in fences[::2]:
+            if language.strip() not in ('python', 'r', 'R', 'sh', 'shell', 'bash', 'json', 'text'):
+                errors.append(f'{path.relative_to(ROOT)}: code fence needs an explicit language')
+        if any(language.strip() in ('python','r','R','sh','shell','bash','json') for language in fences[::2]):
+            rendered = path.with_suffix('.html').read_text()
+            if 'class="highlight"' not in rendered or not re.search(r'<span class="[a-z0-9]+">', rendered):
+                errors.append(f'{path.relative_to(ROOT)}: missing token-level highlighting')
+    result_html = (docs / 'results.html').read_text()
+    if 'V&lt;prior_tol' not in result_html or '<prior_tol' in result_html:
+        errors.append('results.html: literal comparison escaping regression')
     cfg = (ROOT / 'pyproject.toml').read_text()
     package = re.search(r'^name = "([^"]+)"', cfg, re.M)[1]
     version = re.search(r'^version = "([^"]+)"', cfg, re.M)[1]
