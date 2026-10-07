@@ -44,7 +44,7 @@ PIP and the requested threshold. `coverage=None` or `min_abs_corr=None` disables
 CS construction. A CS is not a marginal region posterior and its posterior mass
 is not empirical frequentist coverage. Nonconvergence is independent of no-CS.
 
-After iteration, V<prior_tol components have zero V/moments/BFs/KL and alpha
+After iteration, V&lt;prior_tol components have zero V/moments/BFs/KL and alpha
 restored to the normalized prior. ELBO and XtXr preserve pre-trim iteration
 values. PIP agreement alone does not establish equality of intermediate arrays,
 credible sets, Bayes factors or downstream posteriors. Persist arrays with NPZ plus JSON metadata if
