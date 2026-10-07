@@ -19,18 +19,10 @@ fit = prusie.susie_rss(
 )
 ```
 
-Choose one of the following input routes:
-
-| Arguments | Interpretation |
-| --- | --- |
-| `z`, `R`, `n` | Signed z, signed correlation matrix and known sample size >1; finite-sample Wald adjustment |
-| `bhat`, `shat`, `R`, `n` | Effect estimates and positive standard errors, converted to signed z; shat may be scalar or a vector |
-| `bhat`, `shat`, `R`, `n`, `var_y` | Known phenotype variance, with original predictor-scale reconstruction |
-| `z`, `R`, `n=None` | Explicit large-sample noncentrality likelihood, with a warning; `prior_variance=50` initializes V |
-
-`z` is mutually exclusive with `bhat`/`shat`. `R` must match the complete input
-order and effect alleles. A supplied `var_y` also sets response variance with
-z-only inputs. Nonzero `z_ld_weight` is unsupported.
+Input routes, shapes and alignment requirements are centralized in
+[Inputs](inputs.md#supported-model-and-input-routes). The
+[model page](model.md#from-summaries-to-working-sufficient-statistics) gives
+separate working-scale formulas for each route.
 
 ## susie_suff_stat
 
@@ -46,9 +38,9 @@ fit = prusie.susie_suff_stat(
 )
 ```
 
-Q is a symmetric p×p predictor crossproduct, g is a length-p predictor-response
-crossproduct, yty is positive and n>1. Optional `X_colmeans` and `y_mean` recover
-an original-scale intercept; it is NaN when means are unavailable.
+`XtX`, `Xty`, `yty` and `n` describe the same centered data, as detailed in
+[Inputs](inputs.md#shapes-and-numerical-checks). `X_colmeans` and `y_mean` are
+optional original means for recovering the intercept.
 
 ## Shared fitting options
 
@@ -58,12 +50,12 @@ an original-scale intercept; it is NaN when means are unavailable.
 | `scaled_prior_variance` | 0.2 | Initial component variance divided by yty/(n−1); ≤1 when standardized |
 | `residual_variance` | None | Initial/fixed residual variance; None uses yty/(n−1) |
 | `estimate_prior_variance` | True | Whether to update component V |
-| `estimate_prior_method` | `'optim'` | `'optim'`, `'EM'` or `'simple'` |
+| `estimate_prior_method` | `'optim'` | Continuous marginal-likelihood search; alternatives `'EM'` and `'simple'` follow the [model's update schedule](model.md#sequential-ibss-and-variance-estimation) |
 | `check_null_threshold` | 0 | Log-BF threshold for the applicable null-V comparison |
 | `prior_weights` | None | Uniform prior by default; finite nonnegative weights with positive total otherwise |
 | `null_weight` | 0 | Optional last internal null column, in [0,1) |
 | `standardize` | True | Scale predictors to unit sample variance |
-| `prior_tol` | 1e-9 | Final trim and PIP threshold; CS activity uses its fixed 1e-9 threshold |
+| `prior_tol` | 1e-9 | Final trim/PIP threshold; precise inequalities and separate CS activity are in [Results](results.md#iterations-and-finalization) |
 | `coverage` | 0.95 | Requested credible-set posterior mass |
 | `min_abs_corr` | 0.5 | Minimum complete-pair absolute correlation for retained sets |
 | `n_purity` | None | Accepted option; matrix-input purity always uses all selected pairs |
@@ -74,14 +66,29 @@ an original-scale intercept; it is NaN when means are unavailable.
 | `variant_metadata` | None | Aligned length-p columns copied into the result |
 
 RSS defaults to `max_iter=50`; sufficient statistics to 100. Both default to
-`tol=0.0001`. The tolerance concerns finite nonnegative ELBO improvement.
+`tol=0.0001`. See [Results](results.md#iterations-and-finalization) for the stopping criterion.
 `estimate_residual_variance` defaults to False in RSS and True in sufficient
 statistics. Use fixed variance with external LD unless estimation is justified.
 `coverage=None` or `min_abs_corr=None` disables CS construction while retaining PIP.
 
-Nondefault `s_init`, `refine`, `track_fit` and `verbose` are unsupported.
-The sufficient-statistic `maf`/`maf_thresh` filtering options are unsupported.
-These requests raise `NotImplementedError`; invalid inputs raise `ValueError`.
+The following exposed options accept only their listed defaults:
+
+| Parameter | Allowed value | Error for another value |
+| --- | --- | --- |
+| `s_init` | None | `NotImplementedError: s_init is not implemented` |
+| `refine` | False | `NotImplementedError: refine is not implemented` |
+| `track_fit` | False | `NotImplementedError: track_fit is not implemented` |
+| `verbose` | False | `NotImplementedError: verbose is not implemented` |
+| `maf`, `maf_thresh` (sufficient statistics) | None, 0 | `NotImplementedError: maf is not implemented` |
+| `z_ld_weight` (RSS) | 0 | `NotImplementedError: Nonzero z_ld_weight is not implemented` |
+
+Invalid shapes, nonfinite values and parameter ranges raise `ValueError`.
+`L`, `max_iter` and supplied `n_purity` must be positive integers; `tol`,
+`prior_tol`, `r_tol` and `check_null_threshold` must be finite and nonnegative.
+`coverage` lies in (0, 1], `min_abs_corr` in [0, 1], or either may be None.
+In missing-n mode, `prior_variance` (default 50) replaces
+`scaled_prior_variance`; changing the latter from 0.2 raises an error.
+
 Full signatures and docstrings are available through Python `help()` and the
 [API source](https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py).
 
@@ -89,8 +96,8 @@ Full signatures and docstrings are available through Python `help()` and the
 
 Both fitting functions return a `SusieResult`, including `pip`, `alpha`, `mu`,
 `mu2`, `lbf_variable`, `lbf`, `V`, `sigma2`, `elbo`, `KL`, `sets`, `niter`,
-`converged` and execution metadata. `fit.coef` gives original-scale posterior
-coefficient means. `fit.as_dict()` returns a shallow mapping; it does not copy
+`converged` and execution metadata. `fit.coef` gives posterior coefficient means on the scale defined by the input
+route. `fit.as_dict()` returns a shallow mapping; it does not copy
 arrays. See [results](results.md) for shapes and finalization details.
 
 ## Posterior helpers
@@ -101,9 +108,8 @@ the optional null position.
 
 `prusie.posterior.credible_sets` accepts alpha, V and a signed correlation
 matrix, with keyword options `coverage`, `min_abs_corr`, `null_index`,
-`n_purity`, `covariance_scales` and `covariance_multiplier`. Returned component
-IDs retain their original identity. `coverage` is actual posterior mass;
-`actual_coverage` is an equal alias and `requested_coverage` records the target.
+`n_purity`, `covariance_scales` and `covariance_multiplier`. See [Results](results.md#credible-set-fields) for original component IDs,
+selection order, posterior mass and aliases.
 The scale options are used when the matrix contains covariance rather than
 correlation. Normal fitting constructs these arguments internally.
 

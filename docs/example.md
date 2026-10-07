@@ -92,7 +92,7 @@ correlation 0.85, sample-standardized predictors, nonzero coefficients 0.35 and
 noise. Coordinates are arbitrary synthetic positions at 1000-unit intervals.
 `tools/generate_example.py --check` verifies the exact frozen-file SHA256 hashes
 and checks regenerated numerical values within tight floating-point roundoff
-bounds. Compressed archive bytes can vary across numerical libraries; see
+bounds. Regenerated array values can differ slightly between CPU numerical kernels; see
 [the regeneration criteria](reproducibility.md#toy-data-regeneration).
 
 The packaged reference was separately fitted with susieR 0.16.6 using the same

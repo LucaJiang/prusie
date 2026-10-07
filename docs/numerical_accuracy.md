@@ -3,7 +3,7 @@
 The real-data comparison uses prusie 0.2.3rc4 and susieR 0.16.6 at commit
 `8e56a8e038e989856d106d9ca5175cc664fea9d2`. It reanalyzes saved full fits from
 6 October 2026 using the matched inputs and parameters described in
-[performance methods](performance.md#methods). Inference source has not changed.
+[performance methods](performance.md#methods). These records identify the measured rc4 source and binary; they are not timings or full-panel measurements of later checkouts.
 
 ## Variant inclusion probabilities
 

@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
-<title>SusieResult schema · prusie</title>
+
+<title>Results · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
 <link rel="stylesheet" href="assets/katex/katex.min.css">
@@ -16,21 +17,27 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
 <span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html" aria-current="page">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html" aria-current="page">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="results.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#saving-results">Saving results</a></li>
+<li><a href="#posterior-fields">Posterior fields</a></li>
+<li><a href="#credible-set-fields">Credible-set fields</a></li>
+<li><a href="#iterations-and-finalization">Iterations and finalization</a></li>
+<li><a href="#metadata-and-persistence">Metadata and persistence</a></li>
 </ul>
 </div>
-</details><h1 id="susieresult-schema">SusieResult schema</h1>
-<p>All indices are zero-based. m is the number of biological variants; q=m+1 when
-an explicit null column is present, otherwise q=m. L is the returned effect
-count, capped at the available columns. <code>as_dict()</code> returns a shallow mapping
-without copying arrays. Results are mutable; callers own any copies they need.</p>
+</details><h1 id="results">Results</h1>
+<p>Both fitting functions return <code>SusieResult</code>. All indices are zero-based and
+biological variants remain in the caller's order. Let <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span> be their count and
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>=</mo><mi>p</mi><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">q=p+1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span> when an internal null column is present, otherwise <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi><mo>=</mo><mi>p</mi></mrow><annotation encoding="application/x-tex">q=p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span>. In the table,
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span></span></span></span></span> is the returned component count, capped at the number of available columns.
+<code>as_dict()</code> returns a shallow mapping without copying arrays. Results are
+mutable; callers own any copies they need.</p>
+<h2 id="posterior-fields">Posterior fields</h2>
 <div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
 <thead>
 <tr>
@@ -41,143 +48,199 @@ without copying arrays. Results are mutable; callers own any copies they need.</
 </thead>
 <tbody>
 <tr>
-<td>variant_ids</td>
-<td>(m,) strings</td>
-<td>Original caller SNP order, excluding null</td>
+<td><code>variant_ids</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>p</mi><mo separator="true">,</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(p,)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">p</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mclose">)</span></span></span></span></span> strings</td>
+<td>Caller variant order, excluding null</td>
 </tr>
 <tr>
-<td>alpha</td>
-<td>(L,q) float64</td>
-<td>Single-effect posterior probabilities</td>
+<td><code>alpha</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>L</mi><mo separator="true">,</mo><mi>q</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(L,q)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mclose">)</span></span></span></span></span> float64</td>
+<td>Component probabilities <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>q</mi><mi mathvariant="normal">ℓ</mi></msub><mo stretchy="false">(</mo><msub><mi>γ</mi><mi mathvariant="normal">ℓ</mi></msub><mo>=</mo><mi>j</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">q_\ell(\gamma_\ell=j)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05556em;">γ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0556em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.05724em;">j</span><span class="mclose">)</span></span></span></span></span></td>
 </tr>
 <tr>
-<td>mu</td>
-<td>(L,q) float64</td>
-<td>Conditional effect means on fitted predictor scale</td>
+<td><code>mu</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>L</mi><mo separator="true">,</mo><mi>q</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(L,q)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mclose">)</span></span></span></span></span> float64</td>
+<td>Conditional means on the fitted predictor scale</td>
 </tr>
 <tr>
-<td>mu2</td>
-<td>(L,q) float64</td>
-<td>Conditional second moments, not variances</td>
+<td><code>mu2</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>L</mi><mo separator="true">,</mo><mi>q</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(L,q)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mclose">)</span></span></span></span></span> float64</td>
+<td>Conditional second moments, equal to squared conditional means plus conditional variances</td>
 </tr>
 <tr>
-<td>lbf_variable</td>
-<td>(L,q) float64</td>
-<td>Natural-log component/SNP Bayes factors</td>
+<td><code>lbf_variable</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>L</mi><mo separator="true">,</mo><mi>q</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(L,q)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mclose">)</span></span></span></span></span> float64</td>
+<td>Natural-log component/variant Bayes factors before variant weights</td>
 </tr>
 <tr>
-<td>lbf</td>
-<td>(L,) float64</td>
-<td>Component log Bayes factors</td>
+<td><code>lbf</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>L</mi><mo separator="true">,</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(L,)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mclose">)</span></span></span></span></span> float64</td>
+<td>Component log weighted evidence</td>
 </tr>
 <tr>
-<td>V</td>
-<td>(L,) float64</td>
-<td>Component prior variances after final trimming</td>
+<td><code>V</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>L</mi><mo separator="true">,</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(L,)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mclose">)</span></span></span></span></span> float64</td>
+<td>Component prior variances after trimming</td>
 </tr>
 <tr>
-<td>sigma2</td>
+<td><code>sigma2</code></td>
 <td>float</td>
-<td>Residual variance</td>
+<td>Residual variance on the working response scale</td>
 </tr>
 <tr>
-<td>pip</td>
-<td>(m,) float64</td>
-<td>Marginal inclusion probability; null excluded</td>
+<td><code>pip</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>p</mi><mo separator="true">,</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(p,)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">p</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mclose">)</span></span></span></span></span> float64</td>
+<td>Marginal inclusion probability over active components, excluding null</td>
 </tr>
 <tr>
-<td>elbo</td>
-<td>(niter,) float64</td>
-<td>IBSS objective trace before final low-V trim</td>
+<td><code>coef</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>p</mi><mo separator="true">,</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(p,)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">p</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mclose">)</span></span></span></span></span> property</td>
+<td>Sum of alpha times mu over components, divided by predictor scale factors</td>
 </tr>
 <tr>
-<td>niter, converged</td>
-<td>int, bool</td>
-<td>Iterations executed and convergence status</td>
+<td><code>KL</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>L</mi><mo separator="true">,</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(L,)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mclose">)</span></span></span></span></span> float64</td>
+<td>Component divergence terms from the fitting updates; trimmed rows are zero</td>
 </tr>
 <tr>
-<td>null_index</td>
-<td>int or None</td>
-<td>Last internal null-column index when enabled</td>
+<td><code>elbo</code></td>
+<td><code>(niter,)</code> float64</td>
+<td>Objective trace before final low-V trimming</td>
 </tr>
 <tr>
-<td>sets</td>
-<td>mapping</td>
-<td>Credible-set data below</td>
+<td><code>XtXr</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>q</mi><mo separator="true">,</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(q,)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mclose">)</span></span></span></span></span> float64</td>
+<td>Retained fitted crossproduct before trimming; this is not the crossproduct residual</td>
 </tr>
 <tr>
-<td>params</td>
-<td>mapping</td>
-<td>Actual model/options, including effective prior weights</td>
+<td><code>X_column_scale_factors</code></td>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>q</mi><mo separator="true">,</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(q,)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mclose">)</span></span></span></span></span> float64</td>
+<td>Predictor scale factors including null, if present</td>
 </tr>
 <tr>
-<td>backend_version</td>
-<td>string</td>
-<td>Installed native implementation version</td>
-</tr>
-<tr>
-<td>warnings</td>
-<td>list of strings</td>
-<td>Numerical/model/convergence warnings</td>
-</tr>
-<tr>
-<td>qc</td>
-<td>mapping</td>
-<td>Per-call input/transform diagnostics; not external alignment proof</td>
-</tr>
-<tr>
-<td>variant_metadata</td>
-<td>mapping of (m,) arrays</td>
-<td>Caller metadata copied into result</td>
-</tr>
-<tr>
-<td>X_column_scale_factors</td>
-<td>(q,) float64</td>
-<td>Predictor scaling, including null when present</td>
-</tr>
-<tr>
-<td>intercept</td>
+<td><code>intercept</code></td>
 <td>float</td>
-<td>Original-scale intercept using supplied means; NaN if means unavailable</td>
-</tr>
-<tr>
-<td>KL</td>
-<td>(L,) float64</td>
-<td>Component divergence terms</td>
-</tr>
-<tr>
-<td>XtXr</td>
-<td>(q,) float64</td>
-<td>Crossproduct times posterior coefficients, not a residual vector</td>
-</tr>
-<tr>
-<td>coef</td>
-<td>(m,) property</td>
-<td>Σ(alpha*mu) divided by original predictor scales</td>
+<td>Supplied response mean minus predictor means times posterior coefficients; NaN when means are unavailable</td>
 </tr>
 </tbody>
 </table></div>
-<p><code>sets.cs[k]</code> contains members for original effect <code>sets.cs_index[k]</code>.
-Indices need not be consecutive and return order is not a relabeling.
-<code>coverage</code> and its equal alias <code>actual_coverage</code> are posterior mass of each
-returned set. <code>requested_coverage</code> is the target. <code>purity</code> holds
-min_abs_corr, mean_abs_corr and median_abs_corr for complete retained sets.
-Complete purity includes every selected pair; n_purity never subsamples the
-supplied matrix. No correlation matrix is returned inside sets.</p>
-<p>No-CS returns empty member/index/coverage/purity collections while preserving
-PIP and the requested threshold. <code>coverage=None</code> or <code>min_abs_corr=None</code> disables
-CS construction. A CS is not a marginal region posterior and its posterior mass
-is not empirical frequentist coverage. Nonconvergence is independent of no-CS.</p>
-<p>After iteration, V&lt;prior_tol components have zero V/moments/BFs/KL and alpha
-restored to the normalized prior. ELBO and XtXr preserve pre-trim iteration
-values. Numerical differences in PIPs, intermediate arrays, credible sets and Bayes
-factors are reported separately in <a href="numerical_accuracy.html">numerical accuracy</a>. Persist arrays with NPZ plus JSON metadata if
-needed; pickle and R are not required by this result contract.</p>
-<h2 id="saving-results">Saving results</h2>
-<p>Prefer NPZ arrays plus JSON metadata for portable results. Python pickles retain
+<p><code>mu</code> is conditional on a variant being selected within one component, whereas
+<code>alpha * mu</code> is the component's marginal coefficient mean. See the
+<a href="model.html#component-posteriors-and-effect-means">model explanation</a> for their
+relationship and the separate <a href="model.html#from-summaries-to-working-sufficient-statistics">RSS coefficient scales</a>.</p>
+<h2 id="credible-set-fields">Credible-set fields</h2>
+<p><code>sets['cs'][k]</code> contains member indices for the original component
+<code>sets['cs_index'][k]</code>. IDs need not be consecutive; sorting returned sets does
+not relabel components. The mapping contains:</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cs</code></td>
+<td>List of member-index arrays, ascending within each set</td>
+</tr>
+<tr>
+<td><code>cs_index</code></td>
+<td>Original zero-based component ID for each returned set</td>
+</tr>
+<tr>
+<td><code>coverage</code>, <code>actual_coverage</code></td>
+<td>Actual selected posterior mass in that component; equal aliases sharing the returned array for nonempty results</td>
+</tr>
+<tr>
+<td><code>requested_coverage</code></td>
+<td>Requested selection target</td>
+</tr>
+<tr>
+<td><code>purity</code></td>
+<td>Arrays <code>min_abs_corr</code>, <code>mean_abs_corr</code>, <code>median_abs_corr</code>, one entry per returned set</td>
+</tr>
+</tbody>
+</table></div>
+<p>Candidates accumulate alpha in descending order with stable ties, then sort
+member indices. Deduplication retains the first occurrence of a membership set
+<strong>before</strong> activity and purity filtering, so an earlier rejected candidate can
+suppress a later duplicate. CS activity uses <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">V_\ell&gt;10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span>. Candidates
+containing null receive the reference's negative purity sentinel and are not
+retained at allowed thresholds. Singleton sets have purity one; larger retained
+sets use every unordered pair's absolute correlation. <code>n_purity</code> does not
+subsample matrix input. Returned sets sort by decreasing minimum purity with
+stable ties.</p>
+<p>Empty sets give empty member/index/mass/purity collections while retaining PIPs
+and the target. <code>coverage=None</code> or <code>min_abs_corr=None</code> disables construction.
+The <a href="model.html#pip-and-credible-sets">two-variant example</a> distinguishes requested
+mass, selected mass, LD purity and repeated-sampling coverage. The presence of
+a credible set and convergence are separate properties.</p>
+<h2 id="iterations-and-finalization">Iterations and finalization</h2>
+<p><code>niter</code> counts executed sweeps; <code>max_iter</code> is the cap. With a finite objective
+increment, convergence requires <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mi mathvariant="normal">Δ</mi><mi mathvariant="script">L</mi><mo>&lt;</mo><mrow><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">0\leq\Delta\mathcal L&lt;\mathtt{tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7804em;vertical-align:-0.136em;"></span><span class="mord">0</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord">Δ</span><span class="mord mathcal">L</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6111em;"></span><span class="mord"><span class="mord mathtt">tol</span></span></span></span></span></span> after at
+least two sweeps. An objective decrease beyond tolerance produces a warning
+and does not satisfy this criterion. Reaching the cap returns
+<code>converged=False</code> with a warning, unless the stopping criterion held on that
+last sweep. The library does not silently refit.</p>
+<p>A nonfinite objective increment invokes the recorded alpha/PIP fallback. It
+checks a fixed point or a cycle of at most five states using the maximum
+absolute alpha/PIP difference and <code>tol</code>; a detected multi-state cycle averages
+alpha across that cycle. Other posterior arrays and retained products are not
+recomputed by this exceptional fallback. Its warning is part of the fit and
+should be retained when interpreting such outputs.</p>
+<p>Residual variance is updated only after the objective and stopping check, so
+it is unchanged on the convergence sweep. If estimation is enabled at an
+iteration-limit exit, returned <code>sigma2</code> includes the final ER2/n update while
+the last ELBO used the previous value. After iteration, V&lt;prior_tol components
+have V, moments, log BFs and KL set to zero and alpha restored to the normalized
+prior. ELBO and XtXr retain the completed iteration values before trimming.
+PIP uses <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo><mrow><mi mathvariant="monospace">p</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">i</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">_</mi><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">V_\ell&gt;\mathtt{prior\_tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.2222em;"></span><span class="mord"><span class="mord mathtt">prior_tol</span></span></span></span></span></span>; a component exactly at that threshold is
+untrimmed but inactive for PIP. The separate CS threshold is fixed as described
+above.</p>
+<h2 id="metadata-and-persistence">Metadata and persistence</h2>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>niter</code>, <code>converged</code></td>
+<td>Executed sweep count and stopping status</td>
+</tr>
+<tr>
+<td><code>null_index</code></td>
+<td>Last internal column index, or None</td>
+</tr>
+<tr>
+<td><code>params</code></td>
+<td>Actual options, normalized weights, effective dimensions and RSS input/scale information</td>
+</tr>
+<tr>
+<td><code>backend_version</code></td>
+<td>Installed Rust implementation and pinned reference identity</td>
+</tr>
+<tr>
+<td><code>warnings</code></td>
+<td>Numerical, model and convergence messages, also emitted as Python warnings</td>
+</tr>
+<tr>
+<td><code>qc</code></td>
+<td>Per-call matrix diagnostics; these do not certify external allele alignment</td>
+</tr>
+<tr>
+<td><code>variant_metadata</code></td>
+<td>Copies of caller-supplied length-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span> metadata arrays</td>
+</tr>
+</tbody>
+</table></div>
+<p>Use NPZ for arrays and JSON for parameters/metadata when persisting portable
+results; the <a href="example.html">toy tutorial</a> has an example. Python pickles retain
 class module paths and require a compatible environment. For trusted results
-saved by an older package, export portable arrays using that original environment;
-old class paths are not automatically remapped.</p></article>
+saved by an older package, export arrays with that original environment.</p></article>
 <footer><p>prusie 0.2.3rc6 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>

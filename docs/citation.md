@@ -22,3 +22,7 @@ and [THIRD_PARTY_NOTICES.md](https://github.com/LucaJiang/prusie/blob/main/THIRD
 and are included in package artifacts. The independent toy example has
 GPL-3.0-or-later terms. The older attributed regression fixture retains its
 original data notices separately.
+
+The static documentation includes KaTeX 0.16.22 styles and fonts under its
+[MIT license](assets/katex/LICENSE). The documentation build ships the matching
+renderer and records its hashes; it adds no inference dependency.

@@ -59,7 +59,7 @@ def main():
     highlights=table(['Analysis','Maximum absolute PIP difference','Paired runtime speedup¹','Median peak-memory ratio²'],[[g,f(groups[g]['errors']['pip']['max_abs_error']),f(groups[g]['runtime_speedup_geometric_mean'])+'×',f(groups[g]['memory_ratio_distribution']['median'])+'×'] for g in real])
     highlights+=f"\n{groups['GWAS']['analyses']} GWAS locus analyses and {groups['eQTL']['analyses']} eQTL analyses, each with {min(groups[g]['variant_count_range'][0] for g in real)}–{max(groups[g]['variant_count_range'][1] for g in real)} variants, compared with susieR {evidence['provenance']['susieR_version']}. "
     highlights+='¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). '
-    highlights+='Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; inference code is unchanged.\n'
+    highlights+='Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.\n'
     for page in ('README.md','docs/index.md'):fragment(page,'highlights',highlights)
     absolute=table(['Analysis','prusie time (ms)','susieR time (ms)','prusie peak memory (MiB)','susieR peak memory (MiB)'],[[g,f(groups[g]['runtime_seconds']['prusie']['median']*1000),f(groups[g]['runtime_seconds']['susieR']['median']*1000),f(groups[g]['peak_memory_mib']['prusie']['median']),f(groups[g]['peak_memory_mib']['susieR']['median'])] for g in real])
     absolute+='\nRuntime columns are medians across cases of each case’s median retained-repeat time. Memory columns are separate across-case medians of fresh-process peaks.\n'

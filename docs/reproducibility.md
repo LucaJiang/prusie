@@ -7,10 +7,12 @@ The real-data panel has public result records and separately obtained inputs.
 
 ## Regenerate tables and figures
 
-From the source checkout:
+From the source checkout with Node.js available for math rendering
+(see [Contributing](contributing.md#editing-and-building-documentation)):
 
 ```sh
 python -m pip install -r tools/results-requirements.txt -r tools/docs-requirements.txt
+python tools/model_examples.py --check
 python tools/generate_results.py
 python tools/generate_results.py --check
 python tools/build_docs.py

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
+
 <title>prusie · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -16,7 +17,7 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
 <span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html" aria-current="page">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html" aria-current="page">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -60,7 +61,7 @@ effect summaries.</p>
 </tr>
 </tbody>
 </table></div>
-<p>100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; inference code is unchanged.</p>
+<p>100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.</p>
 <!-- generated:highlights:end -->
 
 <div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Distributions of per-analysis runtime and full-process peak-memory ratios for GWAS and eQTL. Ratios above one favor prusie; boxes show medians and quartiles." src="assets/r_comparison.svg" /></p></div>
@@ -102,7 +103,7 @@ preparation, convergence, posterior mass, purity and saving results.</p>
 <h2 id="documentation">Documentation</h2>
 <p>Browse the <a href="https://lucajiang.github.io/prusie/">documentation site</a>,
 <a href="model.html">statistical model</a>, <a href="api.html">API</a>,
-<a href="implementation.html">implementation</a> and <a href="compatibility.html">model support</a>.
+<a href="implementation.html">implementation</a> and <a href="inputs.html#supported-model-and-input-routes">input routes</a>.
 <a href="reproducibility.html">Reproducibility</a> provides separate entrances for
 regenerating tables/figures and rerunning fits from inputs.</p>
 <h2 id="citation-and-license">Citation and license</h2>

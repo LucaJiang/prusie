@@ -12,7 +12,7 @@ effect summaries.
 | GWAS | 9.14e-09 | 37.4× | 6.94× |
 | eQTL | 1.22e-08 | 33.6× | 6.8× |
 
-100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; inference code is unchanged.
+100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.
 <!-- generated:highlights:end -->
 
 ![Distributions of per-analysis runtime and full-process peak-memory ratios for GWAS and eQTL. Ratios above one favor prusie; boxes show medians and quartiles.](assets/r_comparison.svg)
@@ -65,7 +65,7 @@ preparation, convergence, posterior mass, purity and saving results.
 
 Browse the [documentation site](https://lucajiang.github.io/prusie/),
 [statistical model](model.md), [API](api.md),
-[implementation](implementation.md) and [model support](compatibility.md).
+[implementation](implementation.md) and [input routes](inputs.md#supported-model-and-input-routes).
 [Reproducibility](reproducibility.md) provides separate entrances for
 regenerating tables/figures and rerunning fits from inputs.
 

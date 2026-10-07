@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
+
 <title>Python API · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -16,7 +17,7 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
 <span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html" aria-current="page">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html" aria-current="page">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -47,36 +48,10 @@ Result indices are zero-based. See <a href="inputs.html">inputs</a> for alignmen
 <span class="p">)</span>
 </code></pre></div>
 
-<p>Choose one of the following input routes:</p>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
-<thead>
-<tr>
-<th>Arguments</th>
-<th>Interpretation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>z</code>, <code>R</code>, <code>n</code></td>
-<td>Signed z, signed correlation matrix and known sample size &gt;1; finite-sample Wald adjustment</td>
-</tr>
-<tr>
-<td><code>bhat</code>, <code>shat</code>, <code>R</code>, <code>n</code></td>
-<td>Effect estimates and positive standard errors, converted to signed z; shat may be scalar or a vector</td>
-</tr>
-<tr>
-<td><code>bhat</code>, <code>shat</code>, <code>R</code>, <code>n</code>, <code>var_y</code></td>
-<td>Known phenotype variance, with original predictor-scale reconstruction</td>
-</tr>
-<tr>
-<td><code>z</code>, <code>R</code>, <code>n=None</code></td>
-<td>Explicit large-sample noncentrality likelihood, with a warning; <code>prior_variance=50</code> initializes V</td>
-</tr>
-</tbody>
-</table></div>
-<p><code>z</code> is mutually exclusive with <code>bhat</code>/<code>shat</code>. <code>R</code> must match the complete input
-order and effect alleles. A supplied <code>var_y</code> also sets response variance with
-z-only inputs. Nonzero <code>z_ld_weight</code> is unsupported.</p>
+<p>Input routes, shapes and alignment requirements are centralized in
+<a href="inputs.html#supported-model-and-input-routes">Inputs</a>. The
+<a href="model.html#from-summaries-to-working-sufficient-statistics">model page</a> gives
+separate working-scale formulas for each route.</p>
 <h2 id="susie_suff_stat">susie_suff_stat</h2>
 <p>Fit from centered sufficient statistics:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_suff_stat</span><span class="p">(</span>
@@ -88,9 +63,9 @@ z-only inputs. Nonzero <code>z_ld_weight</code> is unsupported.</p>
 <span class="p">)</span>
 </code></pre></div>
 
-<p>Q is a symmetric p×p predictor crossproduct, g is a length-p predictor-response
-crossproduct, yty is positive and n&gt;1. Optional <code>X_colmeans</code> and <code>y_mean</code> recover
-an original-scale intercept; it is NaN when means are unavailable.</p>
+<p><code>XtX</code>, <code>Xty</code>, <code>yty</code> and <code>n</code> describe the same centered data, as detailed in
+<a href="inputs.html#shapes-and-numerical-checks">Inputs</a>. <code>X_colmeans</code> and <code>y_mean</code> are
+optional original means for recovering the intercept.</p>
 <h2 id="shared-fitting-options">Shared fitting options</h2>
 <div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
 <thead>
@@ -124,7 +99,7 @@ an original-scale intercept; it is NaN when means are unavailable.</p>
 <tr>
 <td><code>estimate_prior_method</code></td>
 <td><code>'optim'</code></td>
-<td><code>'optim'</code>, <code>'EM'</code> or <code>'simple'</code></td>
+<td>Continuous marginal-likelihood search; alternatives <code>'EM'</code> and <code>'simple'</code> follow the <a href="model.html#sequential-ibss-and-variance-estimation">model's update schedule</a></td>
 </tr>
 <tr>
 <td><code>check_null_threshold</code></td>
@@ -149,7 +124,7 @@ an original-scale intercept; it is NaN when means are unavailable.</p>
 <tr>
 <td><code>prior_tol</code></td>
 <td>1e-9</td>
-<td>Final trim and PIP threshold; CS activity uses its fixed 1e-9 threshold</td>
+<td>Final trim/PIP threshold; precise inequalities and separate CS activity are in <a href="results.html#iterations-and-finalization">Results</a></td>
 </tr>
 <tr>
 <td><code>coverage</code></td>
@@ -194,20 +169,65 @@ an original-scale intercept; it is NaN when means are unavailable.</p>
 </tbody>
 </table></div>
 <p>RSS defaults to <code>max_iter=50</code>; sufficient statistics to 100. Both default to
-<code>tol=0.0001</code>. The tolerance concerns finite nonnegative ELBO improvement.
+<code>tol=0.0001</code>. See <a href="results.html#iterations-and-finalization">Results</a> for the stopping criterion.
 <code>estimate_residual_variance</code> defaults to False in RSS and True in sufficient
 statistics. Use fixed variance with external LD unless estimation is justified.
 <code>coverage=None</code> or <code>min_abs_corr=None</code> disables CS construction while retaining PIP.</p>
-<p>Nondefault <code>s_init</code>, <code>refine</code>, <code>track_fit</code> and <code>verbose</code> are unsupported.
-The sufficient-statistic <code>maf</code>/<code>maf_thresh</code> filtering options are unsupported.
-These requests raise <code>NotImplementedError</code>; invalid inputs raise <code>ValueError</code>.
-Full signatures and docstrings are available through Python <code>help()</code> and the
+<p>The following exposed options accept only their listed defaults:</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Allowed value</th>
+<th>Error for another value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>s_init</code></td>
+<td>None</td>
+<td><code>NotImplementedError: s_init is not implemented</code></td>
+</tr>
+<tr>
+<td><code>refine</code></td>
+<td>False</td>
+<td><code>NotImplementedError: refine is not implemented</code></td>
+</tr>
+<tr>
+<td><code>track_fit</code></td>
+<td>False</td>
+<td><code>NotImplementedError: track_fit is not implemented</code></td>
+</tr>
+<tr>
+<td><code>verbose</code></td>
+<td>False</td>
+<td><code>NotImplementedError: verbose is not implemented</code></td>
+</tr>
+<tr>
+<td><code>maf</code>, <code>maf_thresh</code> (sufficient statistics)</td>
+<td>None, 0</td>
+<td><code>NotImplementedError: maf is not implemented</code></td>
+</tr>
+<tr>
+<td><code>z_ld_weight</code> (RSS)</td>
+<td>0</td>
+<td><code>NotImplementedError: Nonzero z_ld_weight is not implemented</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Invalid shapes, nonfinite values and parameter ranges raise <code>ValueError</code>.
+<code>L</code>, <code>max_iter</code> and supplied <code>n_purity</code> must be positive integers; <code>tol</code>,
+<code>prior_tol</code>, <code>r_tol</code> and <code>check_null_threshold</code> must be finite and nonnegative.
+<code>coverage</code> lies in (0, 1], <code>min_abs_corr</code> in [0, 1], or either may be None.
+In missing-n mode, <code>prior_variance</code> (default 50) replaces
+<code>scaled_prior_variance</code>; changing the latter from 0.2 raises an error.</p>
+<p>Full signatures and docstrings are available through Python <code>help()</code> and the
 <a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py">API source</a>.</p>
 <h2 id="susieresult">SusieResult</h2>
 <p>Both fitting functions return a <code>SusieResult</code>, including <code>pip</code>, <code>alpha</code>, <code>mu</code>,
 <code>mu2</code>, <code>lbf_variable</code>, <code>lbf</code>, <code>V</code>, <code>sigma2</code>, <code>elbo</code>, <code>KL</code>, <code>sets</code>, <code>niter</code>,
-<code>converged</code> and execution metadata. <code>fit.coef</code> gives original-scale posterior
-coefficient means. <code>fit.as_dict()</code> returns a shallow mapping; it does not copy
+<code>converged</code> and execution metadata. <code>fit.coef</code> gives posterior coefficient means on the scale defined by the input
+route. <code>fit.as_dict()</code> returns a shallow mapping; it does not copy
 arrays. See <a href="results.html">results</a> for shapes and finalization details.</p>
 <h2 id="posterior-helpers">Posterior helpers</h2>
 <p><code>prusie.posterior.marginal_pip(alpha, V, *, null_index=None, prior_tol=1e-9)</code>
@@ -215,9 +235,8 @@ computes marginal inclusion probabilities from active components and excludes
 the optional null position.</p>
 <p><code>prusie.posterior.credible_sets</code> accepts alpha, V and a signed correlation
 matrix, with keyword options <code>coverage</code>, <code>min_abs_corr</code>, <code>null_index</code>,
-<code>n_purity</code>, <code>covariance_scales</code> and <code>covariance_multiplier</code>. Returned component
-IDs retain their original identity. <code>coverage</code> is actual posterior mass;
-<code>actual_coverage</code> is an equal alias and <code>requested_coverage</code> records the target.
+<code>n_purity</code>, <code>covariance_scales</code> and <code>covariance_multiplier</code>. See <a href="results.html#credible-set-fields">Results</a> for original component IDs,
+selection order, posterior mass and aliases.
 The scale options are used when the matrix contains covariance rather than
 correlation. Normal fitting constructs these arguments internally.</p>
 <h2 id="load_example">load_example</h2>

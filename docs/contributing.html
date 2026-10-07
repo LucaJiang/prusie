@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
+
 <title>Contributing · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -16,50 +17,75 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
 <span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html" aria-current="page">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html" aria-current="page">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="contributing.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#tests-and-packages">Tests and packages</a></li>
-<li><a href="#documentation-and-figures">Documentation and figures</a></li>
-<li><a href="#scientific-references-and-attribution">Scientific references and attribution</a></li>
+<li><a href="#development-environment">Development environment</a></li>
+<li><a href="#source-structure-and-tests">Source structure and tests</a></li>
+<li><a href="#editing-and-building-documentation">Editing and building documentation</a></li>
+<li><a href="#packages-and-scientific-attribution">Packages and scientific attribution</a></li>
 </ul>
 </div>
 </details><h1 id="contributing">Contributing</h1>
-<p>Use the build requirements in <a href="install.html">installation</a>. Changes to inference
-should retain sequential component updates and verify every affected model path
-against independently identified references. Keep numerical tolerances and
-reference changes explicit.</p>
-<h2 id="tests-and-packages">Tests and packages</h2>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>requirements-dev.lock<span class="w"> </span><span class="s1">&#39;.[test]&#39;</span><span class="w"> </span><span class="nv">maturin</span><span class="o">==</span><span class="m">1</span>.9.6
+<p>A useful contribution makes a statistical behavior easier to understand or
+maintain, with a focused example that distinguishes the intended result from
+plausible mistakes. Start from the <a href="model.html">model</a> and
+<a href="implementation.html">implementation</a>, then add a regression test alongside the
+path being changed. Keep reference identities and numerical tolerances explicit.</p>
+<h2 id="development-environment">Development environment</h2>
+<p>Source builds use the Rust toolchain in <code>rust-toolchain.toml</code>, a C compiler and
+Python development headers. The local checks use Python 3.12 and NumPy 2.2.6.
+From a checkout, create an environment and install the package and development
+tools:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+.<span class="w"> </span>.venv/bin/activate
+python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>requirements-dev.lock<span class="w"> </span><span class="s1">&#39;.[test]&#39;</span><span class="w"> </span><span class="nv">maturin</span><span class="o">==</span><span class="m">1</span>.9.6
 python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>tools/docs-requirements.txt<span class="w"> </span>-r<span class="w"> </span>tools/results-requirements.txt
-python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests
+</code></pre></div>
+
+<p>Reinstall the package after editing Python or Rust source so tests exercise the
+compiled checkout. For frequent Rust work, <code>maturin develop --release --locked</code>
+installs a development build in the active environment. Ordinary inference
+installs depend only on NumPy; documentation and plotting dependencies stay in
+their separate requirements files.</p>
+<h2 id="source-structure-and-tests">Source structure and tests</h2>
+<p><code>src/prusie</code> contains the public API, result object and posterior helpers.
+<code>bindings</code> validates borrowed arrays, prepares matrix operations and transfers
+owned outputs. <code>rust/core.rs</code> contains SER, matrix products and the IBSS schedule;
+<code>rust/optimizer.rs</code> and <code>rust/vector_math.*</code> supply optimization and optional
+vector exponentials. The <a href="implementation.html#source-navigation">source navigation</a>
+connects functions to their responsibilities.</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests
 <span class="nv">PRUSIE_SER_MATH</span><span class="o">=</span>scalar<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests
 cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--locked<span class="w"> </span>--lib<span class="w"> </span>--no-default-features<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
 cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--locked<span class="w"> </span>--lib<span class="w"> </span>--no-default-features<span class="w"> </span>--features<span class="w"> </span>vector-math<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+cargo<span class="w"> </span>fmt<span class="w"> </span>--all<span class="w"> </span>--check
+cargo<span class="w"> </span>clippy<span class="w"> </span>--locked<span class="w"> </span>--lib<span class="w"> </span>--tests<span class="w"> </span>--no-default-features<span class="w"> </span>--features<span class="w"> </span>vector-math
 python<span class="w"> </span>examples/quickstart.py
 python<span class="w"> </span>examples/check_example.py<span class="w"> </span>--output-dir<span class="w"> </span>regression-results
 python<span class="w"> </span>tools/check_checkout.py<span class="w"> </span>--output-dir<span class="w"> </span>checkout-check
-maturin<span class="w"> </span>build<span class="w"> </span>--release<span class="w"> </span>--locked<span class="w"> </span>--out<span class="w"> </span>dist
-maturin<span class="w"> </span>sdist<span class="w"> </span>--out<span class="w"> </span>dist
 </code></pre></div>
 
-<p>The installed-resource test fits the independent toy example and compares
-it with its packaged R reference. The older attributed fixture supplies seven
-unchanged regression cases, including partial-zero priors, empty credible sets
-and an iteration-limit diagnostic. Native tests exercise exact-column discovery,
-SER workspaces, array boundaries, scalar/vector math and supported variance paths.</p>
-<p><code>tools/check_artifacts.py --wheel FILE --sdist FILE --work-dir NEW_DIRECTORY</code>
-inspects license/data payloads, installs binary wheels in clean environments
-without Rust on PATH, runs examples from an independent directory, rebuilds the
-sdist and checks the rebuilt wheel. On Linux it also records auditwheel output.
-The CI workflow runs these checks; actual workflow status is separate from local
-verification.</p>
-<h2 id="documentation-and-figures">Documentation and figures</h2>
+<p>The Python reference tests include fixed Gaussian analytical cases and frozen
+R outputs. Layout tests cover C/F storage, strided and read-only views,
+alignment and conversion callbacks. Rust tests retain scalar mathematical
+oracles and directly observe the matrix-discovery branch at its real size
+threshold. When adding a branch, test both its execution condition and an
+independent expected result. Keep scalar fallbacks useful on CPUs without the
+optional vector instructions. Independent regions may run in separate
+processes; component updates within one fit remain sequential.</p>
+<h2 id="editing-and-building-documentation">Editing and building documentation</h2>
+<p>Markdown is the body source; generated HTML is committed alongside it. The
+build uses Python-Markdown 3.7, Pygments 2.19.2, Arithmatex 10.16.1 and vendored
+KaTeX 0.16.22. Node.js is needed only at build time (tested with Node.js 24.18.0).
+Once these tools are installed, rebuilding math requires no network access.</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/generate_example.py<span class="w"> </span>--check
+python<span class="w"> </span>tools/model_examples.py
+python<span class="w"> </span>tools/model_examples.py<span class="w"> </span>--check
 python<span class="w"> </span>tools/generate_results.py
 python<span class="w"> </span>tools/generate_results.py<span class="w"> </span>--check
 python<span class="w"> </span>tools/build_docs.py
@@ -68,26 +94,50 @@ python<span class="w"> </span>tools/check_docs.py
 python<span class="w"> </span>-m<span class="w"> </span>http.server<span class="w"> </span><span class="m">8000</span><span class="w"> </span>--bind<span class="w"> </span><span class="m">127</span>.0.0.1<span class="w"> </span>--directory<span class="w"> </span>docs
 </code></pre></div>
 
-<p>Markdown is the source for generated HTML. Pinned Markdown and Pygments produce
-local token-level highlighting with language guessing disabled. Code copying
-returns the original code, without line numbers. Mathematical notation is static
-Unicode and remains readable offline. Review desktop and mobile rendering after
-layout changes. Check the result generator before the HTML generator so tables,
-figures and rendered pages stay synchronized.</p>
-<p><code>docs/assets/benchmark_records.json</code> is the normalized retained-measurement
-source. The generator produces both README and Overview highlights, detailed
-tables, machine summaries and SVG/PDF figures. <code>--check</code> detects stale outputs.
-<a href="reproducibility.html">Reproducibility</a> describes what can be regenerated from
-public records and which fits require separately obtained inputs.</p>
-<h2 id="scientific-references-and-attribution">Scientific references and attribution</h2>
-<p>Use <a href="reference_mapping.html">source mapping</a> and
-<a href="implementation.html">implementation</a> when changing a computational path. Preserve
-independent frozen references; regenerate a new reference into a separate
-location and explain its source. Whole-call comparisons and isolated mechanism
-measurements answer different questions.</p>
-<p>Keep the GPL license, BSD susieR notices, R optimizer attribution and dataset
-licenses in both source and binary distributions. Cite the statistical methods
-and identify the software version as described in <a href="citation.html">citation</a>.</p></article>
+<p>Open <code>http://127.0.0.1:8000/</code>. Use <code>$...$</code> for inline math and a separate
+<code>$$...$$</code> block for display math, with blank lines around the block. Arithmatex
+protects TeX during Markdown parsing; the builder renders only those protected
+nodes into HTML plus accessible MathML. Invalid TeX stops the build with its
+page and formula. Fenced Python, R and shell blocks retain token highlighting
+and their original copyable text. The <a href="https://github.com/LucaJiang/prusie/tree/main/tools/vendor/katex">math renderer resources and lock</a>
+identify the matching renderer, styles, fonts and license.</p>
+<p><code>model_examples.py</code> checks and generates the small explanatory calculations.
+<code>generate_results.py</code> rebuilds the measured summaries and figures from
+<code>docs/assets/benchmark_records.json</code>; it also updates marked blocks in the
+README and Overview. These scripts must precede HTML generation. The
+<a href="reproducibility.html">reproducibility guide</a> distinguishes saved-record
+regeneration from fitting the underlying inputs.</p>
+<p>After layout changes, inspect wide and narrow browser views, local HTTP,
+<code>/prusie/</code> subpaths and offline file reading with JavaScript disabled. Long
+formulas and code should scroll inside their own region, without widening the
+page. Navigation, text, figures and mathematical rendering remain available
+without JavaScript; the copy button is optional.</p>
+<h2 id="packages-and-scientific-attribution">Packages and scientific attribution</h2>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>maturin<span class="w"> </span>build<span class="w"> </span>--release<span class="w"> </span>--locked<span class="w"> </span>--out<span class="w"> </span>dist
+maturin<span class="w"> </span>sdist<span class="w"> </span>--out<span class="w"> </span>dist
+python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;auditwheel&gt;=6,&lt;7&#39;</span>
+python<span class="w"> </span>tools/check_artifacts.py<span class="w"> </span>--wheel<span class="w"> </span>PATH_TO_WHEEL<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sdist<span class="w"> </span>PATH_TO_SDIST<span class="w"> </span>--work-dir<span class="w"> </span>artifact-check
+</code></pre></div>
+
+<p>Substitute the wheel and sdist just produced. The artifact checker inspects
+license and data payloads, installs wheels in clean environments without Rust
+on PATH, runs examples from an independent directory, rebuilds the sdist and
+checks its wheel. Linux checks also report auditwheel compatibility. Use a new
+output directory so earlier results are retained. CI runs the test, docs and
+package checks; its observed status is separate from a local run.</p>
+<p>Preserve frozen numerical inputs, raw reference records and attribution. If a
+new reference is needed, generate it separately and identify its source and
+parameters. Runtime optimizations should compare complete calls on an
+outcome-independent case panel with retained repeats, reporting wins, ties,
+regressions and variability. An optimization enters the main implementation
+only when more than half of applicable cases have lower median runtime;
+correctness or allocation savings alone do not establish that result.</p>
+<p>Retain GPL package terms, susieR's BSD notices, the R optimizer's attribution
+and data licenses. KaTeX's local documentation resources carry their own MIT
+notice. Cite the methods and identify the source revision as described in
+<a href="citation.html">Citation</a>. Focused changes and their tests can be proposed through
+the repository's issue and pull-request workflow.</p></article>
 <footer><p>prusie 0.2.3rc6 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>

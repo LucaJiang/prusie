@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
+<meta http-equiv="refresh" content="0; url=inputs.html#supported-model-and-input-routes">
+<link rel="canonical" href="inputs.html#supported-model-and-input-routes">
 <title>Model support · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -16,86 +18,13 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
 <span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html" aria-current="page">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="compatibility.md">Markdown source</a></div>
-<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
-<ul>
-<li><a href="#settings-and-result-semantics">Settings and result semantics</a></li>
-<li><a href="#boundaries">Boundaries</a></li>
-</ul>
-</div>
-</details><h1 id="model-support">Model support</h1>
-<p>prusie implements the Gaussian SuSiE paths of susieR 0.16.6. The Python API
-accepts NumPy-compatible arrays and returns explicit zero-based result indices.</p>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
-<thead>
-<tr>
-<th>Capability</th>
-<th>Supported behavior</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Summary statistics</td>
-<td>Signed z + signed R + known n; or beta/SE + R, with optional known phenotype variance</td>
-</tr>
-<tr>
-<td>Sufficient statistics</td>
-<td>Centered XᵀX, Xᵀy, yᵀy and n; optional original means for the intercept</td>
-</tr>
-<tr>
-<td>Missing sample size</td>
-<td>Explicit noncentrality-parameter likelihood with a warning</td>
-</tr>
-<tr>
-<td>Effect priors</td>
-<td>Scalar Gaussian variance; fixed, Brent-optimized, EM or simple update; normalized variant weights and optional null weight</td>
-</tr>
-<tr>
-<td>Residual variance</td>
-<td>Fixed or estimated; RSS defaults to fixed, sufficient statistics to estimated</td>
-</tr>
-<tr>
-<td>Summaries</td>
-<td>PIP, posterior means/second moments, natural-log Bayes factors, ELBO, component variances, credible sets and full-pair purity</td>
-</tr>
-<tr>
-<td>Computation</td>
-<td>CPU float64; sequential IBSS; dense signed matrices, including singular LD</td>
-</tr>
-</tbody>
-</table></div>
-<h2 id="settings-and-result-semantics">Settings and result semantics</h2>
-<p>RSS defaults are <code>L=10</code>, <code>max_iter=50</code> and <code>tol=0.0001</code>; the sufficient-statistic
-iteration maximum is 100. Evaluation settings are explicitly recorded separately.
-Known-n RSS uses the Wald finite-sample adjustment. Supplied <code>var_y</code> sets response
-variance, including with z-only input.</p>
-<p>Finite ELBO convergence requires a nonnegative improvement below tolerance.
-Nonfinite increments use the alpha/PIP fallback with warnings. After iteration,
-components with V&lt;prior_tol are reset to the normalized prior with zero variance,
-moments, log BFs and KL. The stored trace and XtXr describe the iterations before
-that trimming. Degenerate columns retain the reference's no-information behavior.</p>
-<p>Matrix-input purity examines the complete selected submatrix even when
-<code>n_purity</code> is finite. Returned <code>coverage</code> is actual component posterior mass;
-<code>requested_coverage</code> is the target. Empty credible-set collections retain PIPs.
-Setting <code>coverage=None</code> or <code>min_abs_corr=None</code> disables set construction.</p>
-<h2 id="boundaries">Boundaries</h2>
-<p>The package does not perform allele harmonization, imputation, variant filtering
-or LD repair. Matrix finite/symmetry/diagonal/range checks remain active with
-<code>check_input=False</code>. Invalid or nonfinite inputs raise errors; nonpositive
-estimated residual variance raises an error.</p>
-<p>Individual-level regression, NIG/mixture priors, infinitesimal effects, greedy
-components, slot priors, LD-mismatch models, low-rank X input, trend filtering and
-kriging diagnostics are outside this API. Nondefault initialization, refinement,
-MAF filtering, verbose output and trace snapshots raise <code>NotImplementedError</code>.
-No GPU backend is provided. The declared Python minimum is 3.10; executed local
-package checks cover CPython 3.12 on GNU Linux x86-64. Other platforms require
-build and numerical validation.</p>
-<p>See <a href="model.html">statistical model</a>, <a href="api.html">API</a>,
-<a href="numerical_accuracy.html">numerical accuracy</a> and <a href="reference_mapping.html">source mapping</a>.</p></article>
+<article><h1 id="model-support">Model support</h1>
+<p>This material is now part of <a href="inputs.html#supported-model-and-input-routes">Model support</a>.</p></article>
 <footer><p>prusie 0.2.3rc6 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>

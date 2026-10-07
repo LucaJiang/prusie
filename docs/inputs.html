@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
+
 <title>Inputs, alignment and priors · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -16,54 +17,147 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
 <span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html" aria-current="page">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html" aria-current="page">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="inputs.md">Markdown source</a></div>
-<article><h1 id="inputs-alignment-and-priors">Inputs, alignment and priors</h1>
-<p><code>susie_rss</code> accepts signed z and a signed correlation matrix R. Alternatively
-provide bhat and positive shat; known n is needed for finite-sample adjustment.
-The bhat/shat+var_y branch uses the declared phenotype variance. Never infer
-var_y=1 from a trait name or normalized-looking statistics. With n omitted,
-the explicit noncentrality likelihood is a distinct model path. Supplying z
-together with bhat or shat raises an error; choose one input route. See <a href="api.html">API</a>.</p>
-<p>For m biological variants, z or bhat and variant_ids have length m; R has
-shape (m,m). shat can be a positive scalar shared by all variants or a
-length-m vector of positive standard errors. IDs must be distinct and nonempty. variant_metadata contains
-length-m columns copied into the result. It records caller metadata and does
-not establish allele correctness. Preserve genome build, counted allele,
-summary effect allele, population, reference sample selection and SNP order.
-Unknown strand/palindromic orientation needs evidence before fitting.</p>
-<p>A SNP permutation must be applied to both R axes, every vector and metadata.
-For allele recoding with signs d[j]∈{−1,1}, use z_new=d<em>z and
-R_new=d[:,None]</em>R*d[None,:], and update allele metadata consistently. Neither
-transformation means deleting variants. Singular LD is allowed; approximate LD,
-automatic ridge, eigenvalue clipping and silent symmetrization are not performed.
-Finite/symmetry/diagonal/range checks remain active even with check_input=False;
-that option controls additional sufficient-statistic consistency diagnostics.</p>
-<p><code>susie_suff_stat</code> takes centered XtX, Xty, positive yty and n&gt;1. Supply original
-X_colmeans and y_mean if an original-scale intercept is needed. Standardization
-changes the fitted predictor scale; use result.coef to recover original-scale
-posterior coefficients. All numerical work uses float64 and sequential IBSS
-component updates.</p>
-<p><code>prior_weights</code> are finite nonnegative SNP weights with a positive total.
-They are normalized; partial-zero priors are supported. The SER reference
-semantics add sqrt(machine epsilon) before taking logarithms, so a supplied
-zero is not a hard exclusion from every component posterior. Final low-V trim
-restores the exact normalized prior. An optional null_weight∈[0,1) adds a last
-null column; do not append null IDs or allele records yourself.</p>
-<p>Prior weights enter fitting; do not multiply them into the returned component
-log Bayes factors again. A PIP is marginal across effects; component BFs
-describe one effect's evidence, and credible sets select within a component.
-None is interchangeable with another.</p>
-<p>Keep residual variance fixed for external reference LD unless the model and
-data justify estimation. The RSS default does this. Sufficient-statistic
-residual-variance estimation defaults to enabled. Public RSS defaults are max_iter=50 and tol=.0001; validation settings
-are recorded separately in the <a href="numerical_accuracy.html">numerical accuracy</a>. A nonconverged result remains
-nonconverged and emits a warning; the library does not silently refit it.</p>
-<p>A dense float64 LD matrix uses 8m² bytes for m variants, before fitting workspace
-and results. See <a href="implementation.html">implementation</a> for memory layouts and working arrays.</p></article>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#supported-model-and-input-routes">Supported model and input routes</a></li>
+<li><a href="#shapes-and-numerical-checks">Shapes and numerical checks</a></li>
+<li><a href="#variant-order-and-alleles">Variant order and alleles</a></li>
+<li><a href="#priors-and-zero-information-columns">Priors and zero-information columns</a></li>
+<li><a href="#choosing-variance-and-iteration-settings">Choosing variance and iteration settings</a></li>
+</ul>
+</div>
+</details><h1 id="inputs-alignment-and-priors">Inputs, alignment and priors</h1>
+<p>Align association statistics and LD to the same variant order and effect
+alleles before fitting. prusie checks numerical arrays; the study design,
+allele harmonization and covariate adjustment belong to the input preparation.</p>
+<h2 id="supported-model-and-input-routes">Supported model and input routes</h2>
+<p>prusie fits Gaussian SuSiE on CPU in float64, using summary statistics or
+centered sufficient statistics. Choose the route that preserves the scale
+information available for the study:</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Inputs</th>
+<th>Working representation and coefficient interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>z</code>, <code>R</code>, <code>n</code></td>
+<td>Finite-sample Wald-adjusted summaries on a standardized working scale</td>
+</tr>
+<tr>
+<td><code>bhat</code>, <code>shat</code>, <code>R</code>, <code>n</code></td>
+<td>Forms signed z as bhat/shat, then uses the same standardized route</td>
+</tr>
+<tr>
+<td><code>bhat</code>, <code>shat</code>, <code>R</code>, <code>n</code>, <code>var_y</code></td>
+<td>Reconstructs predictor crossproducts using the known phenotype sample variance; <code>coef</code> returns original-scale coefficients</td>
+</tr>
+<tr>
+<td><code>z</code>, <code>R</code>, <code>n</code>, <code>var_y</code></td>
+<td>Sets response sum of squares and initial variance scales; leaves z-based crossproducts unchanged</td>
+</tr>
+<tr>
+<td><code>z</code> or <code>bhat/shat</code>, <code>R</code>, with n omitted</td>
+<td>Noncentrality-parameter likelihood; emits a warning and uses <code>prior_variance</code></td>
+</tr>
+<tr>
+<td><code>XtX</code>, <code>Xty</code>, <code>yty</code>, <code>n</code></td>
+<td>Centered sufficient statistics via <code>susie_suff_stat</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The <a href="model.html#from-summaries-to-working-sufficient-statistics">model page</a>
+derives each transformation. Provide either z or both bhat and shat. <code>var_y</code>
+is a measured sample phenotype variance, not a value inferred from a trait name
+or normalized-looking statistics. In missing-n mode it is checked and recorded
+but does not change the working likelihood.</p>
+<h2 id="shapes-and-numerical-checks">Shapes and numerical checks</h2>
+<p>For <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span> biological variants, z or bhat and <code>variant_ids</code> have length <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span>;
+R has shape <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>p</mi><mo separator="true">,</mo><mi>p</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(p,p)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">p</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">p</span><span class="mclose">)</span></span></span></span></span>. <code>shat</code> is either a strictly positive scalar shared by all
+variants or a length-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span> vector of positive standard errors. IDs are distinct
+nonempty strings. <code>variant_metadata</code> contains aligned length-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span> columns copied
+into the result; metadata does not itself establish allele correctness.</p>
+<p><code>R</code> contains <strong>signed correlation r</strong>. Singular LD is allowed. Every entry must
+be finite; the diagonal must be within <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span> of one and magnitudes at most
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mo>+</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1+10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span>. Symmetry uses both directions of the bound
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">∣</mi><msub><mi>R</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo>−</mo><msub><mi>R</mi><mrow><mi>j</mi><mi>i</mi></mrow></msub><mi mathvariant="normal">∣</mi><mo>≤</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup><mo>+</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>12</mn></mrow></msup><mi mathvariant="normal">∣</mi><msub><mi>R</mi><mrow><mi>j</mi><mi>i</mi></mrow></msub><mi mathvariant="normal">∣</mi></mrow><annotation encoding="application/x-tex">|R_{ij}-R_{ji}|\leq10^{-12}+10^{-12}|R_{ji}|</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0077em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">ij</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0077em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">ji</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8974em;vertical-align:-0.0833em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">12</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.1002em;vertical-align:-0.2861em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">12</span></span></span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0077em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">ji</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mord">∣</span></span></span></span></span>. The API does not repair LD by
+ridge adjustment, eigenvalue clipping or silently symmetrizing invalid input.</p>
+<p><code>susie_suff_stat</code> requires a finite symmetric predictor crossproduct <code>XtX</code>,
+finite <code>Xty</code>, positive <code>yty</code>, and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n&gt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5782em;vertical-align:-0.0391em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span>. These describe the same centered data.
+<code>X_colmeans</code> and <code>y_mean</code> recover an original-scale intercept; missing means
+leave it NaN. Predictor standardization is enabled by default, and <code>coef</code>
+reverses its stored scales. Basic finite/symmetry/diagonal checks always run.
+<code>check_input=True</code> adds an eigendecomposition, rejects eigenvalues below
+<code>-r_tol</code>, and warns if Xty is outside the nonzero eigenspace. It does not
+repair the matrix or certify its external provenance.</p>
+<h2 id="variant-order-and-alleles">Variant order and alleles</h2>
+<p>Preserve genome build, counted allele, association effect allele, population,
+reference sample selection and SNP order in the analysis record. Resolve
+ambiguous strand or palindromic alleles from appropriate evidence before
+fitting. A permutation must be applied to both R axes, every association vector
+and every metadata column.</p>
+<p>If allele recoding multiplies each effect by <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>d</mi><mi>j</mi></msub><mo>∈</mo><mo stretchy="false">{</mo><mo>−</mo><mn>1</mn><mo separator="true">,</mo><mo>+</mo><mn>1</mn><mo stretchy="false">}</mo></mrow><annotation encoding="application/x-tex">d_j\in\{-1,+1\}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9805em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal">d</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">{</span><span class="mord">−</span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">+</span><span class="mord">1</span><span class="mclose">}</span></span></span></span></span>, apply the same
+signs to z and both LD axes:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">z_new</span> <span class="o">=</span> <span class="n">signs</span> <span class="o">*</span> <span class="n">z</span>
+<span class="n">R_new</span> <span class="o">=</span> <span class="n">signs</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="n">R</span> <span class="o">*</span> <span class="n">signs</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+</code></pre></div>
+
+<p>For effect-estimate inputs, recode bhat in the same way and leave shat unchanged.
+Update the allele metadata consistently. The API does not infer these signs or
+filter variants on the caller's behalf.</p>
+<h2 id="priors-and-zero-information-columns">Priors and zero-information columns</h2>
+<p><code>prior_weights</code> are finite nonnegative variant weights with a positive finite
+total. Default weights are uniform. With a null weight <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>w</mi><mn>0</mn></msub></mrow><annotation encoding="application/x-tex">w_0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span>, the raw vector
+is augmented as <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mi>w</mi><mn>0</mn></msub><mo stretchy="false">)</mo><msub><mi>w</mi><mn>1</mn></msub><mo separator="true">,</mo><mo>…</mo><mo separator="true">,</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mi>w</mi><mn>0</mn></msub><mo stretchy="false">)</mo><msub><mi>w</mi><mi>p</mi></msub><mo separator="true">,</mo><msub><mi>w</mi><mn>0</mn></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">((1-w_0)w_1,\ldots,(1-w_0)w_p,w_0)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">((</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span>, then the <strong>whole</strong> vector
+is normalized. Consequently the final null probability equals <code>null_weight</code>
+when the biological weights already sum to one. Arbitrarily rescaling raw
+weights in the presence of a null column can change that probability. The
+null column is appended internally with zero crossproducts; provide only
+biological IDs and metadata.</p>
+<p>SER computes log weights using <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>log</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>π</mi><mi>j</mi></msub><mo>+</mo><msqrt><mi>ϵ</mi></msqrt><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\log(\pi_j+\sqrt{\epsilon})</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0503em;vertical-align:-0.25em;"></span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8003em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord" style="padding-left:0.833em;"><span class="mord mathnormal">ϵ</span></span></span><span style="top:-2.7603em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.08em" viewBox="0 0 400000 1080" preserveAspectRatio="xMinYMin slice"><path d="M95,702
+c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14
+c0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54
+c44.2,-33.3,65.8,-50.3,66.5,-51c1.3,-1.3,3,-2,5,-2c4.7,0,8.7,3.3,12,10
+s173,378,173,378c0.7,0,35.3,-71,104,-213c68.7,-142,137.5,-285,206.5,-429
+c69,-144,104.5,-217.7,106.5,-221
+l0 -0
+c5.3,-9.3,12,-14,20,-14
+H400000v40H845.2724
+s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
+c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
+M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2397em;"><span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span>, where
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϵ</mi></mrow><annotation encoding="application/x-tex">\epsilon</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">ϵ</span></span></span></span></span> is float64 machine epsilon. Thus zero supplied weights are smoothed
+rather than enforcing absolute exclusion. The likelihood uses sampling
+variances floored at machine epsilon. A nonfinite marginal estimate or sampling
+variance, as produced by a zero-information column, receives log BF zero and
+zero conditional moments. Ordinary positive-variance updates follow the
+<a href="model.html#one-single-effect-regression">Gaussian formulas</a>. A zero V also has
+zero conditional moments for an informative column.</p>
+<p>These priors enter fitting. <code>lbf_variable</code> contains Bayes factors before variant
+weighting; posterior probabilities already incorporate the weights. Active
+component thresholds and final trimming are specified once in
+<a href="results.html#iterations-and-finalization">Results</a>.</p>
+<h2 id="choosing-variance-and-iteration-settings">Choosing variance and iteration settings</h2>
+<p>RSS fixes residual variance by default, appropriate when using external LD.
+Estimating it requires in-sample LD consistent with the association summaries;
+requesting it through RSS emits a warning. Sufficient-statistic fitting enables
+estimation by default. A nonpositive or nonfinite estimate raises an error.</p>
+<p>The public RSS iteration limit is 50 and the sufficient-statistic limit is 100;
+these are caps, with early stopping controlled by <code>tol</code>. Both default to
+<code>tol=0.0001</code>. <a href="api.html#shared-fitting-options">API</a> lists parameter defaults and
+errors; <a href="results.html#iterations-and-finalization">Results</a> explains the returned
+status. The settings of numerical comparisons are recorded separately on
+<a href="numerical_accuracy.html">Numerical accuracy</a>.</p>
+<p>A dense float64 matrix requires <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><msup><mi>p</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">8p^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0085em;vertical-align:-0.1944em;"></span><span class="mord">8</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> bytes before working arrays and results.
+See <a href="implementation.html#layout-ownership-and-memory">Implementation</a> for copies,
+layouts and additional storage.</p></article>
 <footer><p>prusie 0.2.3rc6 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>

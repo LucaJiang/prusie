@@ -63,10 +63,6 @@
           "implementation.html"
         ],
         [
-          "Model support",
-          "compatibility.html"
-        ],
-        [
           "Contributing",
           "contributing.html"
         ]
@@ -85,5 +81,10 @@
         ]
       ]
     ]
-  ]
+  ],
+  "redirects": {
+    "compatibility.html": "inputs.html#supported-model-and-input-routes",
+    "reference_mapping.html": "implementation.html#reference-source-mapping",
+    "r_agreement.html": "numerical_accuracy.html"
+  }
 }

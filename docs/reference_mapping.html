@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
+<meta http-equiv="refresh" content="0; url=implementation.html#reference-source-mapping">
+<link rel="canonical" href="implementation.html#reference-source-mapping">
 <title>Reference source mapping · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -16,53 +18,13 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
 <span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="compatibility.html">Model support</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="reference_mapping.md">Markdown source</a></div>
 <article><h1 id="reference-source-mapping">Reference source mapping</h1>
-<p>prusie follows the supported Gaussian paths of susieR 0.16.6, commit
-<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>.</p>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
-<thead>
-<tr>
-<th>prusie responsibility</th>
-<th>susieR source</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>RSS transformation</td>
-<td>susie_constructors.R: summary_stats_constructor and summary_stats_working_quantities</td>
-</tr>
-<tr>
-<td>Sufficient statistics and scaling</td>
-<td>sufficient_stats_constructor; sufficient_stats_methods.R</td>
-</tr>
-<tr>
-<td>Single-effect Bayes factors and moments</td>
-<td>single_effect_regression.R: gaussian_ser_lbf and gaussian_ser_moments</td>
-</tr>
-<tr>
-<td>Prior variance and Gaussian EM</td>
-<td>prior-update hooks and generic_methods.R</td>
-</tr>
-<tr>
-<td>IBSS, objective and stopping</td>
-<td>susie_workhorse.R, model_methods.R and sufficient_stats_methods.R</td>
-</tr>
-<tr>
-<td>Credible sets and PIP</td>
-<td>susie_get_functions.R and susie_utils.R</td>
-</tr>
-</tbody>
-</table></div>
-<p>The scalar optimizer derives from R's <code>stats/src/optimize.c</code>; its license and
-copyright remain in the <a href="https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md">third-party notices</a>.
-Read <a href="implementation.html">implementation and optimizations</a> for the executed path,
-<a href="compatibility.html">model support</a> for the API scope, and
-<a href="numerical_accuracy.html">numerical accuracy</a> for measured differences.</p></article>
+<p>This material is now part of <a href="implementation.html#reference-source-mapping">Reference source mapping</a>.</p></article>
 <footer><p>prusie 0.2.3rc6 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>
