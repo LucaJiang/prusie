@@ -1,19 +1,22 @@
-# Source and license notices
+# Third-party notices
 
-Versions from 0.2.0 onward target the supported Gaussian semantics of official susieR 0.16.6
-at commit 8e56a8e038e989856d106d9ca5175cc664fea9d2. Source:
+The combined prusie distribution is licensed under GPL-3.0-or-later.
+Third-party components retain the licenses and copyright notices below.
+
+## susieR
+
+The Gaussian SuSiE algorithms and API semantics are adapted in Python and Rust
+from official susieR 0.16.6, commit
+`8e56a8e038e989856d106d9ca5175cc664fea9d2`. Source:
 https://github.com/stephenslab/susieR/tree/8e56a8e038e989856d106d9ca5175cc664fea9d2
-Archive SHA256: c88c6324da061c83ac9fbac23972cd1e501210c916596ea7678c3115b33f6971.
-The latest upstream copyright file is retained as rust/LICENSE-susieR-0.16.6.
-
-Earlier versions implement official CRAN susieR 0.14.2.
-The unmodified reference archive is locked separately by SHA256
-ba02322eb1f7a7cc024c9278aa7903a34d8ad5d6f3b12c168374bc6214ed2c6e.
+Archive SHA256: `c88c6324da061c83ac9fbac23972cd1e501210c916596ea7678c3115b33f6971`.
+The upstream copyright file is retained as `rust/LICENSE-susieR-0.16.6`.
+The earlier 0.14.2 attribution is retained in `rust/LICENSE-susieR` and
+`rust/LICENSE-susieR-BSD-3-clause`; its source archive SHA256 is
+`ba02322eb1f7a7cc024c9278aa7903a34d8ad5d6f3b12c168374bc6214ed2c6e`.
 Source: https://cran.r-project.org/src/contrib/susieR_0.14.2.tar.gz.
 
-susieR is BSD-3-Clause licensed; its LICENSE identifies copyright holders
-Gao Wang, Peter Carbonetto, Yuxin Zou, Kaiqian Zhang, Matthew Stephens,
-years 2017–2022. The following notice applies to source-derived algorithms:
+susieR is BSD-3-Clause licensed. Its retained permission and disclaimer follow.
 
 Copyright (c) 2017–2022, Gao Wang, Peter Carbonetto, Yuxin Zou,
 Kaiqian Zhang, Matthew Stephens. All rights reserved.
@@ -41,20 +44,34 @@ AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-The native Brent optimizer derives from R's GPL-2.0-or-later implementation.
-Its exact provenance and retained notices are in rust/THIRD_PARTY_NOTICES.md,
-rust/optimizer.rs and rust/LICENSE-R. The combined package is distributed under
-GPL-3.0-or-later (LICENSE); this does not replace upstream file licenses.
-Dependencies retain their own licenses in their source distributions and lockfile.
+## R optimizer
 
-## Bundled synthetic teaching data
+`rust/optimizer.rs` adapts the `Brent_fmin` routine from R 4.4
+`src/library/stats/src/optimize.c`, retrieved on 2026-10-01 from
+https://svn.r-project.org/R/branches/R-4-4-branch/src/library/stats/src/optimize.c.
+The adaptation is Rust code preserving R's step selection and stopping rules.
+Copyright (C) 1995, 1996 Robert Gentleman and Ross Ihaka; (C) 2003–2004
+The R Foundation; (C) 1998–2023 The R Core Team. The source header specifies
+GPL-2.0-or-later; its full license is retained in `rust/LICENSE-R`.
+The underlying method is Richard Brent's *Algorithms for Minimization without
+Derivatives* (1973). The combined GPL-3.0-or-later distribution retains these
+file-level terms. susieR's BSD license is separate from this R-derived code.
 
-The portable files in examples/data derive from the existing official coloc
-6.0.3 teaching fixture, commit8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45.
-Attribution belongs to Chris Wallace and the coloc contributors. The pinned
-package declares GPL without a version; its declaration is retained and a
-GPL-3 text is included as examples/data/LICENSE.GPL-3. The conversion changes
-storage format only. Source and archive/data hashes, copied upstream provenance,
-full metadata and the reference-regeneration recipe are in examples/data/README.md
-and reference.lock.json. These are upstream synthetic software examples, not
-redistributed private human data.
+## Rust dependencies and binary distributions
+
+Dependency versions and source checksums are in `Cargo.lock`. Copyright and
+license texts for the bundled Rust dependencies are retained under
+`src/prusie/_licenses/cargo/`. The wheel includes these files, the upstream R
+and susieR license files, and notices under `prusie/_licenses/`; its primary
+license is also included in the wheel's distribution metadata.
+
+## Bundled teaching data
+
+The source distribution includes `examples/data/`, converted from the existing
+official coloc 6.0.3 teaching fixture, commit
+`8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45`. Attribution belongs to Chris Wallace
+and the coloc contributors. The pinned package declares GPL without a version;
+that declaration is retained and GPL-3 text is supplied as
+`examples/data/LICENSE.GPL-3`. Conversion changes storage format only.
+Source/data hashes, copied upstream provenance and the regeneration recipe are
+in `examples/data/README.md` and `examples/data/reference.lock.json`.

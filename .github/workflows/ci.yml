@@ -27,3 +27,19 @@ jobs:
       - run: python tools/check_checkout.py --output-dir .ci-check
       - run: maturin build --release --locked --out dist
       - run: maturin sdist --out dist
+      - name: Install artifact inspection tools
+        run: python -m pip install 'auditwheel>=6,<7'
+      - name: Test wheel installation and rebuild the source distribution
+        run: |
+          python tools/check_artifacts.py \
+            --wheel "$(find dist -maxdepth 1 -name 'prusie-*.whl' -print -quit)" \
+            --sdist "$(find dist -maxdepth 1 -name 'prusie-*.tar.gz' -print -quit)" \
+            --work-dir .artifact-check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prusie-cpython312-linux
+          path: |
+            dist/*
+            .artifact-check/artifact_checks.json
+            .artifact-check/logs/*
+          if-no-files-found: error

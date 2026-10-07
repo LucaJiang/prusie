@@ -59,7 +59,10 @@ None is interchangeable with another.</p>
 data justify estimation. The RSS default does this. Sufficient-statistic
 residual-variance estimation defaults to enabled. Public RSS defaults are max_iter=50 and tol=.0001; validation settings
 are recorded separately in the <a href="r_agreement.html">agreement report</a>. A nonconverged result remains
-nonconverged and emits a warning; the library does not silently refit it.</p></article>
+nonconverged and emits a warning; the library does not silently refit it.</p>
+<p>A dense float64 LD matrix uses 8m² bytes for m variants, before fitting workspace
+and results. Reuse each completed trait/gene fit for downstream pairing instead
+of fitting again for each partner; see the <a href="example.html#reuse-fits-for-colocalisation">integration example</a>.</p></article>
 <footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
 </main>
 </div>

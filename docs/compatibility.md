@@ -11,7 +11,8 @@ Scalar Gaussian priors support fixed V, optim, EM and simple updates; fixed or
 estimated residual variance; normalized prior weights and null weight; L,
 iteration cap and tolerance; ELBO, CS and PIP. RSS defaults to cap 50,
 sufficient statistics to cap 100, and both to Gaussian tolerance 0.0001.
-The measured comparison explicitly uses cap 100 and tolerance 0.001 everywhere.
+Primary reference comparisons explicitly use cap 100 and tolerance 0.001;
+the separate one-iteration diagnostic uses cap 1.
 
 Finite ELBO convergence requires a nonnegative increase below tolerance.
 Nonfinite ELBO differences use the current alpha/PIP fallback with warnings.

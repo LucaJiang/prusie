@@ -1,9 +1,25 @@
-"""Hand-written analytical API example; no biological/simulation claim."""
+"""Analyze the complete, frozen 500-SNP synthetic teaching dataset D3."""
+import json
+from pathlib import Path
+
 import numpy as np
-from prusie import susie_rss
-fit = susie_rss(z=[4., .5, -.2], R=[[1., .2, 0.], [.2, 1., .1], [0., .1, 1.]],
-    n=191, L=2, max_iter=100, tol=.001, estimate_residual_variance=False,
-    variant_ids=['a','b','c'])
-assert np.all(np.isfinite(fit.pip)) and np.all((fit.pip >= 0) & (fit.pip <= 1))
-assert fit.variant_ids.tolist() == ['a','b','c']
-print('PIP:', fit.pip, 'converged:', fit.converged, 'CS components:', fit.sets['cs_index'])
+import prusie
+
+data = Path(__file__).resolve().parent / 'data'
+metadata = json.loads((data / 'metadata.json').read_text())['D3']
+with np.load(data / 'inputs.npz', allow_pickle=False) as arrays:
+    z = arrays['D3_beta'] / np.sqrt(arrays['D3_varbeta'])
+    R = arrays['D3_LD']
+
+fit = prusie.susie_rss(
+    z=z, R=R, n=metadata['N'], variant_ids=metadata['snp'],
+    L=10, max_iter=100, tol=0.001, estimate_residual_variance=False,
+    coverage=0.95, min_abs_corr=0.5, n_purity=500,
+)
+lead = int(np.argmax(fit.pip))
+print(f"{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.3f}")
+print('Converged:', fit.converged, 'Iterations:', fit.niter)
+for k, component in enumerate(fit.sets['cs_index']):
+    members = fit.variant_ids[fit.sets['cs'][k]].tolist()
+    print('Component:', int(component), 'SNPs:', members,
+          'Posterior mass:', round(float(fit.sets['coverage'][k]), 3))

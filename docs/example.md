@@ -1,119 +1,138 @@
-# Run the 500-SNP offline check
+# Analyze the 500-SNP example
 
-This example uses all 500 synthetic variables in each of the four stored
-official coloc teaching datasets, D1–D4. It is an existing fixed software
-fixture, not human-study data and not a new simulation. No variables were
-selected, padded or generated for agreement with Python.
+Fit and interpret the complete **500-SNP synthetic teaching datasets** D1–D4
+bundled from official coloc. These fixed examples preserve the stored variable
+order and include single- and multiple-signal cases.
 
-## Run offline after installation
+## Fit a region
 
-Follow [installation](install.md) to clone the repository, create an environment
-and install the package. From that checkout:
+After [installation](install.md), run this from the repository root. All 500
+variables are fitted in their stored order.
+
+```python
+import json
+from pathlib import Path
+import numpy as np
+import prusie
+
+data = Path("examples/data")
+metadata = json.loads((data / "metadata.json").read_text())["D3"]
+with np.load(data / "inputs.npz", allow_pickle=False) as arrays:
+    z = arrays["D3_beta"] / np.sqrt(arrays["D3_varbeta"])
+    R = arrays["D3_LD"]
+
+fit = prusie.susie_rss(
+    z=z, R=R, n=metadata["N"], variant_ids=metadata["snp"],
+    L=10, max_iter=100, tol=0.001, estimate_residual_variance=False,
+    coverage=0.95, min_abs_corr=0.5, n_purity=500,
+)
+lead = int(np.argmax(fit.pip))
+print(f"{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.3f}")
+print("Converged:", fit.converged, "Iterations:", fit.niter)
+for k, component in enumerate(fit.sets["cs_index"]):
+    members = fit.variant_ids[fit.sets["cs"][k]].tolist()
+    print("Component:", int(component), "SNPs:", members,
+          "Posterior mass:", round(float(fit.sets["coverage"][k]), 3))
+```
+
+The D3 fit returns two credible sets and converges in eight iterations in the
+recorded environment. The leading PIP describes marginal variant inclusion;
+`fit.sets["coverage"]` is the posterior mass of each set within its original
+component. Read `fit.sets["purity"]` alongside that mass and the convergence flag.
+
+## Reuse fits for colocalisation
+
+With [pycoloc](https://github.com/LucaJiang/pycoloc) installed, the following
+continues the example with the stored D4 dataset. Each trait is fitted once;
+`coloc_susie` reuses component Bayes factors and retained set identities.
+
+```python
+from pycoloc import coloc_susie
+
+metadata4 = json.loads((data / "metadata.json").read_text())["D4"]
+with np.load(data / "inputs.npz", allow_pickle=False) as arrays:
+    z4 = arrays["D4_beta"] / np.sqrt(arrays["D4_varbeta"])
+    R4 = arrays["D4_LD"]
+fit4 = prusie.susie_rss(
+    z=z4, R=R4, n=metadata4["N"], variant_ids=metadata4["snp"],
+    L=10, max_iter=100, tol=0.001, estimate_residual_variance=False,
+    coverage=0.95, min_abs_corr=0.5, n_purity=500,
+)
+paired = coloc_susie(fit, fit4)
+print(paired.status)
+print(paired.summary[["idx1", "idx2", "PP.H4.abf"]])
+```
+
+`idx1` and `idx2` retain original zero-based component IDs. Each PP.H4 is a
+signal-pair posterior, not a region-wide posterior. The associated `SNP.PP.H4`
+values are conditional on H4 and differ in meaning from fine-mapping PIP.
+No-CS and inadequate-overlap statuses need inspection before interpretation.
+Keep the original SNP/effect-allele alignment and full Bayes-factor arrays when
+saving fits for reuse. See [results](results.md) for portable storage.
+
+## Validate the installation
+
+From the checkout, run:
 
 ```sh
-python examples/check_example.py --help
 python examples/check_example.py --output-dir example-results
 ```
 
-Installation may download dependencies. Once installed, the check runs offline
-without R or external study data. It imports the installed package and uses the
-frozen files in `examples/data/`.
+The check runs offline after installation and needs only prusie and NumPy.
+It uses all seven fixed cases and checks source/reference hashes, SNP order,
+model parameters, PIP validity, actual CS mass and complete-pair purity.
+`example-results/report.json` records the installed version, warnings and
+per-field differences; `actual_native.npz` contains the computed arrays.
+The input and reference files stay unchanged.
 
-To run just the multi-signal teaching dataset:
+PIP acceptance is absolute error ≤1e-5, rtol=0. Posterior and coverage
+identities have a separate fixed 1e-10 arithmetic tolerance. A changed
+version string is recorded; an invalid input/probability structure or failed
+PIP comparison produces FAIL and a nonzero exit. Component BFs, iterations
+and credible sets retain their own diagnostics in the [agreement report](r_agreement.md).
 
-```sh
-python examples/check_example.py --case D3 --output-dir example-D3
-```
-
-The complete check runs all seven declared cases. `--case` is a convenience for
-inspection; the executed report and release checks include the complete set.
-Use an output directory outside `examples/data/`. The runner never overwrites
-input, reference or native expectation files.
-
-## Read PASS and FAIL
-
-Each line gives the maximum absolute PIP error against frozen official R,
-the posterior-validity status, credible-set count, iteration count and
-convergence flag. `example-results/report.json` stores exact parameters,
-input/order/model hashes, runtime/backend/version, warnings, per-field errors
-and CS comparisons by original component ID. `actual_native.npz` contains
-the newly computed numeric output, with no pickle objects.
-
-A substantive PIP mismatch, failed input/reference checksum or invalid
-input/model/probability structure produces **FAIL** and a nonzero process exit.
-PIP acceptance is absolute error ≤1e-5, rtol=0. Intermediate arrays, iteration
-counts and CS membership differences are diagnostics; they are not silently
-used to change this gate. Internal posterior and coverage identities are checked
-separately at a fixed 1e-10 absolute arithmetic tolerance.
-
-The caller's version is recorded. A different package version from the frozen
-native snapshot does not itself cause FAIL. Read the numerical and structural
-results before interpreting a version difference.
-
-## The declared cases
-
-| Case | Purpose | Difference from primary parameters |
+| Case | Purpose | Change from primary settings |
 | --- | --- | --- |
-| D1 | Standard quantitative single-signal teaching data | None |
-| D2 | A second single-signal dataset on the same variable convention | None |
-| D3 | Two stored causal teaching variables | None |
-| D4 | A further single-signal dataset | None |
-| D1_partial_zero | Prior-weight edge case | Every seventh one-based SNP weight is zero; the others are one |
+| D1 | Single-signal teaching data | None |
+| D2 | Second single-signal dataset | None |
+| D3 | Two stored causal variables | None |
+| D4 | Further single-signal dataset | None |
+| D1_partial_zero | Prior-weight diagnostic | Every seventh one-based SNP weight is zero |
 | D3_strict_purity | No returned credible set | `min_abs_corr=1` |
-| D3_one_iteration | Visible nonconvergence diagnostic | `max_iter=1`; explicitly not a primary fit |
+| D3_one_iteration | Nonconvergence diagnostic | `max_iter=1` |
 
-The primary model uses `z=beta/sqrt(varbeta)`, the stored signed LD **r**,
-`n=1000`, `L=10`, `max_iter=100`, `tol=0.001`, `coverage=0.95`,
-`min_abs_corr=0.5`, `n_purity=500`, standardization, estimated prior variance
-using `optim` with initial `scaled_prior_variance=0.2`, fixed residual variance,
-`prior_tol=1e-9`, no null column and no refinement. The authoritative complete
-arguments are `examples/data/parameters.json`.
+All primary cases use signed z = beta / √varbeta, stored signed LD r,
+n=1000, L=10, max_iter=100, tol=0.001, coverage=0.95 and min_abs_corr=0.5.
+`examples/data/parameters.json` records all arguments, including complete
+matrix purity, fixed residual variance and estimated prior variance. The
+RSS call uses the known-n adjustment and no supplied phenotype variance.
 
-The stored sample size is known. This RSS demonstration does not pass `var_y`
-or infer phenotype variance. It uses the finite-sample z-RSS path. LD comes
-from the upstream synthetic reference construction, so residual variance stays
-fixed. The data do not establish ancestry, genome build, effect/counting alleles
-or real genomic coordinates. Variable names `s1`–`s500` and positions 1–500 are
-synthetic identities and indices.
+## Interpret the diagnostics
 
-## Three distinct kinds of expectation
+A credible set's coverage is its returned posterior mass in the original
+component; it is distinct from frequentist repeated-sampling coverage.
+A no-CS fit retains PIPs but has empty member/coverage/purity collections.
+The one-iteration case remains nonconverged and is excluded from primary
+scientific-fit summaries.
 
-1. `r_fits.npz` and `r_fits.json` are official susieR 0.16.6 outputs and supply
-   the PIP comparison. `r_coloc.json` retains separate coloc results for the
-   companion example.
-2. `expected_native.npz` and `expected_native.json` record an explicitly labelled
-   executed prusie snapshot. The check compares its new PIPs to that snapshot
-   as an additional diagnostic; this is not an independent R reference.
-3. The checker independently sums posterior mass from each original alpha row,
-   recomputes marginal PIP across active components, and computes purity from
-   the signed LD submatrix. These checks do not call package summary helpers.
+The pinned reference adds √ε before logging active-component prior weights.
+A supplied zero weight therefore permits a small posterior contribution; final
+low-variance trimming restores the exact normalized prior.
 
+## Data and reference provenance
 
-`manifest.json`, `checksums.json` and `native_checksums.json` keep identities
-explicit. Input NPZ arrays retain the upstream float64 values. The TSV files
-are readable views; `variants.tsv` specifies ordering on both matrix axes.
+The fixture preserves all 500 variables in stored upstream D1–D4. Its synthetic
+IDs and indices carry no biological build, ancestry, allele or coordinate
+annotations. Full metadata, data licensing and regeneration commands are in
+the [data README](https://github.com/LucaJiang/prusie/blob/main/examples/data/README.md).
 
-## Interpret the edge cases
+`r_fits.npz` and `r_fits.json` are official susieR 0.16.6 reference outputs.
+`expected_native.*` separately records an earlier native execution; it is an
+additional reproducibility check. Independent probability and CS identities
+use the returned alpha and signed LD, without calling production summary
+helpers. Source/archive hashes and R dependencies are in `reference.lock.json`
+and `reference_environment.json`. Regeneration uses the supplied export and
+conversion scripts in a new directory, preserving shipped expectations.
 
-In the pinned reference, active SER adds √ε to normalized prior weights before
-taking logarithms. A supplied zero prior weight is therefore **not a hard
-exclusion**. Final low-variance trimming restores the exact normalized prior.
-
-
-No-CS results have empty member, index, coverage and purity collections, while
-PIPs remain available. Returned `sets.coverage` is actual posterior mass for
-its original component, not the requested 0.95 and not repeated-sampling
-coverage. The one-iteration diagnostic remains `converged=False`; the runner
-does not silently retry it or present it as a converged scientific fit.
-
-## Reproduce the reference only if needed
-
-Users never need R to check an installation. Maintainers can separately use
-`examples/data/export_reference.R`, `convert_exports.py`,
-`verify_reference_input.py`, `reference.lock.json` and
-`reference_environment.json`. The [frozen data README](https://github.com/LucaJiang/prusie/blob/main/examples/data/README.md)
-gives the exact pinned versions, archive/data hashes and commands. Regeneration
-writes a new directory and does not update the shipped goldens.
-
-Read the [executed agreement report](r_agreement.md) for measured errors and
-the [compatibility guide](compatibility.md) before analyzing your own data.
+Read [inputs](inputs.md) and [supported scope](compatibility.md) before
+substituting your own aligned data.

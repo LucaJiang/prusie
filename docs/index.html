@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SuSiE summary-statistics fine-mapping in Python and Rust: offline examples, inputs, result interpretation and executed R agreement.">
-<title>SuSiE fine-mapping · prusie</title>
+<title>prusie · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <script src="assets/site.js" defer></script>
 </head>
@@ -21,72 +21,165 @@
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="index.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
+<li><a href="#numerical-agreement">Numerical agreement</a></li>
+<li><a href="#performance">Performance</a></li>
+<li><a href="#installation">Installation</a></li>
 <li><a href="#quick-start">Quick start</a></li>
-<li><a href="#what-a-fit-returns">What a fit returns</a></li>
-<li><a href="#supply-aligned-evidence">Supply aligned evidence</a></li>
+<li><a href="#methods-and-scope">Methods and scope</a></li>
+<li><a href="#documentation-and-reproducibility">Documentation and reproducibility</a></li>
+<li><a href="#citation-and-license">Citation and license</a></li>
 </ul>
 </div>
-</details><p class="eyebrow">Python + Rust / SuSiE summary statistics</p>
-
-<h1 id="susie-fine-mapping">SuSiE fine-mapping</h1>
-<p class="intro">prusie fits the Gaussian SuSiE summary-statistics model with a native Rust core. Work with signed association statistics and LD, inspect PIPs and credible sets, and check your installation against frozen official-R results.</p>
-
-<div class="cards">
-<a class="card" href="install.html"><span>01 / Start</span><strong>Install the package</strong><small>Python and NumPy at runtime. A Rust toolchain for source builds.</small></a>
-<a class="card" href="example.html"><span>02 / Verify</span><strong>Run the 500-SNP check</strong><small>A fixed upstream synthetic teaching example. Runs offline, without R.</small></a>
-<a class="card" href="r_agreement.html"><span>03 / Understand</span><strong>Read the R agreement report</strong><small>Executed cases, absolute errors, component identities and explicit limitations.</small></a>
-</div>
-
-<h2 id="quick-start">Quick start</h2>
-<p>Follow <a href="install.html">installation</a> to clone the repository and install its dependencies, then run from the checkout:</p>
-<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python examples/check_example.py --output-dir example-results
-</code></pre>
-<p>The check fits the bundled data using the installed package, verifies input and
-reference checksums, compares PIPs to frozen official-R results, checks posterior
-validity and records your runtime. It prints PASS or FAIL and exits nonzero on a
-substantive mismatch. A changed version string alone is not a numerical failure.</p>
-<h2 id="what-a-fit-returns">What a fit returns</h2>
+</details><h1 id="prusie">prusie</h1>
+<p>SuSiE fine-mapping in Python, powered by Rust.</p>
+<p>Fit the established SuSiE-RSS model to association summary statistics and signed
+linkage disequilibrium (LD). Obtain variant posterior inclusion probabilities
+(PIPs), credible sets and component Bayes factors through a Python API.</p>
+<ul>
+<li><strong>Numerical agreement:</strong> all 200 real trait cases meet the fixed PIP criterion against susieR 0.16.6.</li>
+<li><strong>Measured runtime:</strong> 199/199 comparable real cases run faster than optimized R; paired geometric-mean speedup is 35.2×.</li>
+<li><strong>Lower peak process RSS:</strong> median 37.7 MiB versus 266 MiB for R on the same comparable cases.</li>
+</ul>
+<h2 id="numerical-agreement">Numerical agreement</h2>
+<p>Current prusie 0.2.3rc4 was compared with freshly executed pinned susieR 0.16.6 using matched float64 inputs.</p>
 <div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
 <thead>
 <tr>
-<th>Output</th>
-<th>Interpretation</th>
+<th>Comparison with susieR 0.16.6</th>
+<th style="text-align: right;">Passed cases</th>
+<th style="text-align: right;">Maximum absolute PIP error</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>fit.pip</code></td>
-<td>Marginal variant inclusion probability across retained effects</td>
+<td>Real regions, 103–4162 SNPs</td>
+<td style="text-align: right;">200/200</td>
+<td style="text-align: right;">1.22e-08</td>
 </tr>
 <tr>
-<td><code>fit.sets</code></td>
-<td>Credible sets indexed by original component, with actual posterior mass and purity</td>
-</tr>
-<tr>
-<td><code>fit.converged</code>, <code>fit.niter</code></td>
-<td>The fit's stopping status and iteration count</td>
-</tr>
-<tr>
-<td><code>fit.lbf_variable</code></td>
-<td>Component-level log Bayes factors for downstream colocalisation</td>
+<td>500-SNP teaching cases, converged</td>
+<td style="text-align: right;">6/6</td>
+<td style="text-align: right;">8.81e-10</td>
 </tr>
 </tbody>
 </table></div>
-<p>Use <a href="results.html">the result schema</a> to interpret these quantities. A missing
-credible set is unavailable evidence; it does not mean a zero PIP or zero
-colocalisation probability.</p>
-<h2 id="supply-aligned-evidence">Supply aligned evidence</h2>
-<p>Use signed LD correlation <strong>r</strong>, with the same SNP and counted-allele order as
-signed z = beta / SE. Supply known sample size and retain its provenance.
-prusie validates arrays; it does not harmonize alleles, infer ancestry or repair
-LD. Read <a href="inputs.html">inputs and priors</a> before fitting your own region.</p>
-<p>The reference scope is Gaussian summary-statistics SuSiE against pinned susieR
-0.16.6. The executed comparison uses PIP absolute error ≤1e-5, rtol=0, with
-input, probability and model validity checks. It is not a guarantee for every possible
-input, and intermediate arrays, credible sets, Bayes factors or downstream posteriors can differ.</p>
-<p>See <a href="compatibility.html">supported models and limitations</a>,
-<a href="performance.html">performance evidence</a>, and <a href="contributing.html">contributing</a>.
-Maintained by Wenxin Jiang. Source: <a href="https://github.com/LucaJiang/prusie">GitHub</a>.</p></article>
+<p>The PIP criterion is absolute error ≤1e-5, rtol=0, with input/model/probability checks. 199/200 real fits converged on both sides; the nonconverged case and separate one-iteration teaching diagnostic remain reported. Component BFs and downstream colocalisation have distinct checks in <a href="r_agreement.html">R agreement</a>.</p>
+<h2 id="performance">Performance</h2>
+<p>Complete calls with one numerical thread against susieR 0.16.6 in R 4.4.0 / OpenBLAS 0.3.20. The fixed panel contains 100 real regions, 103–4162 SNPs each. Tables summarize the 199/200 cases in which both fits converged.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Task</th>
+<th style="text-align: right;">Comparable cases</th>
+<th style="text-align: right;">Median time, R → Python (ms)</th>
+<th style="text-align: right;">Paired speedup¹</th>
+<th style="text-align: right;">Faster / tied / slower</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SuSiE-RSS fine-mapping</td>
+<td style="text-align: right;">199/200</td>
+<td style="text-align: right;">86.9 → 2.52</td>
+<td style="text-align: right;">35.2×</td>
+<td style="text-align: right;">199 / 0 / 0</td>
+</tr>
+</tbody>
+</table></div>
+<p>¹ Geometric mean of per-case speedups; seven retained repetitions after warmup. Speedup pairs each case; the displayed time columns are separate across-case medians.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Task</th>
+<th style="text-align: right;">Median peak process RSS, R → Python (MiB)</th>
+<th style="text-align: right;">Lower / tied / higher in Python</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SuSiE-RSS fine-mapping</td>
+<td style="text-align: right;">266 → 37.7</td>
+<td style="text-align: right;">199 / 0 / 0</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="Runtime and peak process RSS ratios for every measured real case, including slower and higher-memory cases." src="assets/r_comparison.svg" /></p>
+<p>Peak process RSS includes imports, inputs and full results, measured in a separate fresh process. <a href="performance.html">Methods, all cases, repeat variability and public-fixture results</a> give the comparison scope.</p>
+<h2 id="installation">Installation</h2>
+<p>A locally supplied CPython 3.12 Linux x86-64 wheel can be installed directly,
+without Rust on the target system:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python -m pip install ./prusie-0.2.3rc4-cp312-cp312-manylinux_2_34_x86_64.whl
+</code></pre>
+<p>Public wheel downloads are not yet available. To install from the source
+repository, use Python ≥3.10, the pinned Rust toolchain, a C linker and Python
+development headers:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">git clone https://github.com/LucaJiang/prusie.git
+cd prusie
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install .
+</code></pre>
+<p>See <a href="install.html">installation</a> for tested environments and build details.</p>
+<h2 id="quick-start">Quick start</h2>
+<p>Run from the checkout. This uses the complete <strong>500-SNP synthetic teaching
+dataset D3</strong> bundled from official coloc; its IDs are teaching variables.</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-python">import json
+from pathlib import Path
+import numpy as np
+import prusie
+
+data = Path(&quot;examples/data&quot;)
+metadata = json.loads((data / &quot;metadata.json&quot;).read_text())[&quot;D3&quot;]
+with np.load(data / &quot;inputs.npz&quot;, allow_pickle=False) as arrays:
+    z = arrays[&quot;D3_beta&quot;] / np.sqrt(arrays[&quot;D3_varbeta&quot;])
+    R = arrays[&quot;D3_LD&quot;]
+
+fit = prusie.susie_rss(
+    z=z, R=R, n=metadata[&quot;N&quot;], variant_ids=metadata[&quot;snp&quot;],
+    L=10, max_iter=100, tol=0.001, estimate_residual_variance=False,
+    coverage=0.95, min_abs_corr=0.5, n_purity=500,
+)
+lead = int(np.argmax(fit.pip))
+print(f&quot;{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.3f}&quot;)
+print(&quot;Converged:&quot;, fit.converged, &quot;Iterations:&quot;, fit.niter)
+for k, component in enumerate(fit.sets[&quot;cs_index&quot;]):
+    members = fit.variant_ids[fit.sets[&quot;cs&quot;][k]].tolist()
+    print(&quot;Component:&quot;, int(component), &quot;SNPs:&quot;, members,
+          &quot;Posterior mass:&quot;, round(float(fit.sets[&quot;coverage&quot;][k]), 3))
+</code></pre>
+<p>PIP summarizes a variant's inclusion across effects. Each credible set belongs
+to an original SuSiE component; its returned coverage is actual posterior mass.
+Inspect convergence and set purity before interpreting the result. The
+<a href="example.html">worked example</a> explains these outputs and the offline check.</p>
+<h2 id="methods-and-scope">Methods and scope</h2>
+<p><code>susie_rss</code> accepts signed z or beta/SE with signed LD <strong>r</strong>, in exactly the same
+SNP and effect-allele order. <code>susie_suff_stat</code> supports centered Gaussian
+sufficient statistics. The Rust core performs sequential iterative Bayesian stepwise selection (IBSS)
+updates in float64, following the supported Gaussian semantics of susieR 0.16.6. Dense LD storage requires 8m² bytes for m
+variants, before fitting workspace and outputs.</p>
+<p>Supply sample-size and allele/build/population provenance. Allele harmonization
+and LD quality control precede fitting; residual variance stays fixed by default
+for external reference LD. Read <a href="inputs.html">inputs</a> and
+<a href="compatibility.html">supported models</a> for assumptions and options.</p>
+<p>Fit each trait or gene once, then reuse its results. With pycoloc installed,
+<code>pycoloc.coloc_susie(fit1, fit2)</code> pairs existing component Bayes factors without
+refitting. See <a href="example.html#reuse-fits-for-colocalisation">the integration example</a>.
+Each PP.H4 row describes one signal pair, rather than a region-wide posterior.</p>
+<h2 id="documentation-and-reproducibility">Documentation and reproducibility</h2>
+<p>Browse the <a href="https://lucajiang.github.io/prusie/">documentation site</a>,
+<a href="api.html">API</a>, <a href="results.html">result schema</a> and
+<a href="https://github.com/LucaJiang/prusie/tree/main/tools/benchmark/README.md">manual R comparison scripts</a>.
+To validate an installation against all seven frozen cases, run
+<code>python examples/check_example.py --output-dir example-results</code>.
+The R agreement criterion applies to PIPs; component and downstream posterior
+agreement are checked separately.</p>
+<h2 id="citation-and-license">Citation and license</h2>
+<p>Cite the SuSiE method of Wang et al. (2020) and SuSiE-RSS of Zou et al. (2022),
+and identify the prusie version using <a href="https://github.com/LucaJiang/prusie/blob/main/CITATION.cff">CITATION.cff</a>.
+Maintained by Wenxin Jiang.</p>
+<p>GPL-3.0-or-later. See <a href="https://github.com/LucaJiang/prusie/blob/main/LICENSE">LICENSE</a> and
+<a href="https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md">third-party notices</a> for retained upstream attribution
+and the bundled teaching-data terms.</p></article>
 <footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
 </main>
 </div>

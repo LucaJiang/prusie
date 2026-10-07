@@ -21,35 +21,47 @@
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="install.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#build-from-a-checkout">Build from a checkout</a></li>
+<li><a href="#install-a-prepared-wheel">Install a prepared wheel</a></li>
+<li><a href="#install-from-source">Install from source</a></li>
+<li><a href="#check-your-installation">Check your installation</a></li>
 </ul>
 </div>
 </details><h1 id="installation">Installation</h1>
-<p>Install from the <a href="https://github.com/LucaJiang/prusie">GitHub source</a>. No PyPI
-release or public prebuilt wheel is provided. The package declares Python ≥3.10
-and NumPy ≥1.26,&lt;3; executed installation checks cover CPython 3.12 on Linux
-x86-64 with NumPy 2.2.6. Other declared Python/platform combinations need their
-own build and validation.</p>
-<h2 id="build-from-a-checkout">Build from a checkout</h2>
-<p>Install the Rust toolchain pinned in <code>rust-toolchain.toml</code> (currently 1.98.1),
-a working C linker and Python development headers first. Rustup can manage the
-pinned toolchain. The build uses maturin 1.9.6 and the native dependencies in
-<code>Cargo.lock</code>; pip and Cargo need either cached dependencies or network access.</p>
+<h2 id="install-a-prepared-wheel">Install a prepared wheel</h2>
+<p>For a locally supplied Linux x86-64, CPython 3.12 wheel:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python -m pip install ./prusie-0.2.3rc4-cp312-cp312-manylinux_2_34_x86_64.whl
+</code></pre>
+<p>The wheel contains the Python interface and compiled Rust extension. This
+installation needs Python and NumPy, without Rust, Cargo or a compiler.
+The platform tag specifies glibc 2.34 or later; use the asset matching your
+Python and platform. Public wheel downloads are not yet available.
+Source is available from the repository below.</p>
+<h2 id="install-from-source">Install from source</h2>
+<p>The package declares Python ≥3.10 and NumPy ≥1.26,&lt;3. Executed installation
+checks cover CPython 3.12 on Linux x86-64 with NumPy 2.2.6. Build checks for
+other Python versions and platforms are separate from this evidence.</p>
+<p>Source builds need the Rust toolchain pinned in <code>rust-toolchain.toml</code>
+(currently 1.98.1), a C linker and Python development headers. The build uses
+maturin 1.9.6 and the native dependency versions in <code>Cargo.lock</code>.</p>
 <pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">git clone https://github.com/LucaJiang/prusie.git
 cd prusie
 python -m venv .venv
 . .venv/bin/activate
 python -m pip install .
-python examples/check_example.py --output-dir example-results
+python examples/quickstart.py
 </code></pre>
-<p>NumPy is the only required Python runtime dependency. R, Rust and a compiler
-are not needed to run an already installed package. There is no mandatory BLAS
-development library: optional glibc vector math is discovered at runtime, with
-a scalar fallback and runtime-guarded AVX2.</p>
-<p>The <a href="example.html">offline example</a> uses repository files, so keep the checkout
-when running it. Once installation is complete it needs no network or R.
-For building distributable artifacts and running development checks, see
-<a href="contributing.html">contributing</a>.</p></article>
+<p>pip and Cargo need cached dependencies or network access during installation.
+NumPy is the only required Python runtime dependency. An installed package
+runs without R; optional glibc vector math uses runtime CPU checks and a scalar
+fallback. No BLAS development library is required for the native extension.</p>
+<h2 id="check-your-installation">Check your installation</h2>
+<p>Keep the repository checkout for the bundled examples. After installation,
+the following check runs offline using all seven fixed examples:</p>
+<pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><code class="language-sh">python examples/check_example.py --output-dir example-results
+</code></pre>
+<p>Read the <a href="example.html">analysis example</a> and <a href="inputs.html">input guide</a> before
+fitting your own data. The <a href="contributing.html">contributor guide</a> covers source
+builds, tests and locally prepared distribution artifacts.</p></article>
 <footer><p>prusie 0.2.3rc4 · Wenxin Jiang</p><p>Read the <a href="compatibility.html">scope and limitations</a> before interpreting a result.</p></footer>
 </main>
 </div>

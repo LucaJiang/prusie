@@ -13,3 +13,6 @@ target/
 
 .ci-check/
 example-results/
+.artifact-check/
+benchmark-work/
+benchmark-results/

@@ -1,5 +1,48 @@
 # Executed agreement with official R
 
+## Fresh optimized-R comparison
+
+All 200 trait cases from the fixed 100-region panel pass the PIP/input/model/probability checks against freshly executed susieR 0.16.6. The installed prusie version is 0.2.3rc4; reference R is 4.4.0 with OpenBLAS 0.3.20 and one numerical thread.
+
+| Comparison with susieR 0.16.6 | Passed cases | Maximum absolute PIP error |
+| --- | ---: | ---: |
+| Real regions, 103–4162 SNPs | 200/200 | 1.22e-08 |
+| 500-SNP teaching cases, converged | 6/6 | 8.81e-10 |
+
+The PIP criterion remains atol=1e-5, rtol=0. Both backends converge in 199/200 real cases, with matching iteration counts in 200/200. Original-component credible-set membership matches in 251/251 comparisons. Maximum CS coverage difference is 2.59e-09 and purity difference 8.88e-16. The case tables retain missing CS and nonconvergence.
+
+| Real-panel diagnostic | Maximum absolute difference |
+| --- | ---: |
+| alpha | 1.22e-08 |
+| mu | 2.34e-08 |
+| mu2 | 3.7e-09 |
+| lbf_variable | 2.82e-05 |
+| lbf | 2.82e-05 |
+| V | 4.08e-06 |
+| sigma2 | 0 |
+| elbo | 1e-05 |
+| KL | 1.17e-07 |
+
+Intermediate quantities are diagnostic under the PIP criterion. In the separately checked prusie→pycoloc versus susieR→coloc layer, 48/100 real regions and both main teaching pairs exceed existing tighter coloc bounds. Maximum real H0–H4 difference is 6.34e-09 and conditional SNP difference 1.35e-07. The direct integration remains available with these recorded differences; PIP agreement alone is not a downstream parity claim.
+
+The fresh one-iteration teaching diagnostic has maximum PIP error 6.53e-10; it remains nonconverged and separate from the six converged checks. The older frozen-reference execution below retains its actual results and Netlib reference identity.
+
+[All numerical records](assets/r_comparison_numerical.json), [summary](assets/r_comparison_summary.json) and [complete settings](assets/r_comparison_protocol.json) preserve case counts and diagnostic fields. [Performance methods](performance.md) describe the new full-call time and peak process RSS measurements.
+
+## Current installed-package check
+
+A new execution with **prusie 0.2.3rc4** passed all seven frozen 500-SNP cases
+against the stored official susieR 0.16.6 outputs. The six converged cases had
+maximum PIP absolute error **8.814891039321537e-10**; the deliberately
+nonconverged one-iteration diagnostic had **3.5462458802815178e-9**. Both use
+atol=1e-5, rtol=0, with unchanged input/model/probability checks. The
+[current machine-readable record](assets/current_example_evidence.json) contains
+actual versions, source identity, full parameters, all field errors and CS
+diagnostics. This offline check reuses frozen R outputs; the separate manual
+R-comparison scripts execute fresh reference fits and measure performance.
+
+## Retained original reference report
+
 **All seven fixed 500-SNP teaching cases passed the PIP comparison with official
 susieR 0.16.6**, with maximum absolute errors from 1.6e-10 to 3.55e-9, below
 atol=1e-5, rtol=0. Input/model and probability checks also passed. The deliberately
