@@ -1,4 +1,5 @@
 """Result contract shared with consumers without requiring this package."""
+
 from dataclasses import dataclass, fields
 from typing import Any
 
@@ -7,10 +8,10 @@ import numpy as np
 
 @dataclass
 class SusieResult:
-    """SuSiE posterior; component arrays are (L, m [+ null]) float64.
+    """SuSiE posterior; component arrays are (L, p [+ null]) float64.
 
     ``mu2`` is the conditional second moment. All indices are zero-based.
-    ``mu`` is on the standardized predictor scale; use ``coef`` for effects
+    ``mu`` is on the fitted predictor scale; use ``coef`` for effects
     on the original predictor scale. The null column is excluded from PIP.
     ``sets`` retains original component indices, even when nonconsecutive.
     ``sets.coverage`` is the posterior mass of each returned set in that
@@ -48,4 +49,7 @@ class SusieResult:
     @property
     def coef(self) -> np.ndarray:
         """Posterior mean coefficients on the original predictor scale."""
-        return np.sum(self.alpha * self.mu, axis=0)[:len(self.variant_ids)] / self.X_column_scale_factors[:len(self.variant_ids)]
+        return (
+            np.sum(self.alpha * self.mu, axis=0)[: len(self.variant_ids)]
+            / self.X_column_scale_factors[: len(self.variant_ids)]
+        )

@@ -6,15 +6,25 @@ use pyo3::prelude::*;
 #[pyfunction]
 fn preparation_simd_supported() -> bool {
     #[cfg(target_arch = "x86_64")]
-    { std::is_x86_feature_detected!("avx512f") }
+    {
+        std::is_x86_feature_detected!("avx512f")
+    }
     #[cfg(not(target_arch = "x86_64"))]
-    { false }
+    {
+        false
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
-unsafe fn prepare_avx512(input: &[f64], inverse: &[f64], scales: &[f64],
-                         multiplier: f64, n: usize, output: *mut f64) {
+unsafe fn prepare_avx512(
+    input: &[f64],
+    inverse: &[f64],
+    scales: &[f64],
+    multiplier: f64,
+    n: usize,
+    output: *mut f64,
+) {
     use std::arch::x86_64::*;
     let mult = _mm512_set1_pd(multiplier);
     for j in 0..n {
@@ -53,24 +63,34 @@ fn prepare_crossproduct<'py>(
     crate::array_layout::ensure_layout(&crossproduct)?;
     crate::array_layout::ensure_layout(&inverse_scales)?;
     crate::array_layout::ensure_layout(&scales)?;
-    let crossproduct = crossproduct.try_readonly().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let inverse_scales = inverse_scales.try_readonly().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let scales = scales.try_readonly().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let crossproduct = crossproduct
+        .try_readonly()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let inverse_scales = inverse_scales
+        .try_readonly()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let scales = scales
+        .try_readonly()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let a = crossproduct.as_array();
     let inverse = inverse_scales.as_array();
     let scales = scales.as_array();
     let n = a.nrows();
     if a.ncols() != n || inverse.len() != n || scales.len() != n {
-        return Err(PyValueError::new_err("Crossproduct dimensions must match scale lengths"));
+        return Err(PyValueError::new_err(
+            "Crossproduct dimensions must match scale lengths",
+        ));
     }
     if !preparation_simd_supported() {
         return Ok(None);
     }
     let (Some(input), Some(inverse), Some(scales)) =
-        (a.as_slice(), inverse.as_slice(), scales.as_slice()) else {
-            return Ok(None);
-        };
-    let _size = n.checked_mul(n)
+        (a.as_slice(), inverse.as_slice(), scales.as_slice())
+    else {
+        return Ok(None);
+    };
+    let _size = n
+        .checked_mul(n)
         .ok_or_else(|| PyValueError::new_err("Crossproduct is too large"))?;
     #[cfg(target_arch = "x86_64")]
     {

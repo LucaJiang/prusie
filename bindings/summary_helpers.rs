@@ -9,9 +9,16 @@ use pyo3::prelude::*;
 
 #[pyfunction]
 #[pyo3(signature = (array, name, correlation=false, scale=1.0))]
-fn validate_matrix(array: Bound<'_, PyArray2<f64>>, name: &str, correlation: bool, scale: f64) -> PyResult<()> {
+fn validate_matrix(
+    array: Bound<'_, PyArray2<f64>>,
+    name: &str,
+    correlation: bool,
+    scale: f64,
+) -> PyResult<()> {
     ensure_layout(&array)?;
-    let array = array.try_readonly().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let array = array
+        .try_readonly()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let a = array.as_array();
     let n = a.nrows();
     if a.ncols() != n {
@@ -22,7 +29,9 @@ fn validate_matrix(array: Bound<'_, PyArray2<f64>>, name: &str, correlation: boo
     for i in 0..n {
         let value = a[[i, i]] * scale;
         if !value.is_finite() {
-            return Err(PyValueError::new_err(format!("{name} must contain only finite values")));
+            return Err(PyValueError::new_err(format!(
+                "{name} must contain only finite values"
+            )));
         }
         negative_diagonal |= value < 0.0;
         if correlation {
@@ -49,18 +58,22 @@ fn validate_matrix(array: Bound<'_, PyArray2<f64>>, name: &str, correlation: boo
                         // absolute bounds, including the two signed zeros.
                         // Equal infinities still fail this finite check.
                         if !x.is_finite() {
-                            return Err(PyValueError::new_err(format!("{name} must contain only finite values")));
+                            return Err(PyValueError::new_err(format!(
+                                "{name} must contain only finite values"
+                            )));
                         }
                         if correlation {
                             valid_correlation &= x.abs() <= 1.0 + 1e-8;
                         }
                     } else {
                         if !x.is_finite() || !y.is_finite() {
-                            return Err(PyValueError::new_err(format!("{name} must contain only finite values")));
+                            return Err(PyValueError::new_err(format!(
+                                "{name} must contain only finite values"
+                            )));
                         }
                         let delta = (x - y).abs();
-                        symmetric &= delta <= 1e-12 + 1e-12 * y.abs()
-                            && delta <= 1e-12 + 1e-12 * x.abs();
+                        symmetric &=
+                            delta <= 1e-12 + 1e-12 * y.abs() && delta <= 1e-12 + 1e-12 * x.abs();
                         if correlation {
                             valid_correlation &= x.abs() <= 1.0 + 1e-8 && y.abs() <= 1.0 + 1e-8;
                         }
@@ -71,14 +84,18 @@ fn validate_matrix(array: Bound<'_, PyArray2<f64>>, name: &str, correlation: boo
     }
     if !symmetric {
         return Err(PyValueError::new_err(format!(
-            "{name} must be symmetric; no automatic symmetrization is performed")));
+            "{name} must be symmetric; no automatic symmetrization is performed"
+        )));
     }
     if negative_diagonal {
-        return Err(PyValueError::new_err(format!("{name} diagonal must be nonnegative")));
+        return Err(PyValueError::new_err(format!(
+            "{name} diagonal must be nonnegative"
+        )));
     }
     if !valid_correlation {
         return Err(PyValueError::new_err(
-            "R must be a signed correlation matrix with unit diagonal and values in [-1,1]"));
+            "R must be a signed correlation matrix with unit diagonal and values in [-1,1]",
+        ));
     }
     Ok(())
 }
@@ -95,24 +112,37 @@ fn cs_pairwise_abs<'py>(
 ) -> PyResult<Option<Bound<'py, PyArray1<f64>>>> {
     ensure_layout(&correlation)?;
     ensure_layout(&members)?;
-    if let Some(ref inverse) = inverse_scales { ensure_layout(inverse)?; }
-    let correlation = correlation.try_readonly().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let members = members.try_readonly().map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let inverse_scales = inverse_scales.as_ref().map(|s| s.try_readonly())
-        .transpose().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    if let Some(ref inverse) = inverse_scales {
+        ensure_layout(inverse)?;
+    }
+    let correlation = correlation
+        .try_readonly()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let members = members
+        .try_readonly()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let inverse_scales = inverse_scales
+        .as_ref()
+        .map(|s| s.try_readonly())
+        .transpose()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let a = correlation.as_array();
     let indices = members.as_array();
     let n = indices.len();
-    if a.nrows() != a.ncols()
-        || indices.iter().any(|&i| i < 0 || i as usize >= a.nrows())
-    {
-        return Err(PyValueError::new_err("CS members must index a square matrix"));
+    if a.nrows() != a.ncols() || indices.iter().any(|&i| i < 0 || i as usize >= a.nrows()) {
+        return Err(PyValueError::new_err(
+            "CS members must index a square matrix",
+        ));
     }
     let inv = inverse_scales.as_ref().map(|s| s.as_array());
     if inv.as_ref().is_some_and(|s| s.len() != n) {
-        return Err(PyValueError::new_err("CS inverse scales must match members"));
+        return Err(PyValueError::new_err(
+            "CS inverse scales must match members",
+        ));
     }
-    let size = n.checked_mul(n.saturating_sub(1)).and_then(|x| x.checked_div(2))
+    let size = n
+        .checked_mul(n.saturating_sub(1))
+        .and_then(|x| x.checked_div(2))
         .ok_or_else(|| PyValueError::new_err("CS is too large"))?;
     if let Some(threshold) = min_abs_corr {
         // A failing pair proves the complete minimum is below threshold (or
@@ -167,7 +197,9 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
 #[pyo3(signature = (array, reduction=true))]
 fn complete_finite_scan(array: Bound<'_, PyArray1<f64>>, reduction: bool) -> PyResult<bool> {
     ensure_layout(&array)?;
-    let array = array.try_readonly().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let array = array
+        .try_readonly()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let values = array.as_slice()?;
     Ok(if reduction {
         crate::core::input_validation::all_finite(values)
@@ -176,8 +208,10 @@ fn complete_finite_scan(array: Bound<'_, PyArray1<f64>>, reduction: bool) -> PyR
     })
 }
 
-fn validate_rss_matrix_impl<const SAFE_SCALE: bool>(a: ndarray::ArrayView2<'_, f64>,
-                                                    scale: f64) -> PyResult<()> {
+fn validate_rss_matrix_impl<const SAFE_SCALE: bool>(
+    a: ndarray::ArrayView2<'_, f64>,
+    scale: f64,
+) -> PyResult<()> {
     let n = a.nrows();
     if a.ncols() != n {
         return Err(PyValueError::new_err("R must be square"));
@@ -237,20 +271,25 @@ fn validate_rss_matrix_impl<const SAFE_SCALE: bool>(a: ndarray::ArrayView2<'_, f
         }
     }
     if !raw_symmetric {
-        return Err(PyValueError::new_err("R must be symmetric; no automatic symmetrization is performed"));
+        return Err(PyValueError::new_err(
+            "R must be symmetric; no automatic symmetrization is performed",
+        ));
     }
     if !raw_nonnegative {
         return Err(PyValueError::new_err("R diagonal must be nonnegative"));
     }
     if !raw_correlation {
         return Err(PyValueError::new_err(
-            "R must be a signed correlation matrix with unit diagonal and values in [-1,1]"));
+            "R must be a signed correlation matrix with unit diagonal and values in [-1,1]",
+        ));
     }
     if !scaled_finite {
         return Err(PyValueError::new_err("XtX must contain only finite values"));
     }
     if !scaled_symmetric {
-        return Err(PyValueError::new_err("XtX must be symmetric; no automatic symmetrization is performed"));
+        return Err(PyValueError::new_err(
+            "XtX must be symmetric; no automatic symmetrization is performed",
+        ));
     }
     if !scaled_nonnegative {
         return Err(PyValueError::new_err("XtX diagonal must be nonnegative"));
@@ -260,19 +299,33 @@ fn validate_rss_matrix_impl<const SAFE_SCALE: bool>(a: ndarray::ArrayView2<'_, f
 
 #[pyfunction]
 #[pyo3(signature = (array, scale, use_simd=true, proof_threads=None))]
-fn validate_rss_matrix(array: Bound<'_, PyArray2<f64>>, scale: f64, use_simd: bool, proof_threads: Option<usize>) -> PyResult<()> {
+fn validate_rss_matrix(
+    array: Bound<'_, PyArray2<f64>>,
+    scale: f64,
+    use_simd: bool,
+    proof_threads: Option<usize>,
+) -> PyResult<()> {
     ensure_layout(&array)?;
-    let array = array.try_readonly().map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let array = array
+        .try_readonly()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
     // Match the existing numerical thread environment. Keep small matrices
     // serial because scoped thread startup exceeds their validation work.
     let proof_threads = proof_threads.unwrap_or_else(|| {
-        if array.shape()[0] < 1024 { return 1; }
-        std::env::var("PRUSIE_NUM_THREADS").ok()
-            .and_then(|value| value.parse::<usize>().ok()).unwrap_or(1).clamp(1, 32)
+        if array.shape()[0] < 1024 {
+            return 1;
+        }
+        std::env::var("PRUSIE_NUM_THREADS")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(1)
+            .clamp(1, 32)
     });
     #[cfg(target_arch = "x86_64")]
-    if use_simd && scale.abs() <= f64::MAX * 0.5
-        && exact_contiguous_rss_proof(array.as_array(), scale, proof_threads) {
+    if use_simd
+        && scale.abs() <= f64::MAX * 0.5
+        && exact_contiguous_rss_proof(array.as_array(), scale, proof_threads)
+    {
         return Ok(());
     }
     #[cfg(not(target_arch = "x86_64"))]
@@ -289,7 +342,11 @@ fn validate_rss_matrix(array: Bound<'_, PyArray2<f64>>, scale: f64, use_simd: bo
 /// Complete sufficient proof for ordinary exact-symmetric contiguous input.
 /// Failure is not rejection: the caller evaluates all general validation rules.
 #[cfg(target_arch = "x86_64")]
-fn exact_contiguous_rss_proof(a: ndarray::ArrayView2<'_, f64>, scale: f64, proof_threads: usize) -> bool {
+fn exact_contiguous_rss_proof(
+    a: ndarray::ArrayView2<'_, f64>,
+    scale: f64,
+    proof_threads: usize,
+) -> bool {
     let n = a.nrows();
     if a.ncols() != n {
         return false;
@@ -307,9 +364,13 @@ fn exact_contiguous_rss_proof(a: ndarray::ArrayView2<'_, f64>, scale: f64, proof
     for i in 0..n {
         let raw = values[i * n + i];
         let scaled = raw * scale;
-        if !(raw.is_finite() && (raw - 1.0).abs() <= 1e-8
-            && raw.abs() <= 1.0 + 1e-8 && raw >= 0.0
-            && scaled.is_finite() && scaled >= 0.0) {
+        if !(raw.is_finite()
+            && (raw - 1.0).abs() <= 1e-8
+            && raw.abs() <= 1.0 + 1e-8
+            && raw >= 0.0
+            && scaled.is_finite()
+            && scaled >= 0.0)
+        {
             return false;
         }
     }
@@ -324,10 +385,16 @@ fn exact_contiguous_rss_proof(a: ndarray::ArrayView2<'_, f64>, scale: f64, proof
         let mut workers = Vec::with_capacity(threads - 1);
         let mut complete = true;
         for rank in 1..threads {
-            match std::thread::Builder::new().name("prusie-validate".into())
-                .spawn_scoped(scope, move || exact_contiguous_rss_pairs(values, n, rank, threads)) {
+            match std::thread::Builder::new()
+                .name("prusie-validate".into())
+                .spawn_scoped(scope, move || {
+                    exact_contiguous_rss_pairs(values, n, rank, threads)
+                }) {
                 Ok(worker) => workers.push(worker),
-                Err(_) => { complete = false; break; }
+                Err(_) => {
+                    complete = false;
+                    break;
+                }
             }
         }
         complete &= exact_contiguous_rss_pairs(values, n, 0, threads);
@@ -383,8 +450,10 @@ unsafe fn exact_block4(base: *const f64, n: usize, i: usize, j: usize) -> bool {
         let b1 = _mm_loadu_pd(base.add((j + 1) * n + i + half));
         let b2 = _mm_loadu_pd(base.add((j + 2) * n + i + half));
         let b3 = _mm_loadu_pd(base.add((j + 3) * n + i + half));
-        let columns = [(_mm_unpacklo_pd(b0, b1), _mm_unpacklo_pd(b2, b3)),
-                       (_mm_unpackhi_pd(b0, b1), _mm_unpackhi_pd(b2, b3))];
+        let columns = [
+            (_mm_unpacklo_pd(b0, b1), _mm_unpacklo_pd(b2, b3)),
+            (_mm_unpackhi_pd(b0, b1), _mm_unpackhi_pd(b2, b3)),
+        ];
         for (offset, (low, high)) in columns.into_iter().enumerate() {
             let row = i + half + offset;
             let x0 = _mm_loadu_pd(base.add(row * n + j));

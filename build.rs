@@ -9,15 +9,23 @@ fn main() {
         && env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("gnu")
         && env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("x86_64")
         && env::var("HOST") == env::var("TARGET");
-    if !enabled { return; }
+    if !enabled {
+        return;
+    }
     let out = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo OUT_DIR"));
     let object = out.join("vector_math.o");
     let status = Command::new(env::var_os("CC").unwrap_or_else(|| "cc".into()))
         .args(["-O3", "-fPIC", "-std=c11", "-c", "rust/vector_math.c", "-o"])
-        .arg(&object).status().expect("C compiler for vector-math feature");
+        .arg(&object)
+        .status()
+        .expect("C compiler for vector-math feature");
     assert!(status.success(), "vector-math C compilation failed");
-    let status = Command::new("ar").arg("crs").arg(out.join("libprusie_vector_math.a"))
-        .arg(object).status().expect("archiver for vector-math feature");
+    let status = Command::new("ar")
+        .arg("crs")
+        .arg(out.join("libprusie_vector_math.a"))
+        .arg(object)
+        .status()
+        .expect("archiver for vector-math feature");
     assert!(status.success(), "vector-math archive failed");
     println!("cargo:rustc-link-search=native={}", out.display());
     println!("cargo:rustc-link-lib=static=prusie_vector_math");

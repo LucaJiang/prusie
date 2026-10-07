@@ -5,7 +5,9 @@
 /// full slice even when an invalid entry occurs early. No CPU feature required.
 #[inline]
 pub fn all_finite(values: &[f64]) -> bool {
-    values.iter().fold(true, |valid, value| valid & value.is_finite())
+    values
+        .iter()
+        .fold(true, |valid, value| valid & value.is_finite())
 }
 
 #[cfg(test)]
@@ -29,7 +31,14 @@ mod tests {
 
     #[test]
     fn finite_extremes_subnormals_and_signed_zeros_are_valid() {
-        assert!(all_finite(&[f64::MAX, f64::MIN, f64::MIN_POSITIVE,
-                            f64::from_bits(1), -f64::from_bits(1), 0.0, -0.0]));
+        assert!(all_finite(&[
+            f64::MAX,
+            f64::MIN,
+            f64::MIN_POSITIVE,
+            f64::from_bits(1),
+            -f64::from_bits(1),
+            0.0,
+            -0.0
+        ]));
     }
 }
