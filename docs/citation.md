@@ -10,7 +10,7 @@ Please cite the statistical methods used in your analysis:
   with the “Sum of Single Effects” model. *PLOS Genetics*, 18:e1010299.
   [DOI: 10.1371/journal.pgen.1010299](https://doi.org/10.1371/journal.pgen.1010299).
 
-Identify the software as **prusie 0.2.3rc5**, author Wenxin Jiang, and retain
+Identify the software as **prusie 0.2.3rc6**, author Wenxin Jiang, and retain
 its source revision and environment in reproducible analyses.
 [CITATION.cff](https://github.com/LucaJiang/prusie/blob/main/CITATION.cff) contains
 machine-readable software metadata. No software-paper DOI is assigned here.

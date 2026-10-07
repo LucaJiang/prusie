@@ -4,4 +4,4 @@ from .result import SusieResult
 from .datasets import load_example
 
 __all__ = ["susie_rss", "susie_suff_stat", "SusieResult", "load_example"]
-__version__ = "0.2.3rc5"
+__version__ = "0.2.3rc6"

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.3rc6 — portable teaching-data validation
+
+- Verify frozen teaching-file hashes separately from numerical regeneration,
+  allowing only measured BLAS roundoff instead of requiring compressed bytes
+  to match across CPU kernels.
+- Preserve all frozen inputs, reference outputs and statistical tolerances;
+  test corruption detection, metadata changes and alternate BLAS kernels.
+
 ## 0.2.3rc5 — documentation and packaged example
 
 - Add an independent, deterministic 500-variant synthetic teaching example,

@@ -6,7 +6,7 @@ build-backend = "maturin"
 authors = [{name = "Wenxin Jiang"}]
 maintainers = [{name = "Wenxin Jiang"}]
 name = "prusie"
-version = "0.2.3rc5"
+version = "0.2.3rc6"
 description = "SuSiE summary-statistics inference with a native Rust IBSS core"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.26,<3"]

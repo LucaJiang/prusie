@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "Please cite the original statistical methods and identify this software version. No DOI is assigned."
 title: "prusie: Native summary-statistics SuSiE"
 type: software
-version: "0.2.3rc5"
+version: "0.2.3rc6"
 license: GPL-3.0-or-later
 authors:
   - family-names: Jiang

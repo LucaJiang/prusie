@@ -60,6 +60,24 @@ The frozen-reference check needs no R. To generate inputs again, use
 `python tools/generate_example.py --output-dir NEW_DIRECTORY` with NumPy 2.2.6.
 This is one deterministic teaching example, rather than a simulation study.
 
+### Teaching data regeneration
+
+`--check` independently verifies the original SHA256 manifest and the exact
+frozen input, metadata and license bytes. It then regenerates the data with
+NumPy 2.2.6 and compares array names, shapes, dtypes and finite values. Metadata,
+true effects and coordinates must match exactly. The recorded NumPy version
+describes the original generation environment and is never replaced during a check.
+
+Single-threaded OpenBLAS 0.3.29 kernels (SkylakeX, Haswell and Sandybridge)
+produced maximum absolute differences of 1.60e-14 for z, 1.12e-15 for R,
+5.56e-16 for marginal effects and 2.09e-17 for their standard errors.
+The respective regeneration bounds are 8e-14, 5e-15, 3e-15 and 1e-16,
+with zero relative tolerance. ZIP encoding is not compared for regenerated
+arrays. Re-encoding or editing the committed frozen files still fails their
+exact integrity checks. These generation checks do not change the independent
+R-reference PIP criterion (absolute error at most 1e-5, zero relative tolerance),
+credible-set checks or fitting options.
+
 For a live comparison, install susieR 0.16.6 at the recorded commit and jsonlite
 in your chosen R library. Check the R installation:
 

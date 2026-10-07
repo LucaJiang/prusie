@@ -143,7 +143,7 @@ dependencies = [
 
 [[package]]
 name = "prusie-native"
-version = "0.2.3-rc.5"
+version = "0.2.3-rc.6"
 dependencies = [
  "ndarray",
  "numpy",

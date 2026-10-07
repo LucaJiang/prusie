@@ -90,8 +90,10 @@ metadata = {"prusie_version": prusie.__version__, "parameters": fit.params,
 correlation 0.85, sample-standardized predictors, nonzero coefficients 0.35 and
 −0.30 at zero-based indices 99 and 349, and independent unit-variance Gaussian
 noise. Coordinates are arbitrary teaching positions at 1000-unit intervals.
-`tools/generate_example.py --check` reproduces the packaged input bytes with
-the pinned generation dependencies.
+`tools/generate_example.py --check` verifies the exact frozen-file SHA256 hashes
+and checks regenerated numerical values within tight floating-point roundoff
+bounds. Compressed archive bytes can vary across numerical libraries; see
+[the regeneration criteria](reproducibility.md#teaching-data-regeneration).
 
 The packaged reference was separately fitted with susieR 0.16.6 using the same
 inputs and options. Input and reference hashes, parameters, convergence and
