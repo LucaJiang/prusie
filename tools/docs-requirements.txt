@@ -1,2 +1,4 @@
 Markdown==3.7
 Pygments==2.19.2
+pymdown-extensions==10.16.1
+PyYAML==6.0.2

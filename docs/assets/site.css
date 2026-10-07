@@ -10,6 +10,12 @@ td,th{overflow-wrap:normal}.table-wrap:focus-visible{outline:3px solid var(--acc
 @media(max-width:640px){.table-wrap table{min-width:38rem}.table-wrap th:first-child,.table-wrap td:first-child{white-space:nowrap}}
 
 /* Build-time token colors come from the local Pygments stylesheet. */
+/* Math is rendered at build time; local KaTeX fonts also work without JS. */
+.arithmatex .katex{font-size:1.08em}
+div.arithmatex{overflow-x:auto;overflow-y:hidden;max-width:100%;padding:.3em .15em;margin:1.25em 0}
+div.arithmatex .katex-display{margin:.3em 0;text-align:left}
+div.arithmatex .katex-display>.katex{text-align:left}
+div.arithmatex:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .highlight { background:#f7f9fc; border-radius:9px; min-width:0; }
 .highlight pre { background:#f7f9fc; color:#172b40; border:1px solid #d8e1e9; font-size:.85rem; line-height:1.6; }
 .highlight pre code { color:inherit; background:transparent; }

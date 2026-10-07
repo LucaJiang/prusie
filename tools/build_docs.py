@@ -10,19 +10,35 @@ from pathlib import Path
 
 import markdown
 from pygments.formatters import HtmlFormatter
+from math_render import StaticMath, check_assets
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 
 
+def render_markdown(source: str, page: str):
+    """Use the same protected math/highlighting pipeline for pages and tests."""
+    md = markdown.Markdown(
+        extensions=["fenced_code", "tables", "toc", "sane_lists", "attr_list",
+                    "codehilite", "pymdownx.arithmatex", StaticMath(page)],
+        extension_configs={
+            "codehilite": {"guess_lang": False, "linenums": False,
+                           "css_class": "highlight", "pygments_style": "friendly"},
+            "toc": {"toc_depth": "2-3", "permalink": False},
+            "pymdownx.arithmatex": {"generic": True, "inline_syntax": ["dollar"],
+                                    "block_syntax": ["dollar"]},
+        },
+    )
+    return md.convert(source), md
+
+
 def build(check: bool = False) -> None:
+    check_assets()
     config = json.loads((ROOT / "tools/site_config.json").read_text())
     version = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M)[1]
     stale = []
     for path in sorted(DOCS.glob("*.md")):
-        md = markdown.Markdown(extensions=["fenced_code", "tables", "toc", "sane_lists", "attr_list", "codehilite"],
-                               extension_configs={"codehilite": {"guess_lang": False, "linenums": False, "css_class": "highlight", "pygments_style": "friendly"}, "toc": {"toc_depth": "2-3", "permalink": False}})
-        body = md.convert(path.read_text())
+        body, md = render_markdown(path.read_text(), path.relative_to(ROOT).as_posix())
         body = body.replace('<pre>', '<pre tabindex="0" aria-label="Code example; scroll horizontally if needed">')
         # Markdown sources remain readable; Pages links resolve within docs/.
         body = re.sub(r'(href="[^"#?:]+)\.md(?=[#"])', r'\1.html', body)
@@ -47,6 +63,7 @@ def build(check: bool = False) -> None:
 <title>{html.escape(title)} · {html.escape(config['package'])}</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
+<link rel="stylesheet" href="assets/katex/katex.min.css">
 <script src="assets/site.js" defer></script>
 </head>
 <body class="{html.escape(config['package'])}">
