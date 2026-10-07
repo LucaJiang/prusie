@@ -30,6 +30,9 @@ def inspect_wheel(path):
         names = archive.namelist()
         dist = next(n.rsplit('/', 1)[0] for n in names if n.endswith('.dist-info/WHEEL'))
         metadata = archive.read(dist + '/METADATA').decode()
+        requirements = [line for line in metadata.splitlines() if line.startswith('Requires-Dist:')]
+        assert not any(name in metadata.lower() for name in
+                       ('requires-dist: markdown', 'requires-dist: pymdown', 'requires-dist: pygments'))
         wheel = archive.read(dist + '/WHEEL').decode()
         required = ['prusie/datasets.py', 'prusie/data/teaching/inputs.npz',
                     'prusie/data/teaching/metadata.json', 'prusie/data/teaching/reference.npz',
@@ -49,6 +52,7 @@ def inspect_wheel(path):
         assert 'THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS' in notice
         assert 'GPL-2.0-or-later' in notice and 'GPL-3.0-or-later' in notice
         return dict(filename=path.name, sha256=sha(path), WHEEL=wheel, METADATA=metadata,
+                    runtime_requirements=requirements, docs_dependencies_absent=True,
                     native_members=native,
                     native_sha256=hashlib.sha256(archive.read(native[0])).hexdigest(),
                     license_members=[n for n in names if 'license' in n.lower() or 'notices' in n.lower()])
@@ -108,9 +112,17 @@ def main():
                     'LICENSE', 'THIRD_PARTY_NOTICES.md', 'src/prusie/_licenses/THIRD_PARTY_NOTICES.md',
                     'tests/test_reference.py', 'tests/test_offline_example.py',
                     'examples/data/inputs.npz', 'examples/data/r_fits.npz',
-                    'examples/data/LICENSE.GPL-3', 'examples/check_example.py']
+                    'examples/data/LICENSE.GPL-3', 'examples/check_example.py',
+                    'tools/math_render.py', 'tools/render_math.cjs', 'tools/model_examples.py',
+                    'tools/math-assets.lock.json', 'tools/vendor/katex/katex.js',
+                    'tools/vendor/katex/LICENSE', 'docs/assets/katex/LICENSE',
+                    'docs/assets/katex/katex.min.css', 'tests/test_math_docs.py']
         assert all((source / name).is_file() for name in required), 'Incomplete buildable sdist'
         record['sdist']['required_source_payload'] = {n: sha(source / n) for n in required}
+        math_assets = json.loads((source/'tools/math-assets.lock.json').read_text())
+        assert all(sha(source/name) == expected for name, expected in math_assets['files'].items())
+        record['sdist']['math_assets_verified'] = len(math_assets['files'])
+        record['sdist']['math_license'] = math_assets['license']
 
         def install_and_check(label, artifact):
             runtime = work / (label + '-env')

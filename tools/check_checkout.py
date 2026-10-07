@@ -38,6 +38,7 @@ def main():
         [sys.executable, '-B', str(source/'examples/check_example.py'), '--output-dir', str(out/'example')],
         [sys.executable, '-B', str(source/'tools/generate_results.py'), '--check'],
         [sys.executable, '-B', str(source/'examples/quickstart.py')],
+        [sys.executable, '-B', str(source/'tools/model_examples.py'), '--check'],
         [sys.executable, '-B', str(source/'tools/build_docs.py'), '--check'],
         [sys.executable, '-B', str(source/'tools/check_docs.py'), '--output', str(out/'docs.json')],
     ]
