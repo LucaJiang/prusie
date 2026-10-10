@@ -8,6 +8,7 @@ use pyo3::PyTypeInfo;
 mod array_layout;
 #[path = "../rust/core.rs"]
 mod core;
+mod diagnostic_helpers;
 mod prepare_helpers;
 mod summary_helpers;
 
@@ -75,6 +76,37 @@ fn fit<'py>(
         prior_tol: option(options, "prior_tol")?,
         null_index: option(options, "null_index")?,
     };
+    let mut control = core::diagnostics::FitControl::default();
+    macro_rules! optional {
+        ($key:literal, $field:ident) => {
+            if let Some(value) = options.get_item($key)? {
+                control.$field = value.extract()?;
+            }
+        };
+    }
+    optional!("track_level", track);
+    optional!("criterion", criterion);
+    optional!("alpha_tol", alpha_tol);
+    optional!("pip_tol", pip_tol);
+    optional!("min_iter", min_iter);
+    optional!("cycle_lag", cycle_lag);
+    optional!("hard_exclusion", hard_exclusion);
+    if options.contains("init_alpha")? {
+        control.initial = Some(core::diagnostics::InitialState {
+            alpha: vector_option(options, "init_alpha")?,
+            mu: vector_option(options, "init_mu")?,
+            mu2: vector_option(options, "init_mu2")?,
+            v: if options.contains("init_V")? {
+                Some(vector_option(options, "init_V")?)
+            } else {
+                None
+            },
+            sigma2: options
+                .get_item("init_sigma2")?
+                .map(|v| v.extract())
+                .transpose()?,
+        });
+    }
     // Python numeric/sequence conversion can execute callbacks. Finish every
     // option extraction before checking raw array metadata or borrowing memory.
     let global = options
@@ -183,28 +215,22 @@ fn fit<'py>(
     let values = matrix
         .as_slice_memory_order()
         .ok_or_else(|| PyValueError::new_err("Matrix must be contiguous"))?;
-    let output = if let Some(scale) = scaling.as_ref() {
-        core::fit_layout_operator(
-            values,
-            xty.as_slice()?,
-            yty,
-            n,
-            &settings,
-            matrix.t().is_standard_layout(),
-            Some(scale),
-        )
-    } else {
-        core::fit_layout(
-            values,
-            xty.as_slice()?,
-            yty,
-            n,
-            &settings,
-            matrix.t().is_standard_layout(),
-        )
-    }
+    let output = core::fit_controlled(
+        values,
+        xty.as_slice()?,
+        yty,
+        n,
+        &settings,
+        matrix.t().is_standard_layout(),
+        scaling.as_ref(),
+        &control,
+    )
     .map_err(PyValueError::new_err)?;
     let result = PyDict::new(py);
+    result.set_item(
+        "diagnostics",
+        diagnostic_helpers::export(py, &output.diagnostics, settings.l, p, control.track)?,
+    )?;
     for (name, values) in [
         ("alpha", output.alpha),
         ("mu", output.mu),

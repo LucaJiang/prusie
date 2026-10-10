@@ -41,6 +41,7 @@ def credible_sets(
     n_purity=None,
     covariance_scales=None,
     covariance_multiplier=1.0,
+    audit=None,
 ):
     """Construct component credible sets with complete pairwise LD purity.
 
@@ -64,6 +65,9 @@ def credible_sets(
         Square roots of covariance diagonal entries, for correlation conversion.
     covariance_multiplier : float, default 1
         Scalar applied to covariance entries before dividing by the scales.
+    audit : list, optional
+        Append the actual ordered construction decisions, including original
+        component IDs and rejected candidates. This does not change selection.
 
     Returns
     -------
@@ -92,8 +96,12 @@ def credible_sets(
         },
     )
     if coverage is None or min_abs_corr is None:
+        if audit is not None:
+            audit.extend(dict(component_id=i, candidate_members=[], reasons=["disabled"],
+                              stages=["disabled"], requested_coverage=coverage,
+                              min_abs_corr=min_abs_corr) for i in range(len(alpha)))
         return empty
-    candidates, seen = [], set()
+    candidates, seen, records = [], set(), {}
     for i, row in enumerate(alpha):
         order = np.argsort(-row, kind="stable")
         count = min(len(row), int(np.sum(np.cumsum(row[order]) < coverage)) + 1)
@@ -101,13 +109,32 @@ def credible_sets(
         key = tuple(members)
         duplicate = key in seen
         seen.add(key)
+        if audit is not None:
+            reasons = []
+            if duplicate:
+                reasons.append("duplicate")
+            if not V[i] > 1e-9:
+                reasons.append("inactive")
+            if not len(members):
+                reasons.append("unavailable")
+            record = dict(component_id=i, candidate_members=members.tolist(),
+                          reasons=reasons, stages=["candidate", "deduplicate", "activity"],
+                          requested_coverage=coverage, min_abs_corr=min_abs_corr,
+                          active_threshold=1e-9, actual_coverage=float(row[members].sum()))
+            audit.append(record)
+            records[i] = record
         if V[i] > 1e-9 and len(members) and not duplicate:
             candidates.append((i, members))
     retained = []
     native_correlation = None
     for i, members in candidates:
+        record = records.get(i)
+        if record is not None:
+            record["stages"].append("purity")
         if null_index is not None and null_index in members:
             purity = (-9.0, -9.0, -9.0)
+            if record is not None:
+                record["reasons"].append("contains_null")
         elif len(members) == 1:
             purity = (1.0, 1.0, 1.0)
         else:
@@ -128,15 +155,25 @@ def credible_sets(
                 native_correlation, members, inv, min_abs_corr, covariance_multiplier
             )
             if values is None:
+                if record is not None:
+                    record["reasons"].append("low_purity_or_unavailable")
+                    record["purity_evaluation"] = "threshold_short_circuit"
                 continue
             minimum = float(values.min())
             # Rejected sets have no returned purity row; avoid their unused
             # mean and median while retaining the same minimum-r decision.
             if not minimum >= min_abs_corr:
+                if record is not None:
+                    record["reasons"].append("low_purity" if np.isfinite(minimum) else "unavailable")
                 continue
             purity = (minimum, float(values.mean()), float(np.median(values)))
         if purity[0] >= min_abs_corr:
             retained.append((i, members, purity))
+            if record is not None:
+                record["reasons"].append("retained")
+                record["purity"] = dict(zip(("min_abs_corr", "mean_abs_corr", "median_abs_corr"), purity))
+        elif record is not None:
+            record["reasons"].append("low_purity")
     if not retained:
         return empty
     order = np.argsort([-item[2][0] for item in retained], kind="stable")
