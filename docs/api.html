@@ -17,7 +17,7 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
 <span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html" aria-current="page">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html" aria-current="page">API</a><a href="post_analysis.html">Post-analysis</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -30,6 +30,7 @@
 <li><a href="#susieresult">SusieResult</a></li>
 <li><a href="#posterior-helpers">Posterior helpers</a></li>
 <li><a href="#load_example">load_example</a></li>
+<li><a href="#convergence-and-post-analysis">Convergence and post-analysis</a></li>
 </ul>
 </div>
 </details><h1 id="python-api">Python API</h1>
@@ -184,37 +185,15 @@ statistics. Use fixed variance with external LD unless estimation is justified.
 </thead>
 <tbody>
 <tr>
-<td><code>s_init</code></td>
-<td>None</td>
-<td><code>NotImplementedError: s_init is not implemented</code></td>
-</tr>
-<tr>
-<td><code>refine</code></td>
-<td>False</td>
-<td><code>NotImplementedError: refine is not implemented</code></td>
-</tr>
-<tr>
-<td><code>track_fit</code></td>
-<td>False</td>
-<td><code>NotImplementedError: track_fit is not implemented</code></td>
-</tr>
-<tr>
-<td><code>verbose</code></td>
-<td>False</td>
-<td><code>NotImplementedError: verbose is not implemented</code></td>
-</tr>
-<tr>
-<td><code>maf</code>, <code>maf_thresh</code> (sufficient statistics)</td>
-<td>None, 0</td>
-<td><code>NotImplementedError: maf is not implemented</code></td>
-</tr>
-<tr>
-<td><code>z_ld_weight</code> (RSS)</td>
-<td>0</td>
-<td><code>NotImplementedError: Nonzero z_ld_weight is not implemented</code></td>
+<td></td>
+<td></td>
+<td></td>
 </tr>
 </tbody>
 </table></div>
+<p>| <code>verbose</code> | False | <code>NotImplementedError: verbose is not implemented</code> |
+| <code>maf</code>, <code>maf_thresh</code> (sufficient statistics) | None, 0 | <code>NotImplementedError: maf is not implemented</code> |
+| <code>z_ld_weight</code> (RSS) | 0 | <code>NotImplementedError: Nonzero z_ld_weight is not implemented</code> |</p>
 <p>Invalid shapes, nonfinite values and parameter ranges raise <code>ValueError</code>.
 <code>L</code>, <code>max_iter</code> and supplied <code>n_purity</code> must be positive integers; <code>tol</code>,
 <code>prior_tol</code>, <code>r_tol</code> and <code>check_null_threshold</code> must be finite and nonnegative.
@@ -248,7 +227,19 @@ correlation. Normal fitting constructs these arguments internally.</p>
 z, R, n and variant IDs; metadata includes the synthetic method, seed, true
 effects and sample size. Input bytes are checked against packaged hashes and
 returned arrays are owned by the caller. The loader works from any directory
-without network access. See the <a href="example.html">toy example tutorial</a>.</p></article>
+without network access. See the <a href="example.html">toy example tutorial</a>.</p>
+<h2 id="convergence-and-post-analysis">Convergence and post-analysis</h2>
+<p>Both fitting interfaces support <code>s_init=None</code>, <code>refine=False</code>,
+<code>track_fit=False</code>, <code>convergence=None</code> and <code>retain_data=False</code>.
+<code>ConvergenceConfig</code> selects exact ELBO, alpha/PIP or joint stopping.
+<code>track_fit=True</code> records compact exact metrics and a labelled lossy alpha display;
+<code>track_fit='dense'</code> retains full states for small debugging inputs.</p>
+<p><code>continue_fit</code>, <code>refine_fit</code>, <code>evaluate_objective</code>, <code>summarize</code>, <code>diagnose_ld</code>,
+<code>compare_fits</code> and <code>run_sensitivity</code> are independent explicit operations.
+<code>RefinementConfig</code> separates search thresholds/budgets from inner IBSS tolerances.
+See <a href="post_analysis.html">post-analysis</a> for costs, initialization metadata,
+phase definitions, methods and runnable examples. Plotting, reports and the
+optional CLI adapter live in <code>prusie.plots</code>, <code>prusie.report</code> and <code>prusie.ai</code>.</p></article>
 <footer><p>prusie 0.2.3rc6 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>

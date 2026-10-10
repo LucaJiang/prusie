@@ -61,6 +61,14 @@ A PIP summarizes variant inclusion across effects; each credible set belongs to
 an original SuSiE component. The [toy example tutorial](docs/example.md) explains input
 preparation, convergence, posterior mass, purity and saving results.
 
+## Diagnose and refine a fit
+
+Use [post-analysis](docs/post_analysis.md) for exact convergence tracking, checked warm starts,
+two-step refinement, LD diagnostics, explicit sensitivity comparisons and offline
+reports. These operations are opt-in; the standard Gaussian fitting defaults
+remain unchanged. Two executable toy examples demonstrate stable and local-optimum
+solutions.
+
 ## Documentation
 
 Browse the [documentation site](https://lucajiang.github.io/prusie/),

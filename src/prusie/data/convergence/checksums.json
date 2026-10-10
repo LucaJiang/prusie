@@ -1,0 +1,7 @@
+{
+  "metadata.json": "6115d526e8d5ecc9ad907f7a55f302fce86776125a5ec2e5859b5e002ed88502",
+  "inputs.npz": "5e8549ca8d0fd0ad4c166243a3a377ffcc3ed2e85cdadb6a221abcc55bf0c41b",
+  "reference.npz": "620919e9337a93cc304db81ac1d3fc9d003070a0f80787c72117caf32993e58a",
+  "LICENSE-BSD-3-Clause.txt": "07cd2b1e331b328a0da14ec16bc3931f82721ee764672b39ba487808a41d3fd9",
+  "LICENSE.txt": "07cd2b1e331b328a0da14ec16bc3931f82721ee764672b39ba487808a41d3fd9"
+}

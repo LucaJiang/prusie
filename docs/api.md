@@ -75,9 +75,9 @@ The following exposed options accept only their listed defaults:
 
 | Parameter | Allowed value | Error for another value |
 | --- | --- | --- |
-| `s_init` | None | `NotImplementedError: s_init is not implemented` |
-| `refine` | False | `NotImplementedError: refine is not implemented` |
-| `track_fit` | False | `NotImplementedError: track_fit is not implemented` |
+
+
+
 | `verbose` | False | `NotImplementedError: verbose is not implemented` |
 | `maf`, `maf_thresh` (sufficient statistics) | None, 0 | `NotImplementedError: maf is not implemented` |
 | `z_ld_weight` (RSS) | 0 | `NotImplementedError: Nonzero z_ld_weight is not implemented` |
@@ -125,3 +125,18 @@ z, R, n and variant IDs; metadata includes the synthetic method, seed, true
 effects and sample size. Input bytes are checked against packaged hashes and
 returned arrays are owned by the caller. The loader works from any directory
 without network access. See the [toy example tutorial](example.md).
+
+## Convergence and post-analysis
+
+Both fitting interfaces support `s_init=None`, `refine=False`,
+`track_fit=False`, `convergence=None` and `retain_data=False`.
+`ConvergenceConfig` selects exact ELBO, alpha/PIP or joint stopping.
+`track_fit=True` records compact exact metrics and a labelled lossy alpha display;
+`track_fit='dense'` retains full states for small debugging inputs.
+
+`continue_fit`, `refine_fit`, `evaluate_objective`, `summarize`, `diagnose_ld`,
+`compare_fits` and `run_sensitivity` are independent explicit operations.
+`RefinementConfig` separates search thresholds/budgets from inner IBSS tolerances.
+See [post-analysis](post_analysis.md) for costs, initialization metadata,
+phase definitions, methods and runnable examples. Plotting, reports and the
+optional CLI adapter live in `prusie.plots`, `prusie.report` and `prusie.ai`.
