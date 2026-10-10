@@ -77,13 +77,18 @@ def _integer(value: int, name: str) -> int:
 
 
 def _metadata(variant_ids, variant_metadata, m):
-    ids = np.asarray(
-        [str(i) for i in range(m)] if variant_ids is None else variant_ids, dtype=str
-    )
-    if ids.shape != (m,) or len(set(ids.tolist())) != m or np.any(ids == ""):
-        raise ValueError(
-            "variant_ids must contain m distinct nonempty IDs in input order"
+    if variant_ids is None and m > 0:
+        # Positional labels are distinct and nonempty by construction. Match
+        # the minimal Unicode width of the explicit decimal strings exactly.
+        ids = np.arange(m).astype(f"<U{len(str(m - 1))}")
+    else:
+        ids = np.asarray(
+            [str(i) for i in range(m)] if variant_ids is None else variant_ids, dtype=str
         )
+        if ids.shape != (m,) or len(set(ids.tolist())) != m or np.any(ids == ""):
+            raise ValueError(
+                "variant_ids must contain m distinct nonempty IDs in input order"
+            )
     metadata = (
         {}
         if variant_metadata is None
@@ -434,7 +439,7 @@ def _susie_suff_stat(
         l=min(L, p),
         prior_variance=scaled_prior_variance * (yty / (n - 1)),
         residual_variance=sigma2,
-        prior_weights=weights.tolist(),
+        prior_weights=weights,
         estimate_prior_variance=bool(estimate_prior_variance),
         estimate_prior_method=estimate_prior_method,
         estimate_residual_variance=bool(estimate_residual_variance),
@@ -448,8 +453,8 @@ def _susie_suff_stat(
     if matrix_operator:
         options.update(
             matrix_global_scale=float(_rss_matrix_scale),
-            matrix_inverse_scales=inverse_scales.tolist(),
-            matrix_scales=scales.tolist(),
+            matrix_inverse_scales=inverse_scales,
+            matrix_scales=scales,
         )
     native = _native.fit(crossproduct, crossresponse, yty, n, options)
     for message in native["warnings"]:

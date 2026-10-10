@@ -3,6 +3,7 @@ use numpy::{IntoPyArray, PyArray1, PyArray2, PyArrayMethods, PyUntypedArrayMetho
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use pyo3::PyTypeInfo;
 
 mod array_layout;
 #[path = "../rust/core.rs"]
@@ -15,6 +16,30 @@ fn option<'py, T: FromPyObject<'py>>(options: &Bound<'py, PyDict>, name: &str) -
         .get_item(name)?
         .ok_or_else(|| PyValueError::new_err(format!("Missing native option: {name}")))?
         .extract()
+}
+
+fn vector_option(options: &Bound<'_, PyDict>, name: &str) -> PyResult<Vec<f64>> {
+    let value = options
+        .get_item(name)?
+        .ok_or_else(|| PyValueError::new_err(format!("Missing native option: {name}")))?;
+    if let Ok(array) = value.downcast::<PyArray1<f64>>() {
+        // This conversion immediately owns a snapshot, at the same extraction
+        // point as the former Vec conversion. Its short borrow ends before any
+        // later Python conversion callback or the long-lived matrix borrow.
+        // Noncontiguous/private sequence arguments retain scalar extraction.
+        if value
+            .get_type()
+            .is(&PyArray1::<f64>::type_object(value.py()))
+            && array.is_c_contiguous()
+            && array_layout::ensure_layout(array).is_ok()
+        {
+            let values = array
+                .try_readonly()
+                .map_err(|error| PyValueError::new_err(error.to_string()))?;
+            return Ok(values.as_slice()?.to_vec());
+        }
+    }
+    value.extract()
 }
 
 #[pyfunction]
@@ -39,7 +64,7 @@ fn fit<'py>(
         l: option(options, "l")?,
         prior_variance: option(options, "prior_variance")?,
         residual_variance: option(options, "residual_variance")?,
-        prior_weights: option(options, "prior_weights")?,
+        prior_weights: vector_option(options, "prior_weights")?,
         estimate_prior_variance: option(options, "estimate_prior_variance")?,
         estimate_prior_method: option(options, "estimate_prior_method")?,
         estimate_residual_variance: option(options, "estimate_residual_variance")?,
@@ -58,8 +83,8 @@ fn fit<'py>(
         .transpose()?;
     let (inverse, scales): (Vec<f64>, Vec<f64>) = if global.is_some() {
         (
-            option(options, "matrix_inverse_scales")?,
-            option(options, "matrix_scales")?,
+            vector_option(options, "matrix_inverse_scales")?,
+            vector_option(options, "matrix_scales")?,
         )
     } else {
         (Vec::new(), Vec::new())

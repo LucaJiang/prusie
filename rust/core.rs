@@ -370,7 +370,16 @@ struct SerLikelihood<'a> {
     uniform_log_prior: Option<f64>,
     group_max_half_beta_squared: Vec<f64>,
     has_no_information: bool,
+    // A private objective search stays on its constructing OS thread, invokes
+    // no Python callbacks, and never changes fenv controls. Recreate this flag
+    // for the next search; exponential helpers keep their own live guards.
+    #[cfg(all(has_vector_math, target_arch = "x86_64"))]
+    group_fill_avx2: bool,
 }
+
+#[cfg(all(test, has_vector_math, target_arch = "x86_64"))]
+#[path = "ser_context_tests.rs"]
+mod ser_context_tests;
 
 impl<'a> SerLikelihood<'a> {
     #[cfg(test)]
@@ -401,6 +410,8 @@ impl<'a> SerLikelihood<'a> {
             uniform_log_prior: None,
             group_max_half_beta_squared: std::mem::take(&mut buffers.group_max_half_beta_squared),
             has_no_information: false,
+            #[cfg(all(has_vector_math, target_arch = "x86_64"))]
+            group_fill_avx2: vector_math::group_fill_avx2_allowed(),
         };
         result.half_beta_squared.clear();
         result
@@ -437,6 +448,8 @@ impl<'a> SerLikelihood<'a> {
             uniform_log_prior: None,
             group_max_half_beta_squared: std::mem::take(&mut buffers.group_max_half_beta_squared),
             has_no_information: false,
+            #[cfg(all(has_vector_math, target_arch = "x86_64"))]
+            group_fill_avx2: vector_math::group_fill_avx2_allowed(),
         };
         result.half_beta_squared.clear();
         result.half_beta_squared.reserve(beta.len());
@@ -565,9 +578,7 @@ impl<'a> SerLikelihood<'a> {
                     largest = largest.max(constant + half_beta_squared * scale + prior);
                 }
                 #[cfg(all(has_vector_math, target_arch = "x86_64"))]
-                if self.terms.len() <= 4
-                    && vector_math::backend_name() == "optional_glibc_libmvec_avx2_masked_exp"
-                {
+                if self.terms.len() <= 4 && self.group_fill_avx2 {
                     // SAFETY: the selected backend proves runtime AVX2 and
                     // default caller controls. Group construction bounds every
                     // index or uses usize::MAX; lengths equal the owned scratch.
