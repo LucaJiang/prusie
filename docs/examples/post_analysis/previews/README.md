@@ -6,10 +6,27 @@ These are actual Firefox 146.0.1 captures of the local `post_analysis` files at
 files; it did not produce the saved statistical fits.
 
 The existing [public Pages site](https://lucajiang.github.io/prusie/index.html)
-was separately opened at desktop and phone widths and returned HTTP 200. It still
-serves `main`; the screenshots below are **local branch previews, not a deployed
-Pages update**. No Pages source change or deployment was made for this preview.
-GitHub file pages display images but do not run the report HTML.
+automatically deployed this branch's update after the push, using its existing
+Pages workflow. No publication setting or source branch was changed. The online
+homepage and both reports were checked against the exact committed HTML in
+`72136c86431de08125b1b27b655df51639850edb` and opened at all three widths.
+Local and live captures are distinguished below. GitHub file pages display images
+but do not run the report HTML.
+
+## Live Pages captures
+
+| View | Desktop, 1440 px | Tablet, 768 px | Phone, 390 px |
+| --- | --- | --- | --- |
+| [Homepage](https://lucajiang.github.io/prusie/index.html) | [Open](online_docs_index_1440.png) | [Open](online_docs_index_768.png) | [Open](online_docs_index_390.png) |
+| [Stable report](https://lucajiang.github.io/prusie/examples/post_analysis/stable/index.html) | [Open](online_stable_report_1440.png) | [Open](online_stable_report_768.png) | [Open](online_stable_report_390.png) |
+| [Problem report](https://lucajiang.github.io/prusie/examples/post_analysis/problem/index.html) | [Open](online_problem_report_1440.png) | [Open](online_problem_report_768.png) | [Open](online_problem_report_390.png) |
+
+The live report heatmap captures show [stable desktop](online_stable_report_heatmap_1440.png),
+[stable phone](online_stable_report_heatmap_390.png),
+[problem desktop](online_problem_report_heatmap_1440.png) and
+[problem phone](online_problem_report_heatmap_390.png).
+
+## Local captures
 
 | View | Desktop, 1440 px | Tablet, 768 px | Phone, 390 px |
 | --- | --- | --- | --- |
