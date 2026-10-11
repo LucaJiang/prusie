@@ -663,7 +663,7 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
         # Only wide multi-panel figures retain a local scroll area on phones.
         display_width = round(float(figure.get_figwidth()) * 96)
         axes_count = len(np.asarray(value[1], dtype=object).ravel()) if isinstance(value, tuple) else len(figure.axes)
-        complex_figure = axes_count >= 3 and display_width >= 640
+        complex_figure = axes_count >= 2 and group != 'sensitivity' and display_width >= 640
         minimum_width = min(display_width, 720) if complex_figure else 0
         figure_index.append(dict(title=str(name), png=f'{stem}.png', svg=f'{stem}.svg', section=group,
                                  display_width_px=display_width, minimum_width_px=minimum_width))
