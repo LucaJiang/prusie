@@ -25,11 +25,12 @@ def _local_style(function):
     return decorated
 
 
-def _axes(axes, count, *, figsize=None):
+def _axes(axes, count, *, figsize=None, height_ratios=None):
     import matplotlib.pyplot as plt
     if axes is None:
         figure, supplied = plt.subplots(count, 1, squeeze=False,
-                                       figsize=figsize or (9, 2.6 * count), constrained_layout=True)
+                                       figsize=figsize or (9, 2.6 * count), constrained_layout=True,
+                                       gridspec_kw={'height_ratios': height_ratios} if height_ratios else None)
         return figure, supplied[:, 0]
     supplied = np.asarray(axes, dtype=object).reshape(-1)
     if len(supplied) != count:
@@ -65,6 +66,11 @@ def _table(ax, rows, labels, *, page=0, page_size=None):
     table = ax.table(cellText=shown, colLabels=labels, cellLoc='left', bbox=[0, .14, 1, .84])
     table.auto_set_font_size(False)
     table.set_fontsize(7)
+    # Multi-line cells need proportionate row heights; wrapping alone would
+    # move text into the next row. Keep the complete table within its own axes.
+    line_counts = [1] + [max(text.count('\n') + 1 for text in row) for row in shown]
+    for (row, _), cell in table.get_celld().items():
+        cell.set_height(line_counts[row] / sum(line_counts))
     if page_size and len(rows) > page_size:
         ax.text(.5, .03, f"Rows {start + 1}–{start + len(selected)} of {len(rows)}; "
                 "select table_page to view others; complete records in returned data.",
@@ -498,12 +504,14 @@ def plot_refinement(before, after, *, comparison=None, axes=None,
     for relation in relations:
         table_rows.append(["Signal relation", str(relation.get("component_a", "")),
                            str(relation.get("component_b", "")),
-                           "overlap=" + str(relation.get("posterior_overlap", "not assessed")),
+                           "overlap=" + (f"{relation['posterior_overlap']:.5g}" if relation.get("posterior_overlap") is not None else "not assessed"),
                            relation.get("status", "not assessed")])
     table_rows.extend(other_attempts)
     shown_count = min(len(table_rows), table_page_size) if table_page_size else len(table_rows)
     count = 3 if axes is not None and np.asarray(axes, dtype=object).size == 3 else 4
-    figure, axs = _axes(axes, count, figsize=(11, 8 + max(2.6, .28 * shown_count)))
+    table_height = max(2.6, .38 * shown_count)
+    figure, axs = _axes(axes, count, figsize=(11, 2.6 * (count-1) + table_height),
+                        height_ratios=[2.6] * (count-1) + [table_height])
     x = np.arange(len(ids))
     axs[0].plot(x, av, "o-", label="Before")
     axs[0].plot(x, bv, "x-", label="After")
