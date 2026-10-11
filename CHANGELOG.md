@@ -19,6 +19,9 @@
 - Organize user documentation around result interpretation, convergence,
   sensitivity and two saved worked examples; retain the original version and
   date attribution of performance measurements.
+- Use separate linear PIP and LD heatmap palettes, compact cells and
+  contrast-aware annotations while retaining full-precision plotted values.
+  Improve mobile navigation, figure viewing and the fit-to-report tutorials.
 
 ## 0.2.3rc6 — portable toy example validation
 

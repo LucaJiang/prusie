@@ -139,8 +139,13 @@ Both fitting interfaces support `s_init=None`, `refine=False`,
 See [convergence and refinement](post_analysis.md) for costs, initialization
 checks, phases and runnable examples. `continue_fit(fit, max_iter=100, tol=None)`
 inherits the original ELBO tolerance when `tol` is omitted. Requested convergence
-controls persist across continuation, refinement and sensitivity; effective
-fallback is recorded separately.
+controls persist across continuation, refinement and sensitivity unless explicitly
+overridden; effective runtime fallback is recorded separately. Refinement's
+`inner_tol` sets its inner ELBO tolerance independently of those inherited controls.
+Continuation starts from the supplied posterior; refinement stage A is a cold
+excluded-prior fit and stage B warm-starts its posterior moments under the restored
+original model. Reuse the returned `refined` in plots and comparisons to avoid
+starting another search.
 
 ## Summaries, comparisons and reports
 
@@ -200,6 +205,32 @@ in `prusie._style` define fonts, spacing, colors and readable number formatting;
 use the public `style` argument for individual figures. Before/after colors are
 consistent, missing values are separate, and probability/r² scales stay in [0,1].
 Displayed rounding never replaces full-precision returned or exported values.
+
+### Heatmap scales and labels
+
+PIP heatmaps default to **Blues**, with a fixed linear scale from 0 to 1. CS LD
+uses **Reds** for the explicit `ld_measure="r2"` display and **RdBu_r** for the
+default signed-r display, with fixed ranges [0,1] and [−1,1] respectively.
+The separate colormap roles prevent a PIP style change from altering LD views.
+Pass `cmap=` to `plot_sensitivity` or `plot_signal` to override the displayed
+colormap; the fixed numeric range and original matrix are retained.
+
+Compact sensitivity cells use `0`, `<0.01`, two decimal places, `>0.99`, `1` and
+`NA` as appropriate. This formatting affects labels only: returned display text
+and policy are separate from full-precision PIPs. Small selected matrices label
+every candidate row; large matrices retain the candidate records even when
+per-cell annotations are omitted. CS members on the declared comparison support
+are not dropped to shrink the figure; common-mode filtering is described in the
+[support rules](sensitivity.md#common-and-union-comparison-support). Missing observations have a distinct grey color, separate from the
+color for a true zero.
+
+Within-CS LD cells are square. Small matrices label non-endpoint correlations
+with sufficient precision to distinguish high LD from exact identity. Compact
+singleton CS views keep the underlying matrix and purity while using a short
+singleton display. See the [worked 86/90 example](worked_examples.md#what-remains-unresolved).
+
+### Other display controls
+
 For large-magnitude objectives, `plot_convergence(..., relative_elbo=True)` plots
 each trace relative to its first finite ELBO, with that origin labelled. It
 preserves the original trace and signed increments in the returned data.

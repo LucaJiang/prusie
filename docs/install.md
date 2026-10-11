@@ -3,8 +3,8 @@
 Install prusie from source with Python ≥3.10. NumPy ≥1.26,<3 is the only Python
 runtime dependency; fitting does not invoke R.
 
-This guide describes the **0.2.4.dev1 development branch**. It does not imply
-a new release or PyPI publication.
+This guide installs the **0.2.4.dev1 preview from `post_analysis`**, the branch
+containing the documented analysis workflow.
 
 ## Build from source
 

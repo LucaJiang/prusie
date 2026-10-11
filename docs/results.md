@@ -26,9 +26,15 @@ actual mass greater than 0.95 because variants are included whole. That target i
 posterior mass under the model; it is not a claim of demonstrated repeated-sampling
 coverage in a new study. PIP and CS support do not establish biological mechanism.
 
+Continue from the [quick start](example.md):
+
 ```python
-summary = prusie.summarize(fit, R, z=z)
-print(prusie.summary_text(summary))
+summary = prusie.summarize(fit, inputs["R"], z=inputs["z"])
+print(prusie.summary_text(summary).splitlines()[0])
+```
+
+```text
+500 variants; 2 retained credible sets; 2 active components.
 ```
 
 For the [packaged example](example.md), `syn0100` has PIP about 0.9697 and
@@ -112,6 +118,9 @@ not relabel components. The mapping contains:
 | `requested_coverage` | Requested selection target |
 | `purity` | Arrays `min_abs_corr`, `mean_abs_corr`, `median_abs_corr`, one entry per returned set |
 
+<details markdown="1">
+<summary>Exact CS extraction order and boundary cases</summary>
+
 Candidates accumulate alpha in descending order with stable ties, then sort
 member indices. Deduplication retains the first occurrence of a membership set
 **before** activity and purity filtering, so an earlier rejected candidate can
@@ -127,6 +136,8 @@ and the target. `coverage=None` or `min_abs_corr=None` disables construction.
 The [two-variant example](model.md#pip-and-credible-sets) distinguishes requested
 mass, selected mass, LD purity and repeated-sampling coverage. The presence of
 a credible set and convergence are separate properties.
+
+</details>
 
 ## Iterations and finalization
 
@@ -145,6 +156,9 @@ current posterior; components are not averaged across incompatible states.
 Read [convergence and refinement](post_analysis.md) for thresholds, continuation,
 tracking costs and the distinction between stopping and finding a better solution.
 
+<details markdown="1">
+<summary>Residual-variance updates, trim thresholds and stored field phases</summary>
+
 Residual variance is updated only after the objective and stopping check, so
 it is unchanged on the convergence sweep. If estimation is enabled at an
 iteration-limit exit, returned `sigma2` includes the final ER2/n update while
@@ -154,6 +168,8 @@ prior. ELBO and XtXr retain the completed iteration values before trimming.
 PIP uses $V_\ell>\mathtt{prior\_tol}$; a component exactly at that threshold is
 untrimmed but inactive for PIP. The separate CS threshold is fixed as described
 above.
+
+</details>
 
 ## Metadata and persistence
 
@@ -169,7 +185,21 @@ above.
 | `qc` | Per-call matrix diagnostics; these do not certify external allele alignment |
 | `variant_metadata` | Copies of caller-supplied length-$p$ metadata arrays |
 
-Use NPZ for arrays and JSON for parameters/metadata when persisting portable
-results; the [toy tutorial](example.md) has an example. Python pickles retain
-class module paths and require a compatible environment. For trusted results
-saved by an older package, export arrays with that original environment.
+Use `save_analysis(fit, directory)` and `load_analysis(directory)` from
+`prusie.report` to preserve the result's arrays, identifiers and metadata without
+pickle. The [quick start](example.md#save-and-reload-a-result) shows the round trip;
+manual NPZ/JSON export is available in its advanced section. Array shapes and
+stored phases above remain part of the saved result. The retained optimization
+context is omitted, so supply the original inputs when warm-starting a reloaded
+posterior.
+
+<details markdown="1">
+<summary>Older saved results</summary>
+
+Python pickles retain class module paths and require a compatible environment.
+For trusted results saved by an older package, export arrays with that original
+environment before importing them into a new workflow. Saved examples with
+producer/render identities are described in
+[worked-example provenance](worked_examples.md#sources-and-reproducibility).
+
+</details>

@@ -10,21 +10,8 @@ condition, then finds a better solution through refinement.
 | Stable | Packaged 500-variant synthetic toy data | [Offline report](examples/post_analysis/stable/index.html), [figure index](examples/post_analysis/stable/figure_index.json) |
 | Problem | Official susieR 200-SNP `FinemappingConvergence` sufficient statistics | [Offline report](examples/post_analysis/problem/index.html), [figure index](examples/post_analysis/problem/figure_index.json) |
 
-The stable inputs are independently generated synthetic data; their
-[generation metadata](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/teaching/metadata.json)
-and [GPL-3.0-or-later notice](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/teaching/LICENSE.txt)
-ship with the package. The problem fixture uses a simulated response with
-real-genotype-derived sufficient statistics, without individual genotypes;
-[source metadata](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/convergence/metadata.json)
-records the pinned upstream input and BSD-3-Clause license, with
-[upstream attribution](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/convergence/LICENSE.txt).
-
-The reports reuse recorded fits and diagnostics. Their provenance separates
-the numerical producer from the current plotting and reporting source; updating
-the presentation does not create a new numerical result. Values below are rounded
-for reading. The linked JSON and CSV retain full precision, identifiers and
-comparison support. Neither example supplies a biological mechanism or gene
-annotation to infer.
+Values below are rounded for reading; the linked tables retain complete values,
+variant IDs and comparison support.
 
 ## Stable signals with a prior-sensitive background
 
@@ -81,7 +68,7 @@ is evidence about one trajectory. Refinement evaluates five exclusion attempts
 in two rounds, using ten inner fits, and accepts one candidate. The returned
 candidate satisfies its inner stopping rule after three sweeps.
 
-![Initial ten-sweep and returned three-sweep convergence trajectories with independent iteration axes.](examples/post_analysis/problem/figure_2.png)
+![Initial ten-sweep and returned three-sweep convergence trajectories with independent iteration axes.](examples/post_analysis/problem/figure_2.png){.figure-complex}
 
 The comparable **post-trim original-model objective** changes from
 −70832.271605 to −70814.813295, a gain of **17.4583**. The final logged sweep ELBO
@@ -89,7 +76,7 @@ has a slightly different value and is not substituted in this comparison.
 Different starting solutions have different outcomes even though both satisfy
 their inner stopping rules.
 
-![Refinement candidate PIPs, candidate gains relative to each round's incumbent and the path of accepted objectives.](examples/post_analysis/problem/figure_3.png)
+![Refinement candidate PIPs, candidate gains relative to each round's incumbent and the path of accepted objectives.](examples/post_analysis/problem/figure_3.png){.figure-complex}
 
 | Variant | Initial PIP | Refined PIP | L = 12 PIP |
 | --- | ---: | ---: | ---: |
@@ -110,10 +97,11 @@ unchanged CS.
 
 The refined `{86,90}` CS has mass greater than 0.9999, approximately 1.595 effective
 candidates, and |r| = 0.9989. Its roughly 0.177/0.823 probability allocation leaves
-LD-limited resolution. The report shows this pair separately from the concentrated
+LD-limited resolution. The LD panel displays r² (approximately 0.9978 off the
+diagonal) on a fixed 0–1 scale. The report shows this pair separately from the concentrated
 singleton `{33}`.
 
-![Signal detail for the retained 86/90 pair, showing posterior concentration, cumulative mass and LD.](examples/post_analysis/problem/figure_8.png)
+![Signal detail for the retained 86/90 pair, showing posterior concentration, cumulative mass and LD.](examples/post_analysis/problem/figure_8.png){.figure-complex}
 
 Variant 33 has genotype correlation about 0.532 with 90. That correlation is not
 a test of whether the two modeled effects are conditionally distinguishable.
@@ -146,11 +134,51 @@ and [LD diagnostics](examples/post_analysis/problem/ld_diagnostics.json). Exact
 paired R flip-flag agreement was not established for either full example; the
 separate small-fixture numerical checks do not supply that missing comparison.
 
-## Reproduce or customize the figures
+## Choose a signal detail
+
+Select a component according to the question it answers. For the problem result,
+the two retained CS justify distinct detail views:
+
+```python
+from prusie.plots import plot_signal
+
+singleton = plot_signal(summary, variant_id="33", R=R,
+                        layout="compact", ld_measure="r2")
+pair = plot_signal(summary, variant_id="90", R=R,
+                   layout="compact", ld_measure="r2")
+```
+
+Here `summary` and `R` are the problem result and aligned LD matrix. IDs in this
+example identify its saved variants; use your own CS members or component IDs
+for another fit. See the [API](api.md#figures-and-local-style) for local style,
+full layouts and exported plotting data, and the
+[sensitivity guide](sensitivity.md) for variant alignment and prior policies.
+
+## Sources and reproducibility
+
+<details markdown="1">
+<summary>Inputs, licenses, numerical provenance and rendering commands</summary>
+
+The stable inputs are independently generated synthetic data; their
+[generation metadata](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/teaching/metadata.json)
+and [GPL-3.0-or-later notice](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/teaching/LICENSE.txt)
+ship with the package. The problem fixture uses a simulated response with
+real-genotype-derived sufficient statistics, without individual genotypes;
+[source metadata](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/convergence/metadata.json)
+records the pinned upstream input and BSD-3-Clause license, with
+[upstream attribution](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/convergence/LICENSE.txt).
+
+The reports reuse recorded fits and diagnostics. Their provenance separates
+the numerical producer from the current plotting and reporting source; updating
+the presentation does not create a new numerical result. The linked JSON and
+CSV retain full precision, identifiers and comparison support. No biological
+mechanism or gene annotation accompanies these inputs.
 
 To regenerate presentation from the saved fits and diagnostics, use the source
-revision recorded as `render_source_sha` in either report's `provenance.json`.
-Set `RENDER_SOURCE_SHA` to that full 40-character revision:
+revision recorded as `render_source_sha` in the
+[stable provenance](examples/post_analysis/stable/provenance.json) or
+[problem provenance](examples/post_analysis/problem/provenance.json). Set
+`RENDER_SOURCE_SHA` to that full 40-character revision:
 
 ```sh
 python examples/render_review.py --output-dir output/rendered-examples \
@@ -177,24 +205,8 @@ does not. Each report includes PNG/SVG, complete CSV tables, lossless JSON/NPZ,
 provenance and a figure index. The compact main figures are supplemented by a
 separate variance-details figure and full search tables.
 
-Select a component according to the question it answers. For the problem result,
-the two retained CS justify distinct detail views:
-
-```python
-from prusie.plots import plot_signal
-
-singleton = plot_signal(summary, variant_id="33", R=R,
-                        layout="compact", ld_measure="r2")
-pair = plot_signal(summary, variant_id="90", R=R,
-                   layout="compact", ld_measure="r2")
-```
-
-Here `summary` and `R` are the problem result and aligned LD matrix. IDs in this
-example identify its saved variants; use your own CS members or component IDs
-for another fit. See the [API](api.md#figures-and-local-style) for local style,
-full layouts and exported plotting data, and the
-[sensitivity guide](sensitivity.md) for variant alignment and prior policies.
-
 The interpretations on this page were prepared in the current Codex session for
 human scientific review by reading the saved results. They are separate from the
 optional AI adapter and do not demonstrate a provider/API invocation.
+
+</details>
