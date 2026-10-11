@@ -24,6 +24,8 @@ def _local_style(function):
         local = {} if style is False else dict(PLOT_STYLE)
         if style is not None and style is not False:
             local.update(style)
+        if 'backend' in local:
+            raise ValueError('Select the Matplotlib backend before plotting; backend is not a local style option')
         with plt.rc_context(local):
             return function(*args, **kwargs)
     return decorated

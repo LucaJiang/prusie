@@ -202,6 +202,12 @@ def test_no_cs_trace_and_styles_preserve_source_and_global_configuration(posteri
             assert matplotlib.get_backend() == backend
             plt.close(view[0])
     assert json.dumps(posterior, sort_keys=True) == snapshot
+    # Matplotlib rc_context deliberately does not restore backend; reject this
+    # non-local setting before it can alter the caller's plotting environment.
+    with pytest.raises(ValueError, match='backend is not a local style option'):
+        plots.plot_locus(posterior, style={'backend': 'svg'})
+    assert plt.rcParams == rc
+    assert matplotlib.get_backend() == backend
 
 
 def test_small_candidate_axes_label_every_id_and_positive_delta_has_no_empty_negative_half():
