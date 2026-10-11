@@ -388,6 +388,104 @@ def sensitivity_key(inputs, settings, *, initialization="cold", software_version
     return h.hexdigest()
 
 
+def _sensitivity_inputs(data, *, explicit_ids=False):
+    """Validate variant-indexed RSS inputs before any member of a plan fits."""
+    from .api import _metadata, _vector, _matrix, _scalar
+    if not isinstance(data, dict):
+        raise ValueError("sensitivity inputs must be a mapping")
+    if explicit_ids and ("variant_ids" not in data or data["variant_ids"] is None):
+        raise ValueError("alternative inputs require explicit variant_ids")
+    if data.get("z") is not None:
+        if data.get("bhat") is not None or data.get("shat") is not None:
+            raise ValueError("Provide either z or bhat/shat, not both")
+        values = _vector(data["z"], "z")
+    else:
+        if data.get("bhat") is None or data.get("shat") is None:
+            raise ValueError("Provide either z or both bhat and shat")
+        values = _vector(data["bhat"], "bhat")
+        se = data["shat"]
+        if np.ndim(se) == 0:
+            _scalar(se, "shat", strict=True)
+        elif np.any(_vector(se, "shat", len(values)) <= 0):
+            raise ValueError("shat must be finite and strictly positive")
+    if data.get("n") is not None:
+        _scalar(data["n"], "n", lower=1., strict=True)
+    _matrix(data.get("R"), "R", len(values), correlation=True)
+    ids, metadata = _metadata(data.get("variant_ids"), data.get("variant_metadata"), len(values))
+    return ids.tolist(), metadata
+
+
+def _sensitivity_prior(weights, ids, null_weight, *, policy, source_ids=None):
+    """Keep raw weight scale: null is augmented BEFORE joint normalization."""
+    from .api import _scalar, _vector
+    null_weight = _scalar(null_weight, "null_weight")
+    if null_weight >= 1:
+        raise ValueError("null_weight must be < 1")
+    raw = np.full(len(ids), 1. / len(ids)) if weights is None else _vector(weights, "prior_weights", len(ids)).copy()
+    # Match the constructor's finite-positive-sum contract, including overflow.
+    with np.errstate(over="ignore", invalid="ignore"):
+        total = raw.sum()
+    if np.any(raw < 0) or not np.isfinite(total) or total <= 0:
+        raise ValueError("prior_weights must be nonnegative with a finite positive sum")
+    augmented = np.r_[raw * (1-null_weight), null_weight] if null_weight else raw.copy()
+    normalized = augmented / math.fsum(augmented)
+    source_index = {x: i for i, x in enumerate(source_ids or ids)}
+    return raw, dict(policy=policy, variant_ids=list(ids),
+        source_indices=[source_index.get(x) for x in ids], raw_weights=raw.tolist(),
+        normalized_weights=normalized.tolist(), null_weight=null_weight,
+        effective_null_probability=float(normalized[-1]) if null_weight else 0.,
+        normalization="augment [(1-null_weight)*raw_weights, null_weight], then normalize once; no preliminary biological normalization")
+
+
+def _alternative_sensitivity_inputs(alt, settings, baseline_ids, baseline_metadata):
+    """Resolve input-only changes without turning reindexing into a new factor."""
+    if not isinstance(alt, dict):
+        raise ValueError("alternative inputs must be a mapping")
+    data = dict(alt)
+    options = dict(settings)
+    explicit_prior = "prior_weights" in data
+    supplied_prior = data.pop("prior_weights", None)
+    # A full input mapping can restate the null setting, but changing it is not
+    # implicit permission to change a second model factor.
+    if "null_weight" in data:
+        if not np.array_equal(data.pop("null_weight"), settings.get("null_weight", 0.)):
+            raise ValueError("alternative inputs must retain baseline null_weight")
+    if "s_init" in data:
+        raise ValueError("alternative inputs are cold-started; s_init is not supported")
+    if set(data) & set(options):
+        raise ValueError("alternative inputs and baseline_settings must not duplicate argument keys")
+    ids, _ = _sensitivity_inputs(data, explicit_ids=True)
+    source_index = {x: i for i, x in enumerate(baseline_ids)}
+    new_ids = [x for x in ids if x not in source_index]
+    raw = settings["prior_weights"]
+    if explicit_prior:
+        weights = supplied_prior
+        policy = "explicit_uniform" if supplied_prior is None else "explicit_alternative_weights"
+    elif new_ids:
+        if not np.all(raw == raw[0]):
+            raise ValueError("new variant IDs require explicit alternative prior_weights under a nonuniform baseline prior")
+        weights = np.full(len(ids), raw[0])
+        policy = "extend_equal_existing_weights"
+    else:
+        weights = raw[[source_index[x] for x in ids]]
+        policy = "reindex_existing_weights" if len(ids) == len(baseline_ids) else "condition_on_retained_variants_and_null"
+    options["prior_weights"], prior_resolution = _sensitivity_prior(
+        weights, ids, settings.get("null_weight", 0.), policy=policy, source_ids=baseline_ids)
+    if "variant_metadata" in data:
+        metadata_policy = "explicit_alternative_columns"
+    elif baseline_metadata:
+        if new_ids:
+            raise ValueError("new variant IDs require explicit alternative variant_metadata when baseline columns are present")
+        data["variant_metadata"] = {key: values[[source_index[x] for x in ids]].copy()
+                                    for key, values in baseline_metadata.items()}
+        metadata_policy = "reindex_existing_columns"
+    else:
+        metadata_policy = "unavailable_no_baseline_columns"
+    return data, options, prior_resolution, dict(variant_ids=ids, new_variant_ids=new_ids,
+        source_indices=[source_index.get(x) for x in ids], metadata_policy=metadata_policy,
+        summary_statistics_and_LD="explicit_alternative_input_order; never inferred or reused as a warm state")
+
+
 def run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, cache=None,
                     fit_function=None, software_version=None):
     """Execute a finite, explicit baseline plus one-factor plan.
@@ -403,13 +501,36 @@ def run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, cach
     objects remain mutable and must not be edited while the cache is reused.
     A supplied baseline is checked for IDs, allele coding and model settings;
     raw-input identity is reported as unassessed without an original RSS hash.
+
+    Alternative ``inputs`` may include complete ``prior_weights`` in their own
+    ID order (explicit None requests uniform). Otherwise weights and inherited
+    metadata columns are reindexed by ID. Subsets condition the original prior
+    on retained variants plus null: raw biological weights are NOT separately
+    normalized, preserving the constructor's null convention. New IDs under a
+    nonuniform prior require explicit complete weights; a uniform prior extends
+    its existing equal raw weight to each new ID. New metadata also needs explicit
+    columns. Records contain the mapping, raw and normalized weights, and null
+    probability; the cache hashes the resolved data and options.
     """
     from .api import susie_rss
     from .diagnostics import ConvergenceConfig, resolve_convergence
     fit_function = susie_rss if fit_function is None else fit_function
     if not isinstance(inputs, dict) or not isinstance(plan, (list, tuple)):
         raise TypeError("inputs must be a mapping and plan must be an explicit sequence")
+    inputs = dict(inputs)
     settings = copy.deepcopy(baseline_settings or {})
+    if set(inputs) & set(settings):
+        raise ValueError("inputs and baseline_settings must not duplicate argument keys")
+    if set(settings) & {"z", "R", "n", "bhat", "shat", "variant_ids"}:
+        raise ValueError("variant data, IDs and sample size belong in inputs, not baseline_settings")
+    if "variant_metadata" in settings:
+        inputs["variant_metadata"] = settings.pop("variant_metadata")
+    for key in ("prior_weights", "null_weight"):
+        if key in inputs:
+            settings[key] = inputs.pop(key)
+    if "s_init" in inputs:
+        raise ValueError("baseline sensitivity is cold-started; use an explicit continuation item")
+    baseline_ids, baseline_metadata = _sensitivity_inputs(inputs)
     # Public fits accept a config object; saved sensitivity settings use a
     # stable dictionary. Restore that dictionary only at this API boundary.
     override = settings.get("convergence")
@@ -455,9 +576,8 @@ def run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, cach
         else:
             raise ValueError("cannot reconstruct supplied baseline null prior; provide a valid fit")
         if "prior_weights" in settings:
-            supplied = np.asarray(settings["prior_weights"],dtype=float)
-            if supplied.shape != biological.shape:
-                raise ValueError("baseline_settings prior_weights has wrong shape")
+            supplied, _ = _sensitivity_prior(settings["prior_weights"], baseline_ids, null_weight,
+                                               policy="explicit_baseline_weights")
             if baseline.null_index is not None:
                 supplied = np.insert(supplied*(1-null_weight),baseline.null_index,null_weight)
             supplied = supplied/math.fsum(supplied)
@@ -474,12 +594,18 @@ def run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, cach
         raise ValueError("baseline sensitivity is cold-started; use an explicit continuation item")
     if set(inputs) & set(settings):
         raise ValueError("inputs and baseline_settings must not duplicate argument keys")
+    settings["prior_weights"], baseline_prior = _sensitivity_prior(
+        settings.get("prior_weights"), baseline_ids, settings.get("null_weight", 0.),
+        policy="reconstructed_baseline_weights" if baseline is not None else "baseline_weights")
     plan = copy.deepcopy(plan)
+    if any(not isinstance(item, dict) for item in plan):
+        raise ValueError("each plan item must be a mapping")
     names = [item.get("name") for item in plan]
     if any(not isinstance(name,str) or not name or name == "baseline" for name in names) or len(set(names)) != len(names):
         raise ValueError("plan names must be distinct nonempty strings other than baseline")
     # Validate the entire plan before doing any work.
     allowed = {"L", "prior_weights", "scaled_prior_variance", "prior_variance", "estimate_prior_variance", "refine"}
+    resolved = {}
     for item in plan:
         categories = set(item) & {"changes", "inputs", "report", "continuation"}
         if len(categories) != 1 or set(item)-{"name", "changes", "inputs", "report", "continuation"}:
@@ -495,6 +621,11 @@ def run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, cach
             wrong_key = "scaled_prior_variance" if variance_key == "prior_variance" else "prior_variance"
             if wrong_key in keys:
                 raise ValueError(f"this RSS sample-size mode uses {variance_key}, not {wrong_key}")
+            options = dict(settings, **changes)
+            options["prior_weights"], prior_resolution = _sensitivity_prior(
+                options.get("prior_weights"), baseline_ids, options.get("null_weight", 0.),
+                policy="explicit_model_prior_change" if "prior_weights" in changes else "unchanged_baseline_weights")
+            resolved[item["name"]] = (inputs, options, prior_resolution, None)
         if "report" in item and (not item["report"] or set(item["report"])-{"coverage", "min_abs_corr"}):
             raise ValueError("report changes only coverage/min_abs_corr")
         if "continuation" in item and set(item["continuation"])-{"max_iter", "tol", "track_fit", "convergence"}:
@@ -506,17 +637,16 @@ def run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, cach
                 item["continuation"]["convergence"] = given
             resolve_convergence(baseline, given)  # Validate before any fit runs.
         if "inputs" in item:
-            alt = item["inputs"]
-            if not isinstance(alt,dict) or "variant_ids" not in alt or "R" not in alt or not ("z" in alt or {"bhat","shat"} <= set(alt)):
-                raise ValueError("alternative inputs require explicit variant_ids, LD and summary statistics")
-            if set(alt) & set(settings):
-                raise ValueError("alternative inputs and baseline_settings must not duplicate argument keys")
+            resolved[item["name"]] = _alternative_sensitivity_inputs(
+                item["inputs"], settings, baseline_ids, baseline_metadata)
     cache = {} if cache is None else cache
     results, records, summaries = {}, [], {}
     retain = any("continuation" in item for item in plan)
     if retain:
         settings["retain_data"] = True
-    def execute(label, data, options, initialization="cold"):
+        for _, options, _, _ in resolved.values():
+            options["retain_data"] = True
+    def execute(label, data, options, initialization="cold", prior_resolution=None, input_resolution=None):
         key = sensitivity_key(data, options, initialization=initialization, software_version=software_version)
         hit = key in cache
         if not hit:
@@ -524,15 +654,18 @@ def run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, cach
         records.append(dict(name=label, cache_key=key, cache_hit=hit, initialization=initialization,
                             fit_performed=not hit, analysis="fit_change",
                             requested_convergence=options["convergence"].options(),
-                            convergence_resolution=copy.deepcopy(control_resolution)))
+                            convergence_resolution=copy.deepcopy(control_resolution),
+                            prior_resolution=copy.deepcopy(prior_resolution),
+                            input_resolution=copy.deepcopy(input_resolution)))
         return cache[key]
-    results["baseline"] = baseline if baseline is not None else execute("baseline", inputs, settings)
+    results["baseline"] = baseline if baseline is not None else execute("baseline", inputs, settings, prior_resolution=baseline_prior)
     if baseline is not None:
         original_control, original_resolution = resolve_convergence(baseline)
         records.append(dict(name="baseline", cache_hit=False, initialization="provided", fit_performed=False,
                             analysis="existing_fit", cache_key=None,
                             requested_convergence=original_control.options(),
-                            convergence_resolution=original_resolution))
+                            convergence_resolution=original_resolution,
+                            prior_resolution=copy.deepcopy(baseline_prior)))
     for item in plan:
         name = item["name"]
         if "report" in item:
@@ -578,9 +711,9 @@ def run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, cach
                                 requested_convergence=continuation_control.options(),
                                 convergence_resolution=continuation_resolution))
         else:
-            options = dict(settings, **item.get("changes", {}))
-            data = item.get("inputs", inputs)
-            results[name] = execute(name, data, options)
+            data, options, prior_resolution, input_resolution = resolved[name]
+            results[name] = execute(name, data, options, prior_resolution=prior_resolution,
+                                    input_resolution=input_resolution)
             changes = item.get("changes", {})
             if {"scaled_prior_variance", "prior_variance", "estimate_prior_variance"} & set(changes):
                 records[-1]["analysis"] = "computational_initialization_sensitivity" if options.get("estimate_prior_variance", True) else "fixed_effect_variance_prior"
