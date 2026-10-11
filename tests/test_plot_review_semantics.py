@@ -81,13 +81,23 @@ def test_before_after_iterations_thresholds_and_zero_components():
     view = plots.plot_convergence(before, after=after)
     np.testing.assert_array_equal(view[1][0].lines[0].get_xdata(), [1, 2, 3, 4, 5])
     np.testing.assert_array_equal(view[1][6].lines[0].get_xdata(), [1, 2])
-    assert 'Before' in view[1][0].get_xlabel() and 'Accepted after' in view[1][6].get_xlabel()
+    assert 'Before' in view[1][0].get_xlabel() and 'After' in view[1][6].get_xlabel()
     assert view[2]['stages']['Before']['zero_variance_components'] == [0, 2]
-    assert view[2]['stages']['Accepted after']['variance_components_shown'] == [1]
+    assert view[2]['stages']['After']['variance_components_shown'] == [1]
     assert view[1][2].lines[1].get_ydata() == [.003, .003]
     assert view[1][8].lines[1].get_ydata() == [.0007, .0007]
     assert len(view[2]['stages']['Before']['trace']) == 5
     assert not any(np.array_equal(line.get_xdata(), np.arange(1, 8)) for ax in view[1] for line in ax.lines)
+    plt.close(view[0])
+
+
+def test_unaccepted_search_is_not_labelled_an_accepted_fit():
+    summary={'convergence':{},'trace':[],
+             'refinement':{'history':[{'accepted':False}],'status':'no_improvement'}}
+    view=plots.plot_convergence(summary,after=summary)
+    assert view[2]['after_label']=='After search (unchanged)'
+    assert view[2]['refinement_candidate_accepted'] is False
+    assert 'Accepted after' not in view[1][6].get_title()
     plt.close(view[0])
 
 
@@ -277,4 +287,24 @@ def test_nonfinite_fallback_selects_alpha_pip_thresholds():
     assert 'not selected' in view[1][1].lines[2].get_label()
     assert view[1][2].lines[1].get_label() == 'Selected stopping threshold: 0.0002'
     assert view[1][3].lines[1].get_label() == 'Selected stopping threshold: 0.0003'
+    plt.close(view[0])
+
+
+def test_explicit_signal_view_keeps_cs_and_full_posterior_without_renormalizing():
+    ids=[f'rs{i}' for i in range(30)]
+    alpha=np.full(30,1/30)
+    summary={'variants':[{'variant_id':v,'pip':float(a)} for v,a in zip(ids,alpha)],
+        'components':[{'component_id':0,'ranking':ids,'alpha':alpha,
+                       'cumulative_posterior':np.cumsum(alpha),'null_mass':0}],
+        'credible_sets':[{'component_id':0,'members':ids[:29], 'requested_coverage':.95}],
+        'proxies':[]}
+    view=plots.plot_signal(summary,0,max_variants=3)
+    assert view[2]['displayed_variant_ids']==ids[:29]
+    assert len(view[2]['component']['alpha'])==30
+    assert view[2]['cumulative_posterior_renormalized'] is False
+    assert view[1][1].lines[0].get_ydata()[-1]==pytest.approx(29/30)
+    plt.close(view[0])
+    summary['credible_sets'][0]['members']=ids[:2]
+    view=plots.plot_signal(summary,0,variant_id='rs29',max_variants=3)
+    assert view[2]['displayed_variant_ids']==ids[:3]+['rs29']
     plt.close(view[0])

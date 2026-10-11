@@ -11,6 +11,7 @@ from __future__ import annotations
 import functools
 from pathlib import Path
 import re
+import textwrap
 
 import numpy as np
 
@@ -57,10 +58,11 @@ def _table(ax, rows, labels, *, page=0, page_size=None):
     def display(value):
         if isinstance(value, (float, np.floating)):
             return f"{value:.5g}"
-        text = str(value)
-        return text if len(text) <= 48 else text[:45] + "…"
+        text = 'NA' if value is None else str(value)
+        text = text if len(text) <= 48 else text[:45] + "…"
+        return '\n'.join(textwrap.wrap(text, width=24 if len(labels) >= 5 else 36))
     shown = [[display(v) for v in row] for row in selected]
-    table = ax.table(cellText=shown, colLabels=labels, bbox=[0, .14, 1, .84])
+    table = ax.table(cellText=shown, colLabels=labels, cellLoc='left', bbox=[0, .14, 1, .84])
     table.auto_set_font_size(False)
     table.set_fontsize(7)
     if page_size and len(rows) > page_size:
@@ -283,24 +285,37 @@ def _select_component(summary, component_id, variant_id):
 
 @_local_style
 def plot_signal(summary, component_id=None, *, variant_id=None, R=None, axes=None,
-                table_page=0, table_page_size=None):
-    """Ranked alpha and cumulative mass, within-CS signed LD, direct proxies."""
+                table_page=0, table_page_size=None, max_variants=None):
+    """Ranked alpha and cumulative mass, within-CS signed LD, direct proxies.
+
+    An explicit ``max_variants`` focuses on the leading ranks while always
+    including formal CS members and an explicitly selected variant. Cumulative
+    probabilities retain the complete ranking, without renormalizing a subset.
+    The returned component always contains the complete posterior ranking.
+    """
     component = _select_component(summary, component_id, variant_id)
     component_id = component["component_id"]
     figure, axs = _axes(axes, 4)
     ranking, alpha = component["ranking"], np.asarray(component["alpha"])
-    rank = np.arange(len(ranking))
-    axs[0].bar(rank, alpha, color="0.3")
-    axs[0].set_ylabel("Component alpha")
-    axs[1].plot(rank, component["cumulative_posterior"], marker=".", color="black")
-    axs[1].set_ylabel("Cumulative posterior")
     cs = next((c for c in summary.get("credible_sets", []) if c["component_id"] == component_id), None)
+    if max_variants is not None and (isinstance(max_variants, bool) or not isinstance(max_variants, int) or max_variants < 1):
+        raise ValueError('max_variants must be a positive integer or None')
+    selected = set(range(min(max_variants or len(ranking), len(ranking))))
+    selected.update(i for i, value in enumerate(ranking) if value in (cs['members'] if cs else []) or value == variant_id)
+    selected = np.asarray(sorted(selected), dtype=int)
+    labels = [ranking[i] for i in selected]
+    rank = np.arange(len(selected))
+    axs[0].bar(rank, alpha[selected], color="0.3")
+    axs[0].set_ylabel("Component alpha")
+    axs[1].plot(rank, np.asarray(component["cumulative_posterior"])[selected], marker=".", color="black")
+    axs[1].set_ylabel("Cumulative posterior")
     if cs:
         axs[1].axhline(cs["requested_coverage"], ls="--", color="black", label="Requested CS coverage")
         axs[1].legend()
     for ax in axs[:2]:
-        _variant_ticks(ax, ranking, priority_indices=range(min(3, len(ranking))))
-        ax.set_xlabel("Variants ranked by component alpha (selected ID labels)")
+        _variant_ticks(ax, labels, priority_indices=range(min(3, len(labels))))
+        ax.set_xlabel("Variants in full-alpha rank order" +
+                      (f" ({len(selected)}/{len(ranking)} displayed; complete posterior exported)" if len(selected) < len(ranking) else " (selected ID labels)"))
     within = None
     if R is not None and cs:
         ids = [v["variant_id"] for v in summary["variants"]]
@@ -322,7 +337,9 @@ def plot_signal(summary, component_id=None, *, variant_id=None, R=None, axes=Non
         _missing(axs[3], "No direct proxies reported; no transitive expansion")
     figure.suptitle(f"Component {component_id}; null mass = {component.get('null_mass', 'not assessed')}")
     return figure, axs, {"component": component, "credible_set": cs, "within_cs_r": within, "proxies": proxies,
-                         "selected_variant": variant_id, "all_components": summary.get("components", [])}
+                         "selected_variant": variant_id, "all_components": summary.get("components", []),
+                         "displayed_variant_ids": labels, "displayed_full_rank_indices": selected,
+                         "max_variants": max_variants, "cumulative_posterior_renormalized": False}
 
 
 def _plot_convergence_stage(fit_or_summary, *, axes=None, variance_components=None):
@@ -421,16 +438,20 @@ def plot_convergence(fit_or_summary, *, after=None, axes=None, variance_componen
     else:
         figure, axs = _axes(axes, 12)
     stages = {}
-    for label, value, stage_axes in (("Before", fit_or_summary, axs[:6]), ("Accepted after", after, axs[6:])):
+    refinement = after.get('refinement', {}) if isinstance(after, dict) else getattr(after, 'refinement', {})
+    accepted = any(row.get('accepted') for row in refinement.get('history', []))
+    after_label = 'Accepted after' if accepted else 'After search (unchanged)' if refinement.get('history') else 'After'
+    for label, value, stage_axes in (("Before", fit_or_summary, axs[:6]), (after_label, after, axs[6:])):
         _, _, data = _plot_convergence_stage(value, axes=stage_axes, variance_components=variance_components)
         stages[label] = data
         summary = data["convergence"]
         criterion = summary.get("effective_criterion", summary.get("requested_criterion", "not recorded"))
         stage_axes[0].set_title(f"{label}: {summary.get('stop_reason', 'not assessed')}\nStopping rule: {criterion}", fontsize="small")
         for ax in stage_axes:
-            ax.set_xlabel(f"{label}: IBSS iteration (independent fit)")
-    figure.suptitle("Before and accepted-after convergence: separate IBSS trajectories")
-    return figure, axs, {"stages": stages, "independent_iteration_axes": True}
+            ax.set_xlabel(f"{label}: IBSS iteration (separate iteration axis)")
+    figure.suptitle("Before and returned-after convergence: separate IBSS panels")
+    return figure, axs, {"stages": stages, "independent_iteration_axes": True,
+                         "refinement_candidate_accepted": accepted, "after_label": after_label}
 
 
 def _formal_sets(value):
@@ -577,7 +598,8 @@ def plot_ld_diagnostics(diagnostics, *, axes=None, table_page=0, table_page_size
     if len(finite):
         axs[0].plot([min(finite), max(finite)], [min(finite), max(finite)], ls="--", color="0.5")
     axs[0].set_xlabel("Expected z (diagnostic model)")
-    axs[0].set_ylabel("Observed z (diagnostic scale; missing omitted)")
+    axs[0].set_ylabel("Observed z")
+    axs[0].set_title("Diagnostic scale; missing observations omitted", fontsize="small")
     if rows:
         axs[0].legend(fontsize="small")
     axs[1].set_xlabel("Variant index (zero-based)")

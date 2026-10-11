@@ -81,6 +81,7 @@ def render(case,output,render_source,refresh):
     provenance=json.loads((old/'provenance.json').read_text())
     provenance.update(numeric_source_sha=NUMERIC_SOURCE,render_source_sha=render_source,
         render_version=prusie.__version__,sensitivity_source=sensitivity_source,
+        elapsed_seconds_scope='Original numeric analysis; not this rendering pass',
         reused=['baseline and refined posterior/trace from original saved fits','original LD diagnostics'],
         recomputed=['posterior summary from saved fit','signal/component comparison','figures','HTML',
                     'compact analysis summary','evidence index'],

@@ -33,7 +33,7 @@ def make_figures(fit,refined,summary,R,ld,comparison):
         component=cs['component_id']
         detail=next(row for row in summary['components'] if row['component_id']==component)
         candidates=list(dict.fromkeys(cs['members']+detail['ranking'][:10]))
-        figures[f'signal detail component {component}']=plot_signal(summary,component,R=R)
+        figures[f'signal detail component {component}']=plot_signal(summary,component,R=R,max_variants=12)
         figures[f'prior influence component {component} (CS and top 10)']=plot_prior_influence(
             summary,component,variant_ids=candidates)
     if not components:
