@@ -14,7 +14,8 @@ import re
 import textwrap
 
 import numpy as np
-from ._style import COLORS, PLOT_STYLE, format_number
+from ._style import (COLORS, PLOT_STYLE, format_number, format_pip_cell,
+                     format_ld_cell, annotation_color)
 
 
 def _local_style(function):
@@ -302,11 +303,11 @@ def plot_locus(summary, *, R=None, reference_variant=None, genes=None, axes=None
         if reference_variant not in ids:
             raise ValueError("LD reference variant is absent")
         ld_values = matrix[ids.index(reference_variant)] ** 2
-        points = axs[3].scatter(x, ld_values, c=ld_values, cmap=COLORS['sequential'], vmin=0, vmax=1, s=18)
+        points = axs[3].scatter(x, ld_values, c=ld_values, cmap=COLORS['ld_r2_cmap'], vmin=0, vmax=1, s=18)
         figure.colorbar(points, ax=axs[3], label="LD r²")
         if color_by_ld:
             points_association.set_array(ld_values)
-            points_association.set_cmap(COLORS['sequential'])
+            points_association.set_cmap(COLORS['ld_r2_cmap'])
             points_association.set_clim(0, 1)
         reference_index = ids.index(reference_variant)
         axs[3].scatter([x[reference_index]], [ld_values[reference_index]], marker='D', s=44,
@@ -375,7 +376,7 @@ def _select_component(summary, component_id, variant_id):
 
 @_local_style
 def plot_signal(summary, component_id=None, *, variant_id=None, R=None, axes=None,
-                table_page=0, table_page_size=None, max_variants=None, layout='full', ld_measure='r'):
+                table_page=0, table_page_size=None, max_variants=None, layout='full', ld_measure='r', cmap=None):
     """Ranked alpha and cumulative mass, within-CS signed LD, direct proxies.
 
     An explicit ``max_variants`` focuses on the leading ranks while always
@@ -385,16 +386,20 @@ def plot_signal(summary, component_id=None, *, variant_id=None, R=None, axes=Non
     Compact layout uses CS members plus ten leading candidates by default and
     keeps proxies in returned data instead of a figure table. ``ld_measure='r2'``
     is an explicit display option; ``within_cs_r`` always retains signed values.
+    ``cmap`` optionally overrides Reds (r²) or RdBu_r (signed r). Cell labels
+    are display strings only; ``ld_display_text`` is separate from the matrix.
     """
     compact = _layout(layout)
     if ld_measure not in ('r', 'r2'):
         raise ValueError("ld_measure must be 'r' or 'r2'")
     component = _select_component(summary, component_id, variant_id)
     component_id = component["component_id"]
-    large_cs = max((len(c['members']) for c in summary.get('credible_sets', []) if c['component_id'] == component_id), default=0) > 12
+    cs_size = max((len(c['members']) for c in summary.get('credible_sets', []) if c['component_id'] == component_id), default=0)
+    large_cs = cs_size > 12
+    ld_height = .65 if cs_size == 1 else 1.55
     figure, axs = _axes(axes, 3 if compact else 4,
-                        figsize=(9., 9.) if compact and large_cs else (8.5, 7.) if compact else None,
-                        height_ratios=[1.6, 1.8, 3.3] if compact and large_cs else None)
+                        figsize=(9., 9.) if compact and large_cs else (8., 4.85 + ld_height) if compact else None,
+                        height_ratios=([1.6, 1.8, 3.3] if large_cs else [1.6, 1.6, ld_height]) if compact else None)
     ranking, alpha = component["ranking"], np.asarray(component["alpha"])
     cs = next((c for c in summary.get("credible_sets", []) if c["component_id"] == component_id), None)
     if max_variants is not None and (isinstance(max_variants, bool) or not isinstance(max_variants, int) or max_variants < 1):
@@ -433,26 +438,35 @@ def plot_signal(summary, component_id=None, *, variant_id=None, R=None, axes=Non
         for ax in axs[:2]:
             ax.set_xlabel("Alpha-ranked candidates (complete ranks retained in returned data)")
     within = None
+    ld_text, ld_text_colors, ld_cmap = [], [], None
     if R is not None and cs:
         ids = [v["variant_id"] for v in summary["variants"]]
         indices = [ids.index(v) for v in cs["members"]]
         within = _ld(R, len(ids))[np.ix_(indices, indices)]
         shown_ld = within ** 2 if ld_measure == 'r2' else within
-        obj = axs[2].imshow(shown_ld, cmap=COLORS['sequential'] if ld_measure == 'r2' else COLORS['diverging'],
-                            vmin=0 if ld_measure == 'r2' else -1, vmax=1)
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import Normalize
+        ld_cmap = plt.get_cmap(cmap or COLORS['ld_r2_cmap' if ld_measure == 'r2' else 'ld_signed_cmap']).copy()
+        obj = axs[2].imshow(shown_ld, cmap=ld_cmap,
+                            norm=Normalize(0 if ld_measure == 'r2' else -1, 1), aspect='equal', interpolation='none')
+        axs[2].set_box_aspect(1)
         _variant_ticks(axs[2], cs["members"])
         _variant_ticks(axs[2], cs["members"], axis="y")
-        colorbar_label = "LD r² within CS" if ld_measure == 'r2' else "Signed r within formal CS"
+        colorbar_label = 'LD r²' if ld_measure == 'r2' else 'Signed r'
         if compact:
             cax = axs[2].inset_axes([1.07, 0., .045, 1.])
-            figure.colorbar(obj, cax=cax, label=colorbar_label)
+            figure.colorbar(obj, cax=cax, label=colorbar_label,
+                            ticks=[0., .5, 1.] if ld_measure == 'r2' else [-1., 0., 1.])
         else:
             figure.colorbar(obj, ax=axs[2], panchor=False, label=colorbar_label)
+        ld_text = [[format_ld_cell(value) for value in row] for row in shown_ld]
+        ld_text_colors = [[annotation_color(obj.cmap(obj.norm(value)), background=axs[2].get_facecolor())
+                           for value in row] for row in shown_ld]
         if len(indices) <= 6:
             for i in range(len(indices)):
                 for j in range(len(indices)):
-                    axs[2].text(j, i, format_number(shown_ld[i, j], precision=3), ha='center', va='center',
-                                color='white' if (shown_ld[i, j] < .45 if ld_measure == 'r2' else abs(shown_ld[i, j]) > .6) else COLORS['text'], fontsize=9)
+                    axs[2].text(j, i, ld_text[i][j], ha='center', va='center',
+                                color=ld_text_colors[i][j], fontsize=9)
     else:
         _missing(axs[2], "Within-CS LD not assessed" if cs else "No retained CS for this component")
     proxies = [p for p in summary.get("proxies", []) if p["component_id"] == component_id]
@@ -465,7 +479,8 @@ def plot_signal(summary, component_id=None, *, variant_id=None, R=None, axes=Non
     elif not compact:
         _missing(axs[3], "No direct proxies reported; no transitive expansion")
     if compact:
-        axs[2].set_title(f"{len(proxies)} direct CS-outside proxies" if proxies else "No direct CS-outside proxies", fontsize=10)
+        axs[2].set_title(('Singleton CS · ' if cs_size == 1 else '') +
+                        (f"{len(proxies)} direct proxies" if proxies else "No direct proxies"), fontsize=10)
     figure.suptitle(f"Signal detail · component {component_id}")
     return figure, axs, {"component": component, "credible_set": cs, "within_cs_r": within, "proxies": proxies,
                          "selected_variant": variant_id, "all_components": summary.get("components", []),
@@ -474,6 +489,12 @@ def plot_signal(summary, component_id=None, *, variant_id=None, R=None, axes=Non
                          "max_variants": max_variants, "cumulative_posterior_renormalized": False,
                          "selected_posterior_mass": selected_mass, "ld_measure": ld_measure,
                          "displayed_ld": within ** 2 if within is not None and ld_measure == 'r2' else within,
+                         "ld_display_text": ld_text, "ld_annotation_colors": ld_text_colors,
+                         "ld_display_policy": {'cmap': ld_cmap.name if ld_cmap is not None else None,
+                             'normalization': [0 if ld_measure == 'r2' else -1, 1], 'scale': 'linear',
+                             'cell_annotations': bool(within is not None and len(within) <= 6),
+                             'annotation_rule': 'at most 6 CS members; four decimal places with exact-endpoint protection',
+                             'variant_ids': list(cs['members']) if cs else []},
                          "selection_rule": 'formal CS members + leading full-posterior ranks + explicit variant', "layout": layout}
 
 
@@ -932,10 +953,13 @@ def plot_ld_diagnostics(diagnostics, *, axes=None, table_page=0, table_page_size
 @_local_style
 def plot_sensitivity(comparison, *, candidates_only=True, axes=None, layer="signals",
                      baseline_only=True, table_page=0, table_page_size=None,
-                     layout='full', display_names=None):
+                     layout='full', display_names=None, cmap=None):
     """PIP heatmap with missing variants masked, baseline first and fixed [0, 1].
 
-    Compact layout replaces the complete relationship table with short counts.
+    Compact layout shows every selected candidate with a short count caption.
+    Full-support maxima and relationships remain in returned data and reports.
+    ``cmap`` overrides Blues; normalization remains linear on [0, 1]. Cell
+    display strings and contrast-selected colors are exported separately from PIPs.
     ``display_names`` maps actual setting keys to readable labels; raw keys,
     full parameters, support rules and source comparison remain in plotted data.
     The default candidate policy is recorded by :func:`compare_fits`.
@@ -959,29 +983,63 @@ def plot_sensitivity(comparison, *, candidates_only=True, axes=None, layer="sign
         # Retain every selected candidate, ordering by maximum observed PIP.
         rows = sorted(rows, key=lambda r: (-max((_number(v) for v in r['pips'].values() if v is not None), default=0.), str(r['variant_id'])))
     matrix = np.asarray([[_number(row['pips'].get(s)) for s in settings] for row in rows], dtype=float)
-    heat_height = max(2.8, min(9., .27 * len(rows) + .7)) if compact else 3.2
+    from matplotlib.colors import Normalize
+    tick_labels = ['\n'.join(textwrap.fill(line, 12 if compact else 16) for line in label.splitlines()) for label in labels]
+    line_count = max((label.count('\n') + 1 for label in tick_labels), default=1)
+    row_labels = _display_labels([r['variant_id'] for r in rows])
+    label_width = min(2.1, .065 * max((len(label) for label in row_labels), default=1))
+    heat_height = max(.95, .30 * len(rows)) if compact else max(3.2, .26 * len(rows))
     shown_count = min(len(relations), table_page_size) if table_page_size else len(relations)
-    detail_height = (1.65 + .28 * max(0, len(settings) - 2)) if compact else max(2.6, .32 * shown_count)
-    figure, axs = _axes(axes, 2, figsize=(max(8.5, min(12., 5.5 + .9 * len(settings))), heat_height + detail_height),
-                        height_ratios=[heat_height, detail_height])
-    annotated = bool(len(rows) <= 18 and len(settings) <= 7)
+    detail_height = (.45 if np.any(~np.isfinite(matrix)) else .24) if compact else max(2.6, .32 * shown_count)
+    width = max(3.1 if len(settings) <= 2 else 4.8, .78 * len(settings) + label_width + 1.4) if compact else max(8.5, min(12., 5.5 + .9 * len(settings)))
+    height = heat_height + detail_height + .85 + .14 * line_count if compact else heat_height + detail_height
+    figure, axs = _axes(axes, 2, figsize=(width, height), height_ratios=[heat_height, detail_height])
+    annotated = bool(len(rows) <= 18 and len(settings) <= 7 and matrix.size <= 100)
+    text_matrix = [[format_pip_cell(value) for value in row] for row in matrix]
+    text_colors = []
+    color_map = plt.get_cmap(cmap or COLORS['pip_cmap']).copy()
+    color_map.set_bad(COLORS['missing'])
+    norm = Normalize(0, 1)
     if rows and settings:
-        cmap = plt.get_cmap(COLORS['sequential']).copy()
-        cmap.set_bad(COLORS['missing'])
-        obj = axs[0].imshow(np.ma.masked_invalid(matrix), cmap=cmap, vmin=0, vmax=1, aspect='auto')
-        figure.colorbar(obj, ax=axs[0], label='Marginal PIP · gray = variant not included')
-        tick_labels = [textwrap.fill(s, 24) for s in labels]
-        axs[0].set_xticks(range(len(settings)), tick_labels, rotation=0 if len(settings) <= 4 else 35,
-                          ha='center' if len(settings) <= 4 else 'right')
-        _variant_ticks(axs[0], [r['variant_id'] for r in rows], axis='y')
-        axs[0].set_ylabel('Candidate variants' if candidates_only else 'Variants')
+        obj = axs[0].imshow(np.ma.masked_invalid(matrix), cmap=color_map, norm=norm,
+                            aspect='auto', interpolation='none')
+        # Limit strip-like cells without requiring square PIP cells. User-supplied
+        # axes retain their own size; the data and labels remain identical.
+        if compact and axes is None:
+            axs[0].set_box_aspect(heat_height / max(.78 * len(settings), .78))
+        if compact:
+            cax = axs[0].inset_axes([1.04, .07, .035, .86])
+            colorbar = figure.colorbar(obj, cax=cax, ticks=[0., .25, .5, .75, 1.])
+        else:
+            colorbar = figure.colorbar(obj, ax=axs[0], fraction=.035, pad=.035, shrink=.86,
+                                       ticks=[0., .25, .5, .75, 1.])
+        colorbar.ax.set_title('PIP', fontsize=10, pad=5)
+        colorbar.ax.set_yticklabels(['0', '0.25', '0.5', '0.75', '1'])
+        axs[0].set_xticks(range(len(settings)), tick_labels, rotation=0 if len(settings) <= 6 else 35,
+                          ha='center' if len(settings) <= 6 else 'right')
+        # Every selected candidate is labelled; no twelve-row thinning here.
+        axs[0].set_yticks(range(len(rows)), row_labels)
+        row_axis_label = 'Candidate variant' if candidates_only else 'Variant'
+        if compact and label_width > 1.2:
+            axs[0].text(-.035, 1.02, row_axis_label, ha='right', va='bottom',
+                        transform=axs[0].transAxes, fontsize=10)
+        else:
+            axs[0].set_ylabel(row_axis_label, labelpad=1)
+        axs[0].tick_params(axis='both', length=0, pad=5)
+        for spine in axs[0].spines.values():
+            spine.set_visible(False)
+        if matrix.size <= 250:
+            axs[0].set_xticks(np.arange(len(settings) + 1) - .5, minor=True)
+            axs[0].set_yticks(np.arange(len(rows) + 1) - .5, minor=True)
+            axs[0].grid(which='minor', color='white', linewidth=.4)
+            axs[0].tick_params(which='minor', bottom=False, left=False)
+        text_colors = [[annotation_color(color_map(norm(value)) if np.isfinite(value) else color_map.get_bad(),
+                          background=axs[0].get_facecolor()) for value in row] for row in matrix]
         if annotated:
             for i in range(len(rows)):
                 for j in range(len(settings)):
-                    value = matrix[i, j]
-                    label = 'NA' if not np.isfinite(value) else format_number(value, probability=True, precision=3)
-                    axs[0].text(j, i, label, ha='center', va='center', fontsize=9,
-                                color='white' if np.isfinite(value) and value < .45 else COLORS['text'])
+                    axs[0].text(j, i, text_matrix[i][j], ha='center', va='center', fontsize=9,
+                                color=text_colors[i][j])
     else:
         _missing(axs[0], 'No variants in the declared comparison support' if settings else 'No sensitivity comparison supplied')
     axs[1].axis('off')
@@ -1020,13 +1078,19 @@ def plot_sensitivity(comparison, *, candidates_only=True, axes=None, layer="sign
         if change['outside_displayed_candidates']:
             line += ' (outside candidates; full variant table)'
         per_setting.append(line)
+    caption_details = [f'{layer.title()} relationships: {count_text}', *per_setting,
+        f'{comparison.get("mode", "unspecified")} mode; metrics: {scope.replace("_", " ")}',
+        'Missing variants are NA, distinct from zero PIP. Full settings and records are exported.']
     if compact:
-        change_text = '\n'.join(per_setting) if per_setting else max_text
-        summary = (f'{layer.title()} relationships: {count_text}.\n{change_text}.\n'
-                   f'{comparison.get("mode", "unspecified")} mode; metrics: {scope.replace("_", " ")}. '
-                   'Missing variants are NA, distinct from zero PIP.\nComplete settings, relationships and variant records are exported.')
-        axs[1].text(0., .95, '\n'.join(textwrap.fill(line, 105) for line in summary.splitlines()),
-                    va='top', transform=axs[1].transAxes, fontsize=9, linespacing=1.5)
+        candidate_word = 'candidate' if len(rows) == 1 else 'candidates'
+        variant_word = 'variant' if len(all_rows) == 1 else 'variants'
+        caption = (f'{len(rows)} selected {candidate_word} / {len(all_rows)} compared {variant_word}'
+                   if candidates_only else f'{len(rows)} compared {variant_word}')
+        axs[1].text(.5, .95, caption, ha='center', va='top', transform=axs[1].transAxes, fontsize=9)
+        if np.any(~np.isfinite(matrix)):
+            from matplotlib.patches import Patch
+            axs[1].legend(handles=[Patch(facecolor=COLORS['missing'], label='NA: variant not included')],
+                          loc='lower center', fontsize=9, handlelength=1., borderaxespad=0.)
     elif relations:
         _table(axs[1], [[r.get('setting_a', ''), r.get('setting_b', ''), r.get('component_a', ''),
                         r.get('component_b', ''), r.get('posterior_overlap', 'not assessed'), r.get('status', 'not assessed')]
@@ -1035,14 +1099,21 @@ def plot_sensitivity(comparison, *, candidates_only=True, axes=None, layer="sign
                page=table_page, page_size=table_page_size)
     else:
         _missing(axs[1], 'No signal relationships assessed')
-    axs[1].set_title(f'{layer.title()} layer · ' + ('baseline versus each setting' if baseline_only else 'all setting pairs'), fontsize=10)
-    figure.suptitle('Sensitivity across explicit settings')
+    if not compact:
+        axs[1].set_title(f'{layer.title()} layer · ' + ('baseline versus each setting' if baseline_only else 'all setting pairs'), fontsize=10)
+    figure.suptitle('PIP sensitivity', fontsize=12)
     return figure, axs, {'variant_ids': [r['variant_id'] for r in rows], 'settings': settings,
         'pip_matrix': matrix, 'signal_relations': relations, 'missing_is_zero': False,
         'candidates_only': candidates_only, 'all_variant_records': all_rows,
         'layer': layer, 'baseline_only': baseline_only, 'all_component_relations': comparison.get('component_relations', []),
         'table_page': table_page, 'table_page_size': table_page_size, 'layout': layout,
         'display_names': dict(zip(settings, labels)), 'cell_annotations': annotated,
+        'display_text': text_matrix, 'annotation_colors': text_colors, 'caption_details': caption_details,
+        'display_policy': {'cmap': color_map.name, 'normalization': [0, 1], 'scale': 'linear',
+            'annotation_rule': 'at most 18 rows, 7 settings and 100 cells',
+            'annotation_format': 'exact 0/1; <0.01 or >0.99 for interior tails; otherwise two decimals; NA for missing',
+            'row_labels': 'all selected candidates; long IDs uniquely abbreviated',
+            'rendered_setting_labels': dict(zip(settings, tick_labels))},
         'relation_counts': counts, 'baseline_changes': baseline_changes, 'maximum_baseline_change': maximum, 'maximum_change_outside_candidates': outside_maximum,
         'mode': comparison.get('mode'), 'support': comparison.get('support', {}),
         'fit_settings': comparison.get('fit_settings', {}), 'source_comparison': comparison,

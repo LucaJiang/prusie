@@ -21,11 +21,11 @@ def checksum(a):
 def make_figures(fit,refined,summary,R,ld,comparison):
     """Screen-sized views, with every retained CS and separate variance details."""
     matched=prusie.compare_fits({'before':fit,'after':refined},baseline='before',R=R)
-    display_names={'baseline':'Baseline','refined':'After refinement','coverage90':'CS coverage = 90%'}
+    display_names={'baseline':'Baseline','refined':'After refinement','coverage90':'CS coverage\n90%'}
     for name, settings in comparison.get('fit_settings', {}).items():
         if name=='larger_L' and 'L' in settings:
             display_names[name]=f"L = {settings['L']}"
-    display_names['fixed_variance']='Fixed scaled prior\nvariance = 0.05'
+    display_names['fixed_variance']='Scaled prior variance\n0.05 (fixed)'
     display_names={name:label for name,label in display_names.items() if name in comparison.get('settings', [])}
     figures={'locus overview':plot_locus(summary,R=R,layout='compact'),
              'convergence before and after':plot_convergence(fit,after=refined,layout='compact'),

@@ -2,10 +2,11 @@
 
 From the repository root, with the analysis extra installed:
     python examples/render_review.py --output-dir output/review --render-source-sha SHA \
-        --refresh-sensitivity
-Subsequent calls omit --refresh-sensitivity and reuse that directory's saved
-alternative fits. The baseline/refinement posterior and LD diagnostics are
-always read from the original public review snapshot, never refitted here.
+        --sensitivity-dir docs/review/post_analysis_fixes/examples
+This reads the saved alternative fits as well as the original baseline,
+refinement posterior and LD diagnostics. Only an explicit
+``--refresh-sensitivity`` recomputes alternative fits; it cannot be combined
+with ``--sensitivity-dir``.
 """
 import argparse
 import hashlib

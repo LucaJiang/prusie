@@ -617,7 +617,7 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
         sections.append('<p>Baseline: <strong>' + escape(sensitivity['baseline']) + '</strong>. '
                         + str(len(sensitivity['settings'])) + ' settings; CS-supported relation counts: '
                         + escape(_display(sensitivity['relation_counts'])) + '. '
-                        'These are distinct posteriors; they are not averaged.</p>')
+                        'Each fit or summary setting is shown separately.</p>')
         table(sensitivity.get('regional_maxima', []), ('setting_b', 'variant_id', 'max_abs_delta_pip', 'in_candidate_view'))
         for row in sensitivity.get('regional_maxima', []):
             if not row['in_candidate_view']:
@@ -643,6 +643,7 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
             table([counts['mixture']], caption='Mixture solver status')
     sections.append('</section><section aria-labelledby="figures"><h2 id="figures">Figures and before/after evidence</h2>')
     figure_paths, figure_index, figure_groups, plot_data = [], [], {}, {}
+    figure_responsive_rules = []
     for index, (name, value) in enumerate((figures or {}).items()):
         figure = value[0] if isinstance(value, tuple) else value
         stem = f'figure_{index + 1}'
@@ -655,9 +656,17 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
             for suffix in ('svg', 'png'):
                 path = directory / f'{stem}.{suffix}'
                 metadata = {'Date': None} if suffix == 'svg' else {'Software': 'prusie'}
-                figure.savefig(path, bbox_inches='tight', metadata=metadata)
+                figure.savefig(path, bbox_inches='tight', metadata=metadata,
+                               **({'dpi': 150} if suffix == 'png' else {}))
                 figure_paths.append(str(path.resolve()))
-        figure_index.append(dict(title=str(name), png=f'{stem}.png', svg=f'{stem}.svg', section=group))
+        # Use the intended display size, not the raster's export resolution.
+        # Only wide multi-panel figures retain a local scroll area on phones.
+        display_width = round(float(figure.get_figwidth()) * 96)
+        axes_count = len(np.asarray(value[1], dtype=object).ravel()) if isinstance(value, tuple) else len(figure.axes)
+        complex_figure = axes_count >= 3 and display_width >= 640
+        minimum_width = min(display_width, 720) if complex_figure else 0
+        figure_index.append(dict(title=str(name), png=f'{stem}.png', svg=f'{stem}.svg', section=group,
+                                 display_width_px=display_width, minimum_width_px=minimum_width))
         if isinstance(value, tuple) and len(value) > 2:
             plot_data[str(name)] = _plain(value[2])
         captions = {
@@ -667,16 +676,27 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
             'variance': 'Prior-variance and residual-variance paths describe solver states; full component records remain in the exports.',
             'signal': ('CS members and explicitly selected additional candidates describe localization. '
                        'Component probabilities and Bayes factors are conditional on the other fitted components.'),
-            'sensitivity': ('Settings are distinct fits, with baseline first. Missing cells are unobserved variants, not zero PIP. '
+            'sensitivity': ('Each column shows its recorded fit or summary setting, with baseline first. Missing cells are unobserved variants, not zero PIP. '
                             'The full variant table also identifies changes outside the candidate view.'),
             'ld': ('Flags use the joint recorded likelihood-ratio and absolute-z rule. '
                    'Extreme residuals alone are not allele-flip flags; conditional-only and unassessed states stay separate.'),
         }
         caption = captions[group]
+        if group == 'sensitivity' and 'variant_ids' in plot_data.get(str(name), {}):
+            shown = plot_data[str(name)]
+            selected = shown.get('variant_ids', [])
+            caption += f' The heatmap shows {len(selected)} selected variants; full-precision values are in plot_data.json and the variant table.'
+        if complex_figure:
+            figure_responsive_rules.append(
+                f'@container (max-width:{minimum_width - 1}px){{#{stem} .figure-scroll-hint{{display:block}}}}')
         encoded = base64.b64encode((directory / f'{stem}.png').read_bytes()).decode('ascii')
         figure_groups.setdefault(group, []).append(
-            f'<figure id="{stem}"><img alt="{escape(name)}" src="data:image/png;base64,{encoded}" '
-            f'loading="lazy"><figcaption>{escape(name)} · <a href="{stem}.png">PNG</a> · '
+            f'<figure id="{stem}" class="figure-frame" style="--figure-width:{display_width}px;'
+            f'--figure-min-width:{minimum_width}px"><div class="figure-scroll" role="region" '
+            f'aria-label="{escape(name)}" tabindex="0"><img alt="{escape(name)}" src="data:image/png;base64,{encoded}" '
+            f'loading="lazy"></div>'
+            + ('<p class="figure-scroll-hint">Scroll the figure horizontally, or open the original below.</p>' if complex_figure else '')
+            + f'<figcaption>{escape(name)} · <a href="{stem}.png">Original PNG</a> · '
             f'<a href="{stem}.svg">SVG</a><br>{escape(caption)}</figcaption></figure>')
     (directory / 'figure_index.json').write_text(json.dumps(figure_index, ensure_ascii=False, indent=2), encoding='utf-8')
     if plot_data:
@@ -786,12 +806,16 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
     .table-scroll{max-width:100%;overflow:auto}th{white-space:normal}td{overflow-wrap:anywhere}
     caption{text-align:left;font-weight:600;margin:.5rem 0}figure{margin:1.4rem 0 2rem}
     img{display:block;height:auto}figcaption,.caption{font-size:.92rem;color:#52606d}
+    .figure-frame{container-type:inline-size}.figure-scroll{max-width:100%;overflow-x:auto}
+    .figure-scroll img{width:min(100%,var(--figure-width));min-width:var(--figure-min-width);max-width:none}
+    .figure-scroll-hint{display:none;font-size:.85rem;color:#52606d;margin:.35rem 0}
     details{border-top:1px solid #e6e9ec;padding:.65rem 0}summary{cursor:pointer;font-weight:600}
     pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:34rem;overflow:auto}
     @media(max-width:800px){body{padding:1rem}table{font-size:.9rem}th,td{padding:.4rem}h1{font-size:1.7rem}}
     @media print{body{max-width:none;padding:0;font-size:11pt}nav{display:none}img{max-height:24cm;object-fit:contain}
-    figure{break-inside:avoid}.table-scroll{overflow:visible}details{break-inside:avoid}a{color:inherit}}
-    """
+    figure{break-inside:avoid}.table-scroll{overflow:visible}details{break-inside:avoid}a{color:inherit}
+    .figure-scroll{overflow:visible}.figure-scroll img{min-width:0;max-width:100%}.figure-scroll-hint{display:none!important}}
+    """ + '\n'.join(figure_responsive_rules)
     content = ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
                '<meta name="viewport" content="width=device-width, initial-scale=1">'
                '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
