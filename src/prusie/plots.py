@@ -700,7 +700,8 @@ def plot_prior_influence(summary, component_id=None, *, variant_id=None, variant
         ax.bar(range(len(rows)), [_number(row.get(key)) for row in rows], color="0.3")
         ax.set_ylabel(label)
         _variant_ticks(ax, ids)
-        ax.set_xlabel("Variant order (selected ID labels; all data shown)")
+        ax.set_xlabel("Variant order (selected ID labels; all data shown)" if chosen is None else
+                      f"Selected variants ({len(rows)}/{len(all_rows)}; complete table exported)")
         if not rows:
             _missing(ax, "Prior influence not assessed")
     if rows and any("effective_prior_weight" in row for row in rows):
