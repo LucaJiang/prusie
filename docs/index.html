@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.">
 
-<title>Fine-mapping, from candidates to interpretation · prusie</title>
+<title>SuSiE fine-mapping in Python · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
 <link rel="stylesheet" href="assets/katex/katex.min.css">
@@ -16,77 +16,19 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
-<span class="version">0.2.4.dev1 <span>development snapshot</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html" aria-current="page">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<div class="version"><span class="version-number">0.2.4.dev1</span><span class="version-badge">Development</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html" aria-current="page">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="index.md">Markdown source</a></div>
-<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
-<ul>
-<li><a href="#one-fit-and-a-short-summary">One fit and a short summary</a></li>
-<li><a href="#two-different-diagnostic-questions">Two different diagnostic questions</a></li>
-<li><a href="#measured-numerical-accuracy-and-performance">Measured numerical accuracy and performance</a></li>
-</ul>
-</div>
-</details><h1 id="fine-mapping-from-candidates-to-interpretation">Fine-mapping, from candidates to interpretation</h1>
-<p>prusie fits the SuSiE model to signed association statistics and LD. The Python
-API returns posterior inclusion probabilities (PIPs), credible sets and component
-posteriors, with optional convergence tracking, refinement, sensitivity comparisons
-and offline reports.</p>
-<p>Start with the <a href="example.html">quick start</a> to fit the packaged synthetic example.
-Then use the result to answer four questions:</p>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
-<thead>
-<tr>
-<th>Question</th>
-<th>Read next</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Which candidates carry support, and how concentrated is each signal?</td>
-<td><a href="results.html">Reading results</a></td>
-</tr>
-<tr>
-<td>Did IBSS stop, and does a new search improve the solution?</td>
-<td><a href="post_analysis.html">Convergence and refinement</a></td>
-</tr>
-<tr>
-<td>Which conclusions change with settings or LD assumptions?</td>
-<td><a href="sensitivity.html">Sensitivity and LD diagnostics</a></td>
-</tr>
-<tr>
-<td>What does a complete interpretation look like?</td>
-<td><a href="worked_examples.html">Worked examples</a></td>
-</tr>
-</tbody>
-</table></div>
-<h2 id="one-fit-and-a-short-summary">One fit and a short summary</h2>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
-
-<span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_example</span><span class="p">()</span>
-<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span><span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">],</span>
-                       <span class="n">track_fit</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">retain_data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;R&quot;</span><span class="p">],</span> <span class="n">z</span><span class="o">=</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">prusie</span><span class="o">.</span><span class="n">summary_text</span><span class="p">(</span><span class="n">summary</span><span class="p">))</span>
-</code></pre></div>
-
-<p>The example returns two singleton credible sets after three sweeps. The
-<a href="example.html#write-an-offline-report">quick start</a> adds figures and an offline report
-without fitting again. <a href="install.html">Installation</a> describes this 0.2.4.dev1
-branch preview and optional analysis dependencies.</p>
-<h2 id="two-different-diagnostic-questions">Two different diagnostic questions</h2>
-<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Candidate PIPs in the stable example show persistent leading sets and a prior-sensitive background." src="examples/post_analysis/stable/figure_5.png" /></p></div>
-<p>In the stable example, fixing a positive component variance preserves the two
-leading CS but raises background PIPs. In the problem example, refinement improves
-the original-model objective by 17.46 after the initial fit has already met its
-stopping condition. The remaining <code>{86,90}</code> pair has limited resolution.
-<a href="worked_examples.html">Read both examples and open their complete reports</a>.</p>
-<h2 id="measured-numerical-accuracy-and-performance">Measured numerical accuracy and performance</h2>
+<article><h1 id="susie-fine-mapping-in-python">SuSiE fine-mapping in Python</h1>
+<p>Fit association summary statistics with a Rust-powered SuSiE implementation,
+then inspect credible sets, convergence and sensitivity in one workflow.</p>
+<h2 id="fast-computation-complete-analysis">Fast computation, complete analysis</h2>
 <!-- generated:highlights:start -->
 
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Analysis</th>
@@ -113,14 +55,56 @@ stopping condition. The remaining <code>{86,90}</code> pair has limited resoluti
 <p>100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.</p>
 <!-- generated:highlights:end -->
 
-<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Runtime and full-process peak-memory ratios for GWAS and eQTL, with ratios above one favoring prusie." src="assets/r_comparison.svg" /></p></div>
-<p><a href="numerical_accuracy.html">Numerical accuracy</a> and <a href="performance.html">performance</a>
-explain the data, methods and original measurement environment. These measurements
-are attributed to prusie 0.2.3rc4, not to the development preview.</p>
+<p>Use <a href="numerical_accuracy.html">numerical accuracy</a> and <a href="performance.html">performance</a>
+for the full comparison and measurement methods. The Python workflow adds
+explicit continuation and refinement, LD diagnostics, comparisons across settings,
+and offline reports alongside variant PIPs and credible sets.</p>
+<div class="start-links">
+<p><a href="install.html">Install</a> <a href="example.html">Quick start</a> <a href="worked_examples.html">Worked examples</a></p>
+</div>
+<h2 id="one-fit-a-readable-result">One fit, a readable result</h2>
+<p>The packaged 500-variant synthetic toy example runs offline after installation.
+This code fits once and summarizes that posterior:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
+
+<span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_example</span><span class="p">()</span>
+<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span><span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">],</span>
+                       <span class="n">track_fit</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">retain_data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;R&quot;</span><span class="p">],</span> <span class="n">z</span><span class="o">=</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">prusie</span><span class="o">.</span><span class="n">summary_text</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;IBSS: </span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">convergence</span><span class="p">[</span><span class="s1">&#39;stop_reason&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="si">}</span><span class="s2"> sweeps)&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">cs</span> <span class="ow">in</span> <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;credible_sets&quot;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CS </span><span class="si">{</span><span class="n">cs</span><span class="p">[</span><span class="s1">&#39;component_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cs</span><span class="p">[</span><span class="s1">&#39;members&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Expected output:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>500 variants; 2 retained credible sets; 2 active components.
+IBSS: criterion_satisfied (3 sweeps)
+CS 0: syn0100
+CS 1: syn0350
+</code></pre></div>
+
+<p>The two singleton credible sets identify concentrated candidates in this toy fit.
+The <a href="example.html">quick start</a> explains their PIPs and posterior mass, then adds
+plots and an offline report. Refinement, LD and sensitivity are separate explicit
+steps; they have not been run by the code above.</p>
+<h2 id="from-candidates-to-interpretation">From candidates to interpretation</h2>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Candidate PIPs across settings: leading credible sets persist while fixing scaled prior variance changes the background." src="examples/post_analysis/stable/figure_5.png" /></div><figcaption><a href="examples/post_analysis/stable/figure_5.png">Open original figure</a></figcaption></figure>
+<p>The stable example retains its two main CS across these settings, while a fixed
+positive scaled prior variance raises background probabilities. The
+<a href="worked_examples.html">worked examples</a> explain this distinction and a second fit
+where refinement improves the solution but an LD-correlated pair remains unresolved.</p>
+<h2 id="read-the-result-in-context">Read the result in context</h2>
+<ul>
+<li><a href="results.html">Reading results</a>: which candidates carry support, and how concentrated is each signal?</li>
+<li><a href="post_analysis.html">Convergence and refinement</a>: did IBSS stop, and can search improve the solution?</li>
+<li><a href="sensitivity.html">Sensitivity and LD</a>: which conclusions change with settings or input assumptions?</li>
+<li><a href="worked_examples.html">Worked examples</a>: how do these observations fit into a complete interpretation?</li>
+</ul>
 <p>For precise inputs and return values, use the <a href="api.html">API</a>, <a href="inputs.html">input guide</a>
 and <a href="model.html">statistical model</a>. <a href="reproducibility.html">Reproducibility</a> separates
-regenerating figures from rerunning fits. Cite the original statistical methods
-and the software revision as described in <a href="citation.html">citation and license</a>.</p></article>
+regenerating figures from rerunning fits. <a href="citation.html">Citation and license</a>
+identifies the statistical methods and software revision.</p></article>
 <footer><p>prusie 0.2.4.dev1 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>

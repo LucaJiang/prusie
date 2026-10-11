@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
-<span class="version">0.2.4.dev1 <span>development snapshot</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html" aria-current="page">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<div class="version"><span class="version-number">0.2.4.dev1</span><span class="version-badge">Development</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html" aria-current="page">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -39,7 +39,7 @@ each component is and whether diagnostics change the interpretation. A variant
 can have a high marginal PIP while belonging to a set with several plausible
 alternatives. Component IDs identify model rows, not ranks or known causal effects.</p>
 <h2 id="pip-alpha-and-credible-sets">PIP, alpha and credible sets</h2>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Quantity</th>
@@ -83,8 +83,12 @@ alternatives. Component IDs identify model rows, not ranks or known causal effec
 actual mass greater than 0.95 because variants are included whole. That target is
 posterior mass under the model; it is not a claim of demonstrated repeated-sampling
 coverage in a new study. PIP and CS support do not establish biological mechanism.</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">prusie</span><span class="o">.</span><span class="n">summary_text</span><span class="p">(</span><span class="n">summary</span><span class="p">))</span>
+<p>Continue from the <a href="example.html">quick start</a>:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;R&quot;</span><span class="p">],</span> <span class="n">z</span><span class="o">=</span><span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">prusie</span><span class="o">.</span><span class="n">summary_text</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+</code></pre></div>
+
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>500 variants; 2 retained credible sets; 2 active components.
 </code></pre></div>
 
 <p>For the <a href="example.html">packaged example</a>, <code>syn0100</code> has PIP about 0.9697 and
@@ -122,7 +126,7 @@ biological variants remain in the caller's order. Let <span class="arithmatex"><
 <code>as_dict()</code> returns a shallow mapping without copying arrays. Results are
 mutable; callers own any copies they need.</p>
 <h2 id="posterior-fields">Posterior fields</h2>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Field</th>
@@ -216,7 +220,7 @@ relationship and the separate <a href="model.html#from-summaries-to-working-suff
 <p><code>sets['cs'][k]</code> contains member indices for the original component
 <code>sets['cs_index'][k]</code>. IDs need not be consecutive; sorting returned sets does
 not relabel components. The mapping contains:</p>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Key</th>
@@ -246,6 +250,8 @@ not relabel components. The mapping contains:</p>
 </tr>
 </tbody>
 </table></div>
+<details>
+<summary>Exact CS extraction order and boundary cases</summary>
 <p>Candidates accumulate alpha in descending order with stable ties, then sort
 member indices. Deduplication retains the first occurrence of a membership set
 <strong>before</strong> activity and purity filtering, so an earlier rejected candidate can
@@ -260,6 +266,7 @@ and the target. <code>coverage=None</code> or <code>min_abs_corr=None</code> dis
 The <a href="model.html#pip-and-credible-sets">two-variant example</a> distinguishes requested
 mass, selected mass, LD purity and repeated-sampling coverage. The presence of
 a credible set and convergence are separate properties.</p>
+</details>
 <h2 id="iterations-and-finalization">Iterations and finalization</h2>
 <p><code>niter</code> counts executed sweeps; <code>max_iter</code> is the cap. By default, convergence
 requires a finite <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mi mathvariant="normal">Δ</mi><mi mathvariant="script">L</mi><mo>&lt;</mo><mrow><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">0\leq\Delta\mathcal L&lt;\mathtt{tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7804em;vertical-align:-0.136em;"></span><span class="mord">0</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord">Δ</span><span class="mord mathcal">L</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6111em;"></span><span class="mord"><span class="mord mathtt">tol</span></span></span></span></span></span> after at least two sweeps.
@@ -274,6 +281,8 @@ invokes a labelled alpha/PIP fallback. A multi-state cycle is reported as
 current posterior; components are not averaged across incompatible states.
 Read <a href="post_analysis.html">convergence and refinement</a> for thresholds, continuation,
 tracking costs and the distinction between stopping and finding a better solution.</p>
+<details>
+<summary>Residual-variance updates, trim thresholds and stored field phases</summary>
 <p>Residual variance is updated only after the objective and stopping check, so
 it is unchanged on the convergence sweep. If estimation is enabled at an
 iteration-limit exit, returned <code>sigma2</code> includes the final ER2/n update while
@@ -283,8 +292,9 @@ prior. ELBO and XtXr retain the completed iteration values before trimming.
 PIP uses <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo><mrow><mi mathvariant="monospace">p</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">i</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">_</mi><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">V_\ell&gt;\mathtt{prior\_tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.2222em;"></span><span class="mord"><span class="mord mathtt">prior_tol</span></span></span></span></span></span>; a component exactly at that threshold is
 untrimmed but inactive for PIP. The separate CS threshold is fixed as described
 above.</p>
+</details>
 <h2 id="metadata-and-persistence">Metadata and persistence</h2>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Field</th>
@@ -330,10 +340,21 @@ above.</p>
 </tr>
 </tbody>
 </table></div>
-<p>Use NPZ for arrays and JSON for parameters/metadata when persisting portable
-results; the <a href="example.html">toy tutorial</a> has an example. Python pickles retain
-class module paths and require a compatible environment. For trusted results
-saved by an older package, export arrays with that original environment.</p></article>
+<p>Use <code>save_analysis(fit, directory)</code> and <code>load_analysis(directory)</code> from
+<code>prusie.report</code> to preserve the result's arrays, identifiers and metadata without
+pickle. The <a href="example.html#save-and-reload-a-result">quick start</a> shows the round trip;
+manual NPZ/JSON export is available in its advanced section. Array shapes and
+stored phases above remain part of the saved result. The retained optimization
+context is omitted, so supply the original inputs when warm-starting a reloaded
+posterior.</p>
+<details>
+<summary>Older saved results</summary>
+<p>Python pickles retain class module paths and require a compatible environment.
+For trusted results saved by an older package, export arrays with that original
+environment before importing them into a new workflow. Saved examples with
+producer/render identities are described in
+<a href="worked_examples.html#sources-and-reproducibility">worked-example provenance</a>.</p>
+</details></article>
 <footer><p>prusie 0.2.4.dev1 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>

@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
-<span class="version">0.2.4.dev1 <span>development snapshot</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html" aria-current="page">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<div class="version"><span class="version-number">0.2.4.dev1</span><span class="version-badge">Development</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html" aria-current="page">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -25,37 +25,86 @@
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
 <li><a href="#compare-explicit-settings">Compare explicit settings</a></li>
-<li><a href="#read-the-sensitivity-figure">Read the sensitivity figure</a></li>
+<li><a href="#plot-and-interpret-the-comparison">Plot and interpret the comparison</a></li>
+<li><a href="#variant-alignment-and-prior-weights">Variant alignment and prior weights</a></li>
+<li><a href="#common-and-union-comparison-support">Common and union comparison support</a></li>
 <li><a href="#diagnose-consistency-of-z-and-ld">Diagnose consistency of z and LD</a></li>
 </ul>
 </div>
 </details><h1 id="sensitivity-and-ld-diagnostics">Sensitivity and LD diagnostics</h1>
-<p>Use sensitivity analysis to ask which candidates and credible sets persist when
-you change a defensible modeling or input choice. Use LD diagnostics to ask
-whether signed association statistics agree with the supplied correlation matrix.
-They answer different questions: agreement with one diagnostic does not establish
-that all modeling assumptions hold.</p>
-<p>The following examples continue the fit from the <a href="example.html">quick start</a>.
-Install the optional <a href="install.html#optional-analysis-tools">analysis dependencies</a>
-for diagnostic plots and reports.</p>
+<p>Compare explicit modeling choices to see which candidates persist, then check
+compatibility between the signed association statistics and LD. This workflow
+continues the <code>example</code> and <code>fit</code> from the <a href="example.html">quick start</a>; plotting and
+LD diagnostics use the <a href="install.html#optional-analysis-tools">analysis extra</a>.</p>
 <h2 id="compare-explicit-settings">Compare explicit settings</h2>
-<p><code>compare_fits</code> compares existing results without new fits. <code>run_sensitivity</code>
-executes only a named baseline plus one-factor plan:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">sensitivity</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">run_sensitivity</span><span class="p">(</span><span class="n">example</span><span class="p">[</span><span class="s1">&#39;inputs&#39;</span><span class="p">],</span> <span class="p">[</span>
-    <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;larger_L&#39;</span><span class="p">,</span> <span class="s1">&#39;changes&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;L&#39;</span><span class="p">:</span> <span class="mi">6</span><span class="p">}},</span>
-    <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;fixed_variance&#39;</span><span class="p">,</span> <span class="s1">&#39;changes&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;scaled_prior_variance&#39;</span><span class="p">:</span> <span class="mf">.05</span><span class="p">,</span>
-                                  <span class="s1">&#39;estimate_prior_variance&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}},</span>
-    <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;coverage90&#39;</span><span class="p">,</span> <span class="s1">&#39;report&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;coverage&#39;</span><span class="p">:</span> <span class="mf">.90</span><span class="p">}},</span>
+<p>Name each change so that its interpretation remains separate. This plan reuses
+the baseline, fits two alternatives and re-extracts coverage from the baseline
+posterior:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">sensitivity</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">run_sensitivity</span><span class="p">(</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span> <span class="p">[</span>
+    <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;larger_L&quot;</span><span class="p">,</span> <span class="s2">&quot;changes&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;L&quot;</span><span class="p">:</span> <span class="mi">6</span><span class="p">}},</span>
+    <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;fixed_variance&quot;</span><span class="p">,</span> <span class="s2">&quot;changes&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;scaled_prior_variance&quot;</span><span class="p">:</span> <span class="mf">.05</span><span class="p">,</span>
+                                         <span class="s2">&quot;estimate_prior_variance&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}},</span>
+    <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;coverage90&quot;</span><span class="p">,</span> <span class="s2">&quot;report&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;coverage&quot;</span><span class="p">:</span> <span class="mf">.90</span><span class="p">}},</span>
 <span class="p">],</span> <span class="n">baseline</span><span class="o">=</span><span class="n">fit</span><span class="p">)</span>
-<span class="n">comparison</span> <span class="o">=</span> <span class="n">sensitivity</span><span class="p">[</span><span class="s1">&#39;comparison&#39;</span><span class="p">]</span>
+<span class="n">comparison</span> <span class="o">=</span> <span class="n">sensitivity</span><span class="p">[</span><span class="s2">&quot;comparison&quot;</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">sensitivity</span><span class="p">[</span><span class="s2">&quot;records&quot;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span> <span class="s2">&quot;new fit:&quot;</span><span class="p">,</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;fit_performed&quot;</span><span class="p">])</span>
 </code></pre></div>
 
-<p>Supported choices include L, variant priors, genuine fixed effect variance,
-explicit LD/window/filter inputs, continuation and refinement. Changing V's
-initialization while estimating it is labelled computational initialization
-sensitivity. External-LD residual variance is not automatically estimated.
-Coverage/purity changes are report filters and reuse the posterior. No Cartesian
-grid, implicit window expansion or average posterior is constructed.</p>
+<p>Expected output with an empty cache:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>baseline new fit: False
+larger_L new fit: True
+fixed_variance new fit: True
+coverage90 new fit: False
+</code></pre></div>
+
+<p>Use <code>compare_fits</code> directly when all fits already exist. <code>run_sensitivity</code> runs a
+finite named plan, with requested convergence controls inherited from the
+baseline unless explicitly overridden. A runtime fallback is recorded separately.
+Changing coverage or purity is a report filter; it keeps the posterior.</p>
+<h2 id="plot-and-interpret-the-comparison">Plot and interpret the comparison</h2>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.plots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_sensitivity</span>
+
+<span class="n">sensitivity_view</span> <span class="o">=</span> <span class="n">plot_sensitivity</span><span class="p">(</span>
+    <span class="n">comparison</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span>
+    <span class="n">display_names</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;baseline&quot;</span><span class="p">:</span> <span class="s2">&quot;Baseline&quot;</span><span class="p">,</span> <span class="s2">&quot;larger_L&quot;</span><span class="p">:</span> <span class="s2">&quot;L = 6&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;fixed_variance&quot;</span><span class="p">:</span> <span class="s2">&quot;Scaled prior variance</span><span class="se">\n</span><span class="s2">0.05 (fixed)&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;coverage90&quot;</span><span class="p">:</span> <span class="s2">&quot;CS coverage</span><span class="se">\n</span><span class="s2">90%&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Stable candidate PIPs across baseline, larger L, fixed scaled prior variance and reported CS coverage." src="examples/post_analysis/stable/figure_5.png" /></div><figcaption><a href="examples/post_analysis/stable/figure_5.png">Open original figure</a></figcaption></figure>
+<p>The two leading CS, <code>{syn0100}</code> and <code>{syn0350}</code>, persist in the saved comparison.
+L=6 and the coverage-only change leave all PIPs unchanged. Fixing
+<code>scaled_prior_variance=0.05</code> with <code>estimate_prior_variance=False</code> changes the
+background: <code>syn0143</code> rises from about 5.318×10⁻¹¹ to 0.2544, and <code>syn0145</code> from
+about 2.066×10⁻¹¹ to 0.1430.</p>
+<p>The fixed positive variance keeps all five components active, including three
+without retained CS. With estimation disabled, those components cannot shrink
+to V=0 through that estimation step and can distribute additional posterior mass.
+Thus the main CS are stable while the background is prior-sensitive.
+<code>scaled_prior_variance</code> means V divided by the working response variance
+yty/(n−1); it is not generally the working-scale V itself. See the
+<a href="worked_examples.html#stable-signals-with-a-prior-sensitive-background">worked example</a>
+and <a href="examples/post_analysis/stable/comparison.json">complete comparison</a>.</p>
+<p>Every column uses the same candidate order and linear PIP scale from 0 to 1.
+The compact view includes formal CS members on the declared comparison support,
+per-component top candidates and threshold candidates. Labels use <code>&lt;0.01</code> and <code>&gt;0.99</code> near the endpoints; exact
+0 and 1 remain explicit, and unobserved variants are grey <code>NA</code>. Display text is
+separate from full-precision values in <code>plotted_data</code>, CSV and JSON.</p>
+<p>The report also identifies the largest PIP change on the full declared comparison
+support, including variants outside the heatmap. Use <code>candidates_only=False</code> for
+all comparison variants, or <code>layout="full"</code> for relation tables.
+<code>layer="components"</code> includes all active-component relations; the default
+<code>layer="signals"</code> emphasizes formal CS-supported relations. Table pagination
+changes only the display, retaining full records.</p>
+<h2 id="variant-alignment-and-prior-weights">Variant alignment and prior weights</h2>
+<p>Variant IDs determine alignment across reordered, subset or extended inputs.
+Missing variants remain unobserved; they are not assigned PIP=0. The default
+view compares each alternative with baseline, with full original settings and
+prior-resolution records available in the exports.</p>
+<details>
+<summary>Alternative windows, nonuniform priors and null weights</summary>
 <p>An alternative <code>inputs</code> mapping supplies its own summary statistics, LD and
 explicit variant IDs. Existing prior weights and inherited metadata columns are
 mapped by those IDs, including when a previously fitted baseline is supplied.
@@ -81,21 +130,13 @@ Each fit record includes <code>prior_resolution</code> (mapping, policy, raw and
 weights, effective null probability), and input changes include <code>input_resolution</code>.
 The cache hashes the resolved data and settings. Alternative fits are cold starts;
 baseline arrays and results are not mutated.</p>
-<p>Missing variants stay NA. The default comparison shows formal-CS-supported
-signals against baseline; complete active-component relations are a separate
-view. A diffuse component can overlap another diffuse component almost perfectly
-without identifying a localized signal. Unresolved support changes remain visible
-and do not become confirmed split/merge events from diffuse graph degrees.
-Main candidates include all formal CS members, top candidates and threshold
-candidates, so a large CS is retained even when every member has PIP below 0.1.
-Signal relations use shared-support posterior overlap
-without renormalizing away unobserved mass, CS overlap and explicitly identified
-LD evidence. Component numbers are not matched directly. Unmatched,
-ambiguous and split/merge relations remain visible; a one-to-one display match
-is only an aid. Candidate PIP changes, ranks, thresholds, CS sizes/purity and
-high-LD exchanges remain separate metrics rather than a composite robustness
-score. Cache keys include inputs/order/alleles, settings, software and
-initialization; caches are caller-owned.</p>
+<p>Supported choices include L, variant priors, fixed effect variance, explicit
+LD/window/filter inputs, continuation and refinement. Changing only V's
+initialization while estimating it is computational initialization sensitivity.
+External-LD residual variance is not automatically estimated. Cache keys include
+inputs/order/alleles, settings, software and initialization; caches are caller-owned.</p>
+</details>
+<h2 id="common-and-union-comparison-support">Common and union comparison support</h2>
 <p><code>mode='union'</code> displays the union and computes each pair's PIP and posterior/CS
 overlap on that pair's intersection; representative LD uses the original
 representatives in the named LD reference. <code>mode='common'</code> uses the <strong>global intersection across
@@ -110,66 +151,37 @@ An empty global intersection gives zero shared counts and unavailable PIP metric
 with components unmatched on that support. It does not imply biological absence.
 The legacy field name <code>full_region_pip_correlation</code> refers to the declared support
 for that mode, not to a union in which missing PIPs have been filled in.</p>
-<h2 id="read-the-sensitivity-figure">Read the sensitivity figure</h2>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.plots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_sensitivity</span>
-
-<span class="n">figure</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">plotted</span> <span class="o">=</span> <span class="n">plot_sensitivity</span><span class="p">(</span>
-    <span class="n">comparison</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span>
-    <span class="n">display_names</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;baseline&quot;</span><span class="p">:</span> <span class="s2">&quot;Baseline&quot;</span><span class="p">,</span> <span class="s2">&quot;larger_L&quot;</span><span class="p">:</span> <span class="s2">&quot;L = 6&quot;</span><span class="p">,</span>
-                   <span class="s2">&quot;fixed_variance&quot;</span><span class="p">:</span> <span class="s2">&quot;Fixed scaled prior variance = 0.05&quot;</span><span class="p">,</span>
-                   <span class="s2">&quot;coverage90&quot;</span><span class="p">:</span> <span class="s2">&quot;CS coverage = 90%&quot;</span><span class="p">},</span>
-<span class="p">)</span>
-</code></pre></div>
-
-<p>Columns begin with baseline. Candidate rows include every formal CS member,
-per-component top candidates and variants meeting the candidate PIP threshold.
-Missing variants have their own color and remain NA; an observed PIP of zero is
-a different value. Small heatmaps label each probability. The accompanying
-summary reports the maximum absolute PIP change on the declared comparison
-support, even when that variant is outside the candidate view.</p>
-<p><code>candidates_only=False</code> includes all comparison variants. <code>layer="components"</code>
-opens the complete component relations; the default <code>layer="signals"</code> emphasizes
-formal CS-supported relations. Page controls affect the relation table display,
-not the exported evidence. Always check <code>plotted</code> and the full variant table when
-your question concerns variants outside the displayed candidates.</p>
-<p><code>scaled_prior_variance</code> is V divided by the working response variance yty/(n−1);
-it is not generally V itself. A positive fixed variance together with
-<code>estimate_prior_variance=False</code> keeps unused components from shrinking to V=0
-through variance estimation. Their posterior mass can raise background PIPs
-without changing the leading CS. The <a href="worked_examples.html#stable-signals-with-a-prior-sensitive-background">stable example</a>
-shows this distinction using the saved component tables.</p>
+<details>
+<summary>Signal matching, resolution and complete component relations</summary>
+<p>Missing variants stay NA. The default comparison shows formal-CS-supported
+signals against baseline; complete active-component relations are a separate
+view. A diffuse component can overlap another diffuse component almost perfectly
+without identifying a localized signal. Unresolved support changes remain visible
+and do not become confirmed split/merge events from diffuse graph degrees.
+Main candidates include formal CS members on the comparison support, top
+candidates and threshold candidates. A large CS is not trimmed by the display
+PIP threshold; common-mode support may exclude members absent from another fit.
+Signal relations use shared-support posterior overlap
+without renormalizing away unobserved mass, CS overlap and explicitly identified
+LD evidence. Component numbers are not matched directly. Unmatched,
+ambiguous and split/merge relations remain visible; a one-to-one display match
+is only an aid. Candidate PIP changes, ranks, thresholds, CS sizes/purity and
+high-LD exchanges remain separate metrics rather than a composite robustness
+score.</p>
+</details>
 <h2 id="diagnose-consistency-of-z-and-ld">Diagnose consistency of z and LD</h2>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">ld</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">diagnose_ld</span><span class="p">(</span><span class="n">example</span><span class="p">[</span><span class="s1">&#39;inputs&#39;</span><span class="p">][</span><span class="s1">&#39;z&#39;</span><span class="p">],</span> <span class="n">example</span><span class="p">[</span><span class="s1">&#39;inputs&#39;</span><span class="p">][</span><span class="s1">&#39;R&#39;</span><span class="p">],</span>
-                        <span class="n">example</span><span class="p">[</span><span class="s1">&#39;inputs&#39;</span><span class="p">][</span><span class="s1">&#39;n&#39;</span><span class="p">],</span> <span class="n">variant_ids</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">)</span>
+<p>Run LD diagnostics explicitly for the supplied signed statistics and correlation
+matrix:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">ld</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">diagnose_ld</span><span class="p">(</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;z&quot;</span><span class="p">],</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;R&quot;</span><span class="p">],</span>
+                        <span class="n">n</span><span class="o">=</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;n&quot;</span><span class="p">],</span> <span class="n">variant_ids</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">)</span>
 </code></pre></div>
 
-<p>The explicit LD diagnostic implements the RSS null model
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>∼</mo><mi>N</mi><mo stretchy="false">(</mo><mn>0</mn><mo separator="true">,</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>s</mi><mo stretchy="false">)</mo><mi>R</mi><mo>+</mo><mi>s</mi><mi>I</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">z\sim N(0,(1-s)R+sI)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mopen">(</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">s</span><span class="mclose">)</span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="mclose">)</span></span></span></span></span>, including finite-n z adjustment, likelihood-based s
-estimation, conditional means/variances and a normal scale mixture for allele-flip
-likelihood ratios. <code>estimate_s_rss</code> exposes null MLE, partial MLE and pseudo-MLE.
-Eigen decomposition is explicit, separately timed and optionally cached. Small
-or negative eigenvalues are truncated only inside the diagnostic, with warnings;
-the fitting matrix is untouched. Singular s=0 uses the labelled spectral
-pseudoinverse convention. Missing statistics and undefined conditional quantities
-remain unassessed. The report separates assessed/flagged, assessed/not flagged,
-conditional-only and unassessed rows. A finite conditional residual does not
-establish that mixture optimization and the flip test succeeded. For missing z,
-the diagnostic's working zero is recorded separately from the unavailable
-observed statistic. Flags suggest possible mismatch; nothing is flipped or removed.</p>
-<p>The scale-mixture likelihood is solved with a full-simplex KKT check. Some pinned
-R <code>mixsqp</code> default fits stop at suboptimal weights; prusie records this solver
-accuracy difference rather than reproducing premature stopping. Conditional
-formulas and independently certified R mixture optima are validated separately.</p>
-<p>User-provided allele labels, EAF, N, INFO, ancestry/build, LD reference sample
-size and external QC flags can be carried in metadata and <code>input_info</code>.
-Missing information stays <code>not_assessed</code>. Provided P values take precedence;
-otherwise plotted association values use a labelled two-sided normal
-approximation with a stable log-tail calculation.</p>
-<p>The default allele-flip flag requires <strong>log LR &gt; 2 and |adjusted z| &gt; 2</strong>.
-A large conditional residual alone is not a flip flag. The LD figure labels a
-small number of flagged or extreme-residual variants and records why they were
-selected. Inspect both parts of the rule before interpreting a label.</p>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<p>The saved stable example assesses all 500 variants and flags none. Read the joint
+rule and assessed counts with that result: <strong>log LR &gt; 2 and |adjusted z| &gt; 2</strong>.
+A large conditional residual alone is not an allele-flip flag. Check ancestry,
+effect alleles, order, filtering and LD-reference identity when investigating a
+flag; this diagnostic leaves the input statistics and alleles unchanged.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Report state</th>
@@ -196,19 +208,43 @@ selected. Inspect both parts of the rule before interpreting a label.</p>
 </tbody>
 </table></div>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.plots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_ld_diagnostics</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">summary_text</span><span class="p">,</span> <span class="n">write_report</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_report</span>
 
-<span class="n">figure</span> <span class="o">=</span> <span class="n">plot_ld_diagnostics</span><span class="p">(</span><span class="n">ld</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">)</span>
-<span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">example</span><span class="p">[</span><span class="s1">&#39;inputs&#39;</span><span class="p">][</span><span class="s1">&#39;R&#39;</span><span class="p">],</span> <span class="n">z</span><span class="o">=</span><span class="n">example</span><span class="p">[</span><span class="s1">&#39;inputs&#39;</span><span class="p">][</span><span class="s1">&#39;z&#39;</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">summary_text</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">ld</span><span class="o">=</span><span class="n">ld</span><span class="p">,</span> <span class="n">comparison</span><span class="o">=</span><span class="n">comparison</span><span class="p">))</span>
-<span class="n">write_report</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="s2">&quot;output/diagnostics&quot;</span><span class="p">,</span> <span class="n">ld</span><span class="o">=</span><span class="n">ld</span><span class="p">,</span> <span class="n">comparison</span><span class="o">=</span><span class="n">comparison</span><span class="p">,</span>
-             <span class="n">figures</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;LD diagnostics&quot;</span><span class="p">:</span> <span class="n">figure</span><span class="p">})</span>
+<span class="n">ld_view</span> <span class="o">=</span> <span class="n">plot_ld_diagnostics</span><span class="p">(</span><span class="n">ld</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">)</span>
+<span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;R&quot;</span><span class="p">],</span> <span class="n">z</span><span class="o">=</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">prusie</span><span class="o">.</span><span class="n">summary_text</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">ld</span><span class="o">=</span><span class="n">ld</span><span class="p">,</span> <span class="n">comparison</span><span class="o">=</span><span class="n">comparison</span><span class="p">))</span>
+<span class="n">report</span> <span class="o">=</span> <span class="n">write_report</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="s2">&quot;output/diagnostics&quot;</span><span class="p">,</span> <span class="n">ld</span><span class="o">=</span><span class="n">ld</span><span class="p">,</span> <span class="n">comparison</span><span class="o">=</span><span class="n">comparison</span><span class="p">,</span>
+                      <span class="n">figures</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Sensitivity&quot;</span><span class="p">:</span> <span class="n">sensitivity_view</span><span class="p">,</span> <span class="s2">&quot;LD diagnostics&quot;</span><span class="p">:</span> <span class="n">ld_view</span><span class="p">})</span>
 </code></pre></div>
 
-<p>Missing observed z is not plotted at zero. Failed or skipped diagnostics retain
-their reason and assessed counts. Keep ancestry, effect alleles, variant order,
-window/filter selection and LD reference identity with the report so that these
-checks can be interpreted in context.</p></article>
+<p>Open <code>output/diagnostics/index.html</code> to read the heatmap, full-support PIP changes,
+LD states and downloadable tables together. Missing observed z is not plotted
+at zero; failed or skipped assessments retain their reason.</p>
+<details>
+<summary>LD model, mixture optimization and recorded input information</summary>
+<p>The explicit LD diagnostic implements the RSS null model
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>∼</mo><mi>N</mi><mo stretchy="false">(</mo><mn>0</mn><mo separator="true">,</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>s</mi><mo stretchy="false">)</mo><mi>R</mi><mo>+</mo><mi>s</mi><mi>I</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">z\sim N(0,(1-s)R+sI)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mopen">(</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">s</span><span class="mclose">)</span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="mclose">)</span></span></span></span></span>, including finite-n z adjustment, likelihood-based s
+estimation, conditional means/variances and a normal scale mixture for allele-flip
+likelihood ratios. <code>estimate_s_rss</code> exposes null MLE, partial MLE and pseudo-MLE.
+Eigen decomposition is explicit, separately timed and optionally cached. Small
+or negative eigenvalues are truncated only inside the diagnostic, with warnings;
+the fitting matrix is untouched. Singular s=0 uses the labelled spectral
+pseudoinverse convention. Missing statistics and undefined conditional quantities
+remain unassessed. The report separates assessed/flagged, assessed/not flagged,
+conditional-only and unassessed rows. A finite conditional residual does not
+establish that mixture optimization and the flip test succeeded. For missing z,
+the diagnostic's working zero is recorded separately from the unavailable
+observed statistic. Flags suggest possible mismatch; nothing is flipped or removed.</p>
+<p>The scale-mixture likelihood is solved with a full-simplex KKT check. Some pinned
+R <code>mixsqp</code> default fits stop at suboptimal weights; prusie records this solver
+accuracy difference rather than reproducing premature stopping. Conditional
+formulas and independently certified R mixture optima are validated separately.</p>
+<p>User-provided allele labels, EAF, N, INFO, ancestry/build, LD reference sample
+size and external QC flags can be carried in metadata and <code>input_info</code>.
+Missing information stays <code>not_assessed</code>. Provided P values take precedence;
+otherwise plotted association values use a labelled two-sided normal
+approximation with a stable log-tail calculation.</p>
+</details></article>
 <footer><p>prusie 0.2.4.dev1 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>

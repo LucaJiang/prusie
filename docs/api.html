@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
-<span class="version">0.2.4.dev1 <span>development snapshot</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html" aria-current="page">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<div class="version"><span class="version-number">0.2.4.dev1</span><span class="version-badge">Development</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html" aria-current="page">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -32,7 +32,11 @@
 <li><a href="#load_example">load_example</a></li>
 <li><a href="#convergence-and-post-analysis">Convergence and post-analysis</a></li>
 <li><a href="#summaries-comparisons-and-reports">Summaries, comparisons and reports</a></li>
-<li><a href="#figures-and-local-style">Figures and local style</a></li>
+<li><a href="#figures-and-local-style">Figures and local style</a><ul>
+<li><a href="#heatmap-scales-and-labels">Heatmap scales and labels</a></li>
+<li><a href="#other-display-controls">Other display controls</a></li>
+</ul>
+</li>
 </ul>
 </div>
 </details><h1 id="python-api">Python API</h1>
@@ -72,7 +76,7 @@ separate working-scale formulas for each route.</p>
 <a href="inputs.html#shapes-and-numerical-checks">Inputs</a>. <code>X_colmeans</code> and <code>y_mean</code> are
 optional original means for recovering the intercept.</p>
 <h2 id="shared-fitting-options">Shared fitting options</h2>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Option</th>
@@ -179,7 +183,7 @@ optional original means for recovering the intercept.</p>
 statistics. Use fixed variance with external LD unless estimation is justified.
 <code>coverage=None</code> or <code>min_abs_corr=None</code> disables CS construction while retaining PIP.</p>
 <p>The following exposed options accept only their listed defaults:</p>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Parameter</th>
@@ -251,10 +255,15 @@ without network access. See the <a href="example.html">toy example tutorial</a>.
 See <a href="post_analysis.html">convergence and refinement</a> for costs, initialization
 checks, phases and runnable examples. <code>continue_fit(fit, max_iter=100, tol=None)</code>
 inherits the original ELBO tolerance when <code>tol</code> is omitted. Requested convergence
-controls persist across continuation, refinement and sensitivity; effective
-fallback is recorded separately.</p>
+controls persist across continuation, refinement and sensitivity unless explicitly
+overridden; effective runtime fallback is recorded separately. Refinement's
+<code>inner_tol</code> sets its inner ELBO tolerance independently of those inherited controls.
+Continuation starts from the supplied posterior; refinement stage A is a cold
+excluded-prior fit and stage B warm-starts its posterior moments under the restored
+original model. Reuse the returned <code>refined</code> in plots and comparisons to avoid
+starting another search.</p>
 <h2 id="summaries-comparisons-and-reports">Summaries, comparisons and reports</h2>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Function</th>
@@ -299,7 +308,7 @@ common/union support and missing-assessment states. Optional AI adapters live in
 item records selection rules and plotted values alongside the complete evidence
 needed to interpret the view. Existing Matplotlib axes can be passed with
 <code>axes=...</code>; their count must match the selected layout.</p>
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Function</th>
@@ -356,8 +365,28 @@ global rcParams on exit and does not choose a backend. Shared presentation token
 in <code>prusie._style</code> define fonts, spacing, colors and readable number formatting;
 use the public <code>style</code> argument for individual figures. Before/after colors are
 consistent, missing values are separate, and probability/r² scales stay in [0,1].
-Displayed rounding never replaces full-precision returned or exported values.
-For large-magnitude objectives, <code>plot_convergence(..., relative_elbo=True)</code> plots
+Displayed rounding never replaces full-precision returned or exported values.</p>
+<h3 id="heatmap-scales-and-labels">Heatmap scales and labels</h3>
+<p>PIP heatmaps default to <strong>Blues</strong>, with a fixed linear scale from 0 to 1. CS LD
+uses <strong>Reds</strong> for the explicit <code>ld_measure="r2"</code> display and <strong>RdBu_r</strong> for the
+default signed-r display, with fixed ranges [0,1] and [−1,1] respectively.
+The separate colormap roles prevent a PIP style change from altering LD views.
+Pass <code>cmap=</code> to <code>plot_sensitivity</code> or <code>plot_signal</code> to override the displayed
+colormap; the fixed numeric range and original matrix are retained.</p>
+<p>Compact sensitivity cells use <code>0</code>, <code>&lt;0.01</code>, two decimal places, <code>&gt;0.99</code>, <code>1</code> and
+<code>NA</code> as appropriate. This formatting affects labels only: returned display text
+and policy are separate from full-precision PIPs. Small selected matrices label
+every candidate row; large matrices retain the candidate records even when
+per-cell annotations are omitted. CS members on the declared comparison support
+are not dropped to shrink the figure; common-mode filtering is described in the
+<a href="sensitivity.html#common-and-union-comparison-support">support rules</a>. Missing observations have a distinct grey color, separate from the
+color for a true zero.</p>
+<p>Within-CS LD cells are square. Small matrices label non-endpoint correlations
+with sufficient precision to distinguish high LD from exact identity. Compact
+singleton CS views keep the underlying matrix and purity while using a short
+singleton display. See the <a href="worked_examples.html#what-remains-unresolved">worked 86/90 example</a>.</p>
+<h3 id="other-display-controls">Other display controls</h3>
+<p>For large-magnitude objectives, <code>plot_convergence(..., relative_elbo=True)</code> plots
 each trace relative to its first finite ELBO, with that origin labelled. It
 preserves the original trace and signed increments in the returned data.</p>
 <p>Locus plots use physical position only when provided, otherwise a labelled
