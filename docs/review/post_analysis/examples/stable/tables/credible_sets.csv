@@ -1,0 +1,3 @@
+component_id,members,member_indices,size,requested_coverage,actual_coverage,representative,representative_index,representative_rule,min_abs_corr,mean_abs_corr,median_abs_corr
+0,"[""syn0100""]",[99],1,0.95,0.9696741972541468,syn0100,99,highest alpha; lexical variant ID breaks ties,1.0,1.0,1.0
+1,"[""syn0350""]",[349],1,0.95,0.9999366187170291,syn0350,349,highest alpha; lexical variant ID breaks ties,1.0,1.0,1.0

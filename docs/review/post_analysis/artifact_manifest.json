@@ -1,0 +1,570 @@
+{
+  "implementation_source_commit": "e45914e512e04feef37cf7310bc0b309582d6058",
+  "source_run": "20261010_prusie_post_analysis",
+  "source_identity_note": "Existing examples were generated before final commit creation; this commit captures the delivered source, subsequently checked against the installed wheel. Review commits do not produce new numerical results.",
+  "no_refitting_or_rerendering": true,
+  "omissions": "Redundant top-level typed analysis.json/arrays.npz omitted; full evidence, CSV, HTML and exact baseline/refined fit persistence included. Server logs, processes, credentials, wheels, caches and upstream source mirrors omitted.",
+  "files": [
+    {
+      "source": "examples/final/stable/figure_1.png",
+      "source_sha256": "5e28bc4b0578c48c77c9e0c9227a649524e855c5997be4b8cab5d21b20dd9604",
+      "destination": "examples/stable/figure_1.png",
+      "sha256": "5e28bc4b0578c48c77c9e0c9227a649524e855c5997be4b8cab5d21b20dd9604",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_1.svg",
+      "source_sha256": "0499ca3b7eea7fcb623db804e05ab5de0a3877328a2e0821261c77ddda58f84e",
+      "destination": "examples/stable/figure_1.svg",
+      "sha256": "0499ca3b7eea7fcb623db804e05ab5de0a3877328a2e0821261c77ddda58f84e",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_2.png",
+      "source_sha256": "3dae653c4d3985e8fbb85c5fabd04bf643e5fb9f7d1451514ddea5c7208a9cab",
+      "destination": "examples/stable/figure_2.png",
+      "sha256": "3dae653c4d3985e8fbb85c5fabd04bf643e5fb9f7d1451514ddea5c7208a9cab",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_2.svg",
+      "source_sha256": "2054db9b07a9ad501b62e74f4f1262a71a6e119123a1d9772c91ed644af6d926",
+      "destination": "examples/stable/figure_2.svg",
+      "sha256": "2054db9b07a9ad501b62e74f4f1262a71a6e119123a1d9772c91ed644af6d926",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_3.png",
+      "source_sha256": "dd837fd8098048b8c5b2ad2b9f7026422e4ad02e765de2b48c1aef075716ddeb",
+      "destination": "examples/stable/figure_3.png",
+      "sha256": "dd837fd8098048b8c5b2ad2b9f7026422e4ad02e765de2b48c1aef075716ddeb",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_3.svg",
+      "source_sha256": "59c7062db7f17b84dd7a79f7f106ee7c1edee4302867a8cdde9262ab3d4d0467",
+      "destination": "examples/stable/figure_3.svg",
+      "sha256": "59c7062db7f17b84dd7a79f7f106ee7c1edee4302867a8cdde9262ab3d4d0467",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_4.png",
+      "source_sha256": "ece388ca3cffda78d26e025a10851c941c4ca78678bf9d4e5d3a0e84a418eb66",
+      "destination": "examples/stable/figure_4.png",
+      "sha256": "ece388ca3cffda78d26e025a10851c941c4ca78678bf9d4e5d3a0e84a418eb66",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_4.svg",
+      "source_sha256": "18b2f7cf90e313debb5b3ac78806faf468b89adf77f9ec9877d93dc9bc3af3b2",
+      "destination": "examples/stable/figure_4.svg",
+      "sha256": "18b2f7cf90e313debb5b3ac78806faf468b89adf77f9ec9877d93dc9bc3af3b2",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_5.png",
+      "source_sha256": "9d99d9b723e6b8f8b1ffd6d423d5f7549c16267f4e83f401faa323e618b7f431",
+      "destination": "examples/stable/figure_5.png",
+      "sha256": "9d99d9b723e6b8f8b1ffd6d423d5f7549c16267f4e83f401faa323e618b7f431",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_5.svg",
+      "source_sha256": "41ce2812deceea7d2d06535ebeec4a8126f387c6d682b58e9dbe095233c60fe7",
+      "destination": "examples/stable/figure_5.svg",
+      "sha256": "41ce2812deceea7d2d06535ebeec4a8126f387c6d682b58e9dbe095233c60fe7",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_6.png",
+      "source_sha256": "e0d67c141f88fb4e560ee7672883d775ef61529ed77c5af10a3b9feab1a537e0",
+      "destination": "examples/stable/figure_6.png",
+      "sha256": "e0d67c141f88fb4e560ee7672883d775ef61529ed77c5af10a3b9feab1a537e0",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_6.svg",
+      "source_sha256": "56f680ea7064597831d680fc8eefd861146b1c8359303bc62df06ae5f1ee260f",
+      "destination": "examples/stable/figure_6.svg",
+      "sha256": "56f680ea7064597831d680fc8eefd861146b1c8359303bc62df06ae5f1ee260f",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_7.png",
+      "source_sha256": "034b28898cc07e7a720177a24e9b7864da577fbf9c335002ccdf8e66ca1d422c",
+      "destination": "examples/stable/figure_7.png",
+      "sha256": "034b28898cc07e7a720177a24e9b7864da577fbf9c335002ccdf8e66ca1d422c",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/figure_7.svg",
+      "source_sha256": "b1c3b3ed2ba3bdf26055d56040bbf8df8526143754e95ff11b21e5a0bb0437b3",
+      "destination": "examples/stable/figure_7.svg",
+      "sha256": "b1c3b3ed2ba3bdf26055d56040bbf8df8526143754e95ff11b21e5a0bb0437b3",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/index.html",
+      "source_sha256": "71f55cf2303f4dfd86f5b91d5be0c5639a402cf6254bd5191a935cb081c7aab2",
+      "destination": "examples/stable/index.html",
+      "sha256": "71f55cf2303f4dfd86f5b91d5be0c5639a402cf6254bd5191a935cb081c7aab2",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/tables/components.csv",
+      "source_sha256": "ca616fc6c034125490fc4eb43245a9664ce3efe5087faa18a8c1f4f71e0d0b3f",
+      "destination": "examples/stable/tables/components.csv",
+      "sha256": "ca616fc6c034125490fc4eb43245a9664ce3efe5087faa18a8c1f4f71e0d0b3f",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/tables/credible_sets.csv",
+      "source_sha256": "50ee3072cc83a8d86de0b2407e39882de2fb39b2f8f74994e9268ae88fe99b75",
+      "destination": "examples/stable/tables/credible_sets.csv",
+      "sha256": "50ee3072cc83a8d86de0b2407e39882de2fb39b2f8f74994e9268ae88fe99b75",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/tables/cs_audit.csv",
+      "source_sha256": "34441f84756f3923225e69e936ec134d317a308cf2fff1da976ba713c8c62ef2",
+      "destination": "examples/stable/tables/cs_audit.csv",
+      "sha256": "34441f84756f3923225e69e936ec134d317a308cf2fff1da976ba713c8c62ef2",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/tables/cs_relations.csv",
+      "source_sha256": "b3d41e42d7c40f85515b5a68292b8fdf6d3faa3440c9a1159d3ec19a280933cc",
+      "destination": "examples/stable/tables/cs_relations.csv",
+      "sha256": "b3d41e42d7c40f85515b5a68292b8fdf6d3faa3440c9a1159d3ec19a280933cc",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/tables/prior_influence.csv",
+      "source_sha256": "b80c4041ac82fbbf395534a39070cf1746a3a61ccb32592e054585717f64c45f",
+      "destination": "examples/stable/tables/prior_influence.csv",
+      "sha256": "b80c4041ac82fbbf395534a39070cf1746a3a61ccb32592e054585717f64c45f",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/tables/trace.csv",
+      "source_sha256": "04f8a13b20e68ab30a2cea9fd33653baa79285b2d3debf4dbaf0a29e940fecf4",
+      "destination": "examples/stable/tables/trace.csv",
+      "sha256": "04f8a13b20e68ab30a2cea9fd33653baa79285b2d3debf4dbaf0a29e940fecf4",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/tables/variants.csv",
+      "source_sha256": "bbac1bcf6d7c38234a35f5e73fce4af037047cf6ef4d92029a15e6eea7fb8fdf",
+      "destination": "examples/stable/tables/variants.csv",
+      "sha256": "bbac1bcf6d7c38234a35f5e73fce4af037047cf6ef4d92029a15e6eea7fb8fdf",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/evidence.json",
+      "source_sha256": "34282f5d9a99f0d928f7d177934398d40140c7eebedef633758ec59de4b7fb16",
+      "destination": "examples/stable/evidence.json",
+      "sha256": "605dbe14a2ce1972043c167200f0dc14c7b7b550a172634af313c9b240a3ec83",
+      "transformation": "JSON whitespace compacted only; all facts/data/IDs/hash values preserved"
+    },
+    {
+      "source": "examples/final/stable/fits/analysis.json",
+      "source_sha256": "82c7c4406154d4bcb134eaae8695fdfe962852cd1e6fb075913810f85615df48",
+      "destination": "examples/stable/fits/analysis.json",
+      "sha256": "7b352bb49c7521198c8bae8e71cbc3bb8d895619e0429bebf0248db280cef268",
+      "transformation": "JSON whitespace compacted only; float bit encodings and all type tags preserved"
+    },
+    {
+      "source": "examples/final/stable/fits/arrays.npz",
+      "source_sha256": "a1a7b0f42100475795eaba540fcefedfcfc02afc924d5f9e9b66b54b224e930c",
+      "destination": "examples/stable/fits/arrays.npz",
+      "sha256": "a1a7b0f42100475795eaba540fcefedfcfc02afc924d5f9e9b66b54b224e930c",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/stable/evidence.json",
+      "source_sha256": "34282f5d9a99f0d928f7d177934398d40140c7eebedef633758ec59de4b7fb16",
+      "destination": "examples/stable/ld_diagnostics.json",
+      "sha256": "4309003c66266eb7329f2fdd0e73dc6b105e0925cf4c53c03d2a1a12e752bf95",
+      "transformation": "complete data/ld_diagnostics subtree"
+    },
+    {
+      "source": "examples/final/stable/evidence.json",
+      "source_sha256": "34282f5d9a99f0d928f7d177934398d40140c7eebedef633758ec59de4b7fb16",
+      "destination": "examples/stable/comparison.json",
+      "sha256": "8e90866dda22cdf1787be52f27fec7376004db6b70cadf552f272992c054b32c",
+      "transformation": "complete data/comparison subtree"
+    },
+    {
+      "source": "examples/final/stable/evidence.json",
+      "source_sha256": "34282f5d9a99f0d928f7d177934398d40140c7eebedef633758ec59de4b7fb16",
+      "destination": "examples/stable/provenance.json",
+      "sha256": "722e9ef8c2f488872cb19489064c02a936daa3867be7719f01730a34c1938743",
+      "transformation": "complete data/provenance subtree"
+    },
+    {
+      "source": "examples/final/stable/evidence.json",
+      "source_sha256": "34282f5d9a99f0d928f7d177934398d40140c7eebedef633758ec59de4b7fb16",
+      "destination": "examples/stable/refinement.json",
+      "sha256": "c03d97763df3cc68716d488ecdb95284597e3ef1659bbcf40c1c79149378067e",
+      "transformation": "complete data/summary/refinement subtree"
+    },
+    {
+      "source": "examples/final/stable/evidence.json",
+      "source_sha256": "34282f5d9a99f0d928f7d177934398d40140c7eebedef633758ec59de4b7fb16",
+      "destination": "examples/stable/posterior_summary.json",
+      "sha256": "a6ab8d2da28faf29f7c46a1211d7f56a1b62ca9363e97807ca636627ad0ecbcf",
+      "transformation": "summary except variants/prior_influence/refinement (available in CSV/evidence/refinement.json)"
+    },
+    {
+      "source": "examples/final/stable/fits/analysis.json",
+      "source_sha256": "82c7c4406154d4bcb134eaae8695fdfe962852cd1e6fb075913810f85615df48",
+      "destination": "examples/stable/convergence.json",
+      "sha256": "1a29aa741d2fc994ba342eec150b00ce6543c76b8e91036cf7b659d5c1da3428",
+      "transformation": "decoded exact baseline/refined convergence, trace, variances and sets; arrays from matching NPZ"
+    },
+    {
+      "source": "examples/final/stable/evidence.json",
+      "source_sha256": "34282f5d9a99f0d928f7d177934398d40140c7eebedef633758ec59de4b7fb16",
+      "destination": "examples/stable/review_values.json",
+      "sha256": "85f650c8490683f72cea0409a2e548b44a584a698e3968909b7a9f056dfa2c3f",
+      "transformation": "selected complete rows plus counts/extrema of existing rows; convergence also decoded from saved fits"
+    },
+    {
+      "source": "worktrees/post_analysis/src/prusie/data/teaching/inputs.npz",
+      "source_sha256": "56feaa892c2068e67dee0edf6262e8691144c569be7a092f9accbd14bde8ee2a",
+      "destination": "examples/stable/selected_ld.json",
+      "sha256": "f2942aac3bd3ddd4020d59fb23a18dd8446b7d70c88b2e2c49f15c4c517f25d5",
+      "transformation": "Selected entries from packaged sample Pearson R; no decomposition or fitting."
+    },
+    {
+      "source": "examples/final/stable/receipt.json",
+      "source_sha256": "6647cc79df5dcbb20c8a8c21a936ebf8eb8daeb5adb4b80b3415f6d17d631f1a",
+      "destination": "examples/stable/receipt_public.json",
+      "sha256": "64ed58a4df026b8fca1cb7f128873a41dc303ba87c9016c18460df1dc95422b7",
+      "transformation": "public numeric receipt fields; local paths omitted"
+    },
+    {
+      "source": "examples/final/problem/figure_1.png",
+      "source_sha256": "7172e6086af289dca305666c991911b5f7d72835839e1c7adeed59aae05938a9",
+      "destination": "examples/problem/figure_1.png",
+      "sha256": "7172e6086af289dca305666c991911b5f7d72835839e1c7adeed59aae05938a9",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_1.svg",
+      "source_sha256": "36c38590fb1aa97bfa046fb067b7c581a3b6163e851951264e31dd1dee3469fd",
+      "destination": "examples/problem/figure_1.svg",
+      "sha256": "36c38590fb1aa97bfa046fb067b7c581a3b6163e851951264e31dd1dee3469fd",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_2.png",
+      "source_sha256": "b3fdedfb71311dbf8c2de38b63ee031c71f5f5014438eb24f29c0a6597956c5b",
+      "destination": "examples/problem/figure_2.png",
+      "sha256": "b3fdedfb71311dbf8c2de38b63ee031c71f5f5014438eb24f29c0a6597956c5b",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_2.svg",
+      "source_sha256": "86d7e9305ec393057d5f81ee1ffb8a979b137d1826598d31575ee60212926293",
+      "destination": "examples/problem/figure_2.svg",
+      "sha256": "86d7e9305ec393057d5f81ee1ffb8a979b137d1826598d31575ee60212926293",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_3.png",
+      "source_sha256": "5641ec36d3beaaed7c87f2511314f7212750f5d7d117ce9dee086dad54fa26f3",
+      "destination": "examples/problem/figure_3.png",
+      "sha256": "5641ec36d3beaaed7c87f2511314f7212750f5d7d117ce9dee086dad54fa26f3",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_3.svg",
+      "source_sha256": "6cea659165783a2b7b77e6d541422b388fb919d87e06942b45b57c79fc708005",
+      "destination": "examples/problem/figure_3.svg",
+      "sha256": "6cea659165783a2b7b77e6d541422b388fb919d87e06942b45b57c79fc708005",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_4.png",
+      "source_sha256": "8ff124c8d90c23d3c76f8eba9c9d440fec4efd59e3ed169a5cd2013334a6f79f",
+      "destination": "examples/problem/figure_4.png",
+      "sha256": "8ff124c8d90c23d3c76f8eba9c9d440fec4efd59e3ed169a5cd2013334a6f79f",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_4.svg",
+      "source_sha256": "f9f9676e3d1b35c0efaf610cb616d92702e832d87612524cf9f34853f9c1b75a",
+      "destination": "examples/problem/figure_4.svg",
+      "sha256": "f9f9676e3d1b35c0efaf610cb616d92702e832d87612524cf9f34853f9c1b75a",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_5.png",
+      "source_sha256": "639322d9ec06ba4350a477f301642916800da248adee09d9101dac7205b97982",
+      "destination": "examples/problem/figure_5.png",
+      "sha256": "639322d9ec06ba4350a477f301642916800da248adee09d9101dac7205b97982",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_5.svg",
+      "source_sha256": "48fa6a40ebf441c07356532c41a8595da9dcab703fcca41cdbb0cc28960749c1",
+      "destination": "examples/problem/figure_5.svg",
+      "sha256": "48fa6a40ebf441c07356532c41a8595da9dcab703fcca41cdbb0cc28960749c1",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_6.png",
+      "source_sha256": "7e37a8a64c60f3fd82159957e744fc87631cd24f278b11586842d518ff91d3df",
+      "destination": "examples/problem/figure_6.png",
+      "sha256": "7e37a8a64c60f3fd82159957e744fc87631cd24f278b11586842d518ff91d3df",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_6.svg",
+      "source_sha256": "4d04ae3a4e4ed677d95fa734568f7dd54dc5ee7396d477cfca07166798d9f868",
+      "destination": "examples/problem/figure_6.svg",
+      "sha256": "4d04ae3a4e4ed677d95fa734568f7dd54dc5ee7396d477cfca07166798d9f868",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_7.png",
+      "source_sha256": "56e98abcb09aa2a3f2fa7292f2d07132100edfba3fa48ea2066d71ff30248ab0",
+      "destination": "examples/problem/figure_7.png",
+      "sha256": "56e98abcb09aa2a3f2fa7292f2d07132100edfba3fa48ea2066d71ff30248ab0",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/figure_7.svg",
+      "source_sha256": "d647adc5e7bcfda22600ee01fe0c9d87c936a7a4023b0b246439d04ebd19b4a1",
+      "destination": "examples/problem/figure_7.svg",
+      "sha256": "d647adc5e7bcfda22600ee01fe0c9d87c936a7a4023b0b246439d04ebd19b4a1",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/index.html",
+      "source_sha256": "f504443d05a36ce49e64b9ba326d4ce003d587bf27026bf5ed01ea251ff7711c",
+      "destination": "examples/problem/index.html",
+      "sha256": "f504443d05a36ce49e64b9ba326d4ce003d587bf27026bf5ed01ea251ff7711c",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/tables/components.csv",
+      "source_sha256": "745ef2ea5aa96ef72d3d7965a7b97253349060d05f59663a2df66ed2e029ea3b",
+      "destination": "examples/problem/tables/components.csv",
+      "sha256": "745ef2ea5aa96ef72d3d7965a7b97253349060d05f59663a2df66ed2e029ea3b",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/tables/credible_sets.csv",
+      "source_sha256": "387172359d79cb33600956ef40f637e8796c22cffc5a51461cb4c7ec784a4d6b",
+      "destination": "examples/problem/tables/credible_sets.csv",
+      "sha256": "387172359d79cb33600956ef40f637e8796c22cffc5a51461cb4c7ec784a4d6b",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/tables/cs_audit.csv",
+      "source_sha256": "ba839d525677070d7de34bc5e6bfe905642d33f67e343de029e0082e24285a6f",
+      "destination": "examples/problem/tables/cs_audit.csv",
+      "sha256": "ba839d525677070d7de34bc5e6bfe905642d33f67e343de029e0082e24285a6f",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/tables/cs_relations.csv",
+      "source_sha256": "0c0b2e5b99ee94b79ffc8536626461046ed3696b6fa78b303e10a87daea4c2ee",
+      "destination": "examples/problem/tables/cs_relations.csv",
+      "sha256": "0c0b2e5b99ee94b79ffc8536626461046ed3696b6fa78b303e10a87daea4c2ee",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/tables/prior_influence.csv",
+      "source_sha256": "ddef41eb578a2b97dfc20fca7ef66cb3cb889be0b2b7adc50f1faa1cbaa3021e",
+      "destination": "examples/problem/tables/prior_influence.csv",
+      "sha256": "ddef41eb578a2b97dfc20fca7ef66cb3cb889be0b2b7adc50f1faa1cbaa3021e",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/tables/trace.csv",
+      "source_sha256": "be830bf73c32c71498fc95894aa1ca2b8a8eb9965bdefae4ed5e51dfa729cc3e",
+      "destination": "examples/problem/tables/trace.csv",
+      "sha256": "be830bf73c32c71498fc95894aa1ca2b8a8eb9965bdefae4ed5e51dfa729cc3e",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/tables/variants.csv",
+      "source_sha256": "1e2f20e18764bd7bbe42f531461a30074bf5007ea700a9a02f1efda2114bd77b",
+      "destination": "examples/problem/tables/variants.csv",
+      "sha256": "1e2f20e18764bd7bbe42f531461a30074bf5007ea700a9a02f1efda2114bd77b",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/evidence.json",
+      "source_sha256": "a5dda40377b992d9cd3f99dd5b734526437d8aed24a1d03cb905c794c0a09079",
+      "destination": "examples/problem/evidence.json",
+      "sha256": "9472b1edf70b5a887715ea0f62cf7464f2fd036f502fe19f39a22f829bb3b08a",
+      "transformation": "JSON whitespace compacted only; all facts/data/IDs/hash values preserved"
+    },
+    {
+      "source": "examples/final/problem/fits/analysis.json",
+      "source_sha256": "4db5631e50e88a860985abfeedc7dc045f01d9dd1b7a804681553b662bf52b4b",
+      "destination": "examples/problem/fits/analysis.json",
+      "sha256": "e63b56532af0d4f4cfb13f5f12ba848e19b49aa7b52334d4426fac2254eb58a1",
+      "transformation": "JSON whitespace compacted only; float bit encodings and all type tags preserved"
+    },
+    {
+      "source": "examples/final/problem/fits/arrays.npz",
+      "source_sha256": "62bbfdc0d81e418cff6f5530873e7aea5a4282e472a97d75fb3b2b1fdd011df6",
+      "destination": "examples/problem/fits/arrays.npz",
+      "sha256": "62bbfdc0d81e418cff6f5530873e7aea5a4282e472a97d75fb3b2b1fdd011df6",
+      "transformation": "byte-identical copy"
+    },
+    {
+      "source": "examples/final/problem/evidence.json",
+      "source_sha256": "a5dda40377b992d9cd3f99dd5b734526437d8aed24a1d03cb905c794c0a09079",
+      "destination": "examples/problem/ld_diagnostics.json",
+      "sha256": "af0a734cc1dffe1ce07b5a4538fe10bac959b9903ad971a045ef2b548ecc7e9e",
+      "transformation": "complete data/ld_diagnostics subtree"
+    },
+    {
+      "source": "examples/final/problem/evidence.json",
+      "source_sha256": "a5dda40377b992d9cd3f99dd5b734526437d8aed24a1d03cb905c794c0a09079",
+      "destination": "examples/problem/comparison.json",
+      "sha256": "8e6b6f81d5ac302f624786df2e521840365ae57b7c54fe5ae8687c2a55984805",
+      "transformation": "complete data/comparison subtree"
+    },
+    {
+      "source": "examples/final/problem/evidence.json",
+      "source_sha256": "a5dda40377b992d9cd3f99dd5b734526437d8aed24a1d03cb905c794c0a09079",
+      "destination": "examples/problem/provenance.json",
+      "sha256": "3f65feb839cad2db95801c76571f23eaae545d2af05a1b7fce8b56044264a99d",
+      "transformation": "complete data/provenance subtree"
+    },
+    {
+      "source": "examples/final/problem/evidence.json",
+      "source_sha256": "a5dda40377b992d9cd3f99dd5b734526437d8aed24a1d03cb905c794c0a09079",
+      "destination": "examples/problem/refinement.json",
+      "sha256": "4818a9764b05bbf7e80358d7d132faab707e1f42156d2c24de96a5e48d9eddf7",
+      "transformation": "complete data/summary/refinement subtree"
+    },
+    {
+      "source": "examples/final/problem/evidence.json",
+      "source_sha256": "a5dda40377b992d9cd3f99dd5b734526437d8aed24a1d03cb905c794c0a09079",
+      "destination": "examples/problem/posterior_summary.json",
+      "sha256": "09a53bbe292c4aa1098728eb86d81e1b7e65e6d9022ad8e5e7c6bb576a250509",
+      "transformation": "summary except variants/prior_influence/refinement (available in CSV/evidence/refinement.json)"
+    },
+    {
+      "source": "examples/final/problem/fits/analysis.json",
+      "source_sha256": "4db5631e50e88a860985abfeedc7dc045f01d9dd1b7a804681553b662bf52b4b",
+      "destination": "examples/problem/convergence.json",
+      "sha256": "bd79235eb8ddf064365fc2eddc0e29ca31afde198678abb3cdafcbdd179a0083",
+      "transformation": "decoded exact baseline/refined convergence, trace, variances and sets; arrays from matching NPZ"
+    },
+    {
+      "source": "examples/final/problem/evidence.json",
+      "source_sha256": "a5dda40377b992d9cd3f99dd5b734526437d8aed24a1d03cb905c794c0a09079",
+      "destination": "examples/problem/review_values.json",
+      "sha256": "01f97cf237770ecde4017f3be4b4138eb4a9a4c7d25e78937ee217608a6647fb",
+      "transformation": "selected complete rows plus counts/extrema of existing rows; convergence also decoded from saved fits"
+    },
+    {
+      "source": "worktrees/post_analysis/src/prusie/data/convergence/inputs.npz",
+      "source_sha256": "5e8549ca8d0fd0ad4c166243a3a377ffcc3ed2e85cdadb6a221abcc55bf0c41b",
+      "destination": "examples/problem/selected_ld.json",
+      "sha256": "929b3fc6e103eb1639f4cecb48c97d8e86cd5483dafaf9f9fe75f4a67263b040",
+      "transformation": "Selected XtX[i,j]/sqrt(XtX[i,i]*XtX[j,j]) entries; no fitting."
+    },
+    {
+      "source": "examples/final/problem/receipt.json",
+      "source_sha256": "87bc53c6fdbbabc27b9a1878c06080ce544942f135f1201fd1bc24490f3bfd23",
+      "destination": "examples/problem/receipt_public.json",
+      "sha256": "6914fcefcb3c7c3b7c8c1c94b8a287ed0206bdc2a35c826600ef58b42488900f",
+      "transformation": "public numeric receipt fields; local paths omitted"
+    },
+    {
+      "source": "reports/numerical_validation.json",
+      "source_sha256": "57ae08af0a4ceb67d690f5ff8a19b5916d1ef722b83ec58b5f7d2b8e3611b2b5",
+      "destination": "numerical/numerical_validation.json",
+      "sha256": "28cba2f4d27df659d55f7e04916bf054348116882796aa030937dbe78cee9bef",
+      "transformation": "omit module path/CPU affinity; replace remaining local path prefixes; preserve every numerical result"
+    },
+    {
+      "source": "reports/overheads.json",
+      "source_sha256": "ab32e657bd6b8b4a006d082da1ec52a6f296f9185e16d605054da69f3ec4e0cd",
+      "destination": "numerical/overheads.json",
+      "sha256": "92eb57054041bba249eac48df79022a9e5e5b72e45b13e6d07bc723745eda50f",
+      "transformation": "omit module path/CPU affinity; replace remaining local path prefixes; preserve every numerical result"
+    },
+    {
+      "source": "reports/verification.json",
+      "source_sha256": "e915c662538e33809066605d5d1999b4e8aa8aa4e97b228810aa53c1f89690f3",
+      "destination": "numerical/verification_summary.json",
+      "sha256": "3f4a2eac62ef1529f547fe133fcdb075523803bd7c221f45342d5e5279dd547b",
+      "transformation": "selected outcomes, failed attempts and resolutions; no raw logs/host/process/command dump"
+    },
+    {
+      "source": "reports/acceptance.json",
+      "source_sha256": "576c8e253d5ea0a1fc09bfc3fa6ad585d57156452a9d7d5d6837469af0424216",
+      "destination": "numerical/acceptance.json",
+      "sha256": "4bc2597239766683876dc94558e8eced6c896727b241b3382fd74dc545c26bf9",
+      "transformation": "acceptance fields only; original machine-local artifact paths/evidence ledger omitted"
+    },
+    {
+      "source": "reports/implementation_mapping.md",
+      "source_sha256": "04a2d0eb58b20e0344072030dea4b4bed376f088ef820b3b26b393f3fe0e0aab",
+      "destination": "numerical/implementation_mapping.md",
+      "sha256": "1f67fc297224808a36fd674af2c035024447e19e52d412c421b683d7faea9966",
+      "transformation": "public edition: local library locator generalized; reference index renamed; algorithm discussion unchanged"
+    },
+    {
+      "source": "reference/ld_oracles.json",
+      "source_sha256": "f5c11e25e5c275ed99779fdfed89809823c3828203193c68a3786601326cda6a",
+      "destination": "numerical/ld_oracles.json",
+      "sha256": "02a21bef413ae0397e76e0d12782b28805b82941fe19a05cd6b4b9384aa546ef",
+      "transformation": "retain complete reference values, candidate states and solver certificates; omit library/session paths"
+    },
+    {
+      "source": "reference/kriging_certified_oracle.json",
+      "source_sha256": "da79591f53d2fd0913591fee6c69024066cfcda881d75b71b2d96f03e67d4961",
+      "destination": "numerical/kriging_certified_oracle.json",
+      "sha256": "e259b4dbff7a2351ebe5419ed83a1d07cb84df53bb863cfafdd21ef421ff7890",
+      "transformation": "retain complete reference values, candidate states and solver certificates; omit library/session paths"
+    },
+    {
+      "source": "reference/refinement_oracle_old.json",
+      "source_sha256": "235ab27ae76bb68ea2a6a395461b4c826ce83bb1b36fee75175d9cf531e0d6da",
+      "destination": "numerical/refinement_oracle_old.json",
+      "sha256": "e895ec42e0906d14063b2bf9a5faa25e6f90e4683a1992f63ea5549f0d6d7b73",
+      "transformation": "retain complete reference values, candidate states and solver certificates; omit library/session paths"
+    },
+    {
+      "source": "reference/refinement_oracle_latest.json",
+      "source_sha256": "b283adad5233d85660eeedcd0aa4253219014c4e3d7fc885dec9ada3b0a0aea2",
+      "destination": "numerical/refinement_oracle_latest.json",
+      "sha256": "3babca8b7fedec03c15cfcc03b500d006821126f67fa4d32d5a3c86a034c0b30",
+      "transformation": "retain complete reference values, candidate states and solver certificates; omit library/session paths"
+    },
+    {
+      "source": "reference/convergence_semantics.json",
+      "source_sha256": "7efb5f1dd73593158337c1ab4a9ec72bfc624bc6c4105f619c40e09153df3b6b",
+      "destination": "numerical/convergence_semantics.json",
+      "sha256": "f23c07064fd91295ee471669c58c87557382130868ca0adef46e3c1ae89ee89d",
+      "transformation": "retain complete reference values, candidate states and solver certificates; omit library/session paths"
+    },
+    {
+      "source": "reports/reference_lock.json",
+      "source_sha256": "1fc4fb300304569a1ee52568b4c3d8f92bc51f7366e199c34b04bfc0ecbfef45",
+      "destination": "numerical/reference_identity.json",
+      "sha256": "2222958fd004ae8579c77fe1159c55d3565ca1ecdc7f6b612fa3bb3285d7c2c5",
+      "transformation": "path prefixes made relative; no upstream source archive included"
+    }
+  ],
+  "adapted_documents": [
+    {
+      "source": "reports/REPRODUCE.md",
+      "source_sha256": "8dd6b8403a89d7df37f34a17861b6133fdd1c84df5c59eb1a1c63b38f8b232d2",
+      "destination": "REPRODUCE.md",
+      "transformation": "Manually adapted inspection/reproduction guide without server-specific commands; not an original complete report"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "source_file": "src/prusie/data/teaching/inputs.npz",
+  "source_sha256": "56feaa892c2068e67dee0edf6262e8691144c569be7a092f9accbd14bde8ee2a",
+  "method": "Selected entries from packaged sample Pearson R; no decomposition or fitting.",
+  "pairs": [
+    {
+      "variant_a": "syn0100",
+      "variant_b": "syn0101",
+      "signed_r": 0.8578683400236036,
+      "r_squared": 0.7359380888148531
+    },
+    {
+      "variant_a": "syn0100",
+      "variant_b": "syn0143",
+      "signed_r": -0.0281602220076408,
+      "r_squared": 0.0007929981035196172
+    },
+    {
+      "variant_a": "syn0100",
+      "variant_b": "syn0145",
+      "signed_r": -0.046277310195840804,
+      "r_squared": 0.0021415894389620713
+    },
+    {
+      "variant_a": "syn0100",
+      "variant_b": "syn0350",
+      "signed_r": 0.027360870753297715,
+      "r_squared": 0.0007486172483786623
+    },
+    {
+      "variant_a": "syn0101",
+      "variant_b": "syn0143",
+      "signed_r": -0.01491662935343627,
+      "r_squared": 0.00022250583126779658
+    },
+    {
+      "variant_a": "syn0101",
+      "variant_b": "syn0145",
+      "signed_r": -0.02939128864020507,
+      "r_squared": 0.0008638478479318476
+    },
+    {
+      "variant_a": "syn0101",
+      "variant_b": "syn0350",
+      "signed_r": 0.008909192409820799,
+      "r_squared": 7.937370939520852e-05
+    },
+    {
+      "variant_a": "syn0143",
+      "variant_b": "syn0145",
+      "signed_r": 0.7284274745810307,
+      "r_squared": 0.5306065857244981
+    },
+    {
+      "variant_a": "syn0143",
+      "variant_b": "syn0350",
+      "signed_r": -0.020313418139173804,
+      "r_squared": 0.00041263495649691536
+    },
+    {
+      "variant_a": "syn0145",
+      "variant_b": "syn0350",
+      "signed_r": -0.008623676541884694,
+      "r_squared": 7.436779709905235e-05
+    }
+  ]
+}

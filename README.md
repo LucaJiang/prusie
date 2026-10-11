@@ -87,3 +87,7 @@ Author and maintainer: Wenxin Jiang.
 GPL-3.0-or-later. [LICENSE](LICENSE) and
 [third-party notices](THIRD_PARTY_NOTICES.md) retain upstream code and data
 attribution.
+
+## Post-analysis review snapshot
+
+The `post_analysis` branch includes a [source and numerical evidence review guide](docs/review/post_analysis/README.md), with two recorded examples, figures and interpretations for scientific review.
