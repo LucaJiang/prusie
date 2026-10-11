@@ -1,0 +1,62 @@
+[
+  {
+    "title": "locus overview",
+    "png": "figure_1.png",
+    "svg": "figure_1.svg",
+    "section": "locus"
+  },
+  {
+    "title": "convergence before and after",
+    "png": "figure_2.png",
+    "svg": "figure_2.svg",
+    "section": "fit"
+  },
+  {
+    "title": "refinement",
+    "png": "figure_3.png",
+    "svg": "figure_3.svg",
+    "section": "fit"
+  },
+  {
+    "title": "LD diagnostics",
+    "png": "figure_4.png",
+    "svg": "figure_4.svg",
+    "section": "ld"
+  },
+  {
+    "title": "sensitivity main signals",
+    "png": "figure_5.png",
+    "svg": "figure_5.svg",
+    "section": "sensitivity"
+  },
+  {
+    "title": "signal detail component 1",
+    "png": "figure_6.png",
+    "svg": "figure_6.svg",
+    "section": "signal"
+  },
+  {
+    "title": "prior influence component 1 (CS and top 10)",
+    "png": "figure_7.png",
+    "svg": "figure_7.svg",
+    "section": "signal"
+  },
+  {
+    "title": "signal detail component 0",
+    "png": "figure_8.png",
+    "svg": "figure_8.svg",
+    "section": "signal"
+  },
+  {
+    "title": "prior influence component 0 (CS and top 10)",
+    "png": "figure_9.png",
+    "svg": "figure_9.svg",
+    "section": "signal"
+  },
+  {
+    "title": "variance details before and after",
+    "png": "figure_10.png",
+    "svg": "figure_10.svg",
+    "section": "variance"
+  }
+]

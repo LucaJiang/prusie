@@ -1,0 +1,357 @@
+{
+  "schema_version": "prusie.analysis_summary.v1",
+  "evidence_entries": {
+    "main_results": "/summary/credible_sets",
+    "variants": "/summary/variants",
+    "fit": "/summary/convergence",
+    "refinement": "/summary/refinement",
+    "sensitivity": "/comparison",
+    "ld": "/ld_diagnostics"
+  },
+  "results": {
+    "retained_cs": 2,
+    "variant_count": 200,
+    "active_components": 2,
+    "credible_sets": [
+      {
+        "component_id": 1,
+        "members": [
+          "86",
+          "90"
+        ],
+        "size": 2,
+        "representative": "90",
+        "requested_coverage": 0.95,
+        "actual_coverage": 0.9999999912437146,
+        "min_abs_corr": 0.9989091776612095,
+        "mean_abs_corr": 0.9989091776612095,
+        "median_abs_corr": 0.9989091776612095,
+        "effective_candidates": 1.5953381386626992
+      },
+      {
+        "component_id": 2,
+        "members": [
+          "33"
+        ],
+        "size": 1,
+        "representative": "33",
+        "requested_coverage": 0.95,
+        "actual_coverage": 1.0,
+        "min_abs_corr": 1.0,
+        "mean_abs_corr": 1.0,
+        "median_abs_corr": 1.0,
+        "effective_candidates": 1.000000000000001
+      }
+    ],
+    "candidates": [
+      {
+        "variant_id": "33",
+        "pip": 1.0,
+        "rank": 1,
+        "cs_components": [
+          2
+        ],
+        "selection_sources": [
+          "formal_CS_member",
+          "top_PIP",
+          "PIP_threshold"
+        ]
+      },
+      {
+        "variant_id": "90",
+        "pip": 0.8228231130062094,
+        "rank": 2,
+        "cs_components": [
+          1
+        ],
+        "selection_sources": [
+          "formal_CS_member",
+          "top_PIP",
+          "PIP_threshold"
+        ]
+      },
+      {
+        "variant_id": "86",
+        "pip": 0.17717687823750528,
+        "rank": 3,
+        "cs_components": [
+          1
+        ],
+        "selection_sources": [
+          "formal_CS_member",
+          "top_PIP",
+          "PIP_threshold"
+        ]
+      },
+      {
+        "variant_id": "79",
+        "pip": 8.756285363453742e-09,
+        "rank": 4,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "0",
+        "pip": 0.0,
+        "rank": 5,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "1",
+        "pip": 0.0,
+        "rank": 6,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "10",
+        "pip": 0.0,
+        "rank": 7,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "100",
+        "pip": 0.0,
+        "rank": 8,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "101",
+        "pip": 0.0,
+        "rank": 9,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "102",
+        "pip": 0.0,
+        "rank": 10,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      }
+    ],
+    "candidate_policy": {
+      "all_CS_members": true,
+      "pip_threshold": 0.1,
+      "top_candidates": 10
+    },
+    "causal_count": "not_identified_by_CS_count"
+  },
+  "fit": {
+    "requested_criterion": "elbo",
+    "effective_criterion": "elbo",
+    "niter": 3,
+    "stop_reason": "criterion_satisfied",
+    "tol": 0.001,
+    "alpha_tol": 0.0001,
+    "pip_tol": 0.0001,
+    "min_iter": 2,
+    "max_cycle_lag": 5,
+    "fallback_iterations": [],
+    "elbo_decrease_count": 0,
+    "nonfinite_elbo_count": 0,
+    "finalization": {
+      "phase": "post_loop_post_sigma2_update_and_trim",
+      "trimmed_components": [
+        0,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "max_abs_delta_alpha": 0.0,
+      "max_abs_delta_pip": 0.0,
+      "sigma2": 0.9940978424504077
+    },
+    "last": {
+      "iteration": 3,
+      "phase": "post_sweep_pre_sigma2_update",
+      "elbo": -70814.81327158018,
+      "delta_elbo": 4.220055416226387e-09,
+      "relative_delta_elbo": 5.959283405919469e-14,
+      "max_abs_delta_alpha": 6.798545404418377e-08,
+      "max_abs_delta_pip": 6.798545404418377e-08,
+      "max_abs_delta_bbar": 2.549280071345583e-07,
+      "sigma2": 0.9940978424504077,
+      "delta_sigma2": -3.135608899196285e-07,
+      "events": [
+        "fixed_point"
+      ]
+    },
+    "trajectory_available": true,
+    "pending": "The selected inner stopping condition was satisfied; this does not establish a global optimum."
+  },
+  "refinement": {
+    "status": "completed",
+    "stop_reason": "no_improvement_above_absolute_tol",
+    "attempts": 5,
+    "accepted_attempts": 1,
+    "inner_fits": 10,
+    "rounds": 2,
+    "before_objective": -70832.27160472395,
+    "after_objective": -70814.81329542199,
+    "improvement": 17.45830930196098,
+    "objective_definition": "common original-prior objective recomputed from the complete post-trim state",
+    "before_logged_elbo": -70832.27160472395,
+    "after_logged_elbo": -70814.81327158018,
+    "config": {
+      "max_rounds": 10,
+      "absolute_tol": 0.001,
+      "relative_tol": null,
+      "max_iter": 100,
+      "inner_tol": 0.001,
+      "candidate_budget": null
+    }
+  },
+  "ld": {
+    "status": "recorded",
+    "total": 200,
+    "assessed": 200,
+    "flagged": 0,
+    "not_flagged": 200,
+    "conditional_only": 0,
+    "unassessed": 0,
+    "mixture": {
+      "status": "assessed",
+      "optimizer": "scipy SLSQP convex simplex likelihood",
+      "converged": true,
+      "kkt_max_violation": 1.5091927707544528e-10
+    },
+    "thresholds": {
+      "flip_log_lr": 2.0,
+      "flip_abs_z": 2.0,
+      "strict": true
+    },
+    "regularization": 4.2300630066830894e-13,
+    "method": "susieR RSS kriging normal scale mixture",
+    "warnings": []
+  },
+  "sensitivity": {
+    "status": "recorded",
+    "baseline": "baseline",
+    "settings": [
+      "baseline",
+      "refined",
+      "larger_L"
+    ],
+    "relation_counts": {
+      "matched": 4,
+      "unmatched": 3
+    },
+    "pairs": [
+      {
+        "setting_a": "baseline",
+        "setting_b": "refined",
+        "shared_variant_count": 200,
+        "support_scope": "pairwise_intersection",
+        "full_region_pip_correlation": 0.3190198281674841,
+        "max_abs_delta_pip": 0.9999999999999998,
+        "candidate_max_abs_delta_pip": 0.9999999999999998
+      },
+      {
+        "setting_a": "baseline",
+        "setting_b": "larger_L",
+        "shared_variant_count": 200,
+        "support_scope": "pairwise_intersection",
+        "full_region_pip_correlation": 0.9999999502646519,
+        "max_abs_delta_pip": 0.00969418571478775,
+        "candidate_max_abs_delta_pip": 0.009667514947491074
+      }
+    ],
+    "layer": "CS-supported signals",
+    "layer_summary": {
+      "settings": {
+        "baseline": {
+          "retained_cs": 3,
+          "active_components": 10,
+          "unretained_active_components": 7
+        },
+        "refined": {
+          "retained_cs": 2,
+          "active_components": 2,
+          "unretained_active_components": 0
+        },
+        "larger_L": {
+          "retained_cs": 3,
+          "active_components": 12,
+          "unretained_active_components": 9
+        }
+      },
+      "baseline_relation_counts": {
+        "matched": 4,
+        "ambiguous": 0,
+        "split": 0,
+        "merge": 0,
+        "unresolved": 0,
+        "unmatched": 3
+      }
+    },
+    "legacy_format": false,
+    "mode": "union",
+    "support": {
+      "variant_table": "union",
+      "variant_ranks": "original_fit",
+      "pairwise_metrics": "pairwise_intersection",
+      "matching_overlap": "pairwise_intersection",
+      "omitted_posterior_mass": "pairwise_intersection",
+      "component_records": "original_fit",
+      "representative_ld": "original_representatives_in_ld_reference",
+      "global_common_ids": null
+    },
+    "regional_maxima": [
+      {
+        "setting_a": "baseline",
+        "setting_b": "refined",
+        "variant_id": "32",
+        "max_abs_delta_pip": 0.9999999999999998,
+        "pip_a": 0.9999999999999998,
+        "pip_b": 0.0,
+        "in_candidate_view": true,
+        "tied_maxima": 1,
+        "evidence_pointer": "/comparison/variants/126",
+        "support_scope": "pairwise_intersection"
+      },
+      {
+        "setting_a": "baseline",
+        "setting_b": "larger_L",
+        "variant_id": "0",
+        "max_abs_delta_pip": 0.00969418571478775,
+        "pip_a": 0.038560306751959095,
+        "pip_b": 0.048254492466746846,
+        "in_candidate_view": false,
+        "tied_maxima": 1,
+        "evidence_pointer": "/comparison/variants/0",
+        "support_scope": "pairwise_intersection"
+      }
+    ]
+  },
+  "evidence_sha256": "d11b7bb8ee8652233838a211590eaf0dba889d7ea3a7b7df3cb4edcddb74972f",
+  "files": {
+    "evidence": "evidence.json",
+    "lossless_structure": "analysis.json",
+    "lossless_arrays": "arrays.npz",
+    "tables": "tables/",
+    "figures": "figure_index.json",
+    "text_summary": "summary.txt"
+  }
+}

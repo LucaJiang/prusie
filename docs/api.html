@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
+<meta name="description" content="Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.">
 
 <title>Python API · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
@@ -17,7 +17,7 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
 <span class="version">0.2.4.dev1 <span>development snapshot</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html" aria-current="page">API</a><a href="post_analysis.html">Post-analysis</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html" aria-current="page">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -31,11 +31,15 @@
 <li><a href="#posterior-helpers">Posterior helpers</a></li>
 <li><a href="#load_example">load_example</a></li>
 <li><a href="#convergence-and-post-analysis">Convergence and post-analysis</a></li>
+<li><a href="#summaries-comparisons-and-reports">Summaries, comparisons and reports</a></li>
+<li><a href="#figures-and-local-style">Figures and local style</a></li>
 </ul>
 </div>
 </details><h1 id="python-api">Python API</h1>
-<p>The top-level exports are <code>susie_rss</code>, <code>susie_suff_stat</code>, <code>SusieResult</code> and
-<code>load_example</code>. All numerical inputs are converted to float64 as needed.
+<p>The fitting entry points are <code>susie_rss</code> and <code>susie_suff_stat</code>, both returning
+<code>SusieResult</code>. <code>load_example</code> supplies the packaged toy data; the analysis
+helpers below operate on a completed fit. Numerical fitting inputs are converted
+to float64 as needed.
 Result indices are zero-based. See <a href="inputs.html">inputs</a> for alignment and
 <a href="results.html">results</a> for the complete return schema.</p>
 <h2 id="susie_rss">susie_rss</h2>
@@ -208,7 +212,7 @@ statistics. Use fixed variance with external LD unless estimation is justified.
 In missing-n mode, <code>prior_variance</code> (default 50) replaces
 <code>scaled_prior_variance</code>; changing the latter from 0.2 raises an error.</p>
 <p>Full signatures and docstrings are available through Python <code>help()</code> and the
-<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py">API source</a>.</p>
+<a href="https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/api.py">API source</a>.</p>
 <h2 id="susieresult">SusieResult</h2>
 <p>Both fitting functions return a <code>SusieResult</code>, including <code>pip</code>, <code>alpha</code>, <code>mu</code>,
 <code>mu2</code>, <code>lbf_variable</code>, <code>lbf</code>, <code>V</code>, <code>sigma2</code>, <code>elbo</code>, <code>KL</code>, <code>sets</code>, <code>niter</code>,
@@ -244,9 +248,129 @@ without network access. See the <a href="example.html">toy example tutorial</a>.
 <p><code>continue_fit</code>, <code>refine_fit</code>, <code>evaluate_objective</code>, <code>summarize</code>, <code>diagnose_ld</code>,
 <code>compare_fits</code> and <code>run_sensitivity</code> are independent explicit operations.
 <code>RefinementConfig</code> separates search thresholds/budgets from inner IBSS tolerances.
-See <a href="post_analysis.html">post-analysis</a> for costs, initialization metadata,
-phase definitions, methods and runnable examples. Plotting, reports and the
-optional CLI adapter live in <code>prusie.plots</code>, <code>prusie.report</code> and <code>prusie.ai</code>.</p></article>
+See <a href="post_analysis.html">convergence and refinement</a> for costs, initialization
+checks, phases and runnable examples. <code>continue_fit(fit, max_iter=100, tol=None)</code>
+inherits the original ELBO tolerance when <code>tol</code> is omitted. Requested convergence
+controls persist across continuation, refinement and sensitivity; effective
+fallback is recorded separately.</p>
+<h2 id="summaries-comparisons-and-reports">Summaries, comparisons and reports</h2>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>summarize(fit, R=None, *, z=None, ...)</code></td>
+<td>Component, variant, CS, proxy and prior-influence tables; no new fit</td>
+</tr>
+<tr>
+<td><code>summary_text(summary, *, ld=None, comparison=None)</code></td>
+<td>Deterministic short string for <code>print</code>; no fitting, eigendecomposition or plotting</td>
+</tr>
+<tr>
+<td><code>compare_fits(fits, *, baseline=None, mode="union", R=None, ...)</code></td>
+<td>Compare a named mapping of existing fits using explicit ID/support rules</td>
+</tr>
+<tr>
+<td><code>run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, ...)</code></td>
+<td>Execute a finite named one-factor plan; report-only choices reuse a posterior</td>
+</tr>
+<tr>
+<td><code>diagnose_ld(z, R, n=None, ...)</code></td>
+<td>Explicit conditional z/LD and allele-flip diagnostics</td>
+</tr>
+<tr>
+<td><code>write_report(summary, directory, *, figures=None, ld=None, comparison=None, ...)</code></td>
+<td>Offline HTML, text and full evidence exports; include only supplied figures</td>
+</tr>
+</tbody>
+</table></div>
+<p>The first five functions are exported at the package top level. <code>write_report</code>,
+<code>save_analysis</code>, <code>load_analysis</code> and <code>analysis_summary</code> live in <code>prusie.report</code>.
+The <a href="example.html#write-an-offline-report">quick start</a> gives a minimal report call;
+<a href="sensitivity.html">sensitivity and LD</a> specifies prior remapping, alternative inputs,
+common/union support and missing-assessment states. Optional AI adapters live in
+<code>prusie.ai</code>; ordinary summaries and reports are independent of them.</p>
+<h2 id="figures-and-local-style">Figures and local style</h2>
+<p>Every function in <code>prusie.plots</code> returns <code>(figure, axes, plotted_data)</code>. The third
+item records selection rules and plotted values alongside the complete evidence
+needed to interpret the view. Existing Matplotlib axes can be passed with
+<code>axes=...</code>; their count must match the selected layout.</p>
+<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<thead>
+<tr>
+<th>Function</th>
+<th>View and layout choices</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>plot_locus(summary, *, R=None, layout="full", ...)</code></td>
+<td>Association, PIP, CS and reference r² on the same coordinates; optional annotated gene track</td>
+</tr>
+<tr>
+<td><code>plot_convergence(fit_or_summary, *, after=None, layout="full", ...)</code></td>
+<td><code>compact</code>: ELBO, signed ΔELBO, Δalpha, ΔPIP; <code>variance</code>: V and sigma²; <code>full</code>: all six metrics</td>
+</tr>
+<tr>
+<td><code>plot_refinement(before, after, *, layout="full", ...)</code></td>
+<td>Candidate PIPs, stage-B gains and accepted objective path; <code>compact</code> moves long evidence out of the figure</td>
+</tr>
+<tr>
+<td><code>plot_sensitivity(comparison, *, layout="full", candidates_only=True, layer="signals", ...)</code></td>
+<td>Baseline-first candidate heatmap and main signal relations; <code>components</code> retains all active-component relations</td>
+</tr>
+<tr>
+<td><code>plot_signal(summary, component_id=None, *, variant_id=None, layout="full", ld_measure="r", ...)</code></td>
+<td>Component posterior, cumulative mass, CS, resolution and LD; <code>ld_measure="r2"</code> selects an explicitly labelled r² view</td>
+</tr>
+<tr>
+<td><code>plot_prior_influence(summary, component_id=None, *, variant_id=None, variant_ids=None, layout="full", ...)</code></td>
+<td>Supplied/effective prior, conditional log BF and alpha in aligned variant order</td>
+</tr>
+<tr>
+<td><code>plot_ld_diagnostics(diagnostics, *, layout="full", ...)</code></td>
+<td>Assessed states, conditional residuals, flip evidence and the actual joint rule</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>compact</code> is an explicit screen layout; <code>full</code> preserves access to larger views.
+Formal CS members remain included in signal candidate selections. Sensitivity
+<code>display_names={stored_name: readable_label}</code> changes labels, not settings or
+fit identities. <code>table_page</code> and <code>table_page_size</code>, where supported, paginate
+relation/details tables without discarding returned records.</p>
+<p>Use the shared white-background style or override Matplotlib settings locally:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.plots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_convergence</span>
+
+<span class="n">figure</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">plot_convergence</span><span class="p">(</span>
+    <span class="n">fit</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;font.size&quot;</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span> <span class="s2">&quot;axes.labelsize&quot;</span><span class="p">:</span> <span class="mi">11</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="n">figure</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;convergence.svg&quot;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">&quot;tight&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><code>style=False</code> uses the caller's current Matplotlib style. The function restores
+global rcParams on exit and does not choose a backend. Shared presentation tokens
+in <code>prusie._style</code> define fonts, spacing, colors and readable number formatting;
+use the public <code>style</code> argument for individual figures. Before/after colors are
+consistent, missing values are separate, and probability/r² scales stay in [0,1].
+Displayed rounding never replaces full-precision returned or exported values.
+For large-magnitude objectives, <code>plot_convergence(..., relative_elbo=True)</code> plots
+each trace relative to its first finite ELBO, with that origin labelled. It
+preserves the original trace and signed increments in the returned data.</p>
+<p>Locus plots use physical position only when provided, otherwise a labelled
+variant index. <code>position_unit="auto"</code> chooses a displayed bp/kb/Mb scale;
+<code>position_unit="bp"</code>, <code>"kb"</code> or <code>"Mb"</code> selects it explicitly without changing
+source coordinates. <code>label_variants</code> chooses annotation IDs, while
+<code>color_by_ld=True</code> colors association points by r² to the named reference. LD coloring names its reference variant. <code>plot_signal</code> defaults
+to signed r; the worked reports explicitly request r². Local gene tables/GTF
+require source, build, transcript selection and a coordinate convention; known
+chromosome/build conflicts are rejected. No gene identity is inferred from an
+rsID or arbitrary example coordinate. LD-diagnostic <code>auxiliary="residual"</code> or
+<code>"log_lr"</code> selects the supporting panel; labelled extreme residuals remain
+distinct from variants satisfying the joint flag rule.</p></article>
 <footer><p>prusie 0.2.4.dev1 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>

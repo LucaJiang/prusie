@@ -1,0 +1,373 @@
+{
+  "schema_version": "prusie.analysis_summary.v1",
+  "evidence_entries": {
+    "main_results": "/summary/credible_sets",
+    "variants": "/summary/variants",
+    "fit": "/summary/convergence",
+    "refinement": "/summary/refinement",
+    "sensitivity": "/comparison",
+    "ld": "/ld_diagnostics"
+  },
+  "results": {
+    "retained_cs": 2,
+    "variant_count": 500,
+    "active_components": 2,
+    "credible_sets": [
+      {
+        "component_id": 0,
+        "members": [
+          "syn0100"
+        ],
+        "size": 1,
+        "representative": "syn0100",
+        "requested_coverage": 0.95,
+        "actual_coverage": 0.9696741972541468,
+        "min_abs_corr": 1.0,
+        "mean_abs_corr": 1.0,
+        "median_abs_corr": 1.0,
+        "effective_candidates": 1.1459601756696447
+      },
+      {
+        "component_id": 1,
+        "members": [
+          "syn0350"
+        ],
+        "size": 1,
+        "representative": "syn0350",
+        "requested_coverage": 0.95,
+        "actual_coverage": 0.9999366187170291,
+        "min_abs_corr": 1.0,
+        "mean_abs_corr": 1.0,
+        "median_abs_corr": 1.0,
+        "effective_candidates": 1.0006781919444676
+      }
+    ],
+    "candidates": [
+      {
+        "variant_id": "syn0350",
+        "pip": 0.9999366187170291,
+        "rank": 1,
+        "cs_components": [
+          1
+        ],
+        "selection_sources": [
+          "formal_CS_member",
+          "top_PIP",
+          "PIP_threshold"
+        ]
+      },
+      {
+        "variant_id": "syn0100",
+        "pip": 0.9696741972541479,
+        "rank": 2,
+        "cs_components": [
+          0
+        ],
+        "selection_sources": [
+          "formal_CS_member",
+          "top_PIP",
+          "PIP_threshold"
+        ]
+      },
+      {
+        "variant_id": "syn0101",
+        "pip": 0.0302806602675062,
+        "rank": 3,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "syn0349",
+        "pip": 6.308476093863646e-05,
+        "rank": 4,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "syn0102",
+        "pip": 2.609457442814822e-05,
+        "rank": 5,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "syn0099",
+        "pip": 1.9011005728208907e-05,
+        "rank": 6,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "syn0351",
+        "pip": 2.908852582139687e-07,
+        "rank": 7,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "syn0103",
+        "pip": 3.591570019167989e-08,
+        "rank": 8,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "syn0348",
+        "pip": 5.07130737403827e-09,
+        "rank": 9,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      },
+      {
+        "variant_id": "syn0098",
+        "pip": 8.224156911040836e-10,
+        "rank": 10,
+        "cs_components": [],
+        "selection_sources": [
+          "top_PIP"
+        ]
+      }
+    ],
+    "candidate_policy": {
+      "all_CS_members": true,
+      "pip_threshold": 0.1,
+      "top_candidates": 10
+    },
+    "causal_count": "not_identified_by_CS_count"
+  },
+  "fit": {
+    "requested_criterion": "elbo",
+    "effective_criterion": "elbo",
+    "niter": 3,
+    "stop_reason": "criterion_satisfied",
+    "tol": 0.001,
+    "alpha_tol": 0.0001,
+    "pip_tol": 0.0001,
+    "min_iter": 2,
+    "max_cycle_lag": 5,
+    "fallback_iterations": [],
+    "elbo_decrease_count": 0,
+    "nonfinite_elbo_count": 0,
+    "finalization": {
+      "phase": "post_loop_post_sigma2_update_and_trim",
+      "trimmed_components": [
+        2,
+        3,
+        4
+      ],
+      "max_abs_delta_alpha": 0.0,
+      "max_abs_delta_pip": 0.0,
+      "sigma2": 1.0
+    },
+    "last": {
+      "iteration": 3,
+      "phase": "post_sweep_pre_sigma2_update",
+      "elbo": -1363.8547312974285,
+      "delta_elbo": 2.8121007744630333e-07,
+      "relative_delta_elbo": 2.061877052850104e-10,
+      "max_abs_delta_alpha": 9.470669224898032e-05,
+      "max_abs_delta_pip": 9.470669224898032e-05,
+      "max_abs_delta_bbar": 4.324257407689602e-05,
+      "sigma2": 1.0,
+      "delta_sigma2": 0.0,
+      "events": [
+        "fixed_point"
+      ]
+    },
+    "trajectory_available": true,
+    "pending": "The selected inner stopping condition was satisfied; this does not establish a global optimum."
+  },
+  "refinement": {
+    "status": "no_improvement",
+    "stop_reason": "no_improvement_above_absolute_tol",
+    "attempts": 2,
+    "accepted_attempts": 0,
+    "inner_fits": 4,
+    "rounds": 1,
+    "before_objective": -1363.854753649087,
+    "after_objective": -1363.854753649087,
+    "improvement": 0.0,
+    "objective_definition": "common original-prior objective recomputed from the complete post-trim state",
+    "before_logged_elbo": -1363.8547312974285,
+    "after_logged_elbo": -1363.8547312974285,
+    "config": {
+      "max_rounds": 10,
+      "absolute_tol": 0.001,
+      "relative_tol": null,
+      "max_iter": 100,
+      "inner_tol": 0.0001,
+      "candidate_budget": 4
+    }
+  },
+  "ld": {
+    "status": "recorded",
+    "total": 500,
+    "assessed": 500,
+    "flagged": 0,
+    "not_flagged": 500,
+    "conditional_only": 0,
+    "unassessed": 0,
+    "mixture": {
+      "status": "assessed",
+      "optimizer": "scipy SLSQP convex simplex likelihood",
+      "converged": true,
+      "kkt_max_violation": 3.0325963962241076e-10
+    },
+    "thresholds": {
+      "flip_log_lr": 2.0,
+      "flip_abs_z": 2.0,
+      "strict": true
+    },
+    "regularization": 4.2300630066830894e-13,
+    "method": "susieR RSS kriging normal scale mixture",
+    "warnings": []
+  },
+  "sensitivity": {
+    "status": "recorded",
+    "baseline": "baseline",
+    "settings": [
+      "baseline",
+      "larger_L",
+      "fixed_variance",
+      "coverage90"
+    ],
+    "relation_counts": {
+      "matched": 6
+    },
+    "pairs": [
+      {
+        "setting_a": "baseline",
+        "setting_b": "larger_L",
+        "shared_variant_count": 500,
+        "support_scope": "pairwise_intersection",
+        "full_region_pip_correlation": 0.9999999999999999,
+        "max_abs_delta_pip": 0.0,
+        "candidate_max_abs_delta_pip": 0.0
+      },
+      {
+        "setting_a": "baseline",
+        "setting_b": "fixed_variance",
+        "shared_variant_count": 500,
+        "support_scope": "pairwise_intersection",
+        "full_region_pip_correlation": 0.9743089632025984,
+        "max_abs_delta_pip": 0.254364932442118,
+        "candidate_max_abs_delta_pip": 0.254364932442118
+      },
+      {
+        "setting_a": "baseline",
+        "setting_b": "coverage90",
+        "shared_variant_count": 500,
+        "support_scope": "pairwise_intersection",
+        "full_region_pip_correlation": 0.9999999999999999,
+        "max_abs_delta_pip": 0.0,
+        "candidate_max_abs_delta_pip": 0.0
+      }
+    ],
+    "layer": "CS-supported signals",
+    "layer_summary": {
+      "settings": {
+        "baseline": {
+          "retained_cs": 2,
+          "active_components": 2,
+          "unretained_active_components": 0
+        },
+        "larger_L": {
+          "retained_cs": 2,
+          "active_components": 2,
+          "unretained_active_components": 0
+        },
+        "fixed_variance": {
+          "retained_cs": 2,
+          "active_components": 5,
+          "unretained_active_components": 3
+        },
+        "coverage90": {
+          "retained_cs": 2,
+          "active_components": 2,
+          "unretained_active_components": 0
+        }
+      },
+      "baseline_relation_counts": {
+        "matched": 6,
+        "ambiguous": 0,
+        "split": 0,
+        "merge": 0,
+        "unresolved": 0,
+        "unmatched": 0
+      }
+    },
+    "legacy_format": false,
+    "mode": "union",
+    "support": {
+      "variant_table": "union",
+      "variant_ranks": "original_fit",
+      "pairwise_metrics": "pairwise_intersection",
+      "matching_overlap": "pairwise_intersection",
+      "omitted_posterior_mass": "pairwise_intersection",
+      "component_records": "original_fit",
+      "representative_ld": "original_representatives_in_ld_reference",
+      "global_common_ids": null
+    },
+    "regional_maxima": [
+      {
+        "setting_a": "baseline",
+        "setting_b": "larger_L",
+        "variant_id": "syn0100",
+        "max_abs_delta_pip": 0.0,
+        "pip_a": 0.9696741972541479,
+        "pip_b": 0.9696741972541479,
+        "in_candidate_view": true,
+        "tied_maxima": 500,
+        "evidence_pointer": "/comparison/variants/99",
+        "support_scope": "pairwise_intersection"
+      },
+      {
+        "setting_a": "baseline",
+        "setting_b": "fixed_variance",
+        "variant_id": "syn0143",
+        "max_abs_delta_pip": 0.254364932442118,
+        "pip_a": 5.317501994284157e-11,
+        "pip_b": 0.254364932495293,
+        "in_candidate_view": true,
+        "tied_maxima": 1,
+        "evidence_pointer": "/comparison/variants/142",
+        "support_scope": "pairwise_intersection"
+      },
+      {
+        "setting_a": "baseline",
+        "setting_b": "coverage90",
+        "variant_id": "syn0100",
+        "max_abs_delta_pip": 0.0,
+        "pip_a": 0.9696741972541479,
+        "pip_b": 0.9696741972541479,
+        "in_candidate_view": true,
+        "tied_maxima": 500,
+        "evidence_pointer": "/comparison/variants/99",
+        "support_scope": "pairwise_intersection"
+      }
+    ]
+  },
+  "evidence_sha256": "495ae0dee91241c322c7c250fe8afdb7b5e59a578e70f2deb6d857333f9bfe62",
+  "files": {
+    "evidence": "evidence.json",
+    "lossless_structure": "analysis.json",
+    "lossless_arrays": "arrays.npz",
+    "tables": "tables/",
+    "figures": "figure_index.json",
+    "text_summary": "summary.txt"
+  }
+}

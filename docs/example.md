@@ -1,8 +1,8 @@
-# A 500-variant fine-mapping toy example
+# Quick start: fit, read and report
 
-The package contains one independent synthetic toy example: 1000 simulated
-observations and 500 correlated Gaussian predictors. Two predictors have nonzero
-effects. Its fixed seed, generation method, LD, true effects and synthetic IDs
+Run one fit, read its credible sets, then save an offline report. The packaged
+example has 1000 simulated observations and 500 correlated Gaussian predictors,
+with two nonzero effects. Its fixed seed, generation method, LD, true effects and synthetic IDs
 are packaged with the inputs. No human study data or genome build is implied.
 
 ## Load inputs and fit
@@ -17,7 +17,8 @@ import prusie
 example = prusie.load_example()
 inputs = example["inputs"]
 print(inputs["R"].shape, inputs["n"])
-fit = prusie.susie_rss(**inputs, **example["parameters"])
+fit = prusie.susie_rss(**inputs, **example["parameters"],
+                       track_fit="compact", retain_data=True)
 print("Converged:", fit.converged, "Iterations:", fit.niter)
 ```
 
@@ -36,7 +37,7 @@ substituting association or LD files.
 
 ```python
 lead = int(np.argmax(fit.pip))
-print(f"{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.3f}")
+print(f"{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.6g}")
 for k, component in enumerate(fit.sets["cs_index"]):
     members = fit.variant_ids[fit.sets["cs"][k]].tolist()
     print("Component:", int(component), "Variants:", members,
@@ -63,6 +64,53 @@ mass belongs to one original component, and may exceed requested coverage.
 The component IDs need not be consecutive. An empty set collection leaves
 PIPs available; a nonconverged fit needs further investigation even if it
 returns a set. [Results](results.md) describes the full schema.
+
+## Write an offline report
+
+With the [analysis extra](install.md#optional-analysis-tools) installed, create a
+summary and figures from the fitted posterior:
+
+```python
+from prusie.plots import plot_locus, plot_convergence
+from prusie.report import write_report
+
+summary = prusie.summarize(fit, inputs["R"], z=inputs["z"])
+print(prusie.summary_text(summary))
+report = write_report(
+    summary, "output/analysis", title="Synthetic fine-mapping example",
+    figures={"Locus overview": plot_locus(summary, R=inputs["R"]),
+             "Convergence": plot_convergence(fit, layout="compact")},
+)
+print(report["html"])
+```
+
+The text starts with `500 variants; 2 retained credible sets; 2 active components.`
+It lists CS members, leading PIPs and the actual stopping status. Refinement and LD
+are marked as not requested or not assessed until explicitly run. Creating this
+summary does not fit a model, perform an eigendecomposition or create a figure.
+
+Open `output/analysis/index.html` locally. The first tables answer which candidates
+are supported and how concentrated each signal is; the status rows distinguish
+IBSS stopping, refinement, LD and sensitivity. Figures follow these results.
+Keep the whole output directory together when copying the report.
+
+| Export | Use |
+| --- | --- |
+| `summary.txt`, `analysis_summary.json` | Short human-readable and structured summaries |
+| `index.html`, `figure_index.json`, PNG/SVG | Offline report and named figure mapping |
+| `tables/*.csv` | Complete readable tables |
+| `evidence.json` | Full-precision facts with stable IDs and JSON paths |
+| `analysis.json`, `arrays.npz` | Lossless saved structure and arrays |
+
+`write_report` includes only the figures you supply. It does not silently fit,
+run diagnostics or call an AI service. `save_analysis` and `load_analysis` in
+`prusie.report` preserve array dtypes, NaNs and identifiers without pickle.
+Saved fits omit the retained optimization context: provide the explicit original
+inputs when restarting from saved posterior state.
+
+Continue with [reading results](results.md), [convergence and refinement](post_analysis.md)
+and [sensitivity and LD](sensitivity.md). The [worked examples](worked_examples.md)
+show two complete reports with their scientific interpretation.
 
 ## Save arrays and metadata
 

@@ -1,9 +1,70 @@
 # prusie
 
-prusie fits the SuSiE model to association summary statistics and signed linkage
-disequilibrium (LD). A Python API connects to Rust computation and returns
-variant posterior inclusion probabilities (PIPs), credible sets and posterior
-effect summaries.
+Fine-map association signals with SuSiE, then inspect the variants, credible sets
+and uncertainty behind the result. prusie fits signed summary statistics and
+linkage disequilibrium (LD) through a Python API with Rust computation.
+
+## Quick start
+
+This is the **0.2.4.dev1 development preview** on `post_analysis`. Install from
+source with Python ≥3.10, the pinned Rust toolchain, a C linker and Python
+headers; see [installation](docs/install.md) for details.
+
+```sh
+git clone --branch post_analysis https://github.com/LucaJiang/prusie.git
+cd prusie
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install '.[analysis]'
+```
+
+Core fitting needs only NumPy at runtime; the optional `analysis` extra adds
+Matplotlib and SciPy. Fitting requires neither R nor Rust after installation.
+The installed synthetic example works offline from any directory:
+
+```python
+import prusie
+
+example = prusie.load_example()
+fit = prusie.susie_rss(**example["inputs"], **example["parameters"],
+                       track_fit="compact", retain_data=True)
+summary = prusie.summarize(fit, example["inputs"]["R"], z=example["inputs"]["z"])
+print(prusie.summary_text(summary))
+```
+
+The example returns two singleton credible sets, `syn0100` and `syn0350`, after
+three IBSS sweeps. Their PIPs are about 0.9697 and 0.99994. Start with the
+[quick-start tutorial](docs/example.md) to write an offline report and save the
+full posterior.
+
+## Read what changed, and what remains uncertain
+
+The same two leading sets persist when the toy example uses a fixed positive
+scaled prior variance. Background PIPs change: `syn0143` rises from about
+5.3×10⁻¹¹ to 0.2544. With variance estimation disabled, all five components retain
+positive variance, including three without retained CS; those components can
+spread probability beyond the original leading candidates.
+
+![Candidate PIPs for the stable example: the two main credible sets persist while the fixed-variance setting raises background probabilities.](docs/examples/post_analysis/stable/figure_5.png)
+
+The [worked examples](docs/worked_examples.md) explain this result and a second
+case where refinement improves a stopped fit's objective by 17.46 while an
+LD-correlated pair remains unresolved. They link to complete offline reports,
+figures and exact values.
+
+Read the documentation in this order:
+
+1. [Quick start](docs/example.md): fit once, read a summary, export a report.
+2. [Reading results](docs/results.md): PIP, component alpha, CS, purity and resolution.
+3. [Convergence and refinement](docs/post_analysis.md): stopping, warm starts and search.
+4. [Sensitivity and LD](docs/sensitivity.md): assumptions, aligned variants and assessed states.
+5. [Worked examples](docs/worked_examples.md), then the [API](docs/api.md) and [model](docs/model.md).
+
+The documentation sources above describe this branch. The
+[published documentation site](https://lucajiang.github.io/prusie/) reflects its
+last deployment and may precede this preview.
+
+## Numerical accuracy and performance
 
 <!-- generated:highlights:start -->
 
@@ -15,82 +76,23 @@ effect summaries.
 100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.
 <!-- generated:highlights:end -->
 
-![Distributions of per-analysis runtime and full-process peak-memory ratios for GWAS and eQTL. Ratios above one favor prusie; boxes show medians and quartiles.](docs/assets/r_comparison.svg)
+![Per-analysis runtime and full-process peak-memory ratios for GWAS and eQTL. Ratios above one favor prusie; boxes show medians and quartiles.](docs/assets/r_comparison.svg)
 
 See [numerical accuracy](docs/numerical_accuracy.md) and
-[performance](docs/performance.md) for the data, absolute times, methods and
-measurement environment.
-
-## Installation
-
-Install from source with Python ≥3.10, the Rust toolchain in
-`rust-toolchain.toml`, a C linker and Python development headers:
-
-```sh
-git clone https://github.com/LucaJiang/prusie.git
-cd prusie
-python -m venv .venv
-. .venv/bin/activate
-python -m pip install .
-```
-
-NumPy is the only Python runtime dependency. Fitting requires neither R nor
-Rust after installation. See [installation](docs/install.md) for build details
-and the environments tested.
-
-## Quick start
-
-The installed package includes an independent 500-variant synthetic toy example.
-Run this from any directory, offline:
-
-```python
-import numpy as np
-import prusie
-
-example = prusie.load_example()
-fit = prusie.susie_rss(**example["inputs"], **example["parameters"])
-print("Converged:", fit.converged, "Iterations:", fit.niter)
-lead = int(np.argmax(fit.pip))
-print(f"{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.3f}")
-for k, component in enumerate(fit.sets["cs_index"]):
-    print(int(component), fit.variant_ids[fit.sets["cs"][k]].tolist(),
-          "Posterior mass:", float(fit.sets["coverage"][k]))
-```
-
-A PIP summarizes variant inclusion across effects; each credible set belongs to
-an original SuSiE component. The [toy example tutorial](docs/example.md) explains input
-preparation, convergence, posterior mass, purity and saving results.
-
-## Diagnose and refine a fit
-
-Use [post-analysis](docs/post_analysis.md) for exact convergence tracking, checked warm starts,
-two-step refinement, LD diagnostics, explicit sensitivity comparisons and offline
-reports. These operations are opt-in; the standard Gaussian fitting defaults
-remain unchanged. Two executable toy examples demonstrate stable and local-optimum
-solutions.
-
-## Documentation
-
-Browse the [documentation site](https://lucajiang.github.io/prusie/),
-[statistical model](docs/model.md), [API](docs/api.md),
-[implementation](docs/implementation.md) and [input routes](docs/inputs.md#supported-model-and-input-routes).
-[Reproducibility](docs/reproducibility.md) provides separate entrances for
-regenerating tables/figures and rerunning fits from inputs.
+[performance](docs/performance.md) for data, absolute times and measurement methods.
+These measurements retain their original version identity; no new performance
+measurement is implied by the post-analysis features.
 
 ## Citation and license
 
 Cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
 [SuSiE-RSS, Zou et al. (2022)](https://doi.org/10.1371/journal.pgen.1010299),
-and identify this prusie 0.2.4.dev1 development snapshot using [CITATION.cff](CITATION.cff).
+and identify this prusie 0.2.4.dev1 development snapshot with [CITATION.cff](CITATION.cff).
 Author and maintainer: Wenxin Jiang.
 
 GPL-3.0-or-later. [LICENSE](LICENSE) and
-[third-party notices](THIRD_PARTY_NOTICES.md) retain upstream code and data
-attribution.
+[third-party notices](THIRD_PARTY_NOTICES.md) retain upstream attribution.
 
-## Post-analysis review snapshot
-
-The `post_analysis` branch includes an [updated source and numerical evidence review guide](docs/review/post_analysis_fixes/README.md), with two recorded examples, figures and interpretations for scientific review. The [original review snapshot](docs/review/post_analysis/README.md) remains available unchanged.
-
-The [sensitivity follow-up](docs/review/sensitivity_followup.md) documents variant-aware
-priors, common comparison support and an addendum to the stable-example interpretation.
+For historical development evidence, the [original review snapshot](docs/review/post_analysis/README.md),
+[review-fixes snapshot](docs/review/post_analysis_fixes/README.md) and
+[sensitivity follow-up](docs/review/sensitivity_followup.md) remain preserved.

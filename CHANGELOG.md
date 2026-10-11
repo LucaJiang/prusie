@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.4.dev1 — post-analysis review snapshot (unreleased)
+## 0.2.4.dev1 — post-analysis (unreleased)
 
 - Preserve requested convergence controls across continuation, refinement and
   sensitivity fits; record inner solver settings and explicit overrides.
@@ -12,6 +12,13 @@
   deterministic summaries and complete external machine evidence.
 - Install analysis dependencies explicitly in full CI while testing NumPy-only
   wheel installations separately.
+- Align sensitivity priors and metadata by variant ID, including subsets and
+  null augmentation; use one global intersection for common-mode comparisons.
+- Share local figure/report styling, add compact and variance-detail layouts,
+  and provide `summary_text` without implicit fitting or plotting.
+- Organize user documentation around result interpretation, convergence,
+  sensitivity and two saved worked examples; retain the original version and
+  date attribution of performance measurements.
 
 ## 0.2.3rc6 — portable toy example validation
 

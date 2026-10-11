@@ -1,0 +1,3 @@
+round,component,excluded_ids,accepted,reason,objective,improvement,A_stop,A_iterations,A_converged,B_stop,B_iterations,B_converged
+1,0,"[""syn0100""]",False,no_improvement_above_absolute_tol,-1363.8547536491487,-6.184563972055912e-11,criterion_satisfied,3,True,criterion_satisfied,2,True
+1,1,"[""syn0350""]",False,no_improvement_above_absolute_tol,-1363.8547536490862,6.821210263296962e-13,criterion_satisfied,3,True,criterion_satisfied,3,True

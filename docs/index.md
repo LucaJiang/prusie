@@ -1,9 +1,48 @@
-# prusie
+# Fine-mapping, from candidates to interpretation
 
-prusie fits the SuSiE model to association summary statistics and signed linkage
-disequilibrium (LD). A Python API connects to Rust computation and returns
-variant posterior inclusion probabilities (PIPs), credible sets and posterior
-effect summaries.
+prusie fits the SuSiE model to signed association statistics and LD. The Python
+API returns posterior inclusion probabilities (PIPs), credible sets and component
+posteriors, with optional convergence tracking, refinement, sensitivity comparisons
+and offline reports.
+
+Start with the [quick start](example.md) to fit the packaged synthetic example.
+Then use the result to answer four questions:
+
+| Question | Read next |
+| --- | --- |
+| Which candidates carry support, and how concentrated is each signal? | [Reading results](results.md) |
+| Did IBSS stop, and does a new search improve the solution? | [Convergence and refinement](post_analysis.md) |
+| Which conclusions change with settings or LD assumptions? | [Sensitivity and LD diagnostics](sensitivity.md) |
+| What does a complete interpretation look like? | [Worked examples](worked_examples.md) |
+
+## One fit and a short summary
+
+```python
+import prusie
+
+example = prusie.load_example()
+fit = prusie.susie_rss(**example["inputs"], **example["parameters"],
+                       track_fit="compact", retain_data=True)
+summary = prusie.summarize(fit, example["inputs"]["R"], z=example["inputs"]["z"])
+print(prusie.summary_text(summary))
+```
+
+The example returns two singleton credible sets after three sweeps. The
+[quick start](example.md#write-an-offline-report) adds figures and an offline report
+without fitting again. [Installation](install.md) describes this 0.2.4.dev1
+branch preview and optional analysis dependencies.
+
+## Two different diagnostic questions
+
+![Candidate PIPs in the stable example show persistent leading sets and a prior-sensitive background.](examples/post_analysis/stable/figure_5.png)
+
+In the stable example, fixing a positive component variance preserves the two
+leading CS but raises background PIPs. In the problem example, refinement improves
+the original-model objective by 17.46 after the initial fit has already met its
+stopping condition. The remaining `{86,90}` pair has limited resolution.
+[Read both examples and open their complete reports](worked_examples.md).
+
+## Measured numerical accuracy and performance
 
 <!-- generated:highlights:start -->
 
@@ -15,75 +54,13 @@ effect summaries.
 100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.
 <!-- generated:highlights:end -->
 
-![Distributions of per-analysis runtime and full-process peak-memory ratios for GWAS and eQTL. Ratios above one favor prusie; boxes show medians and quartiles.](assets/r_comparison.svg)
+![Runtime and full-process peak-memory ratios for GWAS and eQTL, with ratios above one favoring prusie.](assets/r_comparison.svg)
 
-See [numerical accuracy](numerical_accuracy.md) and
-[performance](performance.md) for the data, absolute times, methods and
-measurement environment.
+[Numerical accuracy](numerical_accuracy.md) and [performance](performance.md)
+explain the data, methods and original measurement environment. These measurements
+are attributed to prusie 0.2.3rc4, not to the development preview.
 
-## Installation
-
-Install from source with Python ≥3.10, the Rust toolchain in
-`rust-toolchain.toml`, a C linker and Python development headers:
-
-```sh
-git clone https://github.com/LucaJiang/prusie.git
-cd prusie
-python -m venv .venv
-. .venv/bin/activate
-python -m pip install .
-```
-
-NumPy is the only Python runtime dependency. Fitting requires neither R nor
-Rust after installation. See [installation](install.md) for build details
-and the environments tested.
-
-## Quick start
-
-The installed package includes an independent 500-variant synthetic toy example.
-Run this from any directory, offline:
-
-```python
-import numpy as np
-import prusie
-
-example = prusie.load_example()
-fit = prusie.susie_rss(**example["inputs"], **example["parameters"])
-print("Converged:", fit.converged, "Iterations:", fit.niter)
-lead = int(np.argmax(fit.pip))
-print(f"{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.3f}")
-for k, component in enumerate(fit.sets["cs_index"]):
-    print(int(component), fit.variant_ids[fit.sets["cs"][k]].tolist(),
-          "Posterior mass:", float(fit.sets["coverage"][k]))
-```
-
-A PIP summarizes variant inclusion across effects; each credible set belongs to
-an original SuSiE component. The [toy example tutorial](example.md) explains input
-preparation, convergence, posterior mass, purity and saving results.
-
-## Diagnose and refine a fit
-
-Use [post-analysis](post_analysis.md) for exact convergence tracking, checked warm starts,
-two-step refinement, LD diagnostics, explicit sensitivity comparisons and offline
-reports. These operations are opt-in; the standard Gaussian fitting defaults
-remain unchanged. Two executable toy examples demonstrate stable and local-optimum
-solutions.
-
-## Documentation
-
-Browse the [documentation site](https://lucajiang.github.io/prusie/),
-[statistical model](model.md), [API](api.md),
-[implementation](implementation.md) and [input routes](inputs.md#supported-model-and-input-routes).
-[Reproducibility](reproducibility.md) provides separate entrances for
-regenerating tables/figures and rerunning fits from inputs.
-
-## Citation and license
-
-Cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
-[SuSiE-RSS, Zou et al. (2022)](https://doi.org/10.1371/journal.pgen.1010299),
-and identify prusie 0.2.3rc6 using [CITATION.cff](https://github.com/LucaJiang/prusie/blob/main/CITATION.cff).
-Author and maintainer: Wenxin Jiang.
-
-GPL-3.0-or-later. [LICENSE](https://github.com/LucaJiang/prusie/blob/main/LICENSE) and
-[third-party notices](https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md) retain upstream code and data
-attribution.
+For precise inputs and return values, use the [API](api.md), [input guide](inputs.md)
+and [statistical model](model.md). [Reproducibility](reproducibility.md) separates
+regenerating figures from rerunning fits. Cite the original statistical methods
+and the software revision as described in [citation and license](citation.md).

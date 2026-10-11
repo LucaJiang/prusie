@@ -3,6 +3,9 @@
 Install prusie from source with Python ≥3.10. NumPy ≥1.26,<3 is the only Python
 runtime dependency; fitting does not invoke R.
 
+This guide describes the **0.2.4.dev1 development branch**. It does not imply
+a new release or PyPI publication.
+
 ## Build from source
 
 Source builds need the Rust toolchain pinned in `rust-toolchain.toml` (1.98.1),
@@ -10,7 +13,7 @@ a C linker and Python development headers. The build uses maturin 1.9.6 and
 locked Cargo dependencies.
 
 ```sh
-git clone https://github.com/LucaJiang/prusie.git
+git clone --branch post_analysis https://github.com/LucaJiang/prusie.git
 cd prusie
 python -m venv .venv
 . .venv/bin/activate
@@ -33,6 +36,18 @@ route.
 Executed package checks cover CPython 3.12 on GNU Linux x86-64 with NumPy 2.2.6.
 Wheel filenames specify their Python ABI and minimum manylinux platform tag.
 See [contributing](contributing.md) for reproducible builds and payload checks.
+
+## Optional analysis tools
+
+From the same checkout, install plotting and LD-diagnostic dependencies:
+
+```sh
+python -m pip install '.[analysis]'
+```
+
+The analysis extra adds Matplotlib and SciPy. Core fitting and deterministic
+posterior summaries remain available with NumPy alone. Reports work offline;
+plots and diagnostic computation run only when requested.
 
 ## Run the installed example
 
