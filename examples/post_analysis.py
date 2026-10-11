@@ -19,13 +19,20 @@ def checksum(a):
 
 
 def make_figures(fit,refined,summary,R,ld,comparison):
-    """Show both solver trajectories and every retained CS explicitly."""
+    """Screen-sized views, with every retained CS and separate variance details."""
     matched=prusie.compare_fits({'before':fit,'after':refined},baseline='before',R=R)
-    figures={'locus overview':plot_locus(summary,R=R),
-             'convergence before and after':plot_convergence(fit,after=refined),
-             'refinement':plot_refinement(fit,refined,comparison=matched),
-             'LD diagnostics':plot_ld_diagnostics(ld),
-             'sensitivity main signals':plot_sensitivity(comparison,candidates_only=True)}
+    display_names={'baseline':'Baseline','refined':'After refinement','coverage90':'CS coverage = 90%'}
+    for name, settings in comparison.get('fit_settings', {}).items():
+        if name=='larger_L' and 'L' in settings:
+            display_names[name]=f"L = {settings['L']}"
+    display_names['fixed_variance']='Fixed scaled prior\nvariance = 0.05'
+    display_names={name:label for name,label in display_names.items() if name in comparison.get('settings', [])}
+    figures={'locus overview':plot_locus(summary,R=R,layout='compact'),
+             'convergence before and after':plot_convergence(fit,after=refined,layout='compact'),
+             'refinement':plot_refinement(fit,refined,comparison=matched,layout='compact'),
+             'LD diagnostics':plot_ld_diagnostics(ld,layout='compact'),
+             'sensitivity main signals':plot_sensitivity(comparison,candidates_only=True,
+                 layout='compact',display_names=display_names)}
     components=sorted(summary['credible_sets'],
                       key=lambda cs:(-max(row['pip'] for row in summary['variants']
                           if row['variant_id'] in cs['members']),cs['component_id']))
@@ -33,12 +40,14 @@ def make_figures(fit,refined,summary,R,ld,comparison):
         component=cs['component_id']
         detail=next(row for row in summary['components'] if row['component_id']==component)
         candidates=list(dict.fromkeys(cs['members']+detail['ranking'][:10]))
-        figures[f'signal detail component {component}']=plot_signal(summary,component,R=R,max_variants=12)
+        figures[f'signal detail component {component}']=plot_signal(summary,component,R=R,max_variants=12,
+            layout='compact',ld_measure='r2')
         figures[f'prior influence component {component} (CS and top 10)']=plot_prior_influence(
-            summary,component,variant_ids=candidates)
+            summary,component,variant_ids=candidates,layout='compact')
     if not components:
         figures['signal detail']=plot_signal(summary,R=R)
         figures['prior influence']=plot_prior_influence(summary)
+    figures['variance details before and after']=plot_convergence(fit,after=refined,layout='variance')
     return figures
 
 

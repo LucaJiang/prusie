@@ -52,8 +52,9 @@ def test_compact_summary_preserves_all_large_cs_members_and_full_precision(tmp_p
     assert compact["fit"]["requested_criterion"] == "joint"
     assert compact["fit"]["trajectory_available"]
     page = (tmp_path / "index.html").read_text()
-    assert "-17.1235" in page
-    assert "-17.12345678901234" not in page
+    assert "-17.12" in page
+    assert "-17.12345678901234" not in page[:page.index('id="details"')]
+    assert "-17.12345678901234" in page[page.index('id="details"'):]
     assert "v19" in page
     restored = load_analysis(tmp_path)
     assert restored["summary"] == summary
@@ -77,7 +78,7 @@ def test_report_reading_order_safe_local_exports_and_no_fact_dom(tmp_path):
     assert not parser.scripts and '&lt;script' in page and hostile not in page
     assert parser.links
     assert all(not value.startswith(("http:", "https:", "//", "/")) and ".." not in value
-               and (Path(receipt["html"]).parent / value).is_file() for value in parser.links)
+               and (value.startswith("#") or (Path(receipt["html"]).parent / value).is_file()) for value in parser.links)
     headings = [f'id="{name}"' for name in ("main-results", "fit-status", "figures", "sensitivity-ld", "details", "exports")]
     assert [page.index(name) for name in headings] == sorted(page.index(name) for name in headings)
     evidence = json.loads(Path(receipt["evidence"]).read_text())
@@ -224,6 +225,6 @@ def test_legacy_reason_only_missing_working_values_never_become_observed(tmp_pat
     receipt = write_report(example_summary(), tmp_path, ld={"variants": [row]})
     page = Path(receipt["html"]).read_text()
     assert "legacy_missing" in page and "-987.654" not in page
-    assert "<td>NA</td><td>2</td><td>NA</td>" in page
+    assert '<td>NA</td><td class="numeric">2</td><td>NA</td>' in page
     saved = json.loads(Path(receipt["evidence"]).read_text())
     assert saved["data"]["ld_diagnostics"]["variants"][0] == row

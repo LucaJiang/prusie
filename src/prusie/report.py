@@ -318,7 +318,7 @@ def analysis_summary(summary: Mapping, *, ld=None, comparison=None,
                   rounds=len({row.get("round") for row in history if row.get("round") is not None}),
                   before_objective=before_objective, after_objective=after_objective,
                   improvement=improvement,
-                  objective_definition="uniform original-model objective recomputed from the complete post-trim state",
+                  objective_definition="common original-prior objective recomputed from the complete post-trim state",
                   before_logged_elbo=before.get("logged_elbo"), after_logged_elbo=after.get("logged_elbo"),
                   config=_plain(refinement.get("config", {})))
     if ld is not None:
@@ -346,7 +346,32 @@ def analysis_summary(summary: Mapping, *, ld=None, comparison=None,
         sensitivity = dict(status="recorded", baseline=baseline, settings=comparison.get("settings", []),
                            relation_counts=counts, pairs=_plain(pairs), layer="CS-supported signals",
                            layer_summary=_plain(comparison.get("layer_summary", {})),
-                           legacy_format=comparison.get("schema_version") != "prusie.comparison.v2")
+                           legacy_format=comparison.get("schema_version") != "prusie.comparison.v2",
+                           mode=comparison.get("mode"), support=_plain(comparison.get("support", {})),
+                           regional_maxima=[])
+        # Read the saved comparison support. In union mode a pair uses only rows
+        # observed in both settings; common-mode tables already contain only the
+        # global intersection. Do not fill missing variants or renormalize PIPs.
+        for pair in pairs:
+            first, second = pair.get("setting_a"), pair.get("setting_b")
+            observed = []
+            for index, row in enumerate(_records(comparison.get("variants"))):
+                values = row.get("pips") or {}
+                a, b = values.get(first), values.get(second)
+                if all(isinstance(v, (int, float, np.number)) and np.isfinite(v) for v in (a, b)):
+                    observed.append((abs(float(a)-float(b)), str(row.get("variant_id")), index, row))
+            if observed:
+                # Prefer a displayed candidate among exact ties, avoiding an
+                # "outside the view" warning when every PIP is unchanged.
+                delta, variant, index, row = min(observed, key=lambda item: (
+                    -item[0], not bool(item[3].get("candidate")), item[1]))
+                sensitivity["regional_maxima"].append(dict(
+                    setting_a=first, setting_b=second, variant_id=variant, max_abs_delta_pip=delta,
+                    pip_a=row["pips"][first], pip_b=row["pips"][second],
+                    in_candidate_view=bool(row.get("candidate")),
+                    tied_maxima=sum(item[0] == delta for item in observed),
+                    evidence_pointer=f"/comparison/variants/{index}",
+                    support_scope=pair.get("support_scope", "recorded shared variant table")))
     return _plain(dict(schema_version="prusie.analysis_summary.v1",
                        evidence_entries={"main_results": "/summary/credible_sets", "variants": "/summary/variants",
                                          "fit": "/summary/convergence", "refinement": "/summary/refinement",
@@ -360,14 +385,15 @@ def analysis_summary(summary: Mapping, *, ld=None, comparison=None,
                        fit=fit_state, refinement=search, ld=ld_state, sensitivity=sensitivity))
 
 
-def _display(value):
+def _display(value, *, probability=False):
     """Human display only: machine exports retain their full precision."""
+    from ._style import format_number
     if isinstance(value, np.generic):
         value = value.item()
     if value is None:
         return "NA"
     if isinstance(value, float):
-        return format(value, ".6g") if math.isfinite(value) else str(value)
+        return format_number(value, probability=probability)
     if isinstance(value, bool):
         return "yes" if value else "no"
     if isinstance(value, Mapping):
@@ -377,17 +403,64 @@ def _display(value):
     return str(value)
 
 
+def summary_text(summary: Mapping, *, ld=None, comparison=None) -> str:
+    """Return a short reading guide from existing summary tables only.
+
+    This display helper never fits a model, computes LD/eigenvalues, or imports
+    plotting libraries. Full records and exact values remain in ``summary``.
+    Use ``print(summary_text(summarize(fit)))`` in a script or terminal.
+    """
+    compact = analysis_summary(summary, ld=ld, comparison=comparison)
+    results, fit, search = (compact[key] for key in ("results", "fit", "refinement"))
+    lines = [f"{results['variant_count']} variants; {results['retained_cs']} retained credible sets; "
+             f"{results['active_components']} active components."]
+    for row in results["credible_sets"]:
+        members = list(row.get("members", []))
+        shown = ", ".join(map(str, members[:6]))
+        if len(members) > 6:
+            shown += f", … (+{len(members)-6}; full members in credible_sets)"
+        lines.append(f"CS component {row.get('component_id')}: {shown}; size {row['size']}; "
+                     f"coverage {_display(row.get('actual_coverage'), probability=True)}; "
+                     f"effective candidates {_display(row.get('effective_candidates'))}.")
+    candidates = results["candidates"][:5]
+    if candidates:
+        lines.append("Leading PIP: " + "; ".join(
+            f"{row['variant_id']} {_display(row['pip'], probability=True)}" for row in candidates) + ".")
+    requested = fit.get("requested_criterion", fit.get("criterion", "not_assessed"))
+    effective = fit.get("effective_criterion", fit.get("criterion", "not_assessed"))
+    lines.append(f"IBSS: {fit['stop_reason']}; requested {requested}, effective {effective}; "
+                 f"iterations {_display(fit.get('niter'))}.")
+    if search["status"] == "not_requested" or search["stop_reason"] == "not_requested":
+        lines.append("Refinement: not requested.")
+    else:
+        lines.append(f"Refinement: {search['accepted_attempts']}/{search['attempts']} attempts accepted; "
+                     f"post-trim original-model objective change {_display(search['improvement'])}.")
+    counts = compact["ld"]
+    lines.append("LD: not assessed." if ld is None else
+                 f"LD: {counts['assessed']} assessed, {counts['flagged']} flagged; "
+                 f"{counts['conditional_only']} conditional only; {counts['unassessed']} unassessed.")
+    if comparison is not None:
+        for row in compact["sensitivity"].get("regional_maxima", []):
+            lines.append(f"Sensitivity {row['setting_a']} → {row['setting_b']}: max |ΔPIP| "
+                         f"{_display(row['max_abs_delta_pip'])} at {row['variant_id']}"
+                         + (" (outside candidate view)." if not row['in_candidate_view'] else "."))
+    return "\n".join(lines)
+
+
 def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=None,
                  comparison=None, provenance=None, annotations=None, ai=None,
                  title="prusie analysis") -> dict:
-    """Write an offline report with a compact deterministic summary and exports.
+    """Write a result-first offline report and full-precision local exports.
 
-    ``figures`` maps labels to Matplotlib Figures or plot return tuples. Embedded
-    PNGs work offline; relative links open complete local JSON, NPZ, CSV and figure
-    exports. Copy the directory to retain these links. All scalar evidence facts
-    remain in ``evidence.json`` rather than being duplicated into the HTML DOM.
-    No fit, network request or model invocation is performed here.
+    ``figures`` maps labels to Matplotlib Figures or plot return tuples. Numbered
+    PNG/SVG filenames retain compatibility; ``figure_index.json`` records their
+    labels and report sections. Copy the entire directory to open the HTML and
+    its exports offline. This function does not fit, diagnose LD, access a
+    network, or invoke a model. Supplied provenance is preserved in the evidence
+    export; only a short source description appears on the page.
     """
+    from ._style import REPORT_CSS
+
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     required = ("data_checksums", "variant_harmonization", "parameters", "initial_state",
@@ -399,89 +472,184 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
     compact = analysis_summary(summary, ld=ld, comparison=comparison)
     compact["evidence_sha256"] = evidence["sha256"]
     compact["files"] = {"evidence": "evidence.json", "lossless_structure": "analysis.json",
-                        "lossless_arrays": "arrays.npz", "tables": "tables/"}
+                        "lossless_arrays": "arrays.npz", "tables": "tables/",
+                        "figures": "figure_index.json", "text_summary": "summary.txt"}
     artifacts = save_analysis({"summary": summary, "ld": ld, "comparison": comparison,
                                "provenance": recorded, "annotations": annotations, "ai": ai}, directory)
     for name, value in (("evidence", evidence), ("analysis_summary", compact)):
         (directory / f"{name}.json").write_text(
             json.dumps(value, ensure_ascii=False, allow_nan=False, indent=2), encoding="utf-8")
+    (directory / "summary.txt").write_text(summary_text(summary, ld=ld, comparison=comparison) + "\n",
+                                          encoding="utf-8")
     tables = export_tables(summary, directory / "tables")
-    sections = [f"<h1>{html.escape(str(title))}</h1>",
-                "<p>Deterministic statistical summary. Optional AI text is separate and requires scientific review.</p>",
-                '<h2 id="main-results">Main results and resolution</h2>',
-                f'<p>{len(compact["results"]["credible_sets"])} retained credible sets among '
-                f'{compact["results"]["variant_count"]} analyzed variants. '
-                'A retained CS is a posterior candidate set, not a confirmed causal effect count.</p>']
+    extra_tables = {}
+    if comparison is not None:
+        from .comparison import comparison_relations
+        extra_tables.update(comparison_variants=comparison.get("variants", []),
+                            signal_relations=comparison_relations(comparison, baseline_only=False),
+                            component_relations=comparison_relations(comparison, layer="components", baseline_only=False))
+    if ld is not None:
+        extra_tables["ld_variants"] = ld.get("variants", [])
+    attempts, stages = [], []
+    for index, row in enumerate((summary.get("refinement") or {}).get("history", []), 1):
+        attempt = _select(row, ("round", "component", "excluded_ids", "accepted", "reason",
+                               "incumbent_objective", "objective", "improvement"))
+        for phase, stage in row.get("stages", {}).items():
+            attempt[f"{phase}_stop"] = stage.get("stop_reason")
+            attempt[f"{phase}_iterations"] = stage.get("niter")
+            attempt[f"{phase}_converged"] = stage.get("ibss_converged")
+            # Preserve every recorded stage field. Legacy producers may lack
+            # solver controls or timings; absence is not filled with defaults.
+            stages.append(dict(_plain(stage), attempt=index, stage=phase,
+                               **_select(row, ("round", "component", "excluded_ids"))))
+        attempts.append(attempt)
+    extra_tables["refinement_attempts"] = attempts
+    extra_tables["refinement_stages"] = stages
+    tables.extend(export_tables(extra_tables, directory / "tables"))
+    escape = lambda value: html.escape(str(value), quote=True)
+    sections = [f'<header><h1>{escape(title)}</h1>']
+    supplied = dict(provenance or {}) | dict(annotations or {})
+    identity = {key: supplied[key] for key in ("trait", "gene", "locus") if supplied.get(key) is not None}
+    if identity:
+        sections.append('<p class="analysis-input">' + escape(_display(identity)) + '</p>')
+    sections.append('<p class="lede">Read the candidate sets, then check the fitted solution, '
+                    'search and input compatibility.</p></header>')
+    navigation = (("main-results", "Candidates & resolution"), ("fit-status", "Analysis status"),
+                  ("figures", "Figures"), ("sensitivity-ld", "Sensitivity & LD details"),
+                  ("details", "Complete records"), ("exports", "Downloads"))
+    sections.append('<nav aria-label="On this page"><ul>' + ''.join(
+        f'<li><a href="#{key}">{escape(label)}</a></li>' for key, label in navigation) + '</ul></nav><main>')
+    probabilities = {"pip", "top_alpha", "actual_coverage", "requested_coverage", "biological_mass", "null_mass"}
+    labels = {"variant_id": "Variant ID", "pip": "PIP", "size": "CS size", "representative": "Representative",
+              "component_id": "Component ID", "actual_coverage": "Posterior mass",
+              "requested_coverage": "CS target", "effective_candidates": "Effective candidates",
+              "min_abs_corr": "Minimum |r|", "cs_components": "CS components",
+              "selection_sources": "Display selection", "max_abs_delta_pip": "Maximum |ΔPIP|",
+              "before_objective": "Before objective", "after_objective": "After objective"}
 
-    def table(rows, columns=None):
+    def cell(value, key):
+        if key == 'selection_sources' and isinstance(value, (list, tuple)):
+            display_names = {'formal_CS_member': 'CS member', 'top_PIP': 'top PIP', 'PIP_threshold': 'PIP threshold'}
+            value = [display_names.get(item, item) for item in value]
+        if key == 'cs_components' and isinstance(value, (list, tuple)) and not value:
+            return '<td>None</td>'  # Known nonmembership; unavailable data remain NA.
+        numeric = isinstance(value, (float, int, np.number)) and not isinstance(value, (bool, np.bool_))
+        attrs = ' class="numeric"' if numeric else ''
+        if numeric and key in probabilities:
+            attrs += ' title="Full precision: ' + escape(repr(float(value))) + '"'
+        return '<td' + attrs + '>' + escape(_display(value, probability=key in probabilities)) + '</td>'
+
+    def table(rows, columns=None, caption=None):
         rows = list(rows)
         if not rows:
-            sections.append("<p>No records.</p>")
+            sections.append('<p class="not-recorded">No records.</p>')
             return
         columns = columns or list(dict.fromkeys(key for row in rows for key in row))
-        sections.append('<div class="table-scroll"><table><thead><tr>' + ''.join(
-            '<th>' + html.escape(str(key).replace('_', ' ')) + '</th>' for key in columns) + '</tr></thead><tbody>')
+        sections.append('<div class="table-scroll" role="region" aria-label="' + escape(caption or 'Data table')
+                        + '" tabindex="0"><table>' + ('<caption>' + escape(caption) + '</caption>' if caption else '')
+                        + '<thead><tr>' + ''.join('<th scope="col">' + escape(labels.get(key, str(key).replace('_', ' ')))
+                                                 + '</th>' for key in columns) + '</tr></thead><tbody>')
         for row in rows:
-            sections.append('<tr>' + ''.join('<td>' + html.escape(_display(row.get(key))) + '</td>'
-                                            for key in columns) + '</tr>')
+            sections.append('<tr>' + ''.join(cell(row.get(key), key) for key in columns) + '</tr>')
         sections.append('</tbody></table></div>')
 
     def details(label, value, columns=None):
-        sections.append('<details><summary>' + html.escape(label) + '</summary>')
+        sections.append('<details><summary>' + escape(label) + '</summary>')
         if isinstance(value, (list, tuple)) and all(isinstance(row, Mapping) for row in value):
             table(value, columns)
         else:
-            sections.append('<pre>' + html.escape(json.dumps(_plain(value), ensure_ascii=False,
-                                                              allow_nan=False, indent=2)) + '</pre>')
+            sections.append('<pre>' + escape(json.dumps(_plain(value), ensure_ascii=False,
+                                                       allow_nan=False, indent=2)) + '</pre>')
         sections.append('</details>')
 
-    table(compact['results']['credible_sets'])
+    results, control, search = (compact[key] for key in ("results", "fit", "refinement"))
+    search_requested = search['status'] != 'not_requested' and search['stop_reason'] != 'not_requested'
+    sections.append('<section aria-labelledby="main-results"><h2 id="main-results">Main results and resolution</h2>'
+                    f'<p><strong>{results["retained_cs"]} retained credible sets</strong> among '
+                    f'{results["variant_count"]} analyzed variants; {results["active_components"]} active components. '
+                    'A retained CS is a posterior candidate set, not a confirmed causal effect count.</p>')
+    table(results['credible_sets'], ('component_id', 'representative', 'size', 'actual_coverage',
+                                     'min_abs_corr', 'effective_candidates'))
+    sections.append('<p class="caption">Smaller credible sets and effective candidate counts indicate more concentrated '
+                    'posterior support. LD purity describes correlations within a set. '
+                    'Neither measure identifies a biological mechanism.</p>')
     sections.append('<h3>Main candidates</h3><p>All formal CS members, the top ten variants by PIP, '
-                    'and all PIP ≥ 0.1 candidates are included. These are display selections; '
-                    'missing or excluded variants are not assigned zero PIP. Display numbers are rounded '
-                    'to six significant digits; exports retain full precision.</p>')
-    table(compact['results']['candidates'])
-    sections.append('<h2 id="fit-status">Fit, stopping and refinement</h2>')
-    control = compact['fit']
-    sections.append('<p>' + html.escape(control['pending']) + '</p>')
+                    'and all PIP ≥ 0.1 candidates are included in the display selection. '
+                    'Missing or excluded variants are not assigned zero PIP. Numbers use four significant digits; '
+                    'near-endpoint probabilities retain a bound or scientific notation. Hover over probability cells '
+                    'or use the full-precision exports for exact values.</p>')
+    candidates = results['candidates']
+    candidate_columns = ('variant_id', 'pip', 'cs_components', 'selection_sources')
+    table(candidates if len(candidates) <= 30 else candidates[:20], candidate_columns)
+    if len(candidates) > 30:
+        sections.append(f'<p>Showing the first 20 of {len(candidates)} selected candidates in PIP order. '
+                        'The complete selection follows; no CS member was removed from it.</p>')
+        details(f'All {len(candidates)} selected candidates', candidates, candidate_columns)
+    details('Complete CS membership and coverage', results['credible_sets'])
+    sections.append('</section><section aria-labelledby="fit-status"><h2 id="fit-status">Analysis status</h2>')
+    sections.append('<h3>IBSS stopping</h3><p>' + escape(control['pending']) + '</p>')
     table([_select(control, ('requested_criterion', 'effective_criterion', 'niter', 'stop_reason',
-                            'tol', 'alpha_tol', 'pip_tol', 'min_iter', 'cycle_lag', 'max_cycle_lag',
-                            'elbo_decrease_count', 'nonfinite_elbo_count'))])
+                            'tol', 'alpha_tol', 'pip_tol', 'elbo_decrease_count', 'nonfinite_elbo_count'))])
     if control['last']:
-        table([control['last']])
+        table([_select(control['last'], ('elbo', 'delta_elbo', 'max_abs_delta_alpha', 'max_abs_delta_pip'))],
+              caption='Last recorded iteration; logged ELBO precedes finalization')
     if not control['trajectory_available']:
         sections.append('<p>No iteration trajectory is available in this summary; final diagnostics alone '
                         'cannot reconstruct the path taken by IBSS.</p>')
-    search = compact['refinement']
-    sections.append('<p>Refinement: ' + html.escape(_display(search['status'])) + '. '
+    sections.append('<h3>Refinement search</h3>')
+    if not search_requested:
+        sections.append('<p>Refinement: not requested.</p>')
+    else:
+        sections.append('<p>Refinement: ' + escape(_display(search['status'])) + '. '
                     + str(search['attempts']) + ' exclusion attempts; ' + str(search['accepted_attempts'])
-                    + ' accepted; ' + html.escape(_display(search['inner_fits'])) + ' inner fits. '
+                    + ' accepted; ' + escape(_display(search['inner_fits'])) + ' inner fits. '
                     'The initial stopping condition and finding a better solution concern different questions.</p>')
-    if search['status'] != 'not_requested':
-        table([_select(search, ('stop_reason', 'before_objective', 'after_objective', 'improvement',
-                               'before_logged_elbo', 'after_logged_elbo'))])
-        sections.append('<p>Improvement uses the uniform original-model objective recomputed from the '
-                        'complete post-trim state. Logged pre-finalization ELBO is shown separately. '
-                        'A negative rejected candidate does not mean the accepted solution regressed.</p>')
-        attempts = []
-        for row in (summary.get('refinement') or {}).get('history', []):
-            attempt = _select(row, ('round', 'component', 'excluded_ids', 'accepted', 'reason', 'incumbent_objective', 'objective', 'improvement'))
-            for phase, stage in row.get('stages', {}).items():
-                attempt[f'{phase}_stop'] = stage.get('stop_reason')
-                attempt[f'{phase}_iterations'] = stage.get('niter')
-            attempts.append(attempt)
-        accepted = [row for row in attempts if row.get('accepted')]
-        if accepted:
-            sections.append('<h3>Accepted attempts</h3>')
-            table(accepted)
-        details('Complete refinement attempts and stage stops', attempts)
-    sections.append('<h2 id="figures">Figures and before/after evidence</h2>')
-    figure_paths = []
+    if search_requested:
+        table([_select(search, ('stop_reason', 'before_objective', 'after_objective', 'improvement'))])
+        sections.append('<p class="caption">Improvement uses the common original-prior objective recomputed from '
+                        'the complete post-trim state. A negative rejected candidate does not mean the accepted '
+                        'solution regressed. Logged pre-finalization ELBO remains separate in the full search record.</p>')
+    sensitivity, counts = compact['sensitivity'], compact['ld']
+    sections.append('<h3>Sensitivity</h3>')
+    if comparison is None:
+        sections.append('<p>Sensitivity was not assessed.</p>')
+    else:
+        sections.append('<p>Baseline: <strong>' + escape(sensitivity['baseline']) + '</strong>. '
+                        + str(len(sensitivity['settings'])) + ' settings; CS-supported relation counts: '
+                        + escape(_display(sensitivity['relation_counts'])) + '. '
+                        'These are distinct posteriors; they are not averaged.</p>')
+        table(sensitivity.get('regional_maxima', []), ('setting_b', 'variant_id', 'max_abs_delta_pip', 'in_candidate_view'))
+        for row in sensitivity.get('regional_maxima', []):
+            if not row['in_candidate_view']:
+                sections.append('<p><strong>Outside the candidate view:</strong> variant ' + escape(row['variant_id'])
+                                + ' has the largest |ΔPIP| (' + escape(_display(row['max_abs_delta_pip']))
+                                + ') for ' + escape(row['setting_b']) + '. See '
+                                '<a href="tables/comparison_variants.csv">the full variant table</a> and '
+                                '<code>' + escape(row['evidence_pointer']) + '</code> in evidence.json.</p>')
+    sections.append('<h3>LD compatibility</h3>')
+    if ld is None:
+        sections.append('<p>LD diagnostics were not assessed.</p>')
+    else:
+        sections.append('<p>LD flip assessment: ' + str(counts['assessed']) + ' assessed ('
+                        + str(counts['flagged']) + ' flagged; ' + str(counts['not_flagged'])
+                        + ' assessed and not flagged); ' + str(counts['conditional_only'])
+                        + ' conditional-only; ' + str(counts['unassessed']) + ' unassessed.</p>')
+        if not counts['assessed']:
+            sections.append('<p>No completed flip assessment is available.</p>')
+        elif not counts['flagged']:
+            sections.append('<p>No variants were flagged among completed assessments. '
+                            'This does not establish that the LD reference is correct.</p>')
+        if counts.get('mixture'):
+            table([counts['mixture']], caption='Mixture solver status')
+    sections.append('</section><section aria-labelledby="figures"><h2 id="figures">Figures and before/after evidence</h2>')
+    figure_paths, figure_index, figure_groups, plot_data = [], [], {}, {}
     for index, (name, value) in enumerate((figures or {}).items()):
         figure = value[0] if isinstance(value, tuple) else value
         stem = f'figure_{index + 1}'
-        # Fixed SVG IDs and omitted creation time make identical input figures
-        # reproducible without changing global Matplotlib configuration.
+        lower = str(name).lower()
+        group = ('variance' if 'variance detail' in lower else 'fit' if any(term in lower for term in ('convergence', 'refinement'))
+                 else 'sensitivity' if 'sensitivity' in lower else 'ld' if 'ld' in lower and 'signal' not in lower
+                 else 'signal' if any(term in lower for term in ('signal', 'prior')) else 'locus')
         import matplotlib as mpl
         with mpl.rc_context({'svg.hashsalt': 'prusie-offline-report-v1'}):
             for suffix in ('svg', 'png'):
@@ -489,35 +657,56 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
                 metadata = {'Date': None} if suffix == 'svg' else {'Software': 'prusie'}
                 figure.savefig(path, bbox_inches='tight', metadata=metadata)
                 figure_paths.append(str(path.resolve()))
+        figure_index.append(dict(title=str(name), png=f'{stem}.png', svg=f'{stem}.svg', section=group))
+        if isinstance(value, tuple) and len(value) > 2:
+            plot_data[str(name)] = _plain(value[2])
+        captions = {
+            'locus': 'All analyzed variants are retained. Physical coordinates are used only when supplied; otherwise the x axis is variant index.',
+            'fit': ('The inner stopping condition and improvement after search answer different questions. '
+                    'Refinement improvements use the common original-prior post-trim objective; logged ELBO remains separate.'),
+            'variance': 'Prior-variance and residual-variance paths describe solver states; full component records remain in the exports.',
+            'signal': ('CS members and explicitly selected additional candidates describe localization. '
+                       'Component probabilities and Bayes factors are conditional on the other fitted components.'),
+            'sensitivity': ('Settings are distinct fits, with baseline first. Missing cells are unobserved variants, not zero PIP. '
+                            'The full variant table also identifies changes outside the candidate view.'),
+            'ld': ('Flags use the joint recorded likelihood-ratio and absolute-z rule. '
+                   'Extreme residuals alone are not allele-flip flags; conditional-only and unassessed states stay separate.'),
+        }
+        caption = captions[group]
         encoded = base64.b64encode((directory / f'{stem}.png').read_bytes()).decode('ascii')
-        sections.append(f'<figure><img alt="{html.escape(str(name), quote=True)}" '
-                        f'src="data:image/png;base64,{encoded}"><figcaption>{html.escape(str(name))}'
-                        f' · <a href="{stem}.png">PNG</a> · <a href="{stem}.svg">SVG</a>'
-                        '</figcaption></figure>')
+        figure_groups.setdefault(group, []).append(
+            f'<figure id="{stem}"><img alt="{escape(name)}" src="data:image/png;base64,{encoded}" '
+            f'loading="lazy"><figcaption>{escape(name)} · <a href="{stem}.png">PNG</a> · '
+            f'<a href="{stem}.svg">SVG</a><br>{escape(caption)}</figcaption></figure>')
+    (directory / 'figure_index.json').write_text(json.dumps(figure_index, ensure_ascii=False, indent=2), encoding='utf-8')
+    if plot_data:
+        (directory / 'plot_data.json').write_text(json.dumps(plot_data, ensure_ascii=False, allow_nan=False,
+                                                          separators=(',', ':')), encoding='utf-8')
+    questions = (("locus", "Where is the posterior support?"), ("fit", "Did fitting stop, and did search improve the solution?"),
+                 ("variance", "Variance details"), ("signal", "How well are individual signals resolved?"),
+                 ("sensitivity", "Which conclusions change across settings?"), ("ld", "Are the statistics compatible with the supplied LD?"))
+    for group, question in questions:
+        if group not in figure_groups:
+            continue
+        sections.append('<details><summary>' + question + '</summary>' if group == 'variance' else '<h3>' + question + '</h3>')
+        sections.extend(figure_groups[group])
+        if group == 'variance':
+            sections.append('</details>')
     if not figure_paths:
         sections.append('<p>No figures were supplied.</p>')
-    sections.append('<h2 id="sensitivity-ld">Sensitivity and LD diagnostics</h2>')
-    sensitivity = compact['sensitivity']
+    sections.append('</section><section aria-labelledby="sensitivity-ld"><h2 id="sensitivity-ld">Sensitivity and LD diagnostics</h2>')
     if comparison is not None:
         sections.append('<p>Main comparisons use CS-supported signals against baseline '
-                        + html.escape(_display(sensitivity['baseline']))
-                        + '. Active diffuse components remain in the complete component view; '
-                        'posterior overlap alone does not confirm a localized split or merge.</p>')
-        table([sensitivity['relation_counts']])
-        table(sensitivity['pairs'])
-        from .comparison import comparison_relations
-        table(comparison_relations(comparison, baseline_only=True))
-    else:
-        sections.append('<p>Sensitivity was not assessed.</p>')
-    counts = compact['ld']
+                        + escape(sensitivity['baseline']) + '. Active diffuse components remain in the complete component view; '
+                        'posterior overlap alone does not confirm a localized split or merge. '
+                        'Missing settings indicate variants outside that fit, not low PIP.</p>')
+        details('Baseline comparisons and support policy', {'mode': sensitivity.get('mode'),
+                 'support': sensitivity.get('support'), 'pairs': sensitivity['pairs']})
+        details('Baseline CS-supported signal relations', comparison_relations(comparison, baseline_only=True))
     if ld is not None:
-        sections.append('<p>LD flip assessment: ' + str(counts['assessed']) + ' assessed ('
-                        + str(counts['flagged']) + ' flagged; ' + str(counts['not_flagged'])
-                        + ' assessed and not flagged); ' + str(counts['conditional_only'])
-                        + ' conditional-only; ' + str(counts['unassessed']) + ' unassessed. '
-                        'A finite conditional residual is not a completed flip assessment. '
+        sections.append('<p>A finite conditional residual is not a completed flip assessment. '
                         'Missing-z working zeros are not observed z statistics.</p>')
-        table([_select(counts, ('method', 'regularization', 'thresholds', 'mixture'))])
+        table([_select(counts, ('method', 'regularization', 'thresholds'))], caption='Recorded LD method and joint flag rule')
         from .ld import diagnostic_input_missing, diagnostic_status
         needs_review = []
         for row in ld.get('variants', []):
@@ -525,27 +714,37 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
                 continue
             displayed = dict(row, assessment=diagnostic_status(row))
             if diagnostic_input_missing(row):
-                # Old files can retain upstream zero-replacement statistics.
-                # Preserve them in evidence, never label them observed in HTML.
                 displayed.update(observed_z=None, standardized_residual=None)
             needs_review.append(displayed)
         if needs_review:
             details('Flagged, conditional-only and unassessed variants', needs_review,
                     ('variant_id', 'assessment', 'observed_z', 'expected_z', 'standardized_residual',
                      'log_likelihood_ratio', 'flag', 'unavailable_reason'))
-        elif counts['assessed']:
-            sections.append('<p>No variants were flagged among completed assessments. '
-                            'This does not establish that the LD reference is correct.</p>')
-        else:
-            sections.append('<p>No completed flip assessment is available.</p>')
-    else:
-        sections.append('<p>LD diagnostics were not assessed.</p>')
-    sections.append('<h2 id="details">Complete records and provenance</h2>')
+        if counts.get('warnings'):
+            details('LD diagnostic warnings', counts['warnings'])
+    sections.append('</section><section aria-labelledby="details"><h2 id="details">Complete records and provenance</h2>')
+    details('Complete stopping controls and finalization', control)
+    if search_requested:
+        details('Refinement objective, logged ELBO and controls', search)
+        accepted = [row for row in attempts if row.get('accepted')]
+        if accepted:
+            details('Accepted attempts', accepted)
+        details('Complete refinement attempts and stage stops', attempts)
+        if stages:
+            sections.append('<details><summary>Complete A/B stage objectives and stopping records</summary>'
+                            '<p>Stage A changes the prior to exclude a CS; its objective is not comparable '
+                            'to stage B. Stage B restores the original prior. Each recomputed objective '
+                            'and logged sweep ELBO is kept in a separate column. '
+                            '<a href="tables/refinement_stages.csv">Download all recorded stage fields</a>; '
+                            'fields absent from the original analysis remain unavailable.</p>')
+            table(stages, ('attempt', 'round', 'component', 'excluded_ids', 'stage', 'objective',
+                           'logged_elbo', 'niter', 'stop_reason', 'ibss_converged', 'error'))
+            sections.append('</details>')
     details('All components, including inactive and diffuse components', summary.get('components', []),
             ('component_id', 'active', 'cs_retained', 'V', 'top_variant', 'top_alpha',
              'effective_candidates', 'biological_mass', 'null_mass', 'component_log_bf'))
     sections.append('<p>Complete component rankings and alpha arrays are in '
-                    '<a href="evidence.json">evidence.json</a> under data.summary.components.</p>')
+                    '<a href="evidence.json">evidence.json</a> under <code>data.summary.components</code>.</p>')
     for label, name in (('CS audit', 'cs_audit'), ('CS-outside direct proxies', 'proxies'),
                         ('Between-CS genotype correlations', 'cs_relations')):
         details(label, summary.get(name, []))
@@ -553,36 +752,57 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
         details('All setting pairs: CS-supported relations', comparison_relations(comparison, baseline_only=False))
         details('All active-component relations, including diffuse overlap',
                 comparison_relations(comparison, layer='components', baseline_only=False))
-    details('Provenance', recorded)
-    details('Input QC and warnings', {'input_qc': summary.get('input_qc', {}),
-                                     'warnings': summary.get('warnings', [])})
-    sections.append('<h2>Methods and interpretation</h2><p>' + html.escape(_METHODS) + '</p>')
+        details('Complete parameters for each sensitivity setting', comparison.get('fit_settings', {}))
+    details('Fit parameters', recorded.get('parameters'))
+    # Keep long data hashes, server paths and process details in the supplied
+    # provenance export, not in the report body. Never invent input metadata.
+    sources = _select(recorded, ('numeric_source_sha', 'render_source_sha', 'render_version',
+                                 'software_versions', 'reference_sources', 'random_seed'))
+    details('Source and software identity', sources)
+    sections.append('<p>Full source records, checksums and supplied annotations: '
+                    '<code>data.provenance</code> and <code>data.annotations</code> in '
+                    '<a href="evidence.json">evidence.json</a>.</p>')
+    details('Input QC and warnings', {'input_qc': summary.get('input_qc', {}), 'warnings': summary.get('warnings', [])})
+    sections.append('<details><summary>Methods and interpretation</summary><p>' + escape(_METHODS) + '</p></details>')
     if ai is not None:
         details('Optional AI interpretation — separate from computed evidence', ai)
-    sections.append('<h2 id="exports">Machine-readable evidence references</h2>'
-                    '<p>Start with <a href="analysis_summary.json">analysis_summary.json</a>; '
-                    'query <a href="evidence.json">evidence.json</a> using data paths or stable fact IDs. '
-                    'All ' + str(len(evidence['facts'])) + ' scalar facts remain in that file and are not '
-                    'duplicated into this page. No browser scripts or remote resources are required.</p>'
+    sections.append('</section><section aria-labelledby="exports"><h2 id="exports">Machine-readable evidence references</h2>'
+                    '<p>Start with <a href="analysis_summary.json">analysis_summary.json</a> or '
+                    '<a href="summary.txt">summary.txt</a>; query <a href="evidence.json">evidence.json</a> '
+                    'using data paths or stable fact IDs. All ' + str(len(evidence['facts'])) + ' scalar facts '
+                    'remain in that file and are not duplicated into this page. No browser scripts or remote resources are required.</p>'
                     '<p>Lossless saved structure: <a href="analysis.json">analysis.json</a> with '
-                    '<a href="arrays.npz">arrays.npz</a>. Open index.html locally and keep its directory '
-                    'together to retain export links. GitHub file pages do not execute this report.</p>')
-    sections.append('<ul>' + ''.join('<li><a href="tables/' + html.escape(Path(path).name, quote=True)
-                                    + '">' + html.escape(Path(path).name) + '</a></li>' for path in tables) + '</ul>')
+                    '<a href="arrays.npz">arrays.npz</a>. Figure mapping: <a href="figure_index.json">figure_index.json</a>. '
+                    'Open index.html locally and keep its directory together to retain export links. '
+                    'GitHub file pages do not execute this report.</p>')
+    if plot_data:
+        sections.append('<p>Full plotted values and selection records: <a href="plot_data.json">plot_data.json</a>.</p>')
+    sections.append('<ul class="downloads">' + ''.join('<li><a href="tables/' + escape(Path(path).name)
+                                    + '">' + escape(Path(path).name) + '</a></li>' for path in tables) + '</ul></section></main>')
+    css = REPORT_CSS + """
+    nav ul,.downloads{display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;list-style:none;padding:0}
+    header{padding-bottom:.5rem}nav{border-bottom:1px solid #dde2e6;padding:.25rem 0 .75rem}
+    section{margin:2.2rem 0}h3{margin-top:1.6rem}.numeric{text-align:right;font-variant-numeric:tabular-nums}
+    .table-scroll{max-width:100%;overflow:auto}th{white-space:normal}td{overflow-wrap:anywhere}
+    caption{text-align:left;font-weight:600;margin:.5rem 0}figure{margin:1.4rem 0 2rem}
+    img{display:block;height:auto}figcaption,.caption{font-size:.92rem;color:#52606d}
+    details{border-top:1px solid #e6e9ec;padding:.65rem 0}summary{cursor:pointer;font-weight:600}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:34rem;overflow:auto}
+    @media(max-width:800px){body{padding:1rem}table{font-size:.9rem}th,td{padding:.4rem}h1{font-size:1.7rem}}
+    @media print{body{max-width:none;padding:0;font-size:11pt}nav{display:none}img{max-height:24cm;object-fit:contain}
+    figure{break-inside:avoid}.table-scroll{overflow:visible}details{break-inside:avoid}a{color:inherit}}
+    """
     content = ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
                '<meta name="viewport" content="width=device-width, initial-scale=1">'
                '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
                'img-src data:; style-src \'unsafe-inline\'">'
-               f'<title>{html.escape(str(title))}</title><style>body{{max-width:1100px;margin:auto;'
-               'padding:1.5rem;font-family:system-ui,sans-serif;line-height:1.5}pre{white-space:'
-               'pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;padding:1rem}img{max-width:100%}'
-               'figure{margin:2rem 0}.table-scroll{overflow:auto}table{border-collapse:collapse}'
-               'th,td{border:1px solid #ccc;padding:.4rem;text-align:left;vertical-align:top}'
-               'details{margin:1rem 0}summary{cursor:pointer;font-weight:600}'
-               '</style></head><body>' + '\n'.join(sections) + '</body></html>')
+               f'<title>{escape(title)}</title><style>{css}</style></head><body>'
+               + '\n'.join(sections) + '</body></html>')
     path = directory / 'index.html'
     path.write_text(content, encoding='utf-8')
     return {'html': str(path.resolve()), 'persistence': artifacts, 'tables': tables,
             'figures': figure_paths, 'evidence_sha256': evidence['sha256'],
+            'figure_index': str((directory / 'figure_index.json').resolve()),
+            'text_summary': str((directory / 'summary.txt').resolve()),
             'analysis_summary': str((directory / 'analysis_summary.json').resolve()),
             'evidence': str((directory / 'evidence.json').resolve())}

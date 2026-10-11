@@ -14,3 +14,6 @@ from .comparison import compare_fits, run_sensitivity
 from .ld import diagnose_ld, estimate_s_rss, kriging_rss
 from .datasets import load_convergence_example
 __all__ += ["summarize", "compare_fits", "run_sensitivity", "diagnose_ld", "estimate_s_rss", "kriging_rss", "load_convergence_example"]
+
+from .report import summary_text
+__all__ += ["summary_text"]

@@ -79,7 +79,8 @@ def test_supplied_axes_missing_trace_and_coordinate_rules(summary, tmp_path):
         row["position"] = None
     figure, axes, data = plots.plot_locus(summary)
     assert not data["physical_positions"]
-    assert "Variant index" in axes[0].get_xlabel()
+    assert "Variant index" in axes[-1].get_xlabel()
+    assert all(not ax.get_xlabel() for ax in axes[:-1])
     plt.close(figure)
     with pytest.raises(ValueError, match="physical"):
         plots.plot_locus(summary, genes={})
@@ -133,7 +134,7 @@ def test_evidence_and_offline_html(summary, tmp_path):
     parser = Links()
     parser.feed(page)
     assert parser.references
-    assert all(link.startswith("data:") or (not link.startswith(("/", "http:", "https:", "//")) and
+    assert all(link.startswith(("data:", "#")) or (not link.startswith(("/", "http:", "https:", "//")) and
                ".." not in link.split("/") and (tmp_path / link).exists()) for link in parser.references)
     assert "&lt;toy&gt;" in page and "not_assessed" in page
     assert "Methods and interpretation" in page and "Machine-readable evidence references" in page

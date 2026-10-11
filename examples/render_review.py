@@ -33,7 +33,9 @@ def dump(path,value):
                                separators=(',',':'))+'\n',encoding='utf-8')
 
 
-def render(case,output,render_source,refresh):
+def render(case,output,render_source,refresh,sensitivity_dir=None):
+    if refresh and sensitivity_dir is not None:
+        raise ValueError('--refresh-sensitivity cannot be combined with --sensitivity-dir')
     old=HISTORICAL/case
     fits=load_analysis(old/'fits')
     fit,refined=fits['baseline'],fits['refined']
@@ -65,8 +67,9 @@ def render(case,output,render_source,refresh):
             recomputed_fits=['larger_L','fixed_variance'] if case=='stable' else ['larger_L'],
             report_only=['coverage90'] if case=='stable' else [],
             requested_convergence=control.options(),convergence_resolution=resolution))
-    alternatives=load_analysis(output/'sensitivity_fits')
-    sensitivity_source=json.loads((output/'sensitivity_source.json').read_text())
+    saved=output if sensitivity_dir is None else sensitivity_dir/case
+    alternatives=load_analysis(saved/'sensitivity_fits')
+    sensitivity_source=json.loads((saved/'sensitivity_source.json').read_text())
     compared=({'baseline':fit}|alternatives if case=='stable' else
               {'baseline':fit,'refined':refined}|alternatives)
     comparison=prusie.compare_fits(compared,baseline='baseline',R=R)
@@ -85,8 +88,11 @@ def render(case,output,render_source,refresh):
         reused=['baseline and refined posterior/trace from original saved fits','original LD diagnostics'],
         recomputed=['posterior summary from saved fit','signal/component comparison','figures','HTML',
                     'compact analysis summary','evidence index'],
-        source_files={str(path.relative_to(ROOT)):sha(path) for path in
-            [old/'fits/analysis.json',old/'fits/arrays.npz',old/'ld_diagnostics.json']})
+        source_files={(str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else
+                       'saved_sensitivity/'+case+'/'+str(path.relative_to(saved))):sha(path) for path in
+            [old/'fits/analysis.json',old/'fits/arrays.npz',old/'ld_diagnostics.json',
+             saved/'sensitivity_fits/analysis.json',saved/'sensitivity_fits/arrays.npz',
+             saved/'sensitivity_source.json']})
     summary=prusie.summarize(refined,R,z=z,input_info={'ld_source':provenance['reference_sources'],
         'in_sample_ld':True,'genome_build':'not_assessed'})
     ld=json.loads((old/'ld_diagnostics.json').read_text())
@@ -94,14 +100,15 @@ def render(case,output,render_source,refresh):
     receipt=write_report(summary,output,figures=figures,ld=ld,comparison=comparison,
         provenance=provenance,annotations={'example_kind':'synthetic toy example' if case=='stable' else
             'official convergence sufficient-statistics example; no biological mechanism inferred'},
-        title=f'prusie {case}: reviewed post-analysis views')
-    dump(output/'figure_index.json',[dict(title=label,png=f'figure_{i}.png',svg=f'figure_{i}.svg')
-                                     for i,label in enumerate(figures,1)])
+        title=f'prusie {case}: fine-mapping results')
+    if not (output/'figure_index.json').exists():
+        dump(output/'figure_index.json',[dict(title=label,png=f'figure_{i}.png',svg=f'figure_{i}.svg')
+                                         for i,label in enumerate(figures,1)])
     dump(output/'plot_data.json',{label:parts[2] for label,parts in figures.items()})
     for name,value in [('posterior_summary',summary),('comparison',comparison),('ld_diagnostics',ld),
                        ('provenance',provenance)]:dump(output/f'{name}.json',value)
     # Lossless exported structures are identical after removing JSON whitespace.
-    for path in [output/'analysis.json',output/'evidence.json',output/'sensitivity_fits/analysis.json']:
+    for path in [output/'analysis.json',output/'evidence.json']:
         dump(path,json.loads(path.read_text()))
     import matplotlib.pyplot as plt
     plt.close('all')
@@ -114,12 +121,17 @@ def main():
     parser.add_argument('--output-dir',type=Path,required=True)
     parser.add_argument('--render-source-sha',required=True)
     parser.add_argument('--refresh-sensitivity',action='store_true')
+    parser.add_argument('--sensitivity-dir',type=Path,
+                        help='Read saved case/sensitivity_fits from this directory; no fits or inputs are changed.')
     parser.add_argument('--case',choices=['stable','problem','both'],default='both')
     args=parser.parse_args()
     if len(args.render_source_sha)!=40 or any(c not in '0123456789abcdef' for c in args.render_source_sha):
         parser.error('--render-source-sha must be the full source commit ID')
+    if args.refresh_sensitivity and args.sensitivity_dir is not None:
+        parser.error('--refresh-sensitivity cannot be combined with --sensitivity-dir')
     for case in ['stable','problem'] if args.case=='both' else [args.case]:
-        print(json.dumps(render(case,args.output_dir/case,args.render_source_sha,args.refresh_sensitivity)))
+        print(json.dumps(render(case,args.output_dir/case,args.render_source_sha,args.refresh_sensitivity,
+                                args.sensitivity_dir)))
 
 
 if __name__=='__main__':main()
