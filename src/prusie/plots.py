@@ -1009,6 +1009,9 @@ def plot_sensitivity(comparison, *, candidates_only=True, axes=None, layer="sign
     per_setting = []
     for change in baseline_changes:
         label = str(display_names.get(change['setting'], change['setting']))
+        if change['max_abs_delta_pip'] == 0:
+            per_setting.append(f'Baseline → {label}: all compared variants unchanged (max |ΔPIP| = 0)')
+            continue
         line = f'Baseline → {label}: max |ΔPIP| = {format_number(change["max_abs_delta_pip"])}'
         if change['variant_id'] is not None:
             line += f' at {change["variant_id"]}'
