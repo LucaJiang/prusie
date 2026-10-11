@@ -652,7 +652,8 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
                  else 'sensitivity' if 'sensitivity' in lower else 'ld' if 'ld' in lower and 'signal' not in lower
                  else 'signal' if any(term in lower for term in ('signal', 'prior')) else 'locus')
         import matplotlib as mpl
-        with mpl.rc_context({'svg.hashsalt': 'prusie-offline-report-v1'}):
+        # SVG serialization happens after plotting's local style context exits.
+        with mpl.rc_context({'svg.hashsalt': 'prusie-offline-report-v1', 'svg.fonttype': 'none'}):
             for suffix in ('svg', 'png'):
                 path = directory / f'{stem}.{suffix}'
                 metadata = {'Date': None} if suffix == 'svg' else {'Software': 'prusie'}

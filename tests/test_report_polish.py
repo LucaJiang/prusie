@@ -57,6 +57,24 @@ def test_text_and_report_do_not_fit_compute_ld_or_import_plotting(monkeypatch, t
     assert supplied == before == load_analysis(tmp_path)["summary"]
 
 
+def test_report_svg_retains_editable_text_after_plot_style_exits(tmp_path):
+    import xml.etree.ElementTree as ET
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
+    with mpl.rc_context({'svg.fonttype': 'path'}):
+        fig, ax = plt.subplots()
+        ax.set_title('Editable result label')
+        before = mpl.rcParams.copy()
+        try:
+            write_report(summary(), tmp_path, figures={'locus': (fig, ax, {})})
+            texts = ET.parse(tmp_path / 'figure_1.svg').findall('.//{http://www.w3.org/2000/svg}text')
+            assert any('Editable result label' in ''.join(node.itertext()) for node in texts)
+            assert dict(mpl.rcParams) == dict(before)
+        finally:
+            plt.close(fig)
+
+
 def test_regional_maximum_ids_respect_observation_support_and_candidate_selection(tmp_path):
     comparison = dict(schema_version="prusie.comparison.v2", baseline="baseline", mode="union",
         settings=["baseline", "alternative"], signal_relations=[], component_relations=[],
