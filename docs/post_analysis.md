@@ -271,6 +271,35 @@ sensitivity. External-LD residual variance is not automatically estimated.
 Coverage/purity changes are report filters and reuse the posterior. No Cartesian
 grid, implicit window expansion or average posterior is constructed.
 
+An alternative `inputs` mapping supplies its own summary statistics, LD and
+explicit variant IDs. Existing prior weights and inherited metadata columns are
+mapped by those IDs, including when a previously fitted baseline is supplied.
+For a subset, the prior is conditioned on the retained variants and the null
+component. If raw biological weights are $w$ and `null_weight` is $\eta$, the
+constructor normalizes $[(1-\eta)w,\eta]$ **once**, after selecting the retained
+weights. Biological weights are not separately normalized first: $\eta$ is not
+necessarily the final null probability when the raw weights do not sum to one.
+Zero biological support is rejected, even with a positive null weight.
+
+For new IDs under a nonuniform prior, provide complete alternative weights in
+the alternative input order. This belongs to the input-change category:
+
+```python
+alternative_inputs = dict(new_inputs, prior_weights=new_variant_weights)
+plan = [{'name': 'alternative_window', 'inputs': alternative_inputs}]
+```
+
+Explicit `prior_weights=None` requests uniform weights for the alternative.
+Without an explicit prior, a uniform baseline extends its existing equal raw
+weight to new IDs; the final null probability can therefore change with the
+window size. New IDs also need explicit metadata columns if baseline columns
+were supplied; explicit alternative metadata may omit unavailable columns.
+The plan is checked for IDs, dimensions and valid weights before any fit starts.
+Each fit record includes `prior_resolution` (mapping, policy, raw and normalized
+weights, effective null probability), and input changes include `input_resolution`.
+The cache hashes the resolved data and settings. Alternative fits are cold starts;
+baseline arrays and results are not mutated.
+
 Missing variants stay NA. The default comparison shows formal-CS-supported
 signals against baseline; complete active-component relations are a separate
 view. A diffuse component can overlap another diffuse component almost perfectly
@@ -286,6 +315,21 @@ is only an aid. Candidate PIP changes, ranks, thresholds, CS sizes/purity and
 high-LD exchanges remain separate metrics rather than a composite robustness
 score. Cache keys include inputs/order/alleles, settings, software and
 initialization; caches are caller-owned.
+
+`mode='union'` displays the union and computes each pair's PIP and posterior/CS
+overlap on that pair's intersection; representative LD uses the original
+representatives in the named LD reference. `mode='common'` uses the **global intersection across
+all fits** for displayed variants, ranks/top-candidate selection, all PIP metrics,
+shared counts, allele alignment, posterior overlap and CS-overlap evidence.
+Representative-LD evidence additionally requires both original representatives
+to belong to that support. The `support` and `support_scope` fields identify the
+policy. Component posteriors, original CS sizes/purities and representative IDs
+remain full-fit metadata; they are not refitted or renormalized on the intersection.
+Reported omitted/unobserved mass is outside the declared comparison support.
+An empty global intersection gives zero shared counts and unavailable PIP metrics,
+with components unmatched on that support. It does not imply biological absence.
+The legacy field name `full_region_pip_correlation` refers to the declared support
+for that mode, not to a union in which missing PIPs have been filled in.
 
 ## Figures, persistence and optional interpretation
 

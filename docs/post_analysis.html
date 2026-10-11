@@ -258,6 +258,31 @@ initialization while estimating it is labelled computational initialization
 sensitivity. External-LD residual variance is not automatically estimated.
 Coverage/purity changes are report filters and reuse the posterior. No Cartesian
 grid, implicit window expansion or average posterior is constructed.</p>
+<p>An alternative <code>inputs</code> mapping supplies its own summary statistics, LD and
+explicit variant IDs. Existing prior weights and inherited metadata columns are
+mapped by those IDs, including when a previously fitted baseline is supplied.
+For a subset, the prior is conditioned on the retained variants and the null
+component. If raw biological weights are <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi></mrow><annotation encoding="application/x-tex">w</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span></span></span></span></span> and <code>null_weight</code> is <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>η</mi></mrow><annotation encoding="application/x-tex">\eta</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">η</span></span></span></span></span>, the
+constructor normalizes <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>η</mi><mo stretchy="false">)</mo><mi>w</mi><mo separator="true">,</mo><mi>η</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[(1-\eta)w,\eta]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">η</span><span class="mclose">)</span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">η</span><span class="mclose">]</span></span></span></span></span> <strong>once</strong>, after selecting the retained
+weights. Biological weights are not separately normalized first: <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>η</mi></mrow><annotation encoding="application/x-tex">\eta</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">η</span></span></span></span></span> is not
+necessarily the final null probability when the raw weights do not sum to one.
+Zero biological support is rejected, even with a positive null weight.</p>
+<p>For new IDs under a nonuniform prior, provide complete alternative weights in
+the alternative input order. This belongs to the input-change category:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">alternative_inputs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">new_inputs</span><span class="p">,</span> <span class="n">prior_weights</span><span class="o">=</span><span class="n">new_variant_weights</span><span class="p">)</span>
+<span class="n">plan</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;alternative_window&#39;</span><span class="p">,</span> <span class="s1">&#39;inputs&#39;</span><span class="p">:</span> <span class="n">alternative_inputs</span><span class="p">}]</span>
+</code></pre></div>
+
+<p>Explicit <code>prior_weights=None</code> requests uniform weights for the alternative.
+Without an explicit prior, a uniform baseline extends its existing equal raw
+weight to new IDs; the final null probability can therefore change with the
+window size. New IDs also need explicit metadata columns if baseline columns
+were supplied; explicit alternative metadata may omit unavailable columns.
+The plan is checked for IDs, dimensions and valid weights before any fit starts.
+Each fit record includes <code>prior_resolution</code> (mapping, policy, raw and normalized
+weights, effective null probability), and input changes include <code>input_resolution</code>.
+The cache hashes the resolved data and settings. Alternative fits are cold starts;
+baseline arrays and results are not mutated.</p>
 <p>Missing variants stay NA. The default comparison shows formal-CS-supported
 signals against baseline; complete active-component relations are a separate
 view. A diffuse component can overlap another diffuse component almost perfectly
@@ -273,6 +298,20 @@ is only an aid. Candidate PIP changes, ranks, thresholds, CS sizes/purity and
 high-LD exchanges remain separate metrics rather than a composite robustness
 score. Cache keys include inputs/order/alleles, settings, software and
 initialization; caches are caller-owned.</p>
+<p><code>mode='union'</code> displays the union and computes each pair's PIP and posterior/CS
+overlap on that pair's intersection; representative LD uses the original
+representatives in the named LD reference. <code>mode='common'</code> uses the <strong>global intersection across
+all fits</strong> for displayed variants, ranks/top-candidate selection, all PIP metrics,
+shared counts, allele alignment, posterior overlap and CS-overlap evidence.
+Representative-LD evidence additionally requires both original representatives
+to belong to that support. The <code>support</code> and <code>support_scope</code> fields identify the
+policy. Component posteriors, original CS sizes/purities and representative IDs
+remain full-fit metadata; they are not refitted or renormalized on the intersection.
+Reported omitted/unobserved mass is outside the declared comparison support.
+An empty global intersection gives zero shared counts and unavailable PIP metrics,
+with components unmatched on that support. It does not imply biological absence.
+The legacy field name <code>full_region_pip_correlation</code> refers to the declared support
+for that mode, not to a union in which missing PIPs have been filled in.</p>
 <h2 id="figures-persistence-and-optional-interpretation">Figures, persistence and optional interpretation</h2>
 <p><code>prusie.plots</code> provides <code>plot_locus</code>, <code>plot_signal</code>, <code>plot_convergence</code>,
 <code>plot_refinement</code>, <code>plot_ld_diagnostics</code>, <code>plot_sensitivity</code> and

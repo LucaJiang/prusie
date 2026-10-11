@@ -91,3 +91,6 @@ attribution.
 ## Post-analysis review snapshot
 
 The `post_analysis` branch includes an [updated source and numerical evidence review guide](docs/review/post_analysis_fixes/README.md), with two recorded examples, figures and interpretations for scientific review. The [original review snapshot](docs/review/post_analysis/README.md) remains available unchanged.
+
+The [sensitivity follow-up](docs/review/sensitivity_followup.md) documents variant-aware
+priors, common comparison support and an addendum to the stable-example interpretation.
