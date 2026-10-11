@@ -95,7 +95,7 @@ def _classify_signal_edges(edges):
     return edges
 
 
-def _unmatched(na, nb, record, side, shared, *, layer):
+def _unmatched(na, nb, record, side, shared, *, layer, support_scope="pairwise_intersection"):
     other = "b" if side == "a" else "a"
     return dict(setting_a=na, setting_b=nb,
         **{f"component_{side}": record["component_id"], f"component_{other}": None,
@@ -105,6 +105,7 @@ def _unmatched(na, nb, record, side, shared, *, layer):
            f"representative_{side}": record["top"], f"representative_{other}": None},
         status="unmatched" if layer == "signals" else "unmatched_component", side=side,
         matching_layer=layer, support_sources=list(record["support_sources"]),
+        support_scope=support_scope, shared_variant_count=len(shared),
         unobserved_mass=sum(v for x, v in record["alpha"].items() if x not in shared))
 
 
@@ -204,6 +205,16 @@ def compare_fits(fits, *, baseline=None, R=None, ld_reference=None,
     Candidate variants include all retained CS members, up to ``top_candidates``
     posterior-ranked variants per retained component (top regional PIPs when no
     CS was retained), and every variant crossing ``pip_threshold`` in any fit.
+
+    ``mode="common"`` uses the intersection across *all* supplied fits for
+    variant ranks, candidate selection, every pair's PIP metrics, posterior/CS
+    overlap and omitted posterior mass. Representative LD is available only
+    when both original representatives lie in that intersection. Component
+    records, formal CS definitions and resolution summaries retain the original
+    fit support; no posterior mass is renormalized. An empty intersection has
+    unavailable PIP metrics and no matching edges. ``mode="union"`` retains
+    the union variant table and pairwise-intersection PIP/overlap metrics;
+    representative LD uses the supplied reference's original representatives.
     """
     if not fits or any(not isinstance(name, str) or not name for name in fits):
         raise ValueError("fits must be a nonempty mapping with nonempty string names")
@@ -222,13 +233,17 @@ def compare_fits(fits, *, baseline=None, R=None, ld_reference=None,
     maps = {name: dict(zip(ids[name], map(float, fit.pip))) for name, fit in fits.items()}
     signals = {name: _signals(fit) for name, fit in fits.items()}
     universe = sorted(set.union(*(set(v) for v in ids.values())) if mode == "union" else set.intersection(*(set(v) for v in ids.values())))
-    ranks = {name: {x: i+1 for i, x in enumerate(sorted(ids[name], key=lambda x: (-maps[name][x], x)))} for name in names}
+    common_support = set(universe) if mode == "common" else None
+    support_scope = "global_intersection" if mode == "common" else "pairwise_intersection"
+    ranks = {name: {x: i+1 for i, x in enumerate(sorted(
+        universe if mode == "common" else ids[name], key=lambda x: (-maps[name][x], x)))} for name in names}
     candidate_sources = {x: {} for x in universe}
     for name in names:
         formal = [s for s in signals[name] if s["cs_retained"]]
         cs_members = set().union(*(s["cs"] for s in formal))
         top_members = {x for s in formal
-                       for x in sorted(s["alpha"], key=lambda y: (-s["alpha"][y], y))[:top_candidates]
+                       for x in sorted((y for y in s["alpha"] if common_support is None or y in common_support),
+                                       key=lambda y: (-s["alpha"][y], y))[:top_candidates]
                        if s["alpha"][x] > 0}
         for x in universe:
             sources = []
@@ -263,24 +278,27 @@ def compare_fits(fits, *, baseline=None, R=None, ld_reference=None,
         ld_ids = {x: i for i, x in enumerate(ids[ld_reference])}
     relations, component_relations, alignments, pairwise, display = [], [], [], [], []
     for na, nb in itertools.combinations(names, 2):
-        shared = set(ids[na]) & set(ids[nb])
+        shared = common_support if common_support is not None else set(ids[na]) & set(ids[nb])
         ordered_shared = sorted(shared)
         directions, direction_status = _directions(fits[na], fits[nb], ordered_shared)
         alignments.append(dict(setting_a=na, setting_b=nb, shared_ids=ordered_shared, directions=directions,
-            status=direction_status, omitted_a=sorted(set(ids[na])-shared), omitted_b=sorted(set(ids[nb])-shared)))
+            status=direction_status, support_scope=support_scope,
+            omitted_a=sorted(set(ids[na])-shared), omitted_b=sorted(set(ids[nb])-shared)))
         pa, pb = [maps[na][x] for x in ordered_shared], [maps[nb][x] for x in ordered_shared]
         correlation = float(np.corrcoef(pa, pb)[0, 1]) if len(shared) > 1 and np.std(pa) > 0 and np.std(pb) > 0 else None
         pairwise.append(dict(setting_a=na, setting_b=nb, shared_variant_count=len(shared),
-            full_region_pip_correlation=correlation,
+            support_scope=support_scope, full_region_pip_correlation=correlation,
             max_abs_delta_pip=max((abs(a-b) for a, b in zip(pa, pb)), default=None),
             candidate_max_abs_delta_pip=max((abs(maps[na][x]-maps[nb][x]) for x in ordered_shared
                 if candidate_sources[x]), default=None)))
         edges = []
         for a, b in itertools.product(signals[na], signals[nb]):
             overlap = math.fsum(min(a["alpha"][x], b["alpha"][x]) for x in ordered_shared)
-            common_cs = sorted(a["cs"] & b["cs"])
-            r = float(corr[ld_ids[a["top"]], ld_ids[b["top"]]]) if corr is not None and a["top"] in ld_ids and b["top"] in ld_ids else None
-            support = (["posterior_overlap"] if overlap >= overlap_threshold else [])
+            common_cs = sorted(a["cs"] & b["cs"] & shared)
+            representatives_available = (mode == "union" or (a["top"] in shared and b["top"] in shared))
+            r = (float(corr[ld_ids[a["top"]], ld_ids[b["top"]]]) if representatives_available
+                 and corr is not None and a["top"] in ld_ids and b["top"] in ld_ids else None)
+            support = (["posterior_overlap"] if overlap >= overlap_threshold and (mode == "union" or bool(shared)) else [])
             support += ["formal_cs_overlap"] if common_cs else []
             support += ["representative_ld"] if r is not None and abs(r) >= ld_threshold else []
             if not support:
@@ -296,7 +314,8 @@ def compare_fits(fits, *, baseline=None, R=None, ld_reference=None,
                 effective_candidates_a=a["effective_candidates"], effective_candidates_b=b["effective_candidates"],
                 V_a=a["V"], V_b=b["V"], cs_retained_a=a["cs_retained"], cs_retained_b=b["cs_retained"],
                 resolution_a=copy.deepcopy(a["resolution"]), resolution_b=copy.deepcopy(b["resolution"]),
-                support_sources=support, matching_layer="components")
+                support_sources=support, matching_layer="components", support_scope=support_scope,
+                shared_variant_count=len(shared))
             edges.append(edge)
         main = [copy.deepcopy(e) for e in edges if (e["cs_retained_a"] and e["cs_retained_b"])
                 or ((e["cs_retained_a"] or e["cs_retained_b"]) and "posterior_overlap" in e["support_sources"])]
@@ -310,9 +329,9 @@ def compare_fits(fits, *, baseline=None, R=None, ld_reference=None,
         for side, records in (("a", signals[na]), ("b", signals[nb])):
             for record in records:
                 if not any(e[f"component_{side}"] == record["component_id"] for e in edges):
-                    component_relations.append(_unmatched(na, nb, record, side, shared, layer="components"))
+                    component_relations.append(_unmatched(na, nb, record, side, shared, layer="components", support_scope=support_scope))
                 if record["cs_retained"] and not any(e[f"component_{side}"] == record["component_id"] for e in main):
-                    main.append(_unmatched(na, nb, record, side, shared, layer="signals"))
+                    main.append(_unmatched(na, nb, record, side, shared, layer="signals", support_scope=support_scope))
         component_relations.extend(edges)
         relations.extend(main)
         used_a, used_b = set(), set()
@@ -323,6 +342,13 @@ def compare_fits(fits, *, baseline=None, R=None, ld_reference=None,
                 used_a.add(edge["component_a"]); used_b.add(edge["component_b"])
     primary = _baseline_first(relations, baseline)
     return dict(schema_version="prusie.comparison.v2", settings=names, baseline=baseline, mode=mode,
+        support=dict(variant_table="global_intersection" if mode == "common" else "union",
+                     variant_ranks="global_intersection" if mode == "common" else "original_fit",
+                     pairwise_metrics=support_scope, matching_overlap=support_scope,
+                     omitted_posterior_mass=support_scope, component_records="original_fit",
+                     representative_ld="original_representatives_within_global_intersection" if mode == "common"
+                     else "original_representatives_in_ld_reference",
+                     global_common_ids=universe if mode == "common" else None),
         fit_settings={name: copy.deepcopy(fits[name].params) for name in names}, variants=variants,
         components={name: [dict(s, cs=sorted(s["cs"])) for s in signals[name]] for name in names},
         signal_relations=relations, baseline_signal_relations=primary,
@@ -338,6 +364,9 @@ def compare_fits(fits, *, baseline=None, R=None, ld_reference=None,
         thresholds=dict(pip=pip_threshold, posterior_overlap=overlap_threshold, abs_r=ld_threshold,
                         top_candidates=int(top_candidates)),
         rules=dict(missing="None, never zero", posterior_overlap="unrenormalized shared-support sum(min(alpha_a,alpha_b))",
+            common_support="Global intersection for candidates/ranks, all pair metrics and matching evidence; empty support cannot establish a match",
+            omitted_mass="unobserved_mass is posterior mass outside the declared comparison support; it may include variants observed in an individual pair but excluded from the global intersection",
+            source_component_metadata="CS sizes, purity, representatives and entropy resolution describe original fits, without redefining their formal CS",
             matching="CS-to-CS: overlap OR CS overlap OR representative LD; CS-to-unretained: posterior overlap only, unresolved",
             component_layer="All active components plus formal CS boundary cases; diffuse overlap is descriptive, not a confirmed split/merge",
             resolution="Continuous entropy effective-candidate count and fraction; no calibrated binary diffuse threshold",
