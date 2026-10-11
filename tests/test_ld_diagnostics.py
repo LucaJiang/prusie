@@ -46,7 +46,11 @@ def test_missing_z_is_recorded_without_automatic_flip():
     result = kriging_rss([np.nan,3.,-3.],np.eye(3),s=.1)
     assert result["variants"][0]["status"] == "not_assessed"
     assert result["variants"][0]["flag"] is None
-    assert result["variants"][0]["observed_z"] == 0
+    assert result["variants"][0]["observed_z"] is None
+    assert result["variants"][0]["working_z"] == 0
+    assert result["variants"][0]["standardized_residual"] is None
+    assert np.isfinite(result["variants"][0]["working_standardized_residual"])
+    assert result["status_counts"]["unassessed"] == 1
     with pytest.raises(ValueError,match="n must"):
         estimate_s_rss([1,2],np.eye(2),n=1)
     with pytest.raises(ValueError,match="nonnegative"):

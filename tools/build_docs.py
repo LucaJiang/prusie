@@ -124,7 +124,7 @@ def build(check: bool = False) -> None:
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">{config["mark"]}</span><span>{config["package"]}<small>{html.escape(config["tagline"])}</small></span></a>
-<span class="version">{version} <span>release candidate</span></span>
+<span class="version">{version} <span>{'development snapshot' if '.dev' in version else 'release candidate'}</span></span>
 <nav aria-label="Documentation">{"".join(nav)}</nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>

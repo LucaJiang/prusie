@@ -14,18 +14,37 @@ from types import MappingProxyType
 import numpy as np
 from . import _native
 from .posterior import credible_sets, marginal_pip
-from .diagnostics import ConvergenceConfig, tracking_level, convergence_summary
+from .diagnostics import (ConvergenceConfig, tracking_level, convergence_summary,
+                          resolve_convergence, nonconvergence_message)
 
 
 def _readonly(value):
     a=np.array(value,copy=True,order='K'); a.flags.writeable=False; return a
 
 
+_HASH_BUFFER_ELEMENTS = 32768  # At most 256 KiB of canonical float64 data per chunk.
+
+
+def _hash_float64_c_order(h, value):
+    """Hash canonical native float64 C-order bytes with a bounded conversion buffer.
+
+    The signature predates this iterator and canonicalizes numeric dtypes to
+    float64. Preserve that identity contract, including shape, without copying
+    an entire strided/F-order matrix or allocating its full bytes representation.
+    """
+    a = np.asarray(value)
+    h.update(str(a.shape).encode())
+    with np.nditer(a, flags=['external_loop', 'buffered', 'zerosize_ok'],
+                   op_flags=[['readonly', 'contig']], op_dtypes=[np.dtype(np.float64)],
+                   casting='unsafe', order='C', buffersize=_HASH_BUFFER_ELEMENTS) as chunks:
+        for chunk in chunks:
+            h.update(memoryview(chunk).cast('B'))
+
+
 def data_signature(matrix,response,yty,n,scales,multiplier,ids,metadata):
     h=hashlib.sha256()
     for a in (matrix,response,np.asarray([yty,n,multiplier]),scales):
-        a=np.asarray(a,dtype=np.float64)
-        h.update(str(a.shape).encode()); h.update(a.tobytes(order='C'))
+        _hash_float64_c_order(h, a)
     for value in ids: h.update(str(value).encode()); h.update(b'\0')
     for key in ('effect_allele','other_allele'):
         h.update(key.encode())
@@ -220,7 +239,7 @@ def _run(fit,data,options,initial=None,reset_variances=False,track_fit=False,con
     o=dict(options)
     for k in list(o):
         if k.startswith('init_'): del o[k]
-    control=convergence or ConvergenceConfig()
+    control,resolution=resolve_convergence(fit,convergence)
     o.update(control.options(),track_level=tracking_level(track_fit))
     if initial is not None:
         o.update(initial_options(initial,ids=fit.variant_ids,metadata=fit.variant_metadata,
@@ -233,6 +252,7 @@ def _run(fit,data,options,initial=None,reset_variances=False,track_fit=False,con
         setattr(result,name,native[name])
     result.params.update(max_iter=o['max_iter'],tol=o['tol'],prior_weights=np.asarray(o['prior_weights']).tolist(),
                          hard_exclusion=o.get('hard_exclusion',False),track_fit=track_fit,
+                         convergence=control.options(),convergence_resolution=resolution,
                          s_init='posterior_state' if initial is not None else None)
     result.pip=marginal_pip(result.alpha,result.V,null_index=result.null_index,prior_tol=o['prior_tol'])
     result.cs_audit=[]
@@ -241,18 +261,32 @@ def _run(fit,data,options,initial=None,reset_variances=False,track_fit=False,con
           covariance_scales=np.sqrt(data.diagonal),covariance_multiplier=data.matrix_scale,audit=result.cs_audit)
     result.intercept=data.y_mean-float(np.sum(data.means*np.sum(result.alpha*result.mu,axis=0)/data.scales))
     result.warnings=list(native['warnings'])
+    if not native['converged']:
+        result.warnings.append(nonconvergence_message(native))
     result.convergence,result.trace=convergence_summary(native,o,control)
+    result.convergence['config_resolution']=copy.deepcopy(resolution)
     result.refinement={'status':'not_executed','stop_reason':'not_requested','history':[],'total_fits':0}
     return result
 
 
-def continue_fit(fit, *, max_iter=100,tol=1e-4,track_fit=False,convergence=None):
-    """Explicit same-data continuation; caller and prepared arrays remain unchanged."""
+def continue_fit(fit, *, max_iter=100,tol=None,track_fit=False,convergence=None):
+    """Continue the same data, inheriting requested controls and ELBO tolerance.
+
+    An explicit ``tol`` changes ELBO tolerance; ``convergence`` separately
+    overrides the criterion and posterior thresholds. Caller state is unchanged.
+    """
     data=getattr(fit,'_prepared',None)
     if data is None: raise ValueError('Continuation needs retained data; fit with retain_data=True')
+    tol_source='explicit_override'
+    if tol is None:
+        tol=fit.params.get('tol',data.options.get('tol',1e-4))
+        tol_source='inherited_params' if 'tol' in fit.params else 'recovered_prepared_options'
     if int(max_iter)!=max_iter or max_iter<1 or not math.isfinite(tol) or tol<0: raise ValueError('Invalid continuation budget/tolerance')
     o=dict(data.options);o.update(max_iter=int(max_iter),tol=float(tol))
-    return _run(fit,data,o,initial=fit,track_fit=track_fit,convergence=convergence)
+    result=_run(fit,data,o,initial=fit,track_fit=track_fit,convergence=convergence)
+    result.params['tol_resolution']=tol_source
+    result.convergence['tol_resolution']=tol_source
+    return result
 
 
 def _brief(fit,objective=None):
@@ -262,12 +296,15 @@ def _brief(fit,objective=None):
                 convergence=copy.deepcopy(fit.convergence),trace=copy.deepcopy(fit.trace))
 
 
-def refine_fit(fit, config=None):
+def refine_fit(fit, config=None, *, convergence=None):
     """Search CS exclusions, restoring the original prior before every comparison."""
     config=config or RefinementConfig();config.validate()
+    control,resolution=resolve_convergence(fit,convergence)
     best=_copy_result(fit); data=getattr(fit,'_prepared',None)
     history=[]; record=dict(status='not_executed',stop_reason=None,history=history,total_fits=0,
-                           before=_brief(fit),after=_brief(fit),config=vars(config).copy())
+                           before=_brief(fit),after=_brief(fit),config=vars(config).copy(),
+                           requested_convergence=control.options(),convergence_resolution=resolution,
+                           objective_definition='post_loop_post_sigma2_update_and_trim; original prior')
     best.refinement=record
     def finish(status,reason):
         record.update(status=status,stop_reason=reason,after=_brief(best,record.get('best_objective')))
@@ -293,7 +330,8 @@ def refine_fit(fit, config=None):
             if config.candidate_budget is not None and attempts>=config.candidate_budget:
                 budget_exhausted=True;break
             row=dict(round=round_id,component=int(component),excluded_indices=members.tolist(),
-                     excluded_ids=incumbent.variant_ids[members].tolist(),accepted=False,reason=None)
+                     excluded_ids=incumbent.variant_ids[members].tolist(),accepted=False,reason=None,
+                     incumbent_objective=incumbent_obj)
             history.append(row)
             weights=original.copy();weights[members]=0.
             if weights.sum()<=0:
@@ -306,14 +344,22 @@ def refine_fit(fit, config=None):
             for phase in ('A','B'):
                 started=time.perf_counter();record['total_fits']+=1
                 try:
-                    if phase=='A': candidate=_run(incumbent,data,o)
+                    if phase=='A': candidate=_run(incumbent,data,o,convergence=control)
                     else:
                         restored=dict(data.options);restored.update(max_iter=config.max_iter,tol=config.inner_tol,
                                                                   prior_weights=original,hard_exclusion=False)
-                        candidate=_run(incumbent,data,restored,initial=proposal,reset_variances=True,track_fit=requested_tracking)
+                        candidate=_run(incumbent,data,restored,initial=proposal,reset_variances=True,
+                                       track_fit=requested_tracking,convergence=control)
+                    # Both stages use one resolved request; internal forwarding is
+                    # not a second user override. Keep its actual origin explicit.
+                    candidate.params['convergence_resolution']=copy.deepcopy(resolution)
+                    candidate.convergence['config_resolution']=copy.deepcopy(resolution)
                     stage=dict(niter=candidate.niter,stop_reason=candidate.convergence['stop_reason'],
                                ibss_converged=candidate.converged,seconds=time.perf_counter()-started,
-                               logged_elbo=float(candidate.elbo[-1]))
+                               logged_elbo=float(candidate.elbo[-1]),
+                               solver_settings=dict(convergence=control.options(),tol=config.inner_tol,
+                                                    max_iter=config.max_iter,track_fit=candidate.params['track_fit']),
+                               convergence=copy.deepcopy(candidate.convergence))
                     stages[phase]=stage;row['stages']=stages
                     if phase=='A':
                         stage['excluded_max_alpha']=float(np.max(candidate.alpha[:,members]))

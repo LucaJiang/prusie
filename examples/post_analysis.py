@@ -18,6 +18,30 @@ def checksum(a):
     a=np.asarray(a);return hashlib.sha256(a.tobytes(order='C')).hexdigest()
 
 
+def make_figures(fit,refined,summary,R,ld,comparison):
+    """Show both solver trajectories and every retained CS explicitly."""
+    matched=prusie.compare_fits({'before':fit,'after':refined},baseline='before',R=R)
+    figures={'locus overview':plot_locus(summary,R=R),
+             'convergence before and after':plot_convergence(fit,after=refined),
+             'refinement':plot_refinement(fit,refined,comparison=matched),
+             'LD diagnostics':plot_ld_diagnostics(ld),
+             'sensitivity main signals':plot_sensitivity(comparison,candidates_only=True)}
+    components=sorted(summary['credible_sets'],
+                      key=lambda cs:(-max(row['pip'] for row in summary['variants']
+                          if row['variant_id'] in cs['members']),cs['component_id']))
+    for cs in components:
+        component=cs['component_id']
+        detail=next(row for row in summary['components'] if row['component_id']==component)
+        candidates=list(dict.fromkeys(cs['members']+detail['ranking'][:10]))
+        figures[f'signal detail component {component}']=plot_signal(summary,component,R=R)
+        figures[f'prior influence component {component} (CS and top 10)']=plot_prior_influence(
+            summary,component,variant_ids=candidates)
+    if not components:
+        figures['signal detail']=plot_signal(summary,R=R)
+        figures['prior influence']=plot_prior_influence(summary)
+    return figures
+
+
 def execute(case,output,interpret=False):
     started=time.perf_counter()
     if case=='stable':
@@ -45,18 +69,10 @@ def execute(case,output,interpret=False):
         comparison=prusie.compare_fits({'baseline':fit,'refined':refined,'larger_L':alternate},R=R)
         source=e['metadata']['source_url']
         annotations={'example_kind':'official convergence toy sufficient statistics; local-optimum solver example'}
-    summary=prusie.summarize(refined,R,z=z,input_info={'LD_source':source,'in_sample':True,
+    summary=prusie.summarize(refined,R,z=z,input_info={'ld_source':source,'in_sample_ld':True,
                                                      'genome_build':'not_assessed'})
     ld=prusie.diagnose_ld(z,R,n,variant_ids=fit.variant_ids)
-    matched=prusie.compare_fits({'before':fit,'after':refined},R=R)
-    component=int(refined.sets['cs_index'][0]) if len(refined.sets['cs_index']) else 0
-    figures={'locus overview':plot_locus(summary,R=R),
-             'signal detail':plot_signal(summary,component,R=R),
-             'convergence':plot_convergence(refined),
-             'refinement':plot_refinement(fit,refined,comparison=matched),
-             'LD diagnostics':plot_ld_diagnostics(ld),
-             'sensitivity':plot_sensitivity(comparison,candidates_only=True),
-             'prior influence':plot_prior_influence(summary,component)}
+    figures=make_figures(fit,refined,summary,R,ld,comparison)
     provenance=dict(data_checksums={k:checksum(v) for k,v in inputs.items()},
                     variant_harmonization='Input order preserved; allele labels unavailable in this toy fixture.',
                     parameters=params,initial_state='cold start; refinement stage B uses stage A posterior moments',

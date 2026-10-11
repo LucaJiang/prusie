@@ -14,7 +14,8 @@ from . import _native
 from ._array_layout import native_array
 from .posterior import credible_sets, marginal_pip
 from .result import SusieResult
-from .diagnostics import ConvergenceConfig, tracking_level, convergence_summary
+from .diagnostics import (ConvergenceConfig, tracking_level, convergence_summary,
+                          resolve_convergence, nonconvergence_message)
 from .refinement import data_signature, make_prepared, initial_options, refine_fit, RefinementConfig
 
 
@@ -473,9 +474,7 @@ def _susie_suff_stat(
             matrix_inverse_scales=inverse_scales,
             matrix_scales=scales,
         )
-    control = convergence or ConvergenceConfig()
-    if not isinstance(control, ConvergenceConfig):
-        raise TypeError('convergence must be a ConvergenceConfig')
+    control, resolution = resolve_convergence(s_init if hasattr(s_init, 'params') else None, convergence)
     level = tracking_level(track_fit)
     options.update(control.options(), track_level=level)
     signature = data_signature(crossproduct,crossresponse,yty,n,scales,_rss_matrix_scale,ids,metadata)
@@ -493,7 +492,7 @@ def _susie_suff_stat(
         _warn(message, collected)
     if not native["converged"]:
         _warn(
-            f"IBSS did not converge in {max_iter} iterations; check summary/LD consistency",
+            nonconvergence_message(native),
             collected,
         )
     alpha, V = native["alpha"], native["V"]
@@ -536,11 +535,14 @@ def _susie_suff_stat(
         s_init="posterior_state" if s_init is not None else None,
         refine=bool(refine),
         track_fit=track_fit,
+        convergence=control.options(),
+        convergence_resolution=resolution,
     )
     intercept = y_mean_value - float(
         np.sum(means * np.sum(alpha * native["mu"], axis=0) / scales)
     )
     summary, trace = convergence_summary(native, options, control)
+    summary['config_resolution'] = resolution.copy()
     fit = SusieResult(
         variant_ids=ids,
         alpha=alpha,

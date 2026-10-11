@@ -95,7 +95,7 @@ def check():
         errors.append('Missing confirmed author')
     if (ROOT / 'Cargo.toml').exists():
         cargo = re.search(r'^version = "([^"]+)"', (ROOT / 'Cargo.toml').read_text(), re.M)[1]
-        if cargo.replace('-rc.', 'rc') != version:
+        if cargo.replace('-rc.', 'rc').replace('-dev.', '.dev') != version:
             errors.append('Cargo version mismatch')
     if not (docs / '.nojekyll').is_file():
         errors.append('Missing .nojekyll')

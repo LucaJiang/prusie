@@ -15,6 +15,35 @@ from .analysis import _correlation
 _REFERENCE = "stephenslab/susieR@8e56a8e038e989856d106d9ca5175cc664fea9d2:R/susie_rss_utils.R"
 
 
+def diagnostic_input_missing(row):
+    """Read explicit or legacy missing-input markers without guessing from zero."""
+    return bool(row.get("input_missing", False) or
+                ("input_z" in row and row["input_z"] is None) or
+                str(row.get("unavailable_reason", "")).startswith("missing_z"))
+
+
+def diagnostic_status(row):
+    """Classify flip assessment, including older saved records without status.
+
+    Finite conditional moments alone never establish an assessed flip test.
+    """
+    if diagnostic_input_missing(row) or row.get("status") == "not_assessed":
+        return "not_assessed"
+    if row.get("status") == "conditional_only":
+        return "conditional_only"
+    if isinstance(row.get("flag"), (bool, np.bool_)) and row.get("status") in (None, "assessed"):
+        return "flagged" if row["flag"] else "not_flagged"
+    return "not_assessed"
+
+
+def diagnostic_counts(diagnostics):
+    """Counts of completed flip tests and separately available conditional data."""
+    states = [diagnostic_status(row) for row in diagnostics.get("variants", [])]
+    return dict(total=len(states), assessed=states.count("flagged") + states.count("not_flagged"),
+                flagged=states.count("flagged"), not_flagged=states.count("not_flagged"),
+                conditional_only=states.count("conditional_only"), unassessed=states.count("not_assessed"))
+
+
 def _scipy():
     try:
         from scipy import optimize, special
@@ -194,9 +223,11 @@ def kriging_rss(z, R, n=None, *, s=None, r_tol=1e-8, method="null-mle",
     condmean = -condvar * (offdiagonal @ adjusted)
     residual = (adjusted-condmean)/np.sqrt(condvar)
     rows = [dict(variant_id=ids[j], index=j, input_z=None if missing[j] else float(np.asarray(z)[j]),
-                 observed_z=float(adjusted[j]), expected_z=float(condmean[j]) if valid[j] else None,
+                 input_missing=bool(missing[j]), observed_z=None if missing[j] else float(adjusted[j]),
+                 working_z=float(adjusted[j]), expected_z=float(condmean[j]) if valid[j] else None,
                  conditional_variance=float(condvar[j]) if valid[j] else None,
-                 standardized_residual=float(residual[j]) if valid[j] else None,
+                 standardized_residual=float(residual[j]) if valid[j] and not missing[j] else None,
+                 working_standardized_residual=float(residual[j]) if valid[j] else None,
                  log_likelihood_ratio=None, flag=None, status="assessed" if valid[j] and not missing[j] else "not_assessed",
                  unavailable_reason="missing_z_replaced_by_zero_upstream" if missing[j] else
                     (None if valid[j] else "nonpositive_precision_diagonal")) for j in range(p)]
@@ -223,11 +254,15 @@ def kriging_rss(z, R, n=None, *, s=None, r_tol=1e-8, method="null-mle",
                            log_likelihood_original=float(log0[j]), log_likelihood_flipped=float(log1[j]),
                            flag=bool(log1[j]-log0[j] > flip_log_lr and abs(adjusted[j]) > flip_abs_z) if not missing[j] else None)
             mixture = dict(status="assessed", scale_grid=grid, weights=weights, **optimizer)
+    for row in rows:
+        if row["status"] == "assessed" and row["flag"] is None:
+            row.update(status="conditional_only", unavailable_reason=mixture["reason"])
+    counts = diagnostic_counts({"variants": rows})
     return dict(schema_version="prusie.ld.v1", method="susieR RSS kriging normal scale mixture",
                 reference=_REFERENCE, regularization=s, requested_regularization=requested_s,
                 regularization_method=method if estimated else "user_fixed", n=n,
                 z_adjustment="sqrt((n-1)/(z²+n-2))" if n is not None and np.isfinite(n) else "none",
-                variants=rows, mixture=mixture, warnings=messages,
+                variants=rows, mixture=mixture, warnings=messages, status_counts=counts,
                 singular_pseudoinverse=bool(s == 0 and np.any(d == 0)),
                 thresholds=dict(flip_log_lr=flip_log_lr, flip_abs_z=flip_abs_z, strict=True),
                 matrix_sha256=decomposition["matrix_sha256"], cache_hit=decomposition["cache_hit"],

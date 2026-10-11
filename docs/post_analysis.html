@@ -16,7 +16,7 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
-<span class="version">0.2.3rc6 <span>release candidate</span></span>
+<span class="version">0.2.4.dev1 <span>development snapshot</span></span>
 <nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="post_analysis.html" aria-current="page">Post-analysis</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
@@ -24,7 +24,7 @@
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="post_analysis.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#a-complete-offline-workflow">A complete offline workflow</a></li>
+<li><a href="#two-worked-examples">Two worked examples</a></li>
 <li><a href="#read-the-stopping-evidence">Read the stopping evidence</a></li>
 <li><a href="#continue-first-then-consider-refinement">Continue first, then consider refinement</a></li>
 <li><a href="#posterior-resolution-and-ld-checks">Posterior resolution and LD checks</a></li>
@@ -33,22 +33,18 @@
 </ul>
 </div>
 </details><h1 id="diagnose-and-explain-a-fine-mapping-result">Diagnose and explain a fine-mapping result</h1>
-<p>A stable IBSS objective, stable posterior probabilities, and a successful search
-for a better solution answer different questions. None establishes a global
-optimum, causal identity, or calibrated LD. prusie makes these checks explicit
-and keeps the original fit unchanged during analysis.</p>
-<h2 id="a-complete-offline-workflow">A complete offline workflow</h2>
-<p>Install the optional scientific plotting dependencies once:</p>
+<p>Your fit has stopped, but does it localize one candidate per signal, or spread
+probability across correlated variants? Start with credible sets and PIPs,
+then inspect stopping evidence and test whether refinement changes the result.
+These steps answer different questions: a stopping condition does not establish
+a global optimum, and a small CS does not establish causal identity.</p>
+<p>From a source checkout, install the optional analysis dependencies:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span>
-python<span class="w"> </span>examples/post_analysis.py<span class="w"> </span>--output-dir<span class="w"> </span>output/post-analysis<span class="w"> </span>--case<span class="w"> </span>both
 </code></pre></div>
 
-<p>The <strong>stable</strong> example uses the packaged 500-variant synthetic toy input. The
-<strong>problem</strong> example uses the official susieR 200-SNP <code>FinemappingConvergence</code>
-sufficient statistics: ordinary IBSS converges to a local optimum, and two-step
-refinement finds a higher objective. Both examples export seven editable figure
-types, PNG/SVG files, CSV tables, exact JSON/NPZ evidence and an offline HTML
-report. Neither needs R, an internet connection or a model service.</p>
+<p>This minimal workflow fits the packaged example once and creates an offline
+report. Open <code>output/analysis/index.html</code> locally; keep its directory together
+to retain links to full tables and machine evidence.</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">prusie.plots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_convergence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_report</span>
@@ -62,6 +58,22 @@ report. Neither needs R, an internet connection or a model service.</p>
 <span class="n">write_report</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="s1">&#39;output/analysis&#39;</span><span class="p">,</span> <span class="n">figures</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Convergence&#39;</span><span class="p">:</span> <span class="n">figure</span><span class="p">})</span>
 </code></pre></div>
 
+<p>Read the report in order: main candidates and CS resolution; stopping and
+refinement; figures; sensitivity and LD checks; complete component details.
+The short <code>analysis_summary.json</code> links to paths in the complete <code>evidence.json</code>.
+Both are deterministic outputs and need no model service. CSV is convenient for
+reading; tagged JSON/NPZ preserves exact saved results.</p>
+<h2 id="two-worked-examples">Two worked examples</h2>
+<p>From a source checkout with the analysis extra installed, run:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>examples/post_analysis.py<span class="w"> </span>--output-dir<span class="w"> </span>output/post-analysis<span class="w"> </span>--case<span class="w"> </span>both
+</code></pre></div>
+
+<p>The <strong>stable</strong> example uses the packaged 500-variant synthetic toy input. The
+<strong>problem</strong> example uses the official susieR 200-SNP <code>FinemappingConvergence</code>
+sufficient statistics: ordinary IBSS satisfies its stopping rule, and two-step
+refinement finds a higher objective. Both export seven figure types, PNG/SVG,
+CSV, lossless JSON/NPZ and offline HTML. They need neither R nor a network
+connection. This command fits the examples; reading their saved reports does not.</p>
 <p><code>track_fit=False</code> and <code>refine=False</code> remain the defaults. Tracking does not change
 the selected stopping rule. <code>retain_data=True</code> owns a read-only copy of the
 validated matrix and scale metadata for explicit continuation and refinement;
@@ -130,6 +142,17 @@ continuation can finish its inner optimization:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">continued</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">continue_fit</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">track_fit</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
 
+<p>Continuation inherits the original requested convergence configuration unless
+you supply <code>convergence=ConvergenceConfig(...)</code>. An omitted continuation <code>tol</code>
+also inherits the fit's ELBO tolerance; an explicit value overrides it.
+Refinement inherits the same
+alpha/PIP thresholds, minimum iteration count and cycle controls; <code>inner_tol</code>
+sets its separate inner ELBO tolerance. Runtime fallback from a nonfinite ELBO
+is recorded as an effective rule and is not reused as the next requested rule.
+Older saved fits without the requested configuration use a labelled compatibility
+resolution; the result records resolved controls rather than claiming exact
+inheritance. Inspect per-stage <code>solver_settings</code> and <code>convergence</code> for each
+refinement A/B fit.</p>
 <p>Alternatively, pass <code>s_init=fit</code> to the same-data fitting interface. Variant
 IDs/order, supplied allele labels, null layout, working scales and the data
 signature must agree. Unknown cross-input transformations are rejected. A minimal
@@ -184,7 +207,10 @@ one. It measures resolution, not a causal count or calibration. Proxy edges
 require a direct pairwise <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">∣</mi><mi>r</mi><mi mathvariant="normal">∣</mi></mrow><annotation encoding="application/x-tex">|r|</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord">∣</span></span></span></span></span> above the requested threshold (default 0.99);
 they neither add CS members nor expand by transitive closure. Representatives
 use highest alpha, with lexical variant ID tie-breaking. Signed r and r² are
-labelled separately. Returned CS count is not an independent causal-signal count.</p>
+labelled separately. Genotype correlation between representative variants is
+different from conditional distinguishability of effects in a multi-component
+model: nonzero r alone does not show that the model cannot distinguish them.
+Returned CS count does not confirm the true number of causal variants.</p>
 <p>Prior influence shows the supplied and effective epsilon-adjusted priors,
 conditional component log BF, alpha and odds decomposition. Zero prior weights
 are reported explicitly. These BFs depend on the other fitted components and
@@ -201,7 +227,11 @@ Eigen decomposition is explicit, separately timed and optionally cached. Small
 or negative eigenvalues are truncated only inside the diagnostic, with warnings;
 the fitting matrix is untouched. Singular s=0 uses the labelled spectral
 pseudoinverse convention. Missing statistics and undefined conditional quantities
-remain unassessed. Flags suggest possible mismatch; nothing is flipped or removed.</p>
+remain unassessed. The report separates assessed/flagged, assessed/not flagged,
+conditional-only and unassessed rows. A finite conditional residual does not
+establish that mixture optimization and the flip test succeeded. For missing z,
+the diagnostic's working zero is recorded separately from the unavailable
+observed statistic. Flags suggest possible mismatch; nothing is flipped or removed.</p>
 <p>The scale-mixture likelihood is solved with a full-simplex KKT check. Some pinned
 R <code>mixsqp</code> default fits stop at suboptimal weights; prusie records this solver
 accuracy difference rather than reproducing premature stopping. Conditional
@@ -228,7 +258,14 @@ initialization while estimating it is labelled computational initialization
 sensitivity. External-LD residual variance is not automatically estimated.
 Coverage/purity changes are report filters and reuse the posterior. No Cartesian
 grid, implicit window expansion or average posterior is constructed.</p>
-<p>Missing variants stay NA. Signal relations use shared-support posterior overlap
+<p>Missing variants stay NA. The default comparison shows formal-CS-supported
+signals against baseline; complete active-component relations are a separate
+view. A diffuse component can overlap another diffuse component almost perfectly
+without identifying a localized signal. Unresolved support changes remain visible
+and do not become confirmed split/merge events from diffuse graph degrees.
+Main candidates include all formal CS members, top candidates and threshold
+candidates, so a large CS is retained even when every member has PIP below 0.1.
+Signal relations use shared-support posterior overlap
 without renormalizing away unobserved mass, CS overlap and explicitly identified
 LD evidence. Component numbers are not matched directly. Unmatched,
 ambiguous and split/merge relations remain visible; a one-to-one display match
@@ -243,14 +280,30 @@ initialization; caches are caller-owned.</p>
 existing axes, and uses local style. Negative ELBO increments remain signed.
 Discrete CS identity and continuous LD have separate visual channels. Absent
 physical coordinates use variant index. Gene tracks accept local GTF or explicit
-tables with build, source, transcript selection and coordinate convention.</p>
+tables with build, source, transcript selection and coordinate convention.
+Supply a locus chromosome/start/end to select the relevant annotation. Known
+chromosome or build mismatches between variants and genes are rejected; unknown
+metadata is labelled instead of inferred from non-position identifiers such as rsIDs.</p>
+<p>Use <code>plot_convergence(before, after=refined)</code> to compare separate IBSS trajectories
+without joining their iteration axes. <code>plot_refinement</code> distinguishes candidate
+improvements against each round's incumbent from the path of accepted solutions.
+For the problem example, <code>plot_signal(summary, variant_id='33')</code> selects its
+singleton signal; <code>plot_signal(summary, variant_id='90')</code> selects the high-LD
+pair. <code>plot_prior_influence</code> accepts an explicit <code>component_id</code> and <code>variant_ids</code>
+selection. <code>plot_sensitivity</code> defaults to baseline comparisons in the signal
+layer; <code>layer='components'</code> opens the complete component view. Table pagination
+with <code>table_page</code> and <code>table_page_size</code> affects display, not the returned evidence.</p>
 <p><code>save_analysis</code> / <code>load_analysis</code> in <code>prusie.report</code> preserve ndarray bytes,
 dtypes, identifiers, scalar NaNs and structure through tagged JSON plus NPZ;
 no pickle is used. CSV is a readable export, not the lossless representation.
 Saved fits keep diagnostics but omit the retained optimization context: reload
 explicit inputs to continue fitting. Offline HTML embeds images and records
 checksums, harmonization, settings, initial state, references, versions, seed,
-timings and skipped checks. Deterministic evidence remains separate from AI text.</p>
+timings and skipped checks. Full scalar facts stay in <code>evidence.json</code>, outside
+the default HTML DOM. <code>analysis_summary.json</code> is a compact entry point with
+table paths, selection policy and diagnostic counts; complete records retain
+full precision while report tables round numbers for reading. Deterministic
+evidence remains separate from AI text.</p>
 <p>The optional <code>CodexCLI</code> adapter sends only an explicitly reviewed evidence bundle
 after <code>consent=True</code>. It uses the official installed CLI, existing login, an
 isolated read-only context and the requested Astra model. Custom provider identity
@@ -269,9 +322,11 @@ can be requested explicitly (this sends that kind of evidence to OpenAI):</p>
 </code></pre></div>
 
 <p>The script allows one CLI attempt and records failures without losing the offline
-report. Omit <code>--interpret</code> for an entirely offline run. Figure tables display
-at most twelve rows; complete records remain in exported evidence and tables.</p></article>
-<footer><p>prusie 0.2.3rc6 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+report. Omit <code>--interpret</code> for an entirely offline run. Figure table selection
+and page controls are recorded in the returned plotting data; full records remain
+available in evidence and CSV exports. Select components explicitly when their
+scientific questions differ, such as a singleton candidate versus a high-LD pair.</p></article>
+<footer><p>prusie 0.2.4.dev1 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>
 </body>

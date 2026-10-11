@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.4.dev1 — post-analysis review snapshot (unreleased)
+
+- Preserve requested convergence controls across continuation, refinement and
+  sensitivity fits; record inner solver settings and explicit overrides.
+- Hash matrix identity in bounded buffers without changing signatures or default
+  posterior calculations. Distinguish this development build in sensitivity caches.
+- Separate CS-supported signal comparisons from complete component evidence;
+  distinguish incomplete LD assessment from evaluated, unflagged variants.
+- Show before/after fitting and all retained CS in offline reports, with compact
+  deterministic summaries and complete external machine evidence.
+- Install analysis dependencies explicitly in full CI while testing NumPy-only
+  wheel installations separately.
+
 ## 0.2.3rc6 — portable toy example validation
 
 - Verify frozen toy example file hashes separately from numerical regeneration,

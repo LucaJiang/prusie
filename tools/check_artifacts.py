@@ -133,12 +133,15 @@ def main():
             run(label + '-install', [python, '-m', 'pip', 'install', '--only-binary=:all:',
                                     'numpy==2.2.6', artifact], overrides={'PATH': path})
             probe = """import hashlib, importlib.metadata, json, pathlib, shutil, sys
+import importlib.util
 import prusie
 from prusie import _native
 prefix=pathlib.Path(sys.prefix).resolve()
 assert pathlib.Path(prusie.__file__).resolve().is_relative_to(prefix)
 assert pathlib.Path(_native.__file__).resolve().is_relative_to(prefix)
 assert not any(shutil.which(x) for x in ('rustc','cargo','maturin','R'))
+assert importlib.util.find_spec('scipy') is None
+assert importlib.util.find_spec('matplotlib') is None
 assert prusie.__version__ == sys.argv[1] == importlib.metadata.version('prusie')
 example=prusie.load_example()
 fit=prusie.susie_rss(**example['inputs'], **example['parameters'])

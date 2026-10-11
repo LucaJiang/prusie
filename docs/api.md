@@ -75,9 +75,6 @@ The following exposed options accept only their listed defaults:
 
 | Parameter | Allowed value | Error for another value |
 | --- | --- | --- |
-
-
-
 | `verbose` | False | `NotImplementedError: verbose is not implemented` |
 | `maf`, `maf_thresh` (sufficient statistics) | None, 0 | `NotImplementedError: maf is not implemented` |
 | `z_ld_weight` (RSS) | 0 | `NotImplementedError: Nonzero z_ld_weight is not implemented` |

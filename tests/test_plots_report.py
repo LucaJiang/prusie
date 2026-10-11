@@ -132,7 +132,9 @@ def test_evidence_and_offline_html(summary, tmp_path):
     page = (tmp_path / "index.html").read_text()
     parser = Links()
     parser.feed(page)
-    assert parser.references and all(link.startswith("data:") for link in parser.references)
+    assert parser.references
+    assert all(link.startswith("data:") or (not link.startswith(("/", "http:", "https:", "//")) and
+               ".." not in link.split("/") and (tmp_path / link).exists()) for link in parser.references)
     assert "&lt;toy&gt;" in page and "not_assessed" in page
     assert "Methods and interpretation" in page and "Machine-readable evidence references" in page
     restored = load_analysis(tmp_path)["summary"]
