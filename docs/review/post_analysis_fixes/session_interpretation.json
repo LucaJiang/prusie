@@ -1,0 +1,110 @@
+{
+  "purpose": "Current Codex session generated example interpretations for human scientific review",
+  "model_identity": {
+    "configured_model": "gpt-6-astra",
+    "configured_reasoning_effort": "xhigh",
+    "basis": "Existing local configuration read; not inferred from model self-description",
+    "runtime_provider_receipt_available": false,
+    "runtime_service_tier_verified": false
+  },
+  "authentication_or_configuration_modified": false,
+  "model_or_service_tier_override_requested_by_this_task": false,
+  "nested_model_invocations": 0,
+  "adapter_connectivity_tests": 0,
+  "adapter_status": "Optional adapter retained; mock tests do not establish real connectivity",
+  "numeric_source_sha": "e45914e512e04feef37cf7310bc0b309582d6058",
+  "alternative_fit_source_sha": "1f2b246ebd7970929711b2a51bb08f6a76ddad56",
+  "render_source_sha": "997aba947d6246c00b52f7083f2d7bdce49a656e",
+  "new_alternative_fits": 3,
+  "baseline_refinement_or_LD_recomputed": false,
+  "images_opened": {
+    "stable": [
+      {
+        "path": "examples/stable/figure_1.png",
+        "sha256": "ba0e61e7e5e42ea77764ce98f65fd27afad6f432f58b544dcd754a182ad07cdd"
+      },
+      {
+        "path": "examples/stable/figure_2.png",
+        "sha256": "deb930d48165dad380f371127065156470b4b39294beacd804a7de362742bacd"
+      },
+      {
+        "path": "examples/stable/figure_3.png",
+        "sha256": "babb581ddefadfb9944e5def460c8fea6e7eb7f5f6aa7208c8a86332d22605b8"
+      },
+      {
+        "path": "examples/stable/figure_4.png",
+        "sha256": "42e261d87a072df9cc2e93095931353d082ce1b18ce816c0bd997b774606d522"
+      },
+      {
+        "path": "examples/stable/figure_5.png",
+        "sha256": "186932c76b3ca639d9eb1f45adcb992be07439fea62723296a24fb5472d832ab"
+      },
+      {
+        "path": "examples/stable/figure_6.png",
+        "sha256": "408e8e6b966fa02557e8a9a7d09d7feeced58c7247956fe239e46f72400ec0b8"
+      },
+      {
+        "path": "examples/stable/figure_7.png",
+        "sha256": "8724b39846935584b81ce8e8401571ac558e2c912d64f202e9d63ec4038580dd"
+      },
+      {
+        "path": "examples/stable/figure_8.png",
+        "sha256": "f24c9b4fa5e7dc3450d1dc227c55abb477d95b08110618151cc3c23261c8c7ee"
+      },
+      {
+        "path": "examples/stable/figure_9.png",
+        "sha256": "b33f9bf9b591efead1ada4bd69478a9a3fa490ba5ecb0b08de35b22b0f09af76"
+      }
+    ],
+    "problem": [
+      {
+        "path": "examples/problem/figure_1.png",
+        "sha256": "4086744e255dc6472ee921d9795d004ddcbddfe062c2522492a1e1b5a5f401e3"
+      },
+      {
+        "path": "examples/problem/figure_2.png",
+        "sha256": "05a311886000fa06b89b189f547ea9df8df7ccd1ddf5adb6f562b61cff9f4353"
+      },
+      {
+        "path": "examples/problem/figure_3.png",
+        "sha256": "1c3d2a11dfb3ee56811909a50954884ea42be955880da1023c7e8adec7ef8f6f"
+      },
+      {
+        "path": "examples/problem/figure_4.png",
+        "sha256": "8d958eb07161f8dab3f025e51fd938913a3df1de5e4a71b9f18409d35d57af4d"
+      },
+      {
+        "path": "examples/problem/figure_5.png",
+        "sha256": "59cf5b4ecda955583a1bc4cf315364d985967f033c3b9d2b98765f80ee0d0bc9"
+      },
+      {
+        "path": "examples/problem/figure_6.png",
+        "sha256": "141a2ad87f1c834a1d3ad978208a1c94df22411f8dd13ab61381b96c834fdf25"
+      },
+      {
+        "path": "examples/problem/figure_7.png",
+        "sha256": "76473c7461bb78307e419a1800e8ba66c9d6106fd7c5da5eb9fb0b1f49b1967b"
+      },
+      {
+        "path": "examples/problem/figure_8.png",
+        "sha256": "e55b9cc71cc48eea91a2a2d4f7681af2ed155485f7ad28b8e460b4996f992381"
+      },
+      {
+        "path": "examples/problem/figure_9.png",
+        "sha256": "0fdf74dbc34b36bca06c8b912c2f90bbe7f05fe2a4d2096bffb775e237556719"
+      }
+    ]
+  },
+  "html_browser_visual_check": false,
+  "interpretation_basis": [
+    "analysis_summary.json",
+    "posterior_summary.json",
+    "plot_data.json",
+    "comparison.json",
+    "ld_diagnostics.json",
+    "evidence.json",
+    "tables/*.csv",
+    "historical selected_ld.json",
+    "PNG visual inspection"
+  ]
+}

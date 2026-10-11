@@ -81,7 +81,7 @@ regenerating tables/figures and rerunning fits from inputs.
 
 Cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
 [SuSiE-RSS, Zou et al. (2022)](https://doi.org/10.1371/journal.pgen.1010299),
-and identify prusie 0.2.3rc6 using [CITATION.cff](CITATION.cff).
+and identify this prusie 0.2.4.dev1 development snapshot using [CITATION.cff](CITATION.cff).
 Author and maintainer: Wenxin Jiang.
 
 GPL-3.0-or-later. [LICENSE](LICENSE) and
@@ -90,4 +90,4 @@ attribution.
 
 ## Post-analysis review snapshot
 
-The `post_analysis` branch includes a [source and numerical evidence review guide](docs/review/post_analysis/README.md), with two recorded examples, figures and interpretations for scientific review.
+The `post_analysis` branch includes an [updated source and numerical evidence review guide](docs/review/post_analysis_fixes/README.md), with two recorded examples, figures and interpretations for scientific review. The [original review snapshot](docs/review/post_analysis/README.md) remains available unchanged.

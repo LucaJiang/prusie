@@ -1,0 +1,50 @@
+{
+  "scope": "Isolated canonical hash of a preallocated F-order constant float64 matrix; no LD computation or model fitting. One call per mode in a fresh process, single numerical thread. Elapsed times are descriptive, not an inference speed claim.",
+  "buffer_limit_bytes": 262144,
+  "records": [
+    {
+      "p": 500,
+      "mode": "legacy",
+      "layout": "F",
+      "matrix_bytes": 2000000,
+      "seconds": 0.0033797752112150192,
+      "python_numpy_traced_peak_bytes": 2002697,
+      "peak_rss_before_bytes": 43032576,
+      "peak_rss_after_bytes": 44924928,
+      "digest": "3e0b116e0ab98d0582abad8b9b5b84028404cdef923b8c9cafa9d6cbfb89856f"
+    },
+    {
+      "p": 500,
+      "mode": "streamed",
+      "layout": "F",
+      "matrix_bytes": 2000000,
+      "seconds": 0.001658400520682335,
+      "python_numpy_traced_peak_bytes": 263648,
+      "peak_rss_before_bytes": 42770432,
+      "peak_rss_after_bytes": 42770432,
+      "digest": "3e0b116e0ab98d0582abad8b9b5b84028404cdef923b8c9cafa9d6cbfb89856f"
+    },
+    {
+      "p": 4162,
+      "mode": "legacy",
+      "layout": "F",
+      "matrix_bytes": 138577952,
+      "seconds": 0.41606873460114,
+      "python_numpy_traced_peak_bytes": 138580649,
+      "peak_rss_before_bytes": 179359744,
+      "peak_rss_after_bytes": 318042112,
+      "digest": "28c840fd976b209de3bcb89de151f445689f8a2ec761805fa4fc27b735549afa"
+    },
+    {
+      "p": 4162,
+      "mode": "streamed",
+      "layout": "F",
+      "matrix_bytes": 138577952,
+      "seconds": 0.1390207577496767,
+      "python_numpy_traced_peak_bytes": 263648,
+      "peak_rss_before_bytes": 178831360,
+      "peak_rss_after_bytes": 178831360,
+      "digest": "28c840fd976b209de3bcb89de151f445689f8a2ec761805fa4fc27b735549afa"
+    }
+  ]
+}

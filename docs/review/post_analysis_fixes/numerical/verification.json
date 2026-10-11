@@ -1,0 +1,361 @@
+{
+  "record_kind": "curated public verification summary; not a complete server log",
+  "date": "2026-10-11",
+  "core_source_sha": "1f2b246ebd7970929711b2a51bb08f6a76ddad56",
+  "final_plot_source_sha": "997aba947d6246c00b52f7083f2d7bdce49a656e",
+  "sources": [
+    "reports/local_ci.json",
+    "reports/final_python.json",
+    "reports/default_numerical_validation.json",
+    "reports/hash_memory.json",
+    "reports/artifact-check/artifact_checks.json",
+    "logs/scipy-six-final.log",
+    "logs/integrated-regressions.log",
+    "logs/ld_raw_saved_oracles.log",
+    "logs/final-python-default.log",
+    "logs/final-python-scalar.log"
+  ],
+  "final_python": {
+    "default": {
+      "passed": 868,
+      "skipped": 2,
+      "exit_code": 0
+    },
+    "scalar": {
+      "passed": 868,
+      "skipped": 2,
+      "exit_code": 0
+    },
+    "skips": "Two external raw-R oracle tests; both passed separately against preserved original local oracle files. No missing SciPy or Matplotlib skips."
+  },
+  "focused_checks": {
+    "six_previously_SciPy_blocked_tests_passed": 6,
+    "integrated_regressions_passed": 100,
+    "integrated_external_oracle_skips": 2,
+    "external_oracle_tests_separately_passed": 2
+  },
+  "rust": {
+    "scalar_passed": 52,
+    "vector_passed": 56,
+    "source_scope": "core source; subsequent source commits only modify plots and example selection"
+  },
+  "other_checks": [
+    {
+      "label": "pytest",
+      "exit_code": 0,
+      "elapsed_seconds": 18.45410988945514
+    },
+    {
+      "label": "pytest-scalar",
+      "exit_code": 0,
+      "elapsed_seconds": 19.252144844271243
+    },
+    {
+      "label": "rust-scalar",
+      "exit_code": 0,
+      "elapsed_seconds": 25.61694250162691
+    },
+    {
+      "label": "rust-vector",
+      "exit_code": 0,
+      "elapsed_seconds": 4.948155961930752
+    },
+    {
+      "label": "model-examples",
+      "exit_code": 0,
+      "elapsed_seconds": 0.13874811679124832
+    },
+    {
+      "label": "generate-example",
+      "exit_code": 0,
+      "elapsed_seconds": 0.14026618376374245
+    },
+    {
+      "label": "generate-results",
+      "exit_code": 0,
+      "elapsed_seconds": 4.397498725913465
+    },
+    {
+      "label": "quickstart",
+      "exit_code": 0,
+      "elapsed_seconds": 0.1875481028109789
+    },
+    {
+      "label": "checkout",
+      "exit_code": 1,
+      "elapsed_seconds": 10.207204762846231
+    },
+    {
+      "label": "checkout",
+      "exit_code": 0,
+      "elapsed_seconds": 10.88737422786653
+    },
+    {
+      "label": "wheel",
+      "exit_code": 0,
+      "elapsed_seconds": 1.028652780689299
+    },
+    {
+      "label": "sdist",
+      "exit_code": 0,
+      "elapsed_seconds": 2.7313486486673355
+    },
+    {
+      "label": "artifacts",
+      "exit_code": 0
+    }
+  ],
+  "packaging": {
+    "passed": true,
+    "python": "3.12.2",
+    "source_scope": "core source snapshot; later plot-only changes are covered by final Python and final remote CI",
+    "numpy_only_wheel_and_rebuilt_wheel": true,
+    "analysis_dependencies_absent_in_minimal_environments": true,
+    "no_Rust_toolchain_needed_for_installed_fits": true,
+    "steps": [
+      {
+        "label": "wheel-venv",
+        "exit_code": 0
+      },
+      {
+        "label": "wheel-install",
+        "exit_code": 0
+      },
+      {
+        "label": "wheel-identity",
+        "exit_code": 0
+      },
+      {
+        "label": "wheel-pip-check",
+        "exit_code": 0
+      },
+      {
+        "label": "wheel-example",
+        "exit_code": 0
+      },
+      {
+        "label": "wheel-quickstart",
+        "exit_code": 0
+      },
+      {
+        "label": "sdist-rebuild",
+        "exit_code": 0
+      },
+      {
+        "label": "rebuilt-venv",
+        "exit_code": 0
+      },
+      {
+        "label": "rebuilt-install",
+        "exit_code": 0
+      },
+      {
+        "label": "rebuilt-identity",
+        "exit_code": 0
+      },
+      {
+        "label": "rebuilt-pip-check",
+        "exit_code": 0
+      },
+      {
+        "label": "rebuilt-example",
+        "exit_code": 0
+      },
+      {
+        "label": "rebuilt-quickstart",
+        "exit_code": 0
+      },
+      {
+        "label": "auditwheel",
+        "exit_code": 0
+      },
+      {
+        "label": "auditwheel-rebuilt",
+        "exit_code": 0
+      }
+    ],
+    "wheel_license_members": [
+      "prusie-0.2.4.dev1.dist-info/licenses/LICENSE",
+      "prusie/data/teaching/LICENSE.txt",
+      "prusie/data/convergence/LICENSE-BSD-3-Clause.txt",
+      "prusie/data/convergence/LICENSE.txt",
+      "prusie/_licenses/THIRD_PARTY_NOTICES.md",
+      "prusie/_licenses/LICENSE-R",
+      "prusie/_licenses/cargo/rustversion-1.0.23/LICENSE-MIT",
+      "prusie/_licenses/cargo/rustversion-1.0.23/LICENSE-APACHE",
+      "prusie/_licenses/cargo/matrixmultiply-0.3.11/LICENSE-MIT",
+      "prusie/_licenses/cargo/matrixmultiply-0.3.11/LICENSE-APACHE",
+      "prusie/_licenses/cargo/autocfg-1.5.1/LICENSE-MIT",
+      "prusie/_licenses/cargo/autocfg-1.5.1/LICENSE-APACHE",
+      "prusie/_licenses/cargo/rustc-hash-2.1.3/LICENSE-MIT",
+      "prusie/_licenses/cargo/rustc-hash-2.1.3/LICENSE-APACHE",
+      "prusie/_licenses/cargo/libc-0.2.189/LICENSE-MIT",
+      "prusie/_licenses/cargo/libc-0.2.189/LICENSE-APACHE",
+      "prusie/_licenses/cargo/memoffset-0.9.1/LICENSE",
+      "prusie/_licenses/cargo/syn-2.0.119/LICENSE-MIT",
+      "prusie/_licenses/cargo/syn-2.0.119/LICENSE-APACHE",
+      "prusie/_licenses/cargo/num-integer-0.1.47/LICENSE-MIT",
+      "prusie/_licenses/cargo/num-integer-0.1.47/LICENSE-APACHE",
+      "prusie/_licenses/cargo/numpy-0.23.0/LICENSE",
+      "prusie/_licenses/cargo/unicode-ident-1.0.26/LICENSE-MIT",
+      "prusie/_licenses/cargo/unicode-ident-1.0.26/LICENSE-UNICODE",
+      "prusie/_licenses/cargo/unicode-ident-1.0.26/LICENSE-APACHE",
+      "prusie/_licenses/cargo/pyo3-macros-backend-0.23.5/LICENSE-MIT",
+      "prusie/_licenses/cargo/pyo3-macros-backend-0.23.5/LICENSE-APACHE",
+      "prusie/_licenses/cargo/num-complex-0.4.6/LICENSE-MIT",
+      "prusie/_licenses/cargo/num-complex-0.4.6/LICENSE-APACHE",
+      "prusie/_licenses/cargo/cfg-if-1.0.5/LICENSE-MIT",
+      "prusie/_licenses/cargo/cfg-if-1.0.5/LICENSE-APACHE",
+      "prusie/_licenses/cargo/quote-1.0.47/LICENSE-MIT",
+      "prusie/_licenses/cargo/quote-1.0.47/LICENSE-APACHE",
+      "prusie/_licenses/cargo/portable-atomic-1.15.0/LICENSE-MIT",
+      "prusie/_licenses/cargo/portable-atomic-1.15.0/LICENSE-APACHE",
+      "prusie/_licenses/cargo/once_cell-1.21.4/LICENSE-MIT",
+      "prusie/_licenses/cargo/once_cell-1.21.4/LICENSE-APACHE",
+      "prusie/_licenses/cargo/MANIFEST.txt",
+      "prusie/_licenses/cargo/pyo3-ffi-0.23.5/LICENSE-MIT",
+      "prusie/_licenses/cargo/pyo3-ffi-0.23.5/LICENSE-APACHE",
+      "prusie/_licenses/cargo/target-lexicon-0.12.16/LICENSE",
+      "prusie/_licenses/cargo/ndarray-0.16.1/LICENSE-MIT",
+      "prusie/_licenses/cargo/ndarray-0.16.1/LICENSE-APACHE",
+      "prusie/_licenses/cargo/heck-0.5.0/LICENSE-MIT",
+      "prusie/_licenses/cargo/heck-0.5.0/LICENSE-APACHE",
+      "prusie/_licenses/cargo/portable-atomic-util-0.2.8/LICENSE-MIT",
+      "prusie/_licenses/cargo/portable-atomic-util-0.2.8/LICENSE-APACHE",
+      "prusie/_licenses/cargo/pyo3-build-config-0.23.5/LICENSE-MIT",
+      "prusie/_licenses/cargo/pyo3-build-config-0.23.5/LICENSE-APACHE",
+      "prusie/_licenses/cargo/unindent-0.2.4/LICENSE-MIT",
+      "prusie/_licenses/cargo/unindent-0.2.4/LICENSE-APACHE",
+      "prusie/_licenses/cargo/rawpointer-0.2.1/LICENSE-MIT",
+      "prusie/_licenses/cargo/rawpointer-0.2.1/LICENSE-APACHE",
+      "prusie/_licenses/cargo/indoc-2.0.7/LICENSE-MIT",
+      "prusie/_licenses/cargo/indoc-2.0.7/LICENSE-APACHE",
+      "prusie/_licenses/cargo/proc-macro2-1.0.107/LICENSE-MIT",
+      "prusie/_licenses/cargo/proc-macro2-1.0.107/LICENSE-APACHE",
+      "prusie/_licenses/cargo/num-traits-0.2.19/LICENSE-MIT",
+      "prusie/_licenses/cargo/num-traits-0.2.19/LICENSE-APACHE",
+      "prusie/_licenses/cargo/pyo3-0.23.5/LICENSE-MIT",
+      "prusie/_licenses/cargo/pyo3-0.23.5/LICENSE-APACHE",
+      "prusie/_licenses/cargo/pyo3-macros-0.23.5/LICENSE-MIT",
+      "prusie/_licenses/cargo/pyo3-macros-0.23.5/LICENSE-APACHE",
+      "prusie/_licenses/LICENSE-susieR",
+      "prusie/_licenses/Rust_THIRD_PARTY_NOTICES.md",
+      "prusie/_licenses/LICENSE-susieR-0.16.6"
+    ],
+    "sdist_required_source_payload": {
+      "src/prusie/data/teaching/inputs.npz": "56feaa892c2068e67dee0edf6262e8691144c569be7a092f9accbd14bde8ee2a",
+      "src/prusie/data/teaching/reference.npz": "31041ed3372c00dee9032d84d5c4a7dc22e92e35307153bfa4b4e824dfdcb5ed",
+      "src/prusie/data/teaching/metadata.json": "0c6f601d6d0ddda8c1b15251db90b6966f223526068135a0ba40fac9c4d738ba",
+      "src/prusie/data/teaching/LICENSE.txt": "62fb0afff195a004d6a8e1031f1f04b21a0f20734e3c6fe04a369e39e5bcb97a",
+      "tools/generate_example.py": "8036129651f3b7bc5a3fb73bdba3dd38086c177c6b89d24ae2afeef7bf15bdb1",
+      "tools/generate_results.py": "5f551ac4f648a34dbb1685160057129818249521acc355566fe0c6f946c3f788",
+      "Cargo.toml": "c1b344b37d36306f54fd4984aa9128959a8c8ecaca8abd27b969955836e6137a",
+      "Cargo.lock": "0d4fe41023233ab6aa279b8d3fce0bf1039e14cc970a1e6ce410a578d208cb85",
+      "build.rs": "859462d2ac8f6a15303c0fe1d6ca4d1cd4c608251e17c13de5e5457cbcf9a5e2",
+      "rust-toolchain.toml": "887f9be066a15585a2c583578e84b0fcb541126d81546276bad3d2ff00d61167",
+      "bindings/lib.rs": "265e1408c24a4243fd66bf8116f382ed79294837c5e2a048d84b015c18ac91ab",
+      "rust/core.rs": "706b2b690d73bdd38281d3b49399359f98980dbb8b12746ed5331f3c0da68e15",
+      "rust/optimizer.rs": "7b665faec04e388fa428a835557d3a3b8fba0c9f354f714e2a68e1c4eed36f23",
+      "rust/vector_math.c": "1b2b052c27144342d1bde39722322b9357974f5ff23a0d7f19efccdf2ca8cbfb",
+      "rust/LICENSE-R": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+      "rust/LICENSE-susieR": "07cd2b1e331b328a0da14ec16bc3931f82721ee764672b39ba487808a41d3fd9",
+      "rust/LICENSE-susieR-0.16.6": "07cd2b1e331b328a0da14ec16bc3931f82721ee764672b39ba487808a41d3fd9",
+      "LICENSE": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "THIRD_PARTY_NOTICES.md": "4c3fa817d606584a9ed1026941830b4d049f85d98a2a717cba766b4913b09158",
+      "src/prusie/_licenses/THIRD_PARTY_NOTICES.md": "2a18da7898f7b897a77c533906401416ed7b43963fdcc25b2b27d62f3c808b4b",
+      "tests/test_reference.py": "9a11f58606b4655fb34e58fcc76442a32f2977d674908623815a73d6fe50394e",
+      "tests/test_offline_example.py": "bb5f42cd8f1f2ad86e8534eae591e106e3ca34eaf7c5b1702da262452773517d",
+      "examples/data/inputs.npz": "7a60a5d0ad9a2d7c550662677e47890610c6bf79e807c1cc269a0effed65af2d",
+      "examples/data/r_fits.npz": "00475daf219179aad6a4c315cec9bd586966fb41e6c9e982632113ff71843d86",
+      "examples/data/LICENSE.GPL-3": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+      "examples/check_example.py": "2929e30d11b0c1712e82a9b43a44b07886c18e365575b53763dfd12c68e90003",
+      "tools/math_render.py": "a183f8d34d916ceda010d4b92ea8d021de5b1104742e9dea966470e3bfadf9db",
+      "tools/render_math.cjs": "c67e9e241e8b624fb72a5eb392345b0dde29077ee879bd0614a3e3a04aa57d33",
+      "tools/model_examples.py": "3de0794b02de5fb6e7ac80ea98f0b5ad6c34de978b8cb90ac1ed43ac354ed6cd",
+      "tools/math-assets.lock.json": "abf68ba1ab7b2bc1771207a640dd88341679e6589686fd0012fdb99483ac4900",
+      "tools/vendor/katex/katex.js": "8f1f4fb1080439c012bb8fddf424fa253e9144ab4cdd7dc0eae0e92cd04a5e33",
+      "tools/vendor/katex/LICENSE": "766ccc1f306c885aa45542a9846bbd0a505b27a0374f146778171c2254ce18e3",
+      "docs/assets/katex/LICENSE": "766ccc1f306c885aa45542a9846bbd0a505b27a0374f146778171c2254ce18e3",
+      "docs/assets/katex/katex.min.css": "19095127357ed6d29fe0a63a6b000c913a89f7f1963b765dd3715e97c9852e75",
+      "tests/test_math_docs.py": "62382d03c9fb1033e0da9f224cea5d7d46a1665990d154ead32ea7816e0a3149"
+    },
+    "artifacts_uploaded_to_repository": false
+  },
+  "observed_failures": [
+    {
+      "check": "Original remote CI 38120515784",
+      "result": "6 failed, 787 passed, 20 skipped (review-supplied record)",
+      "cause": "Analysis tests ran without SciPy; constraints alone did not install it. Full CI now installs test,analysis extras."
+    },
+    {
+      "check": "First local six-test replay",
+      "result": "5 passed, 1 failed",
+      "cause": "Existing missing-z assertion expected numeric zero; updated to require unavailable observed_z and separate working_z=0, matching requested semantics."
+    },
+    {
+      "check": "First local checkout",
+      "result": "exit 1",
+      "cause": "Development Cargo/Python normalization and citation version mismatch; corrected metadata/checker, retry passed."
+    },
+    {
+      "check": "First saved-oracle invocation",
+      "result": "2 failed",
+      "cause": "Curated public summary JSON was supplied instead of original raw fixture schema; corrected invocation with preserved original raw oracles passed both tests. No tolerance changed."
+    }
+  ],
+  "numerical_regression": "default_numerical_validation.json",
+  "bounded_allocation_probe": "hash_memory.json",
+  "source_preservation": "Original review snapshot, numerical tolerances and reference files retained; no benchmark restart. Final preservation check is recorded locally at delivery.",
+  "remote_ci": {
+    "earlier_core_run": 38123940039,
+    "earlier_core_sha": "1f2b246ebd7970929711b2a51bb08f6a76ddad56",
+    "earlier_core_status": "completed",
+    "earlier_core_conclusion": "success",
+    "final_commit_status": "To be observed after the materials commit is pushed; this pre-push summary does not certify it.",
+    "lookup": "https://github.com/LucaJiang/prusie/actions?query=branch%3Apost_analysis"
+  },
+  "documentation_and_material_checks": {
+    "sources": [
+      "reports/final_docs.json",
+      "reports/material_checks.json",
+      "logs/final-rendered-docs-check.log"
+    ],
+    "links": {
+      "passed": true,
+      "checked_links": 976,
+      "html_pages": 22,
+      "errors": [],
+      "external_urls_checked": false,
+      "browser_visual_check": false
+    },
+    "static_pages_current": true,
+    "example_correspondence": {
+      "stable": {
+        "variants": 500,
+        "embedded_PNGs": 9,
+        "scalar_evidence_facts": 87183,
+        "evidence_sha256": "b1b3f7c9d81dfecf9ac6421d3d0ffe90444294f9c079a948c8aa2ba322532bea",
+        "alternative_keys": [
+          "larger_L",
+          "fixed_variance",
+          "coverage90"
+        ],
+        "original_input_checksums_verified": true,
+        "lossless_load_verified": true
+      },
+      "problem": {
+        "variants": 200,
+        "embedded_PNGs": 9,
+        "scalar_evidence_facts": 60756,
+        "evidence_sha256": "484027dec7299490768407c21a004e64a6cf5cb5f400881d84122c44c8a25f26",
+        "alternative_keys": [
+          "larger_L"
+        ],
+        "original_input_checksums_verified": true,
+        "lossless_load_verified": true
+      }
+    },
+    "historical_review_snapshot_unchanged": true,
+    "protected_main_and_pycoloc_worktrees_preserved": true
+  }
+}
