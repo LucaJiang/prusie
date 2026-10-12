@@ -11,7 +11,7 @@ import numpy as np
 import prusie
 from prusie.plots import (plot_locus,plot_signal,plot_convergence,plot_refinement,
                          plot_ld_diagnostics,plot_sensitivity,plot_prior_influence)
-from prusie.report import write_report,save_analysis,load_analysis,evidence_bundle
+from prusie.report import write_report,save_analysis,load_analysis
 
 
 def checksum(a):
@@ -51,7 +51,31 @@ def make_figures(fit,refined,summary,R,ld,comparison):
     return figures
 
 
-def execute(case,output,interpret=False):
+def interpret_saved_report(output,model):
+    """Save optional AI output separately, citing the already written evidence."""
+    from prusie.ai import CodexCLI
+    bundle=json.loads((output/'evidence.json').read_text(encoding='utf-8'))
+    sources={name:hashlib.sha256((output/name).read_bytes()).hexdigest()
+             for name in ('evidence.json','analysis_summary.json','summary.txt')}
+    try:
+        interpretation=CodexCLI(output/'ai',model=model,provider='openai',
+                                max_attempts=1).interpret(bundle,consent=True)
+    except Exception as exc:
+        # Optional service failures must not discard the completed analysis.
+        interpretation={'status':'failed','reason':str(exc),'error_type':type(exc).__name__,
+                        'transmitted':None,'model_requested':model}
+    interpretation['evidence_sha256']=bundle['sha256']
+    interpretation['source_files_sha256']=sources
+    (output/'ai_interpretation.json').write_text(
+        json.dumps(interpretation,ensure_ascii=False,allow_nan=False,indent=2)+'\n',encoding='utf-8')
+    return interpretation
+
+
+def execute(case,output,interpret=False,model=None):
+    if interpret and case!='stable':
+        raise ValueError('Optional interpretation requires the synthetic stable example')
+    if interpret and (not isinstance(model,str) or not model.strip()):
+        raise ValueError('Optional interpretation requires an explicit model')
     started=time.perf_counter()
     if case=='stable':
         e=prusie.load_example();inputs=e['inputs'];params=dict(e['parameters'])
@@ -87,18 +111,8 @@ def execute(case,output,interpret=False):
                     parameters=params,initial_state='cold start; refinement stage B uses stage A posterior moments',
                     reference_sources=[source],software_versions={'prusie':prusie.__version__,'numpy':np.__version__,
                     'native':fit.backend_version},random_seed=e['metadata'].get('seed','frozen upstream fixture; no new random generation'),
-                    elapsed_seconds=time.perf_counter()-started,skipped=['AI network call not requested','gene track: no physical coordinate metadata'])
-    interpretation = None
-    if interpret:
-        # Only the synthetic stable example may be submitted by this script.
-        from prusie.ai import CodexCLI
-        bundle = evidence_bundle(summary,ld=ld,comparison=comparison,
-                                 provenance=provenance,annotations=annotations)
-        interpretation = CodexCLI(output/'ai', max_attempts=1,
-            provider_config={'name':'OpenAI','wire_api':'responses',
-                             'requires_openai_auth':True}).interpret(bundle,consent=True)
-        provenance['skipped'] = [s for s in provenance['skipped'] if not s.startswith('AI')]
-    receipt=write_report(summary,output,figures=figures,ld=ld,comparison=comparison,ai=interpretation,
+                    elapsed_seconds=time.perf_counter()-started,skipped=['AI explanation is separate from the statistical report','gene track: no physical coordinate metadata'])
+    receipt=write_report(summary,output,figures=figures,ld=ld,comparison=comparison,
                          provenance=provenance,annotations=annotations,title='prusie '+case+' toy example')
     save_analysis({'baseline':fit,'refined':refined},output/'fits')
     restored=load_analysis(output/'fits')
@@ -113,6 +127,8 @@ def execute(case,output,interpret=False):
     (output/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
     import matplotlib.pyplot as plt
     plt.close('all')
+    if interpret:
+        interpret_saved_report(output,model)
     return receipt
 
 
@@ -122,10 +138,13 @@ def main():
     parser.add_argument('--case',choices=('stable','problem','both'),default='both')
     parser.add_argument('--interpret',action='store_true',
                         help='Consent to send the synthetic stable evidence bundle to the official Codex CLI. No LD/genotypes are sent.')
+    parser.add_argument('--model',help='Explicit provider model identifier for --interpret; no default is assumed.')
     args=parser.parse_args()
     if args.interpret and args.case != 'stable':
         parser.error('--interpret requires --case stable (synthetic evidence only)')
+    if args.interpret and not args.model:
+        parser.error('--interpret requires --model with an available provider model identifier')
     for case in (('stable','problem') if args.case=='both' else (args.case,)):
-        receipt=execute(case,args.output_dir/case,interpret=args.interpret);print(json.dumps(receipt))
+        receipt=execute(case,args.output_dir/case,interpret=args.interpret,model=args.model);print(json.dumps(receipt))
 
 if __name__=='__main__':main()

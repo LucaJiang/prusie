@@ -288,9 +288,9 @@ def _susie_suff_stat(
     variant_ids, variant_metadata : sequence, mapping, optional
         Ordered biological IDs and aligned chromosome/allele metadata.
         Omitted IDs are positional labels, not inferred biological identifiers.
-    s_init, refine, track_fit, maf, maf_thresh, verbose
-        Nondefault initialization, refinement, trace, MAF filtering and verbose
-        mode raise NotImplementedError. These options are never silently ignored.
+    maf, maf_thresh, verbose
+        MAF filtering and verbose mode raise NotImplementedError when requested.
+        These options are never silently ignored.
 
     Returns
     -------

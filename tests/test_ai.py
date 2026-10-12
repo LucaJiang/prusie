@@ -70,7 +70,10 @@ class MockProcess:
             return None, None
         output = Path(self.command[self.command.index("--output-last-message") + 1])
         output.write_text(json.dumps(self.response))
-        self.kwargs["stdout"].write(json.dumps({"type": "turn.completed", "model": "gpt-6-astra", "provider": "OpenAI"}) + "\n")
+        model = self.command[self.command.index("--model") + 1]
+        provider = json.loads(next(v.split("=", 1)[1] for v in self.command
+                                   if v.startswith("model_provider=")))
+        self.kwargs["stdout"].write(json.dumps({"type": "turn.completed", "model": model, "provider": provider}) + "\n")
         self.returncode = 0
         return None, None
 
@@ -105,9 +108,9 @@ def test_mock_official_cli_minimal_environment_and_schema(tmp_path, monkeypatch)
     monkeypatch.setenv("CODEX_HOME", str(tmp_path / "official-login-opaque"))
     monkeypatch.setenv("OPENAI_API_KEY", "must-not-be-inherited")
     monkeypatch.setenv("PYTHONPATH", "/private/project")
-    result = CodexCLI(tmp_path, provider_config={"name": "OpenAI", "wire_api": "responses", "requires_openai_auth": True},
+    result = CodexCLI(tmp_path, model="test-model-override", provider_config={"name": "OpenAI", "wire_api": "responses", "requires_openai_auth": True},
                       _popen=MockProcess).interpret(bundle, consent=True)
-    assert result["status"] == "completed" and result["actual_model"] == "gpt-6-astra"
+    assert result["status"] == "completed" and result["actual_model"] == "test-model-override"
     child = MockProcess.instances[-1]
     assert child.kwargs["env"]["CODEX_HOME"].endswith("official-login-opaque")
     assert "OPENAI_API_KEY" not in child.kwargs["env"] and "PYTHONPATH" not in child.kwargs["env"]
@@ -126,7 +129,7 @@ def test_mock_timeout_terminates_only_owned_child(tmp_path, monkeypatch):
     MockProcess.mode, MockProcess.response = "timeout", response
     monkeypatch.setattr(ai.shutil, "which", lambda name: "/usr/bin/codex")
     monkeypatch.setenv("CODEX_HOME", str(tmp_path / "opaque"))
-    result = CodexCLI(tmp_path, provider="openai", timeout=.002, _popen=MockProcess).interpret(bundle, consent=True)
+    result = CodexCLI(tmp_path, model="test-model", provider="openai", timeout=.002, _popen=MockProcess).interpret(bundle, consent=True)
     assert result["status"] == "timeout" and result["attempts"] == 1
     assert MockProcess.instances[-1].terminated
 
@@ -142,7 +145,7 @@ def test_cancelled_before_start_and_bounded_attempts(tmp_path):
 
 def test_custom_provider_fails_closed_without_safe_config(tmp_path):
     bundle, _ = sample()
-    result = CodexCLI(tmp_path).interpret(bundle, consent=True)
+    result = CodexCLI(tmp_path, model="test-model").interpret(bundle, consent=True)
     assert result["status"] == "unavailable" and not result["transmitted"]
     assert result["provider_requested"] == "OpenAI"
     with pytest.raises(ValueError, match="non-secret"):
@@ -159,7 +162,7 @@ def test_finite_retry_failure_and_inflight_cancellation(tmp_path, monkeypatch):
     monkeypatch.setenv("CODEX_HOME", str(tmp_path / "opaque"))
     MockProcess.mode, MockProcess.response = "failure", response
     before = len(MockProcess.instances)
-    result = CodexCLI(tmp_path, provider="openai", max_attempts=2, _popen=MockProcess).interpret(bundle, consent=True)
+    result = CodexCLI(tmp_path, model="test-model", provider="openai", max_attempts=2, _popen=MockProcess).interpret(bundle, consent=True)
     assert result["status"] == "failed" and result["attempts"] == 2
     assert len(MockProcess.instances) == before + 2
     event = threading.Event()
@@ -167,5 +170,26 @@ def test_finite_retry_failure_and_inflight_cancellation(tmp_path, monkeypatch):
         def communicate(self, input=None, timeout=None):
             event.set()
             raise subprocess.TimeoutExpired(self.command, timeout)
-    result = CodexCLI(tmp_path, provider="openai", _popen=CancellingProcess).interpret(bundle, consent=True, cancel=event)
+    result = CodexCLI(tmp_path, model="test-model", provider="openai", _popen=CancellingProcess).interpret(bundle, consent=True, cancel=event)
     assert result["status"] == "cancelled" and MockProcess.instances[-1].terminated
+
+
+def test_unspecified_model_requires_configuration_without_startup(tmp_path, monkeypatch):
+    import prusie.ai as ai
+    bundle, _ = sample()
+    def unexpected(*args, **kwargs):
+        raise AssertionError("No CLI discovery or startup is needed without a model")
+    monkeypatch.setattr(ai.shutil, "which", unexpected)
+    directory = tmp_path / "unused"
+    result = CodexCLI(directory, provider="openai", _popen=unexpected).interpret(bundle, consent=True)
+    assert result["status"] == "unavailable"
+    assert result["model_requested"] is None
+    assert "Set model explicitly" in result["reason"]
+    assert result["attempts"] == 0 and result["transmitted"] is False
+    assert not directory.exists()
+
+
+@pytest.mark.parametrize("model", ["", "   ", 123, False])
+def test_invalid_model_identifiers_rejected(tmp_path, model):
+    with pytest.raises(ValueError, match="model must be"):
+        CodexCLI(tmp_path, model=model)

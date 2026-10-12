@@ -144,14 +144,19 @@ class CodexCLI:
     User config, rules, project instructions, MCP, apps, plugins, shell, browser,
     computer and web-search features are disabled for the child invocation.
     The model/provider are explicit; there is no provider or API-key fallback.
+    Supply ``model`` with an identifier available to your provider. An omitted
+    model returns a configuration requirement before starting the CLI; user
+    configuration is intentionally not inherited by this isolated adapter.
     Actual availability is established only by a successful authorized response.
-    Custom provider IDs (including the session's ``OpenAI`` identity) require an
-    explicit non-secret ``provider_config``. The distinct built-in ``openai``
+    Custom provider IDs require an explicit non-secret ``provider_config``.
+    The distinct built-in ``openai``
     identity is used only if the caller chooses it explicitly.
     """
 
-    def __init__(self, work_root, *, model="gpt-6-astra", provider="OpenAI", provider_config=None,
+    def __init__(self, work_root, *, model=None, provider="OpenAI", provider_config=None,
                  executable="codex", timeout=120, max_attempts=1, _popen=None):
+        if model is not None and (not isinstance(model, str) or not model.strip()):
+            raise ValueError("model must be an explicit nonempty provider model identifier or None")
         if timeout <= 0 or not math.isfinite(timeout):
             raise ValueError("timeout must be finite and positive")
         if max_attempts not in (1, 2):
@@ -190,7 +195,8 @@ class CodexCLI:
         help_result = subprocess.run([executable, "exec", "--help"], capture_output=True, text=True,
                                      timeout=20, check=False)
         flags = ("--json", "--output-schema", "--output-last-message", "--strict-config",
-                 "--sandbox", "--ignore-user-config", "--ignore-rules", "--ephemeral")
+                 "--sandbox", "--ignore-user-config", "--ignore-rules", "--ephemeral",
+                 "--model", "--skip-git-repo-check", "--color")
         supported = version.returncode == help_result.returncode == 0 and all(f in help_result.stdout for f in flags)
         return {"status": "available" if supported else "unsupported", "version": version.stdout.strip(),
                 "required_flags_present": {f: f in help_result.stdout for f in flags},
@@ -251,6 +257,10 @@ class CodexCLI:
         _facts(bundle)
         if cancel is not None and cancel.is_set():
             return {"status": "cancelled", "transmitted": False, "attempts": 0}
+        if self.model is None:
+            return {"status": "unavailable", "transmitted": False, "attempts": 0,
+                    "model_requested": None, "provider_requested": self.provider,
+                    "reason": "Set model explicitly to an identifier available to your provider; this isolated adapter does not inherit user configuration or guess a default model."}
         if self.provider != "openai" and self.provider_config is None:
             return {"status": "unavailable", "transmitted": False, "attempts": 0,
                     "provider_requested": self.provider,

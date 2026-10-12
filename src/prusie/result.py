@@ -48,6 +48,15 @@ class SusieResult:
     data_signature: str = ''
     _prepared: Any = field(default=None, repr=False, compare=False)
 
+    def __repr__(self):
+        """Describe stored dimensions and status without recomputing statistics."""
+        reason = self.convergence.get("stop_reason", "not_available")
+        return (f"SusieResult(variables={len(self.variant_ids)}, "
+                f"components={self.alpha.shape[0]}, "
+                f"credible_sets={len(self.sets.get('cs') or {})}, "
+                f"niter={self.niter}, converged={self.converged}, "
+                f"stop_reason={reason!r})")
+
     @property
     def ibss_converged(self):
         """Inner solver status of the returned state, independent of refinement."""
