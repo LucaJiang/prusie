@@ -51,7 +51,9 @@ def inspect_wheel(path):
         assert 'Redistribution and use in source and binary forms' in notice
         assert 'THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS' in notice
         assert 'GPL-2.0-or-later' in notice and 'GPL-3.0-or-later' in notice
-        return dict(filename=path.name, sha256=sha(path), WHEEL=wheel, METADATA=metadata,
+        assert not any('/docs/review/' in n or n.startswith(('docs/', 'tests/', 'dev/')) for n in names)
+        return dict(filename=path.name, sha256=sha(path), compressed_bytes=path.stat().st_size,
+                    unpacked_bytes=sum(x.file_size for x in archive.infolist()), WHEEL=wheel, METADATA=metadata,
                     runtime_requirements=requirements, docs_dependencies_absent=True,
                     native_members=native,
                     native_sha256=hashlib.sha256(archive.read(native[0])).hexdigest(),
@@ -98,6 +100,10 @@ def main():
 
     try:
         with tarfile.open(sdist) as archive:
+            assert not any('/docs/review/' in n for n in archive.getnames()), 'Historical review payload must remain outside sdist'
+            record['sdist'].update(compressed_bytes=sdist.stat().st_size,
+                                   unpacked_bytes=sum(x.size for x in archive.getmembers() if x.isfile()),
+                                   historical_review_excluded=True)
             archive.extractall(work / 'unpacked', filter='data')
         sources = list((work / 'unpacked').glob('*/pyproject.toml'))
         assert len(sources) == 1, 'Expected exactly one source project'
@@ -111,6 +117,7 @@ def main():
                     'rust/LICENSE-R', 'rust/LICENSE-susieR', 'rust/LICENSE-susieR-0.16.6',
                     'LICENSE', 'THIRD_PARTY_NOTICES.md', 'src/prusie/_licenses/THIRD_PARTY_NOTICES.md',
                     'tests/test_reference.py', 'tests/test_offline_example.py',
+                    'dev/references/restricted_numpy_susie.py', 'tests/data/cycle_seed312.npz',
                     'examples/data/inputs.npz', 'examples/data/r_fits.npz',
                     'examples/data/LICENSE.GPL-3', 'examples/check_example.py',
                     'tools/math_render.py', 'tools/render_math.cjs', 'tools/model_examples.py',
@@ -139,7 +146,7 @@ from prusie import _native
 prefix=pathlib.Path(sys.prefix).resolve()
 assert pathlib.Path(prusie.__file__).resolve().is_relative_to(prefix)
 assert pathlib.Path(_native.__file__).resolve().is_relative_to(prefix)
-assert not any(shutil.which(x) for x in ('rustc','cargo','maturin','R'))
+assert not any(shutil.which(x) for x in ('rustc','cargo','maturin','R','Rscript','codex'))
 assert importlib.util.find_spec('scipy') is None
 assert importlib.util.find_spec('matplotlib') is None
 assert prusie.__version__ == sys.argv[1] == importlib.metadata.version('prusie')

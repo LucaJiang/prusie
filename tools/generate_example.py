@@ -72,11 +72,12 @@ def check_frozen(directory, arrays, metadata):
     for name,expected in hashes.items():
         if hashlib.sha256((directory/name).read_bytes()).hexdigest()!=expected:
             raise ValueError(f'Frozen toy example checksum mismatch: {name}')
-    # numpy_version identifies the original generator, not the current host.
-    # Require the pinned generation version rather than relabeling provenance.
+    # Frozen metadata records the original generator; the regenerated metadata
+    # truthfully records this interpreter's NumPy. All scientific metadata and
+    # numerical bounds still match; the immutable original bytes are checked above.
     expected_metadata=json.loads((directory/'metadata.json').read_text())
-    if metadata!=expected_metadata:
-        raise ValueError('Regenerated metadata changed; use the recorded NumPy version and generation parameters')
+    if metadata!=expected_metadata | {'numpy_version':np.__version__}:
+        raise ValueError('Regenerated metadata changed or does not identify the running NumPy version')
     with np.load(directory/'inputs.npz',allow_pickle=False) as frozen:
         return validate_arrays(dict(frozen),arrays)
 
@@ -87,6 +88,9 @@ def main():
     if a.check:
         errors=check_frozen(a.output_dir,arrays,metadata)
         print('Checked frozen SHA256 and numerical regeneration:',json.dumps(errors,sort_keys=True))
+        original=json.loads((a.output_dir/'metadata.json').read_text())
+        print('NumPy provenance:',json.dumps({'frozen':original['numpy_version'],
+                                            'regenerated':metadata['numpy_version']}))
         return
     buffer=io.BytesIO();np.savez_compressed(buffer,**arrays)
     payload={'inputs.npz':buffer.getvalue(),'metadata.json':(json.dumps(metadata,indent=2)+'\n').encode(),

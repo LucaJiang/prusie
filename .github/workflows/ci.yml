@@ -3,6 +3,47 @@ on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
+  numpy-compatibility:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: '3.10'
+            numpy: '1.26.4'
+          - python: '3.12'
+            numpy: '2.5.3'
+          - python: '3.13'
+            numpy: '2.5.3'
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      PRUSIE_NUM_THREADS: '1'
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.18.0'
+      - name: Install supported NumPy combination and native package
+        run: python -m pip install 'numpy==${{ matrix.numpy }}' '.[test,analysis]' -r tools/docs-requirements.txt threadpoolctl
+      - run: python -m pip check
+      - run: python -c "import numpy as np; np.show_config(); np.show_runtime()"
+      - run: python -m pytest tests --junitxml=compatibility.xml
+      - name: Exercise installed imports outside checkout
+        run: |
+          cd "$RUNNER_TEMP"
+          python -I "$GITHUB_WORKSPACE/examples/quickstart.py"
+          python -I "$GITHUB_WORKSPACE/examples/check_example.py" --output-dir "$RUNNER_TEMP/offline-check"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compatibility-python${{ matrix.python }}-numpy${{ matrix.numpy }}
+          path: compatibility.xml
   linux-python312:
     runs-on: ubuntu-24.04
     env:

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from decimal import Decimal, localcontext
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -42,7 +43,9 @@ def calculate():
     np.testing.assert_array_equal(product, signed_Q[:, 0] * combined)
     V, s2 = 0.2, 0.1
     beta = np.array([0.1, 0.2, 0.3])
-    constant = -0.5 * np.log(1 + V / s2)
+    # This is scalar explanatory arithmetic. Use the scalar library operation so
+    # NumPy ufunc changes do not flip the last displayed decimal at a rounding tie.
+    constant = -0.5 * math.log(1 + V / s2)
     denominator = s2 * (s2 + V)
     bf = constant + 0.5 * beta**2 * V / denominator
     np.testing.assert_allclose(

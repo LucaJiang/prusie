@@ -28,6 +28,15 @@ def test_frozen_integrity_and_regeneration(generated):
     generator.check_frozen(DATA,*generated)
 
 
+def test_regeneration_records_host_version_without_relabeling_frozen_metadata(generated):
+    arrays,metadata=generated
+    original=(DATA/'metadata.json').read_bytes()
+    assert json.loads(original)['numpy_version']=='2.2.6'
+    assert metadata['numpy_version']==np.__version__
+    generator.check_frozen(DATA,arrays,metadata)
+    assert (DATA/'metadata.json').read_bytes()==original
+
+
 def test_archive_encoding_does_not_define_numerical_reproducibility(generated):
     arrays,_=generated
     stored=io.BytesIO();compressed=io.BytesIO()
