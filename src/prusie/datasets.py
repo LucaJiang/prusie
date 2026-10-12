@@ -48,3 +48,26 @@ def load_example():
     return dict(
         inputs=inputs, parameters=metadata["parameters"].copy(), metadata=metadata
     )
+
+
+def load_convergence_example():
+    """Load the licensed official 200-SNP convergence toy sufficient statistics.
+
+    The fixture contains no individual genotypes. Variant IDs are positional;
+    physical coordinates and allele labels are unavailable. Reference arrays
+    are frozen raw R fits; refinement deliberately fixes hard exclusion and
+    compares the uniformly recomputed post-trim objective.
+    """
+    directory=files('prusie').joinpath('data/convergence')
+    manifest=json.loads(directory.joinpath('checksums.json').read_text())
+    blobs={name:directory.joinpath(name).read_bytes() for name in manifest}
+    for name,blob in blobs.items():
+        if hashlib.sha256(blob).hexdigest()!=manifest[name]:
+            raise ValueError('Convergence toy checksum mismatch: '+name)
+    with np.load(io.BytesIO(blobs['inputs.npz']),allow_pickle=False) as data:
+        inputs={k:data[k].copy() for k in ('XtX','Xty','yty','n')}
+        inputs['yty']=float(inputs['yty']);inputs['n']=float(inputs['n'])
+    with np.load(io.BytesIO(blobs['reference.npz']),allow_pickle=False) as data:
+        reference={k:data[k].copy() for k in data.files}
+    metadata=json.loads(blobs['metadata.json'])
+    return dict(inputs=inputs,parameters=metadata['parameters'],metadata=metadata,reference=reference)

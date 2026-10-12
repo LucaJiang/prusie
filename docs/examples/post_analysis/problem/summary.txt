@@ -1,0 +1,9 @@
+200 variants; 2 retained credible sets; 2 active components.
+CS component 1: 86, 90; size 2; coverage > 0.9999; effective candidates 1.595.
+CS component 2: 33; size 1; coverage 1; effective candidates 1.
+Leading PIP: 33 1; 90 0.8228; 86 0.1772; 79 8.756e-09; 0 0.
+IBSS: criterion_satisfied; requested elbo, effective elbo; iterations 3.
+Refinement: 1/5 attempts accepted; post-trim original-model objective change 17.46.
+LD: 200 assessed, 0 flagged; 0 conditional only; 0 unassessed.
+Sensitivity baseline → refined: max |ΔPIP| 1 at 32.
+Sensitivity baseline → larger_L: max |ΔPIP| 0.009694 at 0 (outside candidate view).

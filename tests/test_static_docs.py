@@ -27,7 +27,7 @@ def test_highlight_tokens_and_exact_copy_text():
 def test_literal_comparison_remains_text():
     source=(ROOT/'docs/results.md').read_text()
     assert 'V&lt;prior_tol' in source
-    html=markdown.markdown(source,extensions=['tables','fenced_code','codehilite'])
+    html=markdown.markdown(source,extensions=['tables','fenced_code','codehilite','md_in_html'])
     assert 'V&lt;prior_tol' in html and '<prior_tol' not in html
 
 
@@ -42,7 +42,7 @@ def test_no_guessed_languages_or_external_runtime_resources():
 def test_generated_credible_set_table_preserves_absolute_correlation_header():
     """Absolute-value bars must not become Markdown table delimiters."""
     source=(ROOT/'docs/example.md').read_text()
-    html=markdown.markdown(source,extensions=['tables','fenced_code','codehilite'])
+    html=markdown.markdown(source,extensions=['tables','fenced_code','codehilite','md_in_html'])
     tables=re.findall(r'<table>.*?</table>',html,re.S)
     table=next(t for t in tables if 'Original component' in t)
     assert len(re.findall(r'<th>',table))==4

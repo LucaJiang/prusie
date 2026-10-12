@@ -47,6 +47,13 @@ pub(super) fn backend_name() -> &'static str {
     }
 }
 
+/// Effective group-fill capability for one synchronous SER objective search.
+/// Hardware is cached, but caller controls are sampled afresh for each context.
+#[cfg(all(has_vector_math, target_arch = "x86_64"))]
+pub(super) fn group_fill_avx2_allowed() -> bool {
+    matches!(backend(), Backend::Avx2) && unsafe { prusie_scalar_environment_required() } == 0
+}
+
 #[cfg(has_vector_math)]
 extern "C" {
     fn prusie_vector_init() -> i32;

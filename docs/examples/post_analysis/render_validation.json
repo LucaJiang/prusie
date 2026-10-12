@@ -1,0 +1,379 @@
+{
+  "baseline_presentation_source": "b35e21c2a459a61fb8e98c70fbd23f291d538fa6",
+  "render_source_sha": "70161d4651920c2c0b960d8786598d391a1a17b7",
+  "scope": "Saved-result rendering only. Separate bounded tutorial smoke tests executed documented computations.",
+  "refit_or_ld_optimization_during_render": false,
+  "raw_statistical_fields_unchanged": true,
+  "cases": [
+    {
+      "case": "stable",
+      "passed": true,
+      "numerical_files": {
+        "posterior_summary.json": {
+          "identical": true,
+          "before_sha256": "f2255f8eea7339ae6e3729cefd02553c4d73ba216591d529f3f659d047b4e3aa",
+          "after_sha256": "f2255f8eea7339ae6e3729cefd02553c4d73ba216591d529f3f659d047b4e3aa"
+        },
+        "comparison.json": {
+          "identical": true,
+          "before_sha256": "6d436a376b4464d2417054c3d12d7dc66c533838ce23aab40c93435d59c60517",
+          "after_sha256": "6d436a376b4464d2417054c3d12d7dc66c533838ce23aab40c93435d59c60517"
+        },
+        "ld_diagnostics.json": {
+          "identical": true,
+          "before_sha256": "bb9da3b09af99e0051d093245ae97555524e6db6c9eb7d1cd9cac556ff122caf",
+          "after_sha256": "bb9da3b09af99e0051d093245ae97555524e6db6c9eb7d1cd9cac556ff122caf"
+        },
+        "summary.txt": {
+          "identical": true,
+          "before_sha256": "a36f1055a76c83f892c6dbf9c541313d1590d7a8f8ac3b778ccd377a9c928259",
+          "after_sha256": "a36f1055a76c83f892c6dbf9c541313d1590d7a8f8ac3b778ccd377a9c928259"
+        }
+      },
+      "full_precision_tables_identical": {
+        "refinement_attempts.csv": true,
+        "credible_sets.csv": true,
+        "refinement_stages.csv": true,
+        "components.csv": true,
+        "component_relations.csv": true,
+        "cs_relations.csv": true,
+        "variants.csv": true,
+        "comparison_variants.csv": true,
+        "ld_variants.csv": true,
+        "trace.csv": true,
+        "cs_audit.csv": true,
+        "prior_influence.csv": true,
+        "signal_relations.csv": true
+      },
+      "summary_identical_except_provenance_bundle_hash": true,
+      "persisted_array_entries_identical": true,
+      "display_changes": {
+        "locus overview": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "convergence before and after": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "refinement": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "LD diagnostics": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "sensitivity main signals": {
+          "changed_display_fields": [
+            "display_names"
+          ],
+          "added_display_fields": [
+            "annotation_colors",
+            "caption_details",
+            "display_policy",
+            "display_text"
+          ]
+        },
+        "signal detail component 1": {
+          "changed_display_fields": [],
+          "added_display_fields": [
+            "ld_annotation_colors",
+            "ld_display_policy",
+            "ld_display_text"
+          ]
+        },
+        "prior influence component 1 (CS and top 10)": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "signal detail component 0": {
+          "changed_display_fields": [],
+          "added_display_fields": [
+            "ld_annotation_colors",
+            "ld_display_policy",
+            "ld_display_text"
+          ]
+        },
+        "prior influence component 0 (CS and top 10)": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "variance details before and after": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        }
+      },
+      "candidate_ids": [
+        "syn0350",
+        "syn0100",
+        "syn0143",
+        "syn0145",
+        "syn0101",
+        "syn0102",
+        "syn0351",
+        "syn0349"
+      ],
+      "settings": [
+        "baseline",
+        "larger_L",
+        "fixed_variance",
+        "coverage90"
+      ],
+      "pip_matrix_sha256": "03b198137b6a3cc7493458f8f102ba09e6d0c396b1546b6b5b0d45e63ba10f02",
+      "source_support_sha256": "bde3eb16ea937f449b78a3f20b7de5d007352fff9b0b09471ebbacb98d109db8",
+      "missing_mask": [
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false,
+          false
+        ]
+      ],
+      "display_policy": {
+        "cmap": "Blues",
+        "normalization": [
+          0,
+          1
+        ],
+        "scale": "linear",
+        "annotation_rule": "at most 18 rows, 7 settings and 100 cells",
+        "annotation_format": "exact 0/1; <0.01 or >0.99 for interior tails; otherwise two decimals; NA for missing",
+        "row_labels": "all selected candidates; long IDs uniquely abbreviated",
+        "rendered_setting_labels": {
+          "baseline": "Baseline",
+          "larger_L": "L = 6",
+          "fixed_variance": "Scaled prior\nvariance\n0.05 (fixed)",
+          "coverage90": "CS coverage\n90%"
+        }
+      }
+    },
+    {
+      "case": "problem",
+      "passed": true,
+      "numerical_files": {
+        "posterior_summary.json": {
+          "identical": true,
+          "before_sha256": "9dcf417452be96bc37179d0d8f5dc55a695b15962dfe618af32023e10fec01f8",
+          "after_sha256": "9dcf417452be96bc37179d0d8f5dc55a695b15962dfe618af32023e10fec01f8"
+        },
+        "comparison.json": {
+          "identical": true,
+          "before_sha256": "22068a3fc34df4108e020cba3907ee27bfd6cde2f7823f29204ca73bdce7ec9f",
+          "after_sha256": "22068a3fc34df4108e020cba3907ee27bfd6cde2f7823f29204ca73bdce7ec9f"
+        },
+        "ld_diagnostics.json": {
+          "identical": true,
+          "before_sha256": "f6977c7abb158fe8790ad8a6efb10f3c76ef5ab3f67b2be831cea3148d5e7126",
+          "after_sha256": "f6977c7abb158fe8790ad8a6efb10f3c76ef5ab3f67b2be831cea3148d5e7126"
+        },
+        "summary.txt": {
+          "identical": true,
+          "before_sha256": "963cdc78f80401ef0df7813b71fc67b7986deb8ebaaa03f2b77040b1ee8204f6",
+          "after_sha256": "963cdc78f80401ef0df7813b71fc67b7986deb8ebaaa03f2b77040b1ee8204f6"
+        }
+      },
+      "full_precision_tables_identical": {
+        "refinement_attempts.csv": true,
+        "credible_sets.csv": true,
+        "refinement_stages.csv": true,
+        "components.csv": true,
+        "component_relations.csv": true,
+        "cs_relations.csv": true,
+        "variants.csv": true,
+        "comparison_variants.csv": true,
+        "ld_variants.csv": true,
+        "trace.csv": true,
+        "cs_audit.csv": true,
+        "prior_influence.csv": true,
+        "signal_relations.csv": true
+      },
+      "summary_identical_except_provenance_bundle_hash": true,
+      "persisted_array_entries_identical": true,
+      "display_changes": {
+        "locus overview": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "convergence before and after": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "refinement": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "LD diagnostics": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "sensitivity main signals": {
+          "changed_display_fields": [],
+          "added_display_fields": [
+            "annotation_colors",
+            "caption_details",
+            "display_policy",
+            "display_text"
+          ]
+        },
+        "signal detail component 2": {
+          "changed_display_fields": [],
+          "added_display_fields": [
+            "ld_annotation_colors",
+            "ld_display_policy",
+            "ld_display_text"
+          ]
+        },
+        "prior influence component 2 (CS and top 10)": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "signal detail component 1": {
+          "changed_display_fields": [],
+          "added_display_fields": [
+            "ld_annotation_colors",
+            "ld_display_policy",
+            "ld_display_text"
+          ]
+        },
+        "prior influence component 1 (CS and top 10)": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        },
+        "variance details before and after": {
+          "changed_display_fields": [],
+          "added_display_fields": []
+        }
+      },
+      "candidate_ids": [
+        "33",
+        "32",
+        "35",
+        "90",
+        "86",
+        "70",
+        "63",
+        "79",
+        "34",
+        "48"
+      ],
+      "settings": [
+        "baseline",
+        "refined",
+        "larger_L"
+      ],
+      "pip_matrix_sha256": "db3896eb2d40013fa7e9c7861c4e72fbb167ade03b94a3d69a6288707127722d",
+      "source_support_sha256": "bde3eb16ea937f449b78a3f20b7de5d007352fff9b0b09471ebbacb98d109db8",
+      "missing_mask": [
+        [
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false
+        ],
+        [
+          false,
+          false,
+          false
+        ]
+      ],
+      "display_policy": {
+        "cmap": "Blues",
+        "normalization": [
+          0,
+          1
+        ],
+        "scale": "linear",
+        "annotation_rule": "at most 18 rows, 7 settings and 100 cells",
+        "annotation_format": "exact 0/1; <0.01 or >0.99 for interior tails; otherwise two decimals; NA for missing",
+        "row_labels": "all selected candidates; long IDs uniquely abbreviated",
+        "rendered_setting_labels": {
+          "baseline": "Baseline",
+          "refined": "After\nrefinement",
+          "larger_L": "L = 12"
+        }
+      }
+    }
+  ]
+}

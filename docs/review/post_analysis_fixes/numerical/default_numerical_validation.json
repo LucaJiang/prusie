@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "old_numeric_source": "e45914e512e04feef37cf7310bc0b309582d6058",
+  "new_version": "0.2.4.dev1",
+  "cases": 19,
+  "fits": 57,
+  "tracking_modes": [
+    false,
+    "compact",
+    "dense"
+  ],
+  "array_elements": 60576,
+  "array_bytes_equal": true,
+  "maximum_absolute_difference": 0.0,
+  "by_field_maximum": {
+    "pip": 0.0,
+    "alpha": 0.0,
+    "mu": 0.0,
+    "mu2": 0.0,
+    "V": 0.0,
+    "elbo": 0.0,
+    "KL": 0.0,
+    "XtXr": 0.0,
+    "lbf": 0.0,
+    "lbf_variable": 0.0
+  },
+  "scope": "17 frozen analytical cases plus existing 500/200 variant examples; no refinement or timing campaign"
+}

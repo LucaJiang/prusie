@@ -1,0 +1,37 @@
+{
+  "data_checksums": {
+    "z": "7e093e65425c59e49c54a8a8c0581f5c4671cb1e2b3bf81ca2a0661e6bdd9289",
+    "R": "becf34712e7445a382029b4e38c6c01930437822507abc58f944478a66e85218",
+    "n": "921ac7f259f864606624eb7fc29124712ff65b425e9500a35dd32b71ddb9332c",
+    "variant_ids": "0bd0d8184c5d548348652f3c7ad83aee0f6fcea2dc73f80713755e81a92417bc"
+  },
+  "variant_harmonization": "Input order preserved; allele labels unavailable in this toy fixture.",
+  "parameters": {
+    "L": 5,
+    "max_iter": 100,
+    "tol": 0.001,
+    "scaled_prior_variance": 0.2,
+    "residual_variance": 1.0,
+    "estimate_residual_variance": false,
+    "estimate_prior_variance": true,
+    "estimate_prior_method": "optim",
+    "coverage": 0.95,
+    "min_abs_corr": 0.5,
+    "n_purity": 500
+  },
+  "initial_state": "cold start; refinement stage B uses stage A posterior moments",
+  "reference_sources": [
+    "prusie packaged synthetic toy example; frozen generator seed 20261007"
+  ],
+  "software_versions": {
+    "prusie": "0.2.3rc6",
+    "numpy": "2.2.6",
+    "native": "prusie-rust/0.2.3-rc.6; susieR-reference/0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2"
+  },
+  "random_seed": 20261007,
+  "elapsed_seconds": 5.837968838401139,
+  "skipped": [
+    "AI network call not requested",
+    "gene track: no physical coordinate metadata"
+  ]
+}

@@ -2,11 +2,11 @@
   "package": "prusie",
   "mark": "Su",
   "tagline": "SuSiE fine-mapping",
-  "description": "SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.",
-  "section": "Fine-mapping \u00b7 Python + Rust",
+  "description": "Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.",
+  "section": "Fine-mapping · Python + Rust",
   "navigation": [
     [
-      "Get started",
+      "Start here",
       [
         [
           "Overview",
@@ -17,35 +17,43 @@
           "install.html"
         ],
         [
-          "Toy example",
+          "Quick start",
           "example.html"
         ]
       ]
     ],
     [
-      "Use the package",
+      "Read and check a result",
+      [
+        [
+          "Reading results",
+          "results.html"
+        ],
+        [
+          "Convergence and refinement",
+          "post_analysis.html"
+        ],
+        [
+          "Sensitivity and LD",
+          "sensitivity.html"
+        ],
+        [
+          "Worked examples",
+          "worked_examples.html"
+        ]
+      ]
+    ],
+    [
+      "Reference",
       [
         [
           "Inputs and priors",
           "inputs.html"
         ],
         [
-          "API",
+          "API and plotting",
           "api.html"
         ],
-        [
-          "Results",
-          "results.html"
-        ],
-        [
-          "Reproducibility",
-          "reproducibility.html"
-        ]
-      ]
-    ],
-    [
-      "Understand and contribute",
-      [
         [
           "Statistical model",
           "model.html"
@@ -59,18 +67,22 @@
           "performance.html"
         ],
         [
-          "Implementation and optimizations",
-          "implementation.html"
-        ],
-        [
-          "Contributing",
-          "contributing.html"
+          "Reproducibility",
+          "reproducibility.html"
         ]
       ]
     ],
     [
       "Project",
       [
+        [
+          "Implementation",
+          "implementation.html"
+        ],
+        [
+          "Contributing",
+          "contributing.html"
+        ],
         [
           "Citation and license",
           "citation.html"

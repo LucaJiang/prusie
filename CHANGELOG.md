@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.4.dev1 — post-analysis (unreleased)
+
+- Preserve requested convergence controls across continuation, refinement and
+  sensitivity fits; record inner solver settings and explicit overrides.
+- Hash matrix identity in bounded buffers without changing signatures or default
+  posterior calculations. Distinguish this development build in sensitivity caches.
+- Separate CS-supported signal comparisons from complete component evidence;
+  distinguish incomplete LD assessment from evaluated, unflagged variants.
+- Show before/after fitting and all retained CS in offline reports, with compact
+  deterministic summaries and complete external machine evidence.
+- Install analysis dependencies explicitly in full CI while testing NumPy-only
+  wheel installations separately.
+- Align sensitivity priors and metadata by variant ID, including subsets and
+  null augmentation; use one global intersection for common-mode comparisons.
+- Share local figure/report styling, add compact and variance-detail layouts,
+  and provide `summary_text` without implicit fitting or plotting.
+- Organize user documentation around result interpretation, convergence,
+  sensitivity and two saved worked examples; retain the original version and
+  date attribution of performance measurements.
+- Use separate linear PIP and LD heatmap palettes, compact cells and
+  contrast-aware annotations while retaining full-precision plotted values.
+  Improve mobile navigation, figure viewing and the fit-to-report tutorials.
+
 ## 0.2.3rc6 — portable toy example validation
 
 - Verify frozen toy example file hashes separately from numerical regeneration,

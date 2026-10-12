@@ -1,6 +1,6 @@
 """Result contract shared with consumers without requiring this package."""
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from typing import Any
 
 import numpy as np
@@ -41,10 +41,29 @@ class SusieResult:
     intercept: float
     KL: np.ndarray
     XtXr: np.ndarray
+    convergence: dict[str, Any] = field(default_factory=dict)
+    trace: list[dict[str, Any]] = field(default_factory=list)
+    refinement: dict[str, Any] = field(default_factory=lambda: dict(status='not_executed',stop_reason='not_requested',history=[],total_fits=0))
+    cs_audit: list[dict[str, Any]] = field(default_factory=list)
+    data_signature: str = ''
+    _prepared: Any = field(default=None, repr=False, compare=False)
+
+    @property
+    def ibss_converged(self):
+        """Inner solver status of the returned state, independent of refinement."""
+        return self.converged
+
+    @property
+    def refinement_status(self):
+        return self.refinement.get('status', 'not_executed')
+
+    @property
+    def refinement_stop_reason(self):
+        return self.refinement.get('stop_reason', 'not_requested')
 
     def as_dict(self) -> dict[str, Any]:
         """Return a shallow mapping, preserving arrays without copying."""
-        return {field.name: getattr(self, field.name) for field in fields(self)}
+        return {field.name: getattr(self, field.name) for field in fields(self) if not field.name.startswith("_")}
 
     @property
     def coef(self) -> np.ndarray:

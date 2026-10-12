@@ -1,0 +1,10 @@
+500 variants; 2 retained credible sets; 2 active components.
+CS component 0: syn0100; size 1; coverage 0.9697; effective candidates 1.146.
+CS component 1: syn0350; size 1; coverage 0.9999; effective candidates 1.001.
+Leading PIP: syn0350 0.9999; syn0100 0.9697; syn0101 0.03028; syn0349 6.308e-05; syn0102 2.609e-05.
+IBSS: criterion_satisfied; requested elbo, effective elbo; iterations 3.
+Refinement: 0/2 attempts accepted; post-trim original-model objective change 0.
+LD: 500 assessed, 0 flagged; 0 conditional only; 0 unassessed.
+Sensitivity baseline → larger_L: max |ΔPIP| 0 at syn0100.
+Sensitivity baseline → fixed_variance: max |ΔPIP| 0.2544 at syn0143.
+Sensitivity baseline → coverage90: max |ΔPIP| 0 at syn0100.

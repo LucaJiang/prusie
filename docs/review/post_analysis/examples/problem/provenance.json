@@ -1,0 +1,30 @@
+{
+  "data_checksums": {
+    "XtX": "1693ace68e6681f60f51dad475fb66f32f463a1eb1687c544da6a1558b0d9f60",
+    "Xty": "a6b0bf42b65d0fdf2b13e6daca3a64ce002c1d53440a3df7e60d6cf12c9412d1",
+    "yty": "6abe06cdca4d7566ffbfbbe75876b33c7b393348da11bd06a5a725eb34721c4f",
+    "n": "64e3f87a25ba60674b1ad0ed95bff6cc70ef0332d41c8fb07976f671faebc8e1"
+  },
+  "variant_harmonization": "Input order preserved; allele labels unavailable in this toy fixture.",
+  "parameters": {
+    "L": 10,
+    "max_iter": 100,
+    "tol": 0.001,
+    "estimate_residual_variance": true
+  },
+  "initial_state": "cold start; refinement stage B uses stage A posterior moments",
+  "reference_sources": [
+    "https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData"
+  ],
+  "software_versions": {
+    "prusie": "0.2.3rc6",
+    "numpy": "2.2.6",
+    "native": "prusie-rust/0.2.3-rc.6; susieR-reference/0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2"
+  },
+  "random_seed": "frozen upstream fixture; no new random generation",
+  "elapsed_seconds": 3.1181434290483594,
+  "skipped": [
+    "AI network call not requested",
+    "gene track: no physical coordinate metadata"
+  ]
+}

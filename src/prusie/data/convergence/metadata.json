@@ -1,0 +1,18 @@
+{
+  "description": "Official susieR FinemappingConvergence toy example: a simulated response with real-genotype-derived sufficient statistics. No individual genotypes are included.",
+  "source_commit": "1f9166cf88ed19c1d6acd4ee53a605ff9505a563",
+  "source_url": "https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData",
+  "source_sha256": "8b9ac71cd119cd8e9818340fb1152e422d9b7eaefac747058d8087f6c0b5139b",
+  "license": "BSD-3-Clause; see LICENSE.txt",
+  "reference_commits": {
+    "old": "1f9166cf88ed19c1d6acd4ee53a605ff9505a563",
+    "latest": "8e56a8e038e989856d106d9ca5175cc664fea9d2"
+  },
+  "variant_ids": "positional indices; genomic positions and alleles not provided",
+  "parameters": {
+    "L": 10,
+    "max_iter": 100,
+    "tol": 0.001,
+    "estimate_residual_variance": true
+  }
+}

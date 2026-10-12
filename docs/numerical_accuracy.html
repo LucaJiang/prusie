@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
+<meta name="description" content="Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.">
 
 <title>Numerical accuracy · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
-<span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html" aria-current="page">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<div class="version"><span class="version-number">0.2.4.dev1</span><span class="version-badge">Development</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html" aria-current="page">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -39,7 +39,7 @@
 <h2 id="variant-inclusion-probabilities">Variant inclusion probabilities</h2>
 <!-- generated:maxima:start -->
 
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Analysis</th>
@@ -74,7 +74,7 @@ tolerance, together with input/model/probability validity. The table reports
 observed elementwise maxima, rather than that threshold. Each maximum is
 traceable to a zero-based variant index, both fitted values and hashes of the
 two raw fit records in the <a href="assets/r_comparison_summary.json">machine summary</a>.</p>
-<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Each analysis's maximum absolute PIP difference against its variant count, separated into GWAS and eQTL." src="assets/pip_accuracy.svg" /></p></div>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Each analysis's maximum absolute PIP difference against its variant count, separated into GWAS and eQTL." src="assets/pip_accuracy.svg" /></div><figcaption><a href="assets/pip_accuracy.svg">Open original figure</a></figcaption></figure>
 <p>The vertical axis is symmetric-log with a linear interval below 10⁻¹⁴; exact
 zeros are retained at zero. <a href="assets/pip_accuracy.pdf">Vector PDF</a>.</p>
 <!-- generated:limits:start -->
@@ -84,7 +84,7 @@ zeros are retained at zero. <a href="assets/pip_accuracy.pdf">Vector PDF</a>.</p
 <h2 id="posterior-arrays-bayes-factors-and-objective">Posterior arrays, Bayes factors and objective</h2>
 <!-- generated:errors:start -->
 
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Quantity</th>
@@ -163,7 +163,7 @@ V, moments, Bayes factors and KL follow the finalization semantics described in
 <h2 id="credible-sets">Credible sets</h2>
 <!-- generated:cs:start -->
 
-<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0"><table>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Analysis</th>
@@ -206,7 +206,7 @@ Convergence and the presence of a credible set are different properties.</p>
 <p>The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
 <!-- generated:teaching:end -->
 
-<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0"><p><img alt="Signed association statistics and fitted PIPs for the independent synthetic toy example, with its two true effect positions marked." src="assets/teaching_fit.svg" /></p></div>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Signed association statistics and fitted PIPs for the independent synthetic toy example, with its two true effect positions marked." src="assets/teaching_fit.svg" /></div><figcaption><a href="assets/teaching_fit.svg">Open original figure</a></figcaption></figure>
 <p>The dashed lines mark the two simulated nonzero effects. This single toy
 example has its own newly executed reference, generation script and packaged
 inputs. See the <a href="example.html">toy example tutorial</a> and <a href="assets/teaching_fit.pdf">vector PDF</a>.</p>
@@ -220,7 +220,7 @@ by <code>tests/test_packaged_example.py</code>.</p>
 saved records, offline frozen-reference checks, and live-R fitting.
 <code>tools/benchmark/compare_fits.py</code> compares original component IDs and retains all
 field diagnostics. Existing frozen references and tolerances are unchanged.</p></article>
-<footer><p>prusie 0.2.3rc6 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+<footer><p>prusie 0.2.4.dev1 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>
 </body>

@@ -122,7 +122,7 @@ def test_invalid_inputs_error(kwargs, match):
         susie_rss(**args)
 
 
-@pytest.mark.parametrize("option", ["refine", "track_fit", "verbose"])
+@pytest.mark.parametrize("option", ["verbose"])
 def test_unsupported_options_are_not_ignored(option):
     with pytest.raises(NotImplementedError, match=option):
         susie_rss([1., 0.], np.eye(2), 100, **{option: True})

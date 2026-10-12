@@ -1,6 +1,6 @@
 [package]
 name = "prusie-native"
-version = "0.2.3-rc.6"
+version = "0.2.4-dev.1"
 edition = "2021"
 publish = false
 license = "GPL-3.0-or-later"

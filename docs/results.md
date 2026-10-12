@@ -1,4 +1,76 @@
-# Results
+# Reading fine-mapping results
+
+Start with the PIP ranking and retained credible sets, then ask how concentrated
+each component is and whether diagnostics change the interpretation. A variant
+can have a high marginal PIP while belonging to a set with several plausible
+alternatives. Component IDs identify model rows, not ranks or known causal effects.
+
+## PIP, alpha and credible sets
+
+| Quantity | Question it answers | How to read it |
+| --- | --- | --- |
+| Marginal PIP | How much posterior support does this variant have across active components? | Rank candidates under the fitted model and assumptions |
+| Component alpha | Where does this one single-effect component place its probability? | Read within a component; its rows can exchange roles across fits |
+| Credible set (CS) | Which variants together reach the requested component posterior mass? | Read the actual mass, membership and original component ID |
+| Purity | Are the CS members strongly correlated with one another? | Minimum, mean and median absolute LD correlation; a singleton has purity 1 by definition |
+| Effective candidates | How concentrated is the biological component posterior? | Entropy-based resolution, distinct from CS size and causal count |
+
+For active components, marginal PIP is
+
+$$
+\mathrm{PIP}_j=1-\prod_{l:V_l>\mathrm{prior\_tol}}(1-\alpha_{lj}).
+$$
+
+The optional null position is excluded. A CS with target mass 0.95 can have
+actual mass greater than 0.95 because variants are included whole. That target is
+posterior mass under the model; it is not a claim of demonstrated repeated-sampling
+coverage in a new study. PIP and CS support do not establish biological mechanism.
+
+Continue from the [quick start](example.md):
+
+```python
+summary = prusie.summarize(fit, inputs["R"], z=inputs["z"])
+print(prusie.summary_text(summary).splitlines()[0])
+```
+
+```text
+500 variants; 2 retained credible sets; 2 active components.
+```
+
+For the [packaged example](example.md), `syn0100` has PIP about 0.9697 and
+`syn0350` about 0.99994. Each has a singleton CS. Their effective candidate counts
+are approximately 1.146 and 1.001: most mass is concentrated, although neighboring
+variants can still carry small probabilities. See the
+[worked examples](worked_examples.md) for a retained two-variant CS whose members
+remain difficult to resolve.
+
+## Read the complete posterior context
+
+`summarize` provides variant, component and CS tables, the recorded CS pipeline
+audit, direct LD proxies and conditional prior/BF information. CS audit reasons
+include inactive, duplicate, contains-null, low-purity, disabled and unavailable;
+several reasons may apply. Changing summary coverage or purity re-extracts sets
+from the same posterior without running IBSS.
+
+The effective number of candidates is
+$\exp(-\sum_j a_j\log a_j)$, where biological component alpha is normalized by its
+biological mass. Null mass is reported separately. This is a continuous resolution
+summary, with no automatic cutoff declaring a component to be a causal signal.
+
+Direct proxies require pairwise $|r|$ above the chosen threshold (default 0.99).
+They do not add CS members or expand through chains of correlated variants.
+Representatives use highest alpha, with lexical ID tie-breaking. Genotype
+correlation supplements posterior resolution; it is not a test of whether
+multiple conditional effects can be distinguished. CS count is not a known
+causal count.
+
+Prior-influence plots compare supplied and effective computational weights,
+component-conditional log Bayes factors and alpha in the same variant order.
+These Bayes factors depend on the other components and current settings. They
+are not independent evidence for additional effects. Exact prior conventions
+are described in the [model](model.md) and [sensitivity guide](sensitivity.md).
+
+## Result object
 
 Both fitting functions return `SusieResult`. All indices are zero-based and
 biological variants remain in the caller's order. Let $p$ be their count and
@@ -46,6 +118,9 @@ not relabel components. The mapping contains:
 | `requested_coverage` | Requested selection target |
 | `purity` | Arrays `min_abs_corr`, `mean_abs_corr`, `median_abs_corr`, one entry per returned set |
 
+<details markdown="1">
+<summary>Exact CS extraction order and boundary cases</summary>
+
 Candidates accumulate alpha in descending order with stable ties, then sort
 member indices. Deduplication retains the first occurrence of a membership set
 **before** activity and purity filtering, so an earlier rejected candidate can
@@ -62,21 +137,27 @@ The [two-variant example](model.md#pip-and-credible-sets) distinguishes requeste
 mass, selected mass, LD purity and repeated-sampling coverage. The presence of
 a credible set and convergence are separate properties.
 
+</details>
+
 ## Iterations and finalization
 
-`niter` counts executed sweeps; `max_iter` is the cap. With a finite objective
-increment, convergence requires $0\leq\Delta\mathcal L<\mathtt{tol}$ after at
-least two sweeps. An objective decrease beyond tolerance produces a warning
-and does not satisfy this criterion. Reaching the cap returns
-`converged=False` with a warning, unless the stopping criterion held on that
-last sweep. The library does not silently refit.
+`niter` counts executed sweeps; `max_iter` is the cap. By default, convergence
+requires a finite $0\leq\Delta\mathcal L<\mathtt{tol}$ after at least two sweeps.
+An objective decrease does not satisfy this rule. Reaching the cap leaves IBSS
+unconverged unless the criterion held on the last sweep. Optional alpha/PIP and
+joint rules are selected by `ConvergenceConfig`; the library does not silently
+refit when a rule fails.
 
-A nonfinite objective increment invokes the recorded alpha/PIP fallback. It
-checks a fixed point or a cycle of at most five states using the maximum
-absolute alpha/PIP difference and `tol`; a detected multi-state cycle averages
-alpha across that cycle. Other posterior arrays and retained products are not
-recomputed by this exceptional fallback. Its warning is part of the fit and
-should be retained when interpreting such outputs.
+`fit.convergence` records the requested and effective rules, actual stopping
+reason, exact last distances and finalization. A nonfinite objective increment
+invokes a labelled alpha/PIP fallback. A multi-state cycle is reported as
+`cycle_detected`, with IBSS convergence false, while retaining the complete
+current posterior; components are not averaged across incompatible states.
+Read [convergence and refinement](post_analysis.md) for thresholds, continuation,
+tracking costs and the distinction between stopping and finding a better solution.
+
+<details markdown="1">
+<summary>Residual-variance updates, trim thresholds and stored field phases</summary>
 
 Residual variance is updated only after the objective and stopping check, so
 it is unchanged on the convergence sweep. If estimation is enabled at an
@@ -88,11 +169,15 @@ PIP uses $V_\ell>\mathtt{prior\_tol}$; a component exactly at that threshold is
 untrimmed but inactive for PIP. The separate CS threshold is fixed as described
 above.
 
+</details>
+
 ## Metadata and persistence
 
 | Field | Meaning |
 | --- | --- |
-| `niter`, `converged` | Executed sweep count and stopping status |
+| `niter`, `converged`, `ibss_converged` | Executed sweep count and inner IBSS stopping status |
+| `convergence`, `trace` | Requested/effective rule, stopping evidence and optional iteration history |
+| `refinement` | Explicit search settings, attempts, accepted objective path and search status |
 | `null_index` | Last internal column index, or None |
 | `params` | Actual options, normalized weights, effective dimensions and RSS input/scale information |
 | `backend_version` | Installed Rust implementation and pinned reference identity |
@@ -100,7 +185,21 @@ above.
 | `qc` | Per-call matrix diagnostics; these do not certify external allele alignment |
 | `variant_metadata` | Copies of caller-supplied length-$p$ metadata arrays |
 
-Use NPZ for arrays and JSON for parameters/metadata when persisting portable
-results; the [toy tutorial](example.md) has an example. Python pickles retain
-class module paths and require a compatible environment. For trusted results
-saved by an older package, export arrays with that original environment.
+Use `save_analysis(fit, directory)` and `load_analysis(directory)` from
+`prusie.report` to preserve the result's arrays, identifiers and metadata without
+pickle. The [quick start](example.md#save-and-reload-a-result) shows the round trip;
+manual NPZ/JSON export is available in its advanced section. Array shapes and
+stored phases above remain part of the saved result. The retained optimization
+context is omitted, so supply the original inputs when warm-starting a reloaded
+posterior.
+
+<details markdown="1">
+<summary>Older saved results</summary>
+
+Python pickles retain class module paths and require a compatible environment.
+For trusted results saved by an older package, export arrays with that original
+environment before importing them into a new workflow. Saved examples with
+producer/render identities are described in
+[worked-example provenance](worked_examples.md#sources-and-reproducibility).
+
+</details>

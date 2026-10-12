@@ -49,6 +49,45 @@ def render_markdown(source: str, page: str):
     return md.convert(source), md
 
 
+def decorate_body(body: str) -> str:
+    """Add local scroll regions and original-image links to rendered content."""
+    body = body.replace(
+        "<pre>", '<pre tabindex="0" aria-label="Code example; scroll horizontally if needed">'
+    )
+    body = re.sub(r'(href="[^"#?:]+)\.md(?=[#"])', r"\1.html", body)
+    body = re.sub(
+        r"(<table>.*?</table>)",
+        '<div class="table-wrap" role="region" aria-label="Data table" '
+        'tabindex="0" data-scroll-label="Scroll horizontally to view all columns.">\\1</div>',
+        body, flags=re.S,
+    )
+
+    def figure(match):
+        image = match[1]
+        source = re.search(r'\bsrc="([^"]+)"', image)
+        if source is None:
+            return match[0]
+        classes = re.search(r'\bclass="([^"]*)"', image)
+        complex_figure = classes is not None and "figure-complex" in classes[1].split()
+        wrapper_class = "figure-wrap figure-complex" if complex_figure else "figure-wrap"
+        # Source attributes have already been HTML-escaped by Markdown.
+        return (f'<figure class="doc-figure"><div class="{wrapper_class}" role="region" '
+                'aria-label="Scientific figure" tabindex="0" '
+                'data-scroll-label="Scroll horizontally to inspect the full figure.">'
+                f'{image}</div><figcaption><a href="{source[1]}">Open original figure</a>'
+                '</figcaption></figure>')
+
+    return re.sub(r"<p>\s*(<img [^>]+>)\s*</p>", figure, body)
+
+
+def page_toc(filename: str, markdown_document) -> str:
+    """Keep in-page navigation on long pages, after a direct homepage opening."""
+    if filename == "index.md" or not markdown_document.toc_tokens:
+        return ""
+    return ('<details class="on-this-page"><summary>On this page</summary>'
+            f'{markdown_document.toc}</details>')
+
+
 def build(check: bool = False) -> None:
     check_assets()
     config = json.loads((ROOT / "tools/site_config.json").read_text())
@@ -58,23 +97,7 @@ def build(check: bool = False) -> None:
     stale = []
     for path in sorted(DOCS.glob("*.md")):
         body, md = render_markdown(path.read_text(), path.relative_to(ROOT).as_posix())
-        body = body.replace(
-            "<pre>",
-            '<pre tabindex="0" aria-label="Code example; scroll horizontally if needed">',
-        )
-        # Markdown sources remain readable; Pages links resolve within docs/.
-        body = re.sub(r'(href="[^"#?:]+)\.md(?=[#"])', r"\1.html", body)
-        body = re.sub(
-            r"(<table>.*?</table>)",
-            r'<div class="table-wrap" role="region" aria-label="Scrollable data table" tabindex="0">\1</div>',
-            body,
-            flags=re.S,
-        )
-        body = re.sub(
-            r"(<p><img [^>]+></p>)",
-            r'<div class="figure-wrap" role="region" aria-label="Scrollable scientific figure" tabindex="0">\1</div>',
-            body,
-        )
+        body = decorate_body(body)
         title = re.search(r"<h1[^>]*>(.*?)</h1>", body)
         title = re.sub("<[^>]+>", "", title[1]) if title else path.stem
         nav = []
@@ -92,11 +115,7 @@ def build(check: bool = False) -> None:
             nav.append(
                 f'<div class="nav-group"><p class="nav-label">{html.escape(group)}</p>{"".join(links)}</div>'
             )
-        toc = (
-            f'<details class="on-this-page"><summary>On this page</summary>{md.toc}</details>'
-            if md.toc_tokens
-            else ""
-        )
+        toc = page_toc(path.name, md)
         target = config.get("redirects", {}).get(path.with_suffix(".html").name)
         redirect = (
             (
@@ -124,8 +143,8 @@ def build(check: bool = False) -> None:
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">{config["mark"]}</span><span>{config["package"]}<small>{html.escape(config["tagline"])}</small></span></a>
-<span class="version">{version} <span>release candidate</span></span>
-<nav aria-label="Documentation">{"".join(nav)}</nav>
+<div class="version"><span class="version-number">{version}</span><span class="version-badge">{'Development' if '.dev' in version else 'Release candidate'}</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation">{"".join(nav)}</nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">

@@ -1,0 +1,97 @@
+{
+  "source_file": "src/prusie/data/convergence/inputs.npz",
+  "source_sha256": "5e8549ca8d0fd0ad4c166243a3a377ffcc3ed2e85cdadb6a221abcc55bf0c41b",
+  "method": "Selected XtX[i,j]/sqrt(XtX[i,i]*XtX[j,j]) entries; no fitting.",
+  "pairs": [
+    {
+      "variant_a": "32",
+      "variant_b": "33",
+      "signed_r": 0.5996648929848706,
+      "r_squared": 0.3595979838785563
+    },
+    {
+      "variant_a": "32",
+      "variant_b": "35",
+      "signed_r": -0.24077748000190774,
+      "r_squared": 0.05797379487606908
+    },
+    {
+      "variant_a": "32",
+      "variant_b": "79",
+      "signed_r": 0.6436748379540391,
+      "r_squared": 0.4143172970151585
+    },
+    {
+      "variant_a": "32",
+      "variant_b": "86",
+      "signed_r": 0.6554317940937431,
+      "r_squared": 0.4295908367089428
+    },
+    {
+      "variant_a": "32",
+      "variant_b": "90",
+      "signed_r": 0.6533740147851606,
+      "r_squared": 0.4268976031964792
+    },
+    {
+      "variant_a": "33",
+      "variant_b": "35",
+      "signed_r": 0.5642377546607126,
+      "r_squared": 0.31836424378456246
+    },
+    {
+      "variant_a": "33",
+      "variant_b": "79",
+      "signed_r": 0.47743294540848996,
+      "r_squared": 0.22794221736142617
+    },
+    {
+      "variant_a": "33",
+      "variant_b": "86",
+      "signed_r": 0.5341837467721949,
+      "r_squared": 0.2853522753155805
+    },
+    {
+      "variant_a": "33",
+      "variant_b": "90",
+      "signed_r": 0.5321733801522945,
+      "r_squared": 0.2832085065427186
+    },
+    {
+      "variant_a": "35",
+      "variant_b": "79",
+      "signed_r": -0.09484886277619839,
+      "r_squared": 0.008996306769938112
+    },
+    {
+      "variant_a": "35",
+      "variant_b": "86",
+      "signed_r": -0.03744933704214366,
+      "r_squared": 0.0014024528448960735
+    },
+    {
+      "variant_a": "35",
+      "variant_b": "90",
+      "signed_r": -0.03785854425109825,
+      "r_squared": 0.0014332693728123641
+    },
+    {
+      "variant_a": "79",
+      "variant_b": "86",
+      "signed_r": 0.9027919862943592,
+      "r_squared": 0.8150333705173144
+    },
+    {
+      "variant_a": "79",
+      "variant_b": "90",
+      "signed_r": 0.90134773072613,
+      "r_squared": 0.812427731685144
+    },
+    {
+      "variant_a": "86",
+      "variant_b": "90",
+      "signed_r": 0.9989091776612096,
+      "r_squared": 0.997819545215794
+    }
+  ]
+}

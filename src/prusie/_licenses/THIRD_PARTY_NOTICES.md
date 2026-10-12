@@ -74,3 +74,8 @@ that declaration is retained and GPL-3 text is supplied as
 `examples/data/LICENSE.GPL-3`. Conversion changes storage format only.
 Source/data hashes, copied upstream provenance and the regeneration recipe are
 in `examples/data/README.md` and `examples/data/reference.lock.json`.
+
+The packaged convergence toy sufficient statistics derive from susieR
+FinemappingConvergence at commit 1f9166cf88ed19c1d6acd4ee53a605ff9505a563.
+Original attribution, BSD-3-Clause terms and source checksums are included in
+prusie/data/convergence. No individual genotypes are distributed.

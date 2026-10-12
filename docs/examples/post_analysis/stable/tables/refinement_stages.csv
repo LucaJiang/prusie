@@ -1,0 +1,5 @@
+niter,stop_reason,ibss_converged,seconds,logged_elbo,excluded_max_alpha,objective,attempt,stage,round,component,excluded_ids
+3,criterion_satisfied,True,0.010636434890329838,-1367.330636133829,0.0,-1367.3306584407844,1,A,1,0,"[""syn0100""]"
+2,criterion_satisfied,True,0.007908311672508717,-1363.8547312974904,,-1363.8547536491487,1,B,1,0,"[""syn0100""]"
+3,criterion_satisfied,True,0.007415903732180595,-1373.4822542720813,0.0,-1373.4822765790366,2,A,1,1,"[""syn0350""]"
+3,criterion_satisfied,True,0.010537715628743172,-1363.8547312974276,,-1363.8547536490862,2,B,1,1,"[""syn0350""]"

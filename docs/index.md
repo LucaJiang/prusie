@@ -1,9 +1,9 @@
-# prusie
+# SuSiE fine-mapping in Python
 
-prusie fits the SuSiE model to association summary statistics and signed linkage
-disequilibrium (LD). A Python API connects to Rust computation and returns
-variant posterior inclusion probabilities (PIPs), credible sets and posterior
-effect summaries.
+Fit association summary statistics with a Rust-powered SuSiE implementation,
+then inspect credible sets, convergence and sensitivity in one workflow.
+
+## Fast computation, complete analysis
 
 <!-- generated:highlights:start -->
 
@@ -15,67 +15,66 @@ effect summaries.
 100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.
 <!-- generated:highlights:end -->
 
-![Distributions of per-analysis runtime and full-process peak-memory ratios for GWAS and eQTL. Ratios above one favor prusie; boxes show medians and quartiles.](assets/r_comparison.svg)
+Use [numerical accuracy](numerical_accuracy.md) and [performance](performance.md)
+for the full comparison and measurement methods. The Python workflow adds
+explicit continuation and refinement, LD diagnostics, comparisons across settings,
+and offline reports alongside variant PIPs and credible sets.
 
-See [numerical accuracy](numerical_accuracy.md) and
-[performance](performance.md) for the data, absolute times, methods and
-measurement environment.
+<div class="start-links" markdown="1">
 
-## Installation
+[Install](install.md) [Quick start](example.md) [Worked examples](worked_examples.md)
 
-Install from source with Python ≥3.10, the Rust toolchain in
-`rust-toolchain.toml`, a C linker and Python development headers:
+</div>
 
-```sh
-git clone https://github.com/LucaJiang/prusie.git
-cd prusie
-python -m venv .venv
-. .venv/bin/activate
-python -m pip install .
-```
+## One fit, a readable result
 
-NumPy is the only Python runtime dependency. Fitting requires neither R nor
-Rust after installation. See [installation](install.md) for build details
-and the environments tested.
-
-## Quick start
-
-The installed package includes an independent 500-variant synthetic toy example.
-Run this from any directory, offline:
+The packaged 500-variant synthetic toy example runs offline after installation.
+This code fits once and summarizes that posterior:
 
 ```python
-import numpy as np
 import prusie
 
 example = prusie.load_example()
-fit = prusie.susie_rss(**example["inputs"], **example["parameters"])
-print("Converged:", fit.converged, "Iterations:", fit.niter)
-lead = int(np.argmax(fit.pip))
-print(f"{fit.variant_ids[lead]}: PIP={fit.pip[lead]:.3f}")
-for k, component in enumerate(fit.sets["cs_index"]):
-    print(int(component), fit.variant_ids[fit.sets["cs"][k]].tolist(),
-          "Posterior mass:", float(fit.sets["coverage"][k]))
+fit = prusie.susie_rss(**example["inputs"], **example["parameters"],
+                       track_fit="compact", retain_data=True)
+summary = prusie.summarize(fit, example["inputs"]["R"], z=example["inputs"]["z"])
+print(prusie.summary_text(summary).splitlines()[0])
+print(f"IBSS: {fit.convergence['stop_reason']} ({fit.niter} sweeps)")
+for cs in summary["credible_sets"]:
+    print(f"CS {cs['component_id']}: {', '.join(cs['members'])}")
 ```
 
-A PIP summarizes variant inclusion across effects; each credible set belongs to
-an original SuSiE component. The [toy example tutorial](example.md) explains input
-preparation, convergence, posterior mass, purity and saving results.
+Expected output:
 
-## Documentation
+```text
+500 variants; 2 retained credible sets; 2 active components.
+IBSS: criterion_satisfied (3 sweeps)
+CS 0: syn0100
+CS 1: syn0350
+```
 
-Browse the [documentation site](https://lucajiang.github.io/prusie/),
-[statistical model](model.md), [API](api.md),
-[implementation](implementation.md) and [input routes](inputs.md#supported-model-and-input-routes).
-[Reproducibility](reproducibility.md) provides separate entrances for
-regenerating tables/figures and rerunning fits from inputs.
+The two singleton credible sets identify concentrated candidates in this toy fit.
+The [quick start](example.md) explains their PIPs and posterior mass, then adds
+plots and an offline report. Refinement, LD and sensitivity are separate explicit
+steps; they have not been run by the code above.
 
-## Citation and license
+## From candidates to interpretation
 
-Cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
-[SuSiE-RSS, Zou et al. (2022)](https://doi.org/10.1371/journal.pgen.1010299),
-and identify prusie 0.2.3rc6 using [CITATION.cff](https://github.com/LucaJiang/prusie/blob/main/CITATION.cff).
-Author and maintainer: Wenxin Jiang.
+![Candidate PIPs across settings: leading credible sets persist while fixing scaled prior variance changes the background.](examples/post_analysis/stable/figure_5.png)
 
-GPL-3.0-or-later. [LICENSE](https://github.com/LucaJiang/prusie/blob/main/LICENSE) and
-[third-party notices](https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md) retain upstream code and data
-attribution.
+The stable example retains its two main CS across these settings, while a fixed
+positive scaled prior variance raises background probabilities. The
+[worked examples](worked_examples.md) explain this distinction and a second fit
+where refinement improves the solution but an LD-correlated pair remains unresolved.
+
+## Read the result in context
+
+- [Reading results](results.md): which candidates carry support, and how concentrated is each signal?
+- [Convergence and refinement](post_analysis.md): did IBSS stop, and can search improve the solution?
+- [Sensitivity and LD](sensitivity.md): which conclusions change with settings or input assumptions?
+- [Worked examples](worked_examples.md): how do these observations fit into a complete interpretation?
+
+For precise inputs and return values, use the [API](api.md), [input guide](inputs.md)
+and [statistical model](model.md). [Reproducibility](reproducibility.md) separates
+regenerating figures from rerunning fits. [Citation and license](citation.md)
+identifies the statistical methods and software revision.

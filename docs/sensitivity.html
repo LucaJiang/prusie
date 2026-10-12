@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.">
+
+<title>Sensitivity and LD diagnostics · prusie</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/highlight.css">
+<link rel="stylesheet" href="assets/katex/katex.min.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body class="prusie">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="site-shell">
+<aside class="sidebar" aria-label="Documentation sidebar">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<div class="version"><span class="version-number">0.2.4.dev1</span><span class="version-badge">Development</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html" aria-current="page">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+</aside>
+<main id="main" tabindex="-1">
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="sensitivity.md">Markdown source</a></div>
+<article><details class="on-this-page"><summary>On this page</summary><div class="toc">
+<ul>
+<li><a href="#compare-explicit-settings">Compare explicit settings</a></li>
+<li><a href="#plot-and-interpret-the-comparison">Plot and interpret the comparison</a></li>
+<li><a href="#variant-alignment-and-prior-weights">Variant alignment and prior weights</a></li>
+<li><a href="#common-and-union-comparison-support">Common and union comparison support</a></li>
+<li><a href="#diagnose-consistency-of-z-and-ld">Diagnose consistency of z and LD</a></li>
+</ul>
+</div>
+</details><h1 id="sensitivity-and-ld-diagnostics">Sensitivity and LD diagnostics</h1>
+<p>Compare explicit modeling choices to see which candidates persist, then check
+compatibility between the signed association statistics and LD. This workflow
+continues the <code>example</code> and <code>fit</code> from the <a href="example.html">quick start</a>; plotting and
+LD diagnostics use the <a href="install.html#optional-analysis-tools">analysis extra</a>.</p>
+<h2 id="compare-explicit-settings">Compare explicit settings</h2>
+<p>Name each change so that its interpretation remains separate. This plan reuses
+the baseline, fits two alternatives and re-extracts coverage from the baseline
+posterior:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">sensitivity</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">run_sensitivity</span><span class="p">(</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span> <span class="p">[</span>
+    <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;larger_L&quot;</span><span class="p">,</span> <span class="s2">&quot;changes&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;L&quot;</span><span class="p">:</span> <span class="mi">6</span><span class="p">}},</span>
+    <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;fixed_variance&quot;</span><span class="p">,</span> <span class="s2">&quot;changes&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;scaled_prior_variance&quot;</span><span class="p">:</span> <span class="mf">.05</span><span class="p">,</span>
+                                         <span class="s2">&quot;estimate_prior_variance&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}},</span>
+    <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;coverage90&quot;</span><span class="p">,</span> <span class="s2">&quot;report&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;coverage&quot;</span><span class="p">:</span> <span class="mf">.90</span><span class="p">}},</span>
+<span class="p">],</span> <span class="n">baseline</span><span class="o">=</span><span class="n">fit</span><span class="p">)</span>
+<span class="n">comparison</span> <span class="o">=</span> <span class="n">sensitivity</span><span class="p">[</span><span class="s2">&quot;comparison&quot;</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">sensitivity</span><span class="p">[</span><span class="s2">&quot;records&quot;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span> <span class="s2">&quot;new fit:&quot;</span><span class="p">,</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;fit_performed&quot;</span><span class="p">])</span>
+</code></pre></div>
+
+<p>Expected output with an empty cache:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>baseline new fit: False
+larger_L new fit: True
+fixed_variance new fit: True
+coverage90 new fit: False
+</code></pre></div>
+
+<p>Use <code>compare_fits</code> directly when all fits already exist. <code>run_sensitivity</code> runs a
+finite named plan, with requested convergence controls inherited from the
+baseline unless explicitly overridden. A runtime fallback is recorded separately.
+Changing coverage or purity is a report filter; it keeps the posterior.</p>
+<h2 id="plot-and-interpret-the-comparison">Plot and interpret the comparison</h2>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.plots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_sensitivity</span>
+
+<span class="n">sensitivity_view</span> <span class="o">=</span> <span class="n">plot_sensitivity</span><span class="p">(</span>
+    <span class="n">comparison</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span>
+    <span class="n">display_names</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;baseline&quot;</span><span class="p">:</span> <span class="s2">&quot;Baseline&quot;</span><span class="p">,</span> <span class="s2">&quot;larger_L&quot;</span><span class="p">:</span> <span class="s2">&quot;L = 6&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;fixed_variance&quot;</span><span class="p">:</span> <span class="s2">&quot;Scaled prior variance</span><span class="se">\n</span><span class="s2">0.05 (fixed)&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;coverage90&quot;</span><span class="p">:</span> <span class="s2">&quot;CS coverage</span><span class="se">\n</span><span class="s2">90%&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Stable candidate PIPs across baseline, larger L, fixed scaled prior variance and reported CS coverage." src="examples/post_analysis/stable/figure_5.png" /></div><figcaption><a href="examples/post_analysis/stable/figure_5.png">Open original figure</a></figcaption></figure>
+<p>The two leading CS, <code>{syn0100}</code> and <code>{syn0350}</code>, persist in the saved comparison.
+L=6 and the coverage-only change leave all PIPs unchanged. Fixing
+<code>scaled_prior_variance=0.05</code> with <code>estimate_prior_variance=False</code> changes the
+background: <code>syn0143</code> rises from about 5.318×10⁻¹¹ to 0.2544, and <code>syn0145</code> from
+about 2.066×10⁻¹¹ to 0.1430.</p>
+<p>The fixed positive variance keeps all five components active, including three
+without retained CS. With estimation disabled, those components cannot shrink
+to V=0 through that estimation step and can distribute additional posterior mass.
+Thus the main CS are stable while the background is prior-sensitive.
+<code>scaled_prior_variance</code> means V divided by the working response variance
+yty/(n−1); it is not generally the working-scale V itself. See the
+<a href="worked_examples.html#stable-signals-with-a-prior-sensitive-background">worked example</a>
+and <a href="examples/post_analysis/stable/comparison.json">complete comparison</a>.</p>
+<p>Every column uses the same candidate order and linear PIP scale from 0 to 1.
+The compact view includes formal CS members on the declared comparison support,
+per-component top candidates and threshold candidates. Labels use <code>&lt;0.01</code> and <code>&gt;0.99</code> near the endpoints; exact
+0 and 1 remain explicit, and unobserved variants are grey <code>NA</code>. Display text is
+separate from full-precision values in <code>plotted_data</code>, CSV and JSON.</p>
+<p>The report also identifies the largest PIP change on the full declared comparison
+support, including variants outside the heatmap. Use <code>candidates_only=False</code> for
+all comparison variants, or <code>layout="full"</code> for relation tables.
+<code>layer="components"</code> includes all active-component relations; the default
+<code>layer="signals"</code> emphasizes formal CS-supported relations. Table pagination
+changes only the display, retaining full records.</p>
+<h2 id="variant-alignment-and-prior-weights">Variant alignment and prior weights</h2>
+<p>Variant IDs determine alignment across reordered, subset or extended inputs.
+Missing variants remain unobserved; they are not assigned PIP=0. The default
+view compares each alternative with baseline, with full original settings and
+prior-resolution records available in the exports.</p>
+<details>
+<summary>Alternative windows, nonuniform priors and null weights</summary>
+<p>An alternative <code>inputs</code> mapping supplies its own summary statistics, LD and
+explicit variant IDs. Existing prior weights and inherited metadata columns are
+mapped by those IDs, including when a previously fitted baseline is supplied.
+For a subset, the prior is conditioned on the retained variants and the null
+component. If raw biological weights are <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi></mrow><annotation encoding="application/x-tex">w</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span></span></span></span></span> and <code>null_weight</code> is <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>η</mi></mrow><annotation encoding="application/x-tex">\eta</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">η</span></span></span></span></span>, the
+constructor normalizes <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>η</mi><mo stretchy="false">)</mo><mi>w</mi><mo separator="true">,</mo><mi>η</mi><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[(1-\eta)w,\eta]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">η</span><span class="mclose">)</span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">η</span><span class="mclose">]</span></span></span></span></span> <strong>once</strong>, after selecting the retained
+weights. Biological weights are not separately normalized first: <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>η</mi></mrow><annotation encoding="application/x-tex">\eta</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">η</span></span></span></span></span> is not
+necessarily the final null probability when the raw weights do not sum to one.
+Zero biological support is rejected, even with a positive null weight.</p>
+<p>For new IDs under a nonuniform prior, provide complete alternative weights in
+the alternative input order. This belongs to the input-change category:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">alternative_inputs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">new_inputs</span><span class="p">,</span> <span class="n">prior_weights</span><span class="o">=</span><span class="n">new_variant_weights</span><span class="p">)</span>
+<span class="n">plan</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;alternative_window&#39;</span><span class="p">,</span> <span class="s1">&#39;inputs&#39;</span><span class="p">:</span> <span class="n">alternative_inputs</span><span class="p">}]</span>
+</code></pre></div>
+
+<p>Explicit <code>prior_weights=None</code> requests uniform weights for the alternative.
+Without an explicit prior, a uniform baseline extends its existing equal raw
+weight to new IDs; the final null probability can therefore change with the
+window size. New IDs also need explicit metadata columns if baseline columns
+were supplied; explicit alternative metadata may omit unavailable columns.
+The plan is checked for IDs, dimensions and valid weights before any fit starts.
+Each fit record includes <code>prior_resolution</code> (mapping, policy, raw and normalized
+weights, effective null probability), and input changes include <code>input_resolution</code>.
+The cache hashes the resolved data and settings. Alternative fits are cold starts;
+baseline arrays and results are not mutated.</p>
+<p>Supported choices include L, variant priors, fixed effect variance, explicit
+LD/window/filter inputs, continuation and refinement. Changing only V's
+initialization while estimating it is computational initialization sensitivity.
+External-LD residual variance is not automatically estimated. Cache keys include
+inputs/order/alleles, settings, software and initialization; caches are caller-owned.</p>
+</details>
+<h2 id="common-and-union-comparison-support">Common and union comparison support</h2>
+<p><code>mode='union'</code> displays the union and computes each pair's PIP and posterior/CS
+overlap on that pair's intersection; representative LD uses the original
+representatives in the named LD reference. <code>mode='common'</code> uses the <strong>global intersection across
+all fits</strong> for displayed variants, ranks/top-candidate selection, all PIP metrics,
+shared counts, allele alignment, posterior overlap and CS-overlap evidence.
+Representative-LD evidence additionally requires both original representatives
+to belong to that support. The <code>support</code> and <code>support_scope</code> fields identify the
+policy. Component posteriors, original CS sizes/purities and representative IDs
+remain full-fit metadata; they are not refitted or renormalized on the intersection.
+Reported omitted/unobserved mass is outside the declared comparison support.
+An empty global intersection gives zero shared counts and unavailable PIP metrics,
+with components unmatched on that support. It does not imply biological absence.
+The legacy field name <code>full_region_pip_correlation</code> refers to the declared support
+for that mode, not to a union in which missing PIPs have been filled in.</p>
+<details>
+<summary>Signal matching, resolution and complete component relations</summary>
+<p>Missing variants stay NA. The default comparison shows formal-CS-supported
+signals against baseline; complete active-component relations are a separate
+view. A diffuse component can overlap another diffuse component almost perfectly
+without identifying a localized signal. Unresolved support changes remain visible
+and do not become confirmed split/merge events from diffuse graph degrees.
+Main candidates include formal CS members on the comparison support, top
+candidates and threshold candidates. A large CS is not trimmed by the display
+PIP threshold; common-mode support may exclude members absent from another fit.
+Signal relations use shared-support posterior overlap
+without renormalizing away unobserved mass, CS overlap and explicitly identified
+LD evidence. Component numbers are not matched directly. Unmatched,
+ambiguous and split/merge relations remain visible; a one-to-one display match
+is only an aid. Candidate PIP changes, ranks, thresholds, CS sizes/purity and
+high-LD exchanges remain separate metrics rather than a composite robustness
+score.</p>
+</details>
+<h2 id="diagnose-consistency-of-z-and-ld">Diagnose consistency of z and LD</h2>
+<p>Run LD diagnostics explicitly for the supplied signed statistics and correlation
+matrix:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">ld</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">diagnose_ld</span><span class="p">(</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;z&quot;</span><span class="p">],</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;R&quot;</span><span class="p">],</span>
+                        <span class="n">n</span><span class="o">=</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;n&quot;</span><span class="p">],</span> <span class="n">variant_ids</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">)</span>
+</code></pre></div>
+
+<p>The saved stable example assesses all 500 variants and flags none. Read the joint
+rule and assessed counts with that result: <strong>log LR &gt; 2 and |adjusted z| &gt; 2</strong>.
+A large conditional residual alone is not an allele-flip flag. Check ancestry,
+effect alleles, order, filtering and LD-reference identity when investigating a
+flag; this diagnostic leaves the input statistics and alleles unchanged.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Report state</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Assessed, flagged</td>
+<td>The joint rule was evaluated and satisfied</td>
+</tr>
+<tr>
+<td>Assessed, not flagged</td>
+<td>The joint rule was evaluated and not satisfied</td>
+</tr>
+<tr>
+<td>Conditional only</td>
+<td>Conditional quantities exist, but the full flip test is unavailable</td>
+</tr>
+<tr>
+<td>Not assessed</td>
+<td>The required observation or calculation is unavailable</td>
+</tr>
+</tbody>
+</table></div>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.plots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_ld_diagnostics</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_report</span>
+
+<span class="n">ld_view</span> <span class="o">=</span> <span class="n">plot_ld_diagnostics</span><span class="p">(</span><span class="n">ld</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">)</span>
+<span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;R&quot;</span><span class="p">],</span> <span class="n">z</span><span class="o">=</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">prusie</span><span class="o">.</span><span class="n">summary_text</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">ld</span><span class="o">=</span><span class="n">ld</span><span class="p">,</span> <span class="n">comparison</span><span class="o">=</span><span class="n">comparison</span><span class="p">))</span>
+<span class="n">report</span> <span class="o">=</span> <span class="n">write_report</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="s2">&quot;output/diagnostics&quot;</span><span class="p">,</span> <span class="n">ld</span><span class="o">=</span><span class="n">ld</span><span class="p">,</span> <span class="n">comparison</span><span class="o">=</span><span class="n">comparison</span><span class="p">,</span>
+                      <span class="n">figures</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Sensitivity&quot;</span><span class="p">:</span> <span class="n">sensitivity_view</span><span class="p">,</span> <span class="s2">&quot;LD diagnostics&quot;</span><span class="p">:</span> <span class="n">ld_view</span><span class="p">})</span>
+</code></pre></div>
+
+<p>Open <code>output/diagnostics/index.html</code> to read the heatmap, full-support PIP changes,
+LD states and downloadable tables together. Missing observed z is not plotted
+at zero; failed or skipped assessments retain their reason.</p>
+<details>
+<summary>LD model, mixture optimization and recorded input information</summary>
+<p>The explicit LD diagnostic implements the RSS null model
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo>∼</mo><mi>N</mi><mo stretchy="false">(</mo><mn>0</mn><mo separator="true">,</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>s</mi><mo stretchy="false">)</mo><mi>R</mi><mo>+</mo><mi>s</mi><mi>I</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">z\sim N(0,(1-s)R+sI)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mopen">(</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">s</span><span class="mclose">)</span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="mclose">)</span></span></span></span></span>, including finite-n z adjustment, likelihood-based s
+estimation, conditional means/variances and a normal scale mixture for allele-flip
+likelihood ratios. <code>estimate_s_rss</code> exposes null MLE, partial MLE and pseudo-MLE.
+Eigen decomposition is explicit, separately timed and optionally cached. Small
+or negative eigenvalues are truncated only inside the diagnostic, with warnings;
+the fitting matrix is untouched. Singular s=0 uses the labelled spectral
+pseudoinverse convention. Missing statistics and undefined conditional quantities
+remain unassessed. The report separates assessed/flagged, assessed/not flagged,
+conditional-only and unassessed rows. A finite conditional residual does not
+establish that mixture optimization and the flip test succeeded. For missing z,
+the diagnostic's working zero is recorded separately from the unavailable
+observed statistic. Flags suggest possible mismatch; nothing is flipped or removed.</p>
+<p>The scale-mixture likelihood is solved with a full-simplex KKT check. Some pinned
+R <code>mixsqp</code> default fits stop at suboptimal weights; prusie records this solver
+accuracy difference rather than reproducing premature stopping. Conditional
+formulas and independently certified R mixture optima are validated separately.</p>
+<p>User-provided allele labels, EAF, N, INFO, ancestry/build, LD reference sample
+size and external QC flags can be carried in metadata and <code>input_info</code>.
+Missing information stays <code>not_assessed</code>. Provided P values take precedence;
+otherwise plotted association values use a labelled two-sided normal
+approximation with a stable log-tail calculation.</p>
+</details></article>
+<footer><p>prusie 0.2.4.dev1 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+</main>
+</div>
+</body>
+</html>

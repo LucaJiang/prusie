@@ -80,7 +80,12 @@ def test_capability_dispatch_exact_materialization(monkeypatch, kind, layout, nu
         np.divide(prepared, scales[:, None], out=prepared)
         np.testing.assert_array_equal(prepared.view(np.uint64), expected['matrix'].view(np.uint64))
         np.testing.assert_array_equal(crossresponse, expected['response'])
-        assert native_options == expected['options']
+        assert native_options.keys() == expected['options'].keys()
+        for key, value in native_options.items():
+            if isinstance(value, np.ndarray):
+                np.testing.assert_array_equal(value.view(np.uint64), expected['options'][key].view(np.uint64))
+            else:
+                assert value == expected['options'][key]
         return original(prepared, crossresponse, yty, n, native_options)
 
     monkeypatch.setattr(_native, 'MATRIX_OPERATOR_VERSION', 1)

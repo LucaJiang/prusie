@@ -5,7 +5,9 @@
 //! RSS/standardization scales and assembles metadata and posterior summaries;
 //! Rust binding helpers also validate/prepare matrices and extract CS purity.
 
+pub mod diagnostics;
 pub(crate) mod input_validation;
+use diagnostics::{Diagnostics, FitControl, Snapshot};
 #[path = "optimizer.rs"]
 mod optimizer;
 
@@ -55,6 +57,7 @@ pub struct FitOutput {
     pub converged: bool,
     pub xtxr: Vec<f64>,
     pub warnings: Vec<String>,
+    pub diagnostics: Diagnostics,
 }
 
 /// Compensated scalar reductions protect cancellation in likelihood/objective
@@ -76,66 +79,6 @@ fn sum(values: impl Iterator<Item = f64>) -> f64 {
 
 fn dot(x: &[f64], y: &[f64]) -> f64 {
     sum(x.iter().zip(y).map(|(x, y)| x * y))
-}
-
-/// Current alpha/PIP fallback: fixed point or cycle of at most five states.
-/// History is populated only when the ELBO difference is nonfinite.
-fn fallback_convergence(
-    alpha: &mut [f64],
-    previous: &[f64],
-    v: &[f64],
-    p: usize,
-    prior_tol: f64,
-    null_index: Option<usize>,
-    tol: f64,
-    history: &mut Vec<(Vec<f64>, Vec<f64>)>,
-) -> bool {
-    let pip = |a: &[f64]| -> Vec<f64> {
-        (0..p)
-            .filter(|&j| Some(j) != null_index)
-            .map(|j| {
-                1.0 - (0..v.len())
-                    .filter(|&l| v[l] > prior_tol)
-                    .map(|l| 1.0 - a[l * p + j])
-                    .product::<f64>()
-            })
-            .collect()
-    };
-    if history.is_empty() {
-        history.push((previous.to_vec(), pip(previous)));
-    }
-    let current_pip = pip(alpha);
-    let mut converged = false;
-    for lag in 1..=history.len().min(5) {
-        let (old_alpha, old_pip) = &history[history.len() - lag];
-        let difference = alpha
-            .iter()
-            .zip(old_alpha)
-            .chain(current_pip.iter().zip(old_pip))
-            .map(|(a, b)| (a - b).abs())
-            .fold(0.0_f64, f64::max);
-        if difference < tol {
-            if lag > 1 {
-                for j in 0..alpha.len() {
-                    alpha[j] = (alpha[j]
-                        + history
-                            .iter()
-                            .rev()
-                            .take(lag - 1)
-                            .map(|(a, _)| a[j])
-                            .sum::<f64>())
-                        / lag as f64;
-                }
-            }
-            converged = true;
-            break;
-        }
-    }
-    history.push((alpha.to_vec(), pip(alpha)));
-    if history.len() > 5 {
-        history.remove(0);
-    }
-    converged
 }
 
 /// Gaussian SER BF, with epsilon flooring and no-information handling.
@@ -370,7 +313,16 @@ struct SerLikelihood<'a> {
     uniform_log_prior: Option<f64>,
     group_max_half_beta_squared: Vec<f64>,
     has_no_information: bool,
+    // A private objective search stays on its constructing OS thread, invokes
+    // no Python callbacks, and never changes fenv controls. Recreate this flag
+    // for the next search; exponential helpers keep their own live guards.
+    #[cfg(all(has_vector_math, target_arch = "x86_64"))]
+    group_fill_avx2: bool,
 }
+
+#[cfg(all(test, has_vector_math, target_arch = "x86_64"))]
+#[path = "ser_context_tests.rs"]
+mod ser_context_tests;
 
 impl<'a> SerLikelihood<'a> {
     #[cfg(test)]
@@ -401,6 +353,8 @@ impl<'a> SerLikelihood<'a> {
             uniform_log_prior: None,
             group_max_half_beta_squared: std::mem::take(&mut buffers.group_max_half_beta_squared),
             has_no_information: false,
+            #[cfg(all(has_vector_math, target_arch = "x86_64"))]
+            group_fill_avx2: vector_math::group_fill_avx2_allowed(),
         };
         result.half_beta_squared.clear();
         result
@@ -437,6 +391,8 @@ impl<'a> SerLikelihood<'a> {
             uniform_log_prior: None,
             group_max_half_beta_squared: std::mem::take(&mut buffers.group_max_half_beta_squared),
             has_no_information: false,
+            #[cfg(all(has_vector_math, target_arch = "x86_64"))]
+            group_fill_avx2: vector_math::group_fill_avx2_allowed(),
         };
         result.half_beta_squared.clear();
         result.half_beta_squared.reserve(beta.len());
@@ -565,9 +521,7 @@ impl<'a> SerLikelihood<'a> {
                     largest = largest.max(constant + half_beta_squared * scale + prior);
                 }
                 #[cfg(all(has_vector_math, target_arch = "x86_64"))]
-                if self.terms.len() <= 4
-                    && vector_math::backend_name() == "optional_glibc_libmvec_avx2_masked_exp"
-                {
+                if self.terms.len() <= 4 && self.group_fill_avx2 {
                     // SAFETY: the selected backend proves runtime AVX2 and
                     // default caller controls. Group construction bounds every
                     // index or uses usize::MAX; lengths equal the owned scratch.
@@ -1634,6 +1588,28 @@ pub fn fit_layout_operator(
     column_major: bool,
     scaling: Option<&MatrixScaling<'_>>,
 ) -> Result<FitOutput, String> {
+    fit_controlled(
+        xtx,
+        xty,
+        yty,
+        n,
+        options,
+        column_major,
+        scaling,
+        &FitControl::default(),
+    )
+}
+
+pub fn fit_controlled(
+    xtx: &[f64],
+    xty: &[f64],
+    yty: f64,
+    n: f64,
+    options: &FitOptions,
+    column_major: bool,
+    scaling: Option<&MatrixScaling<'_>>,
+    control: &FitControl,
+) -> Result<FitOutput, String> {
     let p = xty.len();
     if p == 0 || p.checked_mul(p) != Some(xtx.len()) || options.l == 0 || options.l > p {
         return Err("Invalid sufficient-statistic dimensions or number of effects".into());
@@ -1738,7 +1714,13 @@ pub fn fit_layout_operator(
     let log_prior: Vec<f64> = options
         .prior_weights
         .iter()
-        .map(|w| (w + f64::EPSILON.sqrt()).ln())
+        .map(|w| {
+            if control.hard_exclusion && *w == 0. {
+                f64::NEG_INFINITY
+            } else {
+                (w + f64::EPSILON.sqrt()).ln()
+            }
+        })
         .collect();
     let method = if options.estimate_prior_variance {
         options.estimate_prior_method.as_str()
@@ -1770,7 +1752,66 @@ pub fn fit_layout_operator(
         converged: false,
         xtxr: vec![0.0; p],
         warnings: Vec::new(),
+        diagnostics: Diagnostics {
+            stop_reason: "iteration_limit".into(),
+            effective_criterion: control.criterion.clone(),
+            ..Diagnostics::default()
+        },
     };
+    if !matches!(control.criterion.as_str(), "elbo" | "alpha_pip" | "joint")
+        || control.min_iter < 2
+        || control.cycle_lag > 5
+        || !control.alpha_tol.is_finite()
+        || control.alpha_tol < 0.
+        || !control.pip_tol.is_finite()
+        || control.pip_tol < 0.
+    {
+        return Err("Invalid convergence control".into());
+    }
+    if let Some(initial) = &control.initial {
+        if initial.alpha.len() != size
+            || initial.mu.len() != size
+            || initial.mu2.len() != size
+            || initial
+                .alpha
+                .iter()
+                .chain(&initial.mu)
+                .chain(&initial.mu2)
+                .any(|x| !x.is_finite())
+            || initial.alpha.iter().any(|&x| x < 0.)
+        {
+            return Err("Invalid initial posterior dimensions or values".into());
+        }
+        for l in 0..options.l {
+            let row = l * p..(l + 1) * p;
+            if (sum(initial.alpha[row].iter().copied()) - 1.).abs() > 1e-8 {
+                return Err("Initial alpha rows must sum to one".into());
+            }
+        }
+        if initial
+            .mu
+            .iter()
+            .zip(&initial.mu2)
+            .any(|(&m, &m2)| m2 < m * m)
+        {
+            return Err("Initial mu2 must be at least mu squared".into());
+        }
+        output.alpha.copy_from_slice(&initial.alpha);
+        output.mu.copy_from_slice(&initial.mu);
+        output.mu2.copy_from_slice(&initial.mu2);
+        if let Some(v) = &initial.v {
+            if v.len() != options.l || v.iter().any(|x| !x.is_finite() || *x < 0.) {
+                return Err("Invalid initial V".into());
+            }
+            output.v.copy_from_slice(v);
+        }
+        if let Some(v) = initial.sigma2 {
+            if !v.is_finite() || v <= 0. {
+                return Err("Invalid initial sigma2".into());
+            }
+            output.sigma2 = v;
+        }
+    }
     // Discovery is lazy; small or currently sparse products retain the full
     // matrix path. Exact redundancy alone authorizes the compact representation.
     let mut exact_columns: Option<ExactColumns> = None;
@@ -1793,11 +1834,38 @@ pub fn fit_layout_operator(
         fitted: vec![0.0; p],
         component_quadratics: Vec::with_capacity(options.l),
     };
-    let mut previous_alpha = vec![0.0; size];
+    // A warm start never trusts caller caches: rebuild each Q E[b_l].
+    if control.initial.is_some() {
+        for l in 0..options.l {
+            for j in 0..p {
+                component[j] = output.alpha[l * p + j] * output.mu[l * p + j];
+            }
+            if let Some(scale) = operator {
+                scaled_multiply(
+                    matrix,
+                    &component,
+                    &mut product,
+                    None,
+                    scale,
+                    &mut scaled_component,
+                );
+            } else {
+                multiply(matrix, &component, &mut product);
+            }
+            component_products[l * p..(l + 1) * p].copy_from_slice(&product);
+            for j in 0..p {
+                output.xtxr[j] += product[j];
+            }
+        }
+    }
     let mut previous_elbo = f64::NEG_INFINITY;
-    let mut fallback_history: Vec<(Vec<f64>, Vec<f64>)> = Vec::new();
+    let mut previous_alpha: Option<Vec<f64>> = None;
+    let mut previous_pip: Option<Vec<f64>> = None;
+    let mut previous_mean: Option<Vec<f64>> = None;
+    let mut previous_v: Option<Vec<f64>> = None;
+    let mut previous_sigma2: Option<f64> = None;
+    let mut history: Vec<(Vec<f64>, Vec<f64>)> = Vec::new();
     for iteration in 0..options.max_iter {
-        previous_alpha.copy_from_slice(&output.alpha);
         for effect in 0..options.l {
             let offset = effect * p;
             // component_products[l] stores Q E[b_l]. Removing the old product
@@ -1901,35 +1969,155 @@ pub fn fit_layout_operator(
         output.elbo.push(elbo);
         output.niter = iteration + 1;
         let improvement = elbo - previous_elbo;
-        if iteration > 0 {
-            if improvement.is_finite() {
-                if improvement < -options.tol {
-                    output.warnings.push(format!(
-                        "ELBO decreased by {} at iteration {}",
-                        -improvement,
-                        iteration + 1
-                    ));
+        let current_pip = diagnostics::pip(
+            &output.alpha,
+            &output.v,
+            p,
+            options.prior_tol,
+            options.null_index,
+        );
+        let mean = diagnostics::posterior_mean(&output, p);
+        let mut snapshot = Snapshot {
+            iteration: iteration + 1,
+            elbo,
+            delta_elbo: (iteration > 0).then_some(improvement),
+            relative_delta_elbo: (iteration > 0)
+                .then_some(improvement / previous_elbo.abs().max(1.)),
+            delta_alpha: previous_alpha
+                .as_ref()
+                .map(|v| diagnostics::distance(&output.alpha, v)),
+            delta_pip: previous_pip
+                .as_ref()
+                .map(|v| diagnostics::distance(&current_pip, v)),
+            delta_mean: previous_mean
+                .as_ref()
+                .map(|v| diagnostics::distance(&mean, v)),
+            delta_v: previous_v
+                .as_ref()
+                .map(|v| output.v.iter().zip(v).map(|(a, b)| a - b).collect()),
+            delta_sigma2: previous_sigma2.map(|v| output.sigma2 - v),
+            v: output.v.clone(),
+            sigma2: output.sigma2,
+            active: output.v.iter().map(|v| *v > options.prior_tol).collect(),
+            ..Snapshot::default()
+        };
+        for l in 0..options.l {
+            let row = &output.alpha[l * p..(l + 1) * p];
+            let j = (0..p)
+                .max_by(|&a, &b| row[a].partial_cmp(&row[b]).unwrap().then(b.cmp(&a)))
+                .unwrap();
+            snapshot.top_variant.push(j);
+            snapshot.top_alpha.push(row[j]);
+            snapshot
+                .entropy
+                .push(-sum(row.iter().filter(|&&a| a > 0.).map(|a| a * a.ln())));
+        }
+        if !elbo.is_finite() {
+            snapshot.events.push("nonfinite_elbo".into());
+            output.diagnostics.nonfinite_count += 1;
+        }
+        if iteration > 0 && improvement < -options.tol {
+            output.warnings.push(format!(
+                "ELBO decreased by {} at iteration {}",
+                -improvement,
+                iteration + 1
+            ));
+            snapshot.events.push("elbo_decreased".into());
+            output.diagnostics.decrease_count += 1;
+        }
+        let posterior_stable = snapshot.delta_alpha.is_some_and(|d| d < control.alpha_tol)
+            && snapshot.delta_pip.is_some_and(|d| d < control.pip_tol);
+        let elbo_stable = diagnostics::elbo_stable(improvement, options.tol);
+        output.diagnostics.effective_criterion = control.criterion.clone();
+        if let Some((lag, da, dp)) = diagnostics::detect_cycle(
+            &output.alpha,
+            &current_pip,
+            &history,
+            control.cycle_lag,
+            control.alpha_tol,
+            control.pip_tol,
+        ) {
+            snapshot.cycle_lag = Some(lag);
+            snapshot.cycle_alpha_distance = Some(da);
+            snapshot.cycle_pip_distance = Some(dp);
+            snapshot.events.push(
+                if lag == 1 {
+                    "fixed_point"
+                } else {
+                    "cycle_detected"
                 }
-                output.converged = improvement >= 0.0 && improvement < options.tol;
-            } else {
+                .into(),
+            );
+        }
+        if iteration + 1 >= control.min_iter {
+            output.converged = match control.criterion.as_str() {
+                "alpha_pip" => posterior_stable,
+                "joint" => elbo_stable && posterior_stable,
+                _ => elbo_stable,
+            };
+            // Preserve the historical nonfinite fallback, but never average alpha
+            // alone and never recalculate the previous PIP with current activity.
+            if control.criterion == "elbo" && !improvement.is_finite() {
+                output.diagnostics.effective_criterion = "alpha_pip_nonfinite_fallback".into();
+                output.diagnostics.fallback_iterations.push(iteration + 1);
+                output.converged = posterior_stable;
                 output.warnings.push(format!(
                     "Nonfinite ELBO improvement at iteration {}; using alpha/PIP convergence",
                     iteration + 1
                 ));
-                output.converged = fallback_convergence(
-                    &mut output.alpha,
-                    &previous_alpha,
-                    &output.v,
-                    p,
-                    options.prior_tol,
-                    options.null_index,
-                    options.tol,
-                    &mut fallback_history,
-                );
             }
         }
-        if output.converged {
+        let cycle_stop = snapshot.cycle_lag.is_some_and(|lag| lag > 1);
+        if cycle_stop {
+            output.converged = false;
+            output.diagnostics.stop_reason = "cycle_detected".into();
+        } else if output.converged {
+            output.diagnostics.stop_reason = "criterion_satisfied".into();
+        }
+        if control.track > 0 {
+            // Compact mode alpha is thresholded at the binding; only dense mode
+            // retains moment histories. Neither is used to calculate distances.
+            snapshot.pip = current_pip.clone();
+            if control.track == 2 {
+                snapshot.alpha = output.alpha.clone();
+                snapshot.mu = output.mu.clone();
+                snapshot.mu2 = output.mu2.clone();
+            } else {
+                for l in 0..options.l {
+                    let row = &output.alpha[l * p..(l + 1) * p];
+                    let show = snapshot.top_alpha[l] >= 2. / p as f64;
+                    let mut retained = 0.;
+                    for (j, &a) in row.iter().enumerate() {
+                        if show && a >= 1. / p as f64 {
+                            snapshot.alpha_entries.push((l, j, a));
+                            retained += a;
+                        }
+                    }
+                    snapshot
+                        .omitted_mass
+                        .push(sum(row.iter().copied()) - retained);
+                }
+            }
+            output.diagnostics.trace.push(snapshot.clone());
+        }
+        snapshot.alpha.clear();
+        snapshot.mu.clear();
+        snapshot.mu2.clear();
+        snapshot.pip.clear();
+        snapshot.alpha_entries.clear();
+        snapshot.omitted_mass.clear();
+        output.diagnostics.last = Some(snapshot);
+        if output.converged || cycle_stop {
             break;
+        }
+        previous_alpha = Some(output.alpha.clone());
+        previous_pip = Some(current_pip.clone());
+        previous_mean = Some(mean);
+        previous_v = Some(output.v.clone());
+        previous_sigma2 = Some(output.sigma2);
+        history.push((output.alpha.clone(), current_pip));
+        if history.len() > control.cycle_lag.max(1) {
+            history.remove(0);
         }
         previous_elbo = elbo;
         if options.estimate_residual_variance {
@@ -1940,10 +2128,20 @@ pub fn fit_layout_operator(
             output.sigma2 = estimate;
         }
     }
+    output.diagnostics.sigma2_after_loop = output.sigma2;
+    let pretrim_alpha = output.alpha.clone();
+    let pretrim_pip = diagnostics::pip(
+        &output.alpha,
+        &output.v,
+        p,
+        options.prior_tol,
+        options.null_index,
+    );
     // The stored ELBO and XtXr describe the completed iterations before trim.
     // Upstream trims even at max_iter and does not recompute either cache.
     for effect in 0..options.l {
         if output.v[effect] < options.prior_tol {
+            output.diagnostics.trimmed_components.push(effect);
             output.v[effect] = 0.0;
             output.lbf[effect] = 0.0;
             output.kl[effect] = 0.0;
@@ -1954,6 +2152,17 @@ pub fn fit_layout_operator(
             output.lbf_variable[row].fill(0.0);
         }
     }
+    output.diagnostics.trim_alpha_distance = diagnostics::distance(&pretrim_alpha, &output.alpha);
+    output.diagnostics.trim_pip_distance = diagnostics::distance(
+        &pretrim_pip,
+        &diagnostics::pip(
+            &output.alpha,
+            &output.v,
+            p,
+            options.prior_tol,
+            options.null_index,
+        ),
+    );
     Ok(output)
 }
 
@@ -2522,37 +2731,6 @@ mod tests {
         let result = fit(&[10.0], &[1.0], 20.0, 21.0, &settings).unwrap();
         assert!(result.v[0] > settings.prior_tol);
         assert_eq!(result.v[0], result.mu2[0]);
-    }
-
-    #[test]
-    fn alpha_pip_fallback_fixed_point_and_two_cycle() {
-        let mut history = Vec::new();
-        let mut alpha = vec![0.8, 0.2];
-        assert!(fallback_convergence(
-            &mut alpha,
-            &[0.8, 0.2],
-            &[1.0],
-            2,
-            1e-9,
-            None,
-            1e-4,
-            &mut history
-        ));
-        let mut history = vec![
-            (vec![0.8, 0.2], vec![0.8, 0.2]),
-            (vec![0.2, 0.8], vec![0.2, 0.8]),
-        ];
-        assert!(fallback_convergence(
-            &mut alpha,
-            &[0.2, 0.8],
-            &[1.0],
-            2,
-            1e-9,
-            None,
-            1e-4,
-            &mut history
-        ));
-        assert_eq!(alpha, vec![0.5, 0.5]);
     }
 
     #[test]

@@ -6,7 +6,7 @@ build-backend = "maturin"
 authors = [{name = "Wenxin Jiang"}]
 maintainers = [{name = "Wenxin Jiang"}]
 name = "prusie"
-version = "0.2.3rc6"
+version = "0.2.4.dev1"
 description = "SuSiE summary-statistics inference with a native Rust IBSS core"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.26,<3"]
@@ -21,6 +21,7 @@ Issues = "https://github.com/LucaJiang/prusie/issues"
 
 [project.optional-dependencies]
 test = ["pytest>=8,<9"]
+analysis = ["scipy>=1.11", "matplotlib>=3.7"]
 
 [tool.maturin]
 python-source = "src"

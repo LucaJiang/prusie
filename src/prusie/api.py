@@ -14,6 +14,9 @@ from . import _native
 from ._array_layout import native_array
 from .posterior import credible_sets, marginal_pip
 from .result import SusieResult
+from .diagnostics import (ConvergenceConfig, tracking_level, convergence_summary,
+                          resolve_convergence, nonconvergence_message)
+from .refinement import data_signature, make_prepared, initial_options, refine_fit, RefinementConfig
 
 
 def _vector(
@@ -77,13 +80,18 @@ def _integer(value: int, name: str) -> int:
 
 
 def _metadata(variant_ids, variant_metadata, m):
-    ids = np.asarray(
-        [str(i) for i in range(m)] if variant_ids is None else variant_ids, dtype=str
-    )
-    if ids.shape != (m,) or len(set(ids.tolist())) != m or np.any(ids == ""):
-        raise ValueError(
-            "variant_ids must contain m distinct nonempty IDs in input order"
+    if variant_ids is None and m > 0:
+        # Positional labels are distinct and nonempty by construction. Match
+        # the minimal Unicode width of the explicit decimal strings exactly.
+        ids = np.arange(m).astype(f"<U{len(str(m - 1))}")
+    else:
+        ids = np.asarray(
+            [str(i) for i in range(m)] if variant_ids is None else variant_ids, dtype=str
         )
+        if ids.shape != (m,) or len(set(ids.tolist())) != m or np.any(ids == ""):
+            raise ValueError(
+                "variant_ids must contain m distinct nonempty IDs in input order"
+            )
     metadata = (
         {}
         if variant_metadata is None
@@ -128,6 +136,8 @@ def susie_suff_stat(
     track_fit=False,
     check_input=False,
     refine=False,
+    convergence=None,
+    retain_data=False,
     check_prior=False,
     n_purity: int | None = None,
     variant_ids: Sequence[str] | None = None,
@@ -163,6 +173,8 @@ def susie_suff_stat(
         track_fit=track_fit,
         check_input=check_input,
         refine=refine,
+        convergence=convergence,
+        retain_data=retain_data,
         check_prior=check_prior,
         n_purity=n_purity,
         variant_ids=variant_ids,
@@ -201,6 +213,8 @@ def _susie_suff_stat(
     track_fit=False,
     check_input=False,
     refine=False,
+    convergence=None,
+    retain_data=False,
     check_prior=False,
     n_purity: int | None = None,
     variant_ids: Sequence[str] | None = None,
@@ -250,6 +264,18 @@ def _susie_suff_stat(
     n_purity : int or None
         Matrix-input purity is always complete, matching the pinned reference;
         a finite n_purity does not subsample the matrix.
+    s_init : SusieResult or explicit state mapping, optional
+        Same-data posterior initialization; IDs, alleles, scale, null and state
+        validity are checked. Fitted caches are reconstructed.
+    refine : bool or RefinementConfig, default False
+        Explicit two-step CS-exclusion search after a converged baseline.
+    track_fit : bool or {'compact', 'dense'}, default False
+        Exact online metrics; dense posterior history is explicitly opt-in.
+    convergence : ConvergenceConfig, optional
+        Default ELBO or explicit alpha/PIP/joint stopping thresholds.
+    retain_data : bool, default False
+        Own immutable prepared inputs for later continuation/refinement.
+        Tracking, initialization and refine also retain inputs.
     prior_tol : float, default 1e-9
         V threshold for final null-component trim and PIP. The CS threshold
         stays fixed at 1e-9. Trim also runs at the iteration cap.
@@ -298,9 +324,6 @@ def _susie_suff_stat(
     (1, 2)
     """
     for name, requested in (
-        ("s_init", s_init is not None),
-        ("refine", refine),
-        ("track_fit", track_fit),
         ("verbose", verbose),
         ("maf", maf is not None or maf_thresh != 0),
     ):
@@ -434,7 +457,7 @@ def _susie_suff_stat(
         l=min(L, p),
         prior_variance=scaled_prior_variance * (yty / (n - 1)),
         residual_variance=sigma2,
-        prior_weights=weights.tolist(),
+        prior_weights=weights,
         estimate_prior_variance=bool(estimate_prior_variance),
         estimate_prior_method=estimate_prior_method,
         estimate_residual_variance=bool(estimate_residual_variance),
@@ -448,18 +471,32 @@ def _susie_suff_stat(
     if matrix_operator:
         options.update(
             matrix_global_scale=float(_rss_matrix_scale),
-            matrix_inverse_scales=inverse_scales.tolist(),
-            matrix_scales=scales.tolist(),
+            matrix_inverse_scales=inverse_scales,
+            matrix_scales=scales,
         )
+    control, resolution = resolve_convergence(s_init if hasattr(s_init, 'params') else None, convergence)
+    level = tracking_level(track_fit)
+    options.update(control.options(), track_level=level)
+    signature = data_signature(crossproduct,crossresponse,yty,n,scales,_rss_matrix_scale,ids,metadata)
+    if s_init is not None:
+        options.update(initial_options(s_init,ids=ids,metadata=metadata,scales=scales,
+              null_index=null_index,signature=signature,L=min(L,p),weights=weights,
+              estimate_prior_variance=bool(estimate_prior_variance),
+              estimate_residual_variance=bool(estimate_residual_variance),prior_variance=options["prior_variance"]))
+    prepared = None
+    if retain_data or level or refine is not False or s_init is not None:
+        prepared = make_prepared(crossproduct,crossresponse,yty,n,options,XtX,diagonal,
+                                 scales,means,y_mean_value,signature,_rss_matrix_scale,ids,metadata)
     native = _native.fit(crossproduct, crossresponse, yty, n, options)
     for message in native["warnings"]:
         _warn(message, collected)
     if not native["converged"]:
         _warn(
-            f"IBSS did not converge in {max_iter} iterations; check summary/LD consistency",
+            nonconvergence_message(native),
             collected,
         )
     alpha, V = native["alpha"], native["V"]
+    cs_audit = []
     sets = credible_sets(
         alpha,
         V,
@@ -470,6 +507,7 @@ def _susie_suff_stat(
         n_purity=n_purity,
         covariance_scales=np.sqrt(diagonal),
         covariance_multiplier=_rss_matrix_scale,
+        audit=cs_audit,
     )
     params = dict(
         L=L,
@@ -494,14 +532,18 @@ def _susie_suff_stat(
         check_input=bool(check_input),
         r_tol=r_tol,
         check_prior=bool(check_prior),
-        s_init=None,
-        refine=False,
-        track_fit=False,
+        s_init="posterior_state" if s_init is not None else None,
+        refine=bool(refine),
+        track_fit=track_fit,
+        convergence=control.options(),
+        convergence_resolution=resolution,
     )
     intercept = y_mean_value - float(
         np.sum(means * np.sum(alpha * native["mu"], axis=0) / scales)
     )
-    return SusieResult(
+    summary, trace = convergence_summary(native, options, control)
+    summary['config_resolution'] = resolution.copy()
+    fit = SusieResult(
         variant_ids=ids,
         alpha=alpha,
         mu=native["mu"],
@@ -525,7 +567,14 @@ def _susie_suff_stat(
         intercept=intercept,
         KL=native["KL"],
         XtXr=native["XtXr"],
+        convergence=summary, trace=trace, cs_audit=cs_audit,
+        data_signature=signature, _prepared=prepared,
     )
+    if refine is not False:
+        if not isinstance(refine, (bool, RefinementConfig)):
+            raise TypeError('refine must be False, True, or a RefinementConfig')
+        fit = refine_fit(fit, refine if isinstance(refine, RefinementConfig) else None)
+    return fit
 
 
 susie_suff_stat.__doc__ = _susie_suff_stat.__doc__
@@ -563,6 +612,8 @@ def susie_rss(
     track_fit=False,
     check_input=False,
     refine=False,
+    convergence=None,
+    retain_data=False,
     n_purity: int | None = None,
     variant_ids: Sequence[str] | None = None,
     variant_metadata: Mapping[str, ArrayLike] | None = None,
@@ -609,7 +660,7 @@ def susie_rss(
     ValueError
         Ambiguous input, invalid correlation or nonfinite values.
     NotImplementedError
-        Unsupported nondefault option (including initialization/refinement).
+        Unsupported nondefault option such as verbose output or legacy LD modification.
 
     Notes
     -----
@@ -729,6 +780,8 @@ def susie_rss(
         track_fit=track_fit,
         check_input=check_input,
         refine=refine,
+        convergence=convergence,
+        retain_data=retain_data,
         check_prior=check_prior,
         n_purity=n_purity,
         variant_ids=variant_ids,

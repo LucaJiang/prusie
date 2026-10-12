@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="SuSiE fine-mapping with a Python API and Rust computation: statistical model, reproducible toy example, numerical accuracy and performance.">
+<meta name="description" content="Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.">
 
 <title>Installation · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
-<span class="version">0.2.3rc6 <span>release candidate</span></span>
-<nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Get started</p><a href="index.html">Overview</a><a href="install.html" aria-current="page">Install</a><a href="example.html">Toy example</a></div><div class="nav-group"><p class="nav-label">Use the package</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API</a><a href="results.html">Results</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Understand and contribute</p><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="implementation.html">Implementation and optimizations</a><a href="contributing.html">Contributing</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav>
+<div class="version"><span class="version-number">0.2.4.dev1</span><span class="version-badge">Development</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html" aria-current="page">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
@@ -26,17 +26,20 @@
 <ul>
 <li><a href="#build-from-source">Build from source</a></li>
 <li><a href="#use-an-available-wheel">Use an available wheel</a></li>
+<li><a href="#optional-analysis-tools">Optional analysis tools</a></li>
 <li><a href="#run-the-installed-example">Run the installed example</a></li>
 </ul>
 </div>
 </details><h1 id="installation">Installation</h1>
 <p>Install prusie from source with Python ≥3.10. NumPy ≥1.26,&lt;3 is the only Python
 runtime dependency; fitting does not invoke R.</p>
+<p>This guide installs the <strong>0.2.4.dev1 preview from <code>post_analysis</code></strong>, the branch
+containing the documented analysis workflow.</p>
 <h2 id="build-from-source">Build from source</h2>
 <p>Source builds need the Rust toolchain pinned in <code>rust-toolchain.toml</code> (1.98.1),
 a C linker and Python development headers. The build uses maturin 1.9.6 and
 locked Cargo dependencies.</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/LucaJiang/prusie.git
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>post_analysis<span class="w"> </span>https://github.com/LucaJiang/prusie.git
 <span class="nb">cd</span><span class="w"> </span>prusie
 python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
 .<span class="w"> </span>.venv/bin/activate
@@ -56,6 +59,14 @@ route.</p>
 <p>Executed package checks cover CPython 3.12 on GNU Linux x86-64 with NumPy 2.2.6.
 Wheel filenames specify their Python ABI and minimum manylinux platform tag.
 See <a href="contributing.html">contributing</a> for reproducible builds and payload checks.</p>
+<h2 id="optional-analysis-tools">Optional analysis tools</h2>
+<p>From the same checkout, install plotting and LD-diagnostic dependencies:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span>
+</code></pre></div>
+
+<p>The analysis extra adds Matplotlib and SciPy. Core fitting and deterministic
+posterior summaries remain available with NumPy alone. Reports work offline;
+plots and diagnostic computation run only when requested.</p>
 <h2 id="run-the-installed-example">Run the installed example</h2>
 <p>This works from any directory after installation:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
@@ -68,7 +79,7 @@ See <a href="contributing.html">contributing</a> for reproducible builds and pay
 <p>The package contains the inputs, metadata and frozen reference for this example.
 No source checkout, R installation or network is needed to load and fit it.
 Continue with the <a href="example.html">toy example tutorial</a>.</p></article>
-<footer><p>prusie 0.2.3rc6 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+<footer><p>prusie 0.2.4.dev1 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>
 </body>
