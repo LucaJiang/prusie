@@ -72,7 +72,7 @@ Accepted attempts: 0 of 2
 Refinement requires a converged baseline with retained inputs. It inherits the
 baseline's **requested** convergence configuration unless explicitly overridden;
 `search_config.inner_tol` separately sets the inner ELBO tolerance. A runtime
-alpha/PIP fallback after a nonfinite ELBO is recorded as the effective rule and
+alpha/PIP fallback after a NaN ELBO is recorded as the effective rule and
 does not replace the original request for later calls.
 
 Each exclusion attempt has two stages: A temporarily excludes one retained CS
@@ -81,6 +81,34 @@ from A's posterior moments. Only valid, finite, converged B candidates compete
 under the common original-prior **post-trim objective**. The best candidate must
 improve it by more than `absolute_tol`. No accepted attempt means stability under
 this executed search, not a global-optimum certificate.
+
+## Refinement compared with susieR
+
+`refine=True` and `refine_fit` perform the same prusie search. The table compares
+the Gaussian model with susieR **0.16.6**, commit
+`8e56a8e038e989856d106d9ca5175cc664fea9d2`. It describes algorithm choices;
+standard-fit R agreement alone does not validate refinement equivalence.
+
+| Step or control | prusie | Pinned susieR |
+| --- | --- | --- |
+| Stage A | Cold fit; CS weights are zero with log weight −∞, enforcing hard exclusion | Cold fit; zero CS weights enter the ordinary `log(pi + sqrt(eps))` convention, retaining small prior support |
+| Stage B | Restore original prior and model; initialize alpha/mu/mu2 from A, reset V and sigma² to original initialization | Restore original prior; initialize alpha/mu/mu2 from A with ordinary variance initialization |
+| Objective used to select B | Recomputed complete post-trim state under the original prior; A's objective is diagnostic only | Last logged ELBO returned by `susie_get_objective`; A's objective is not compared with the baseline |
+| Required absolute gain | Strictly greater than `absolute_tol=1e-3` | Strictly greater than fit `tol`, default `1e-4` |
+| Relative round stop | Disabled (`relative_tol=None`); if set, accepted gain divided by `max(1, abs(incumbent objective))` is compared with it | Absolute logged gain divided by `max(1, abs(new objective))` is compared with fit `tol` |
+| Convergence eligibility | Baseline and both A/B fits must be converged; returned `converged` describes IBSS separately from search status | No explicit baseline/A/B convergence eligibility test; the outer search overwrites `converged` with its own status |
+| Search bound | `max_rounds=10`; optional candidate budget, unlimited by default | 100 outer rounds; no separate candidate budget |
+| Invalid or failed candidate | Record failed stage, reject candidate, retain incumbent; require a finite recomputed objective | No per-candidate exception recovery or nonfinite filtering in `run_refine`; underlying fitting/objective errors propagate |
+
+The prusie inner defaults are `max_iter=100` and `inner_tol=1e-4`, independent
+of the outer improvement threshold. susieR forwards the original fit settings.
+For exact definitions, see the
+[prusie implementation](https://github.com/LucaJiang/prusie/blob/main/src/prusie/refinement.py),
+[pinned R search](https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/refinement.R)
+and [pinned R objective accessor](https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/susie_get_functions.R).
+The saved [worked examples](worked_examples.md) report executed prusie searches
+with their own source identities and settings; their search outcomes should be
+read separately from the [standard-fit comparison](numerical_accuracy.md).
 
 ## Compare before and after
 
@@ -118,7 +146,7 @@ search status.
 | Maximum absolute Δalpha | Are the component probabilities still moving? |
 | Maximum absolute ΔPIP | Is marginal variant inclusion still moving? |
 | Requested/effective criterion | Which condition was selected, and did a fallback occur? |
-| Stop reason | Was the criterion satisfied, a cycle detected, or the iteration cap reached? |
+| Stop reason | Was the criterion satisfied, an eligible cycle stop taken, the iteration cap reached, or a numerical failure detected? |
 
 For biological variant $j$, marginal PIP combines active components:
 
@@ -142,6 +170,10 @@ The default finite-ELBO rule, starting at iteration two, is
 $0\leq\Delta\mathrm{ELBO}<\mathrm{tol}$. A negative increment does not satisfy it.
 The `alpha_pip` rule requires both probability distances below their separate
 absolute tolerances; `joint` requires those conditions and the finite-ELBO rule.
+`min_iter=2` is the default; a larger value delays successful convergence and
+any cycle stop until that sweep. Repetition of alpha/PIP at lags two through five
+is **diagnostic only for a finite objective in `elbo` mode**. It cannot stop that
+fit or override an already satisfied convergence criterion.
 Select a different requested rule explicitly when fitting or continuing:
 
 ```python
@@ -152,9 +184,20 @@ rule = prusie.ConvergenceConfig(criterion="joint", alpha_tol=1e-6,
 Pass `convergence=rule` to the desired operation; merely creating this object
 leaves the completed example unchanged. Plot legends distinguish selected
 stopping thresholds from diagnostic-only thresholds. Relative ELBO change is
-reported separately and is not the default stopping condition. A nonfinite
-increment uses the labelled alpha/PIP fallback; such a nonfinite objective
-cannot win refinement selection.
+reported separately and is not the default stopping condition.
+
+| Objective state | Behavior |
+| --- | --- |
+| First finite ELBO, following the initial −∞ sentinel | No convergence check or fallback; a preceding completed sweep is required |
+| Finite ELBO with a negative or nonfinite increment | Does not satisfy the ELBO condition; no alpha/PIP fallback |
+| NaN ELBO in `elbo` mode | At or after `min_iter`, use the labelled `alpha_pip_nonfinite_fallback` rule; success requires both posterior distances |
+| NaN ELBO in `alpha_pip` mode | Use the explicitly requested posterior rule and record the nonfinite objective |
+| NaN ELBO in `joint` mode, or an infinite ELBO in any mode | Stop with `numerical_failure` and `converged=False`, even before `min_iter` |
+
+A nonfinite objective cannot win refinement selection. `criterion_satisfied`
+means the effective rule succeeded; inspect that rule and objective validity
+before interpreting the fit. If no stopping condition holds at `max_iter`, the
+reason is `iteration_limit` and `converged=False`.
 
 ## Technical details
 
@@ -220,10 +263,16 @@ Thresholds, omitted mass and `lossy=True` are recorded. This display cannot
 reconstruct the posterior. `'dense'` also records full alpha and moments and is
 intended for small debugging inputs.
 
-A lag-one fixed point is distinct from a short cycle. With the configuration
-above, a detected cycle of lag two through five retains the complete current
-posterior, reports `cycle_detected` and leaves IBSS convergence false. Components
-are not averaged across incompatible states.
+A lag-one fixed point is distinct from a short cycle. `cycle_lag=5` retains the
+default diagnostic history in every mode; `cycle_lag=1` disables lag-greater-than-one
+detection. Lagged repetition is recorded independently of the stopping decision.
+In explicit `alpha_pip` or `joint` mode, or the NaN-ELBO fallback, an eligible
+lag-two-through-five cycle stops only when the requested success criterion has
+not already held and `min_iter` has been reached. Such an exit reports
+`cycle_detected` and leaves IBSS convergence false. Finite-ELBO mode continues.
+Every mode retains the complete current posterior; components are not averaged.
+`track_fit=False`, `'compact'` and `'dense'` change recorded history, not fitted
+values or stopping decisions.
 
 Every search round freezes an incumbent and its CS list. Stage A zeros excluded
 variant weights and normalizes the remaining full prior, including null. Stage B

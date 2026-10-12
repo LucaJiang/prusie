@@ -269,7 +269,7 @@ Rust result buffers into NumPy, avoiding a second copy of those outputs.
 | $O(Lp)$ | Four component output matrices (`alpha`, `mu`, `mu2`, `lbf_variable`), retained component products and previous alpha |
 | $O(p)$ | Component, product and residual vectors; total mean/fitted scratch; diagonal and scales; likelihood scratch, sampling variances and SER buffers; optional scaled-vector scratch |
 | $O(L)$ and $O(\mathtt{max\_iter})$ | Component quadratics, V/BF/KL and objective trace |
-| Optional/data dependent | Eigenvectors and eigensolver workspace for `check_input`; up to five alpha/PIP states for nonfinite convergence; $k(k-1)/2$ pair values for a retained $k$-variant set |
+| Cycle diagnostics and optional work | Up to five alpha/PIP states for lagged diagnostics in every convergence mode; optional eigenvectors and eigensolver workspace for `check_input`; $k(k-1)/2$ pair values for a retained $k$-variant set |
 
 Credible-set ordering also uses per-component length-$p$ arrays and stores
 candidate member lists. Its pairwise helper can reject a failing set before

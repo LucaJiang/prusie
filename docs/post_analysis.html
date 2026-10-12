@@ -16,7 +16,7 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
-<div class="version"><span class="version-number">0.2.4.dev1</span><span class="version-badge">Development</span></div>
+<div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html" aria-current="page">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
@@ -26,6 +26,7 @@
 <ul>
 <li><a href="#start-with-a-tracked-fit">Start with a tracked fit</a></li>
 <li><a href="#continue-first-then-consider-refinement">Continue first, then consider refinement</a></li>
+<li><a href="#refinement-compared-with-susier">Refinement compared with susieR</a></li>
 <li><a href="#compare-before-and-after">Compare before and after</a></li>
 <li><a href="#read-the-stopping-evidence">Read the stopping evidence</a></li>
 <li><a href="#technical-details">Technical details</a></li>
@@ -90,7 +91,7 @@ Accepted attempts: 0 of 2
 <p>Refinement requires a converged baseline with retained inputs. It inherits the
 baseline's <strong>requested</strong> convergence configuration unless explicitly overridden;
 <code>search_config.inner_tol</code> separately sets the inner ELBO tolerance. A runtime
-alpha/PIP fallback after a nonfinite ELBO is recorded as the effective rule and
+alpha/PIP fallback after a NaN ELBO is recorded as the effective rule and
 does not replace the original request for later calls.</p>
 <p>Each exclusion attempt has two stages: A temporarily excludes one retained CS
 and fits from a cold start; B restores the original prior and model and starts
@@ -98,6 +99,71 @@ from A's posterior moments. Only valid, finite, converged B candidates compete
 under the common original-prior <strong>post-trim objective</strong>. The best candidate must
 improve it by more than <code>absolute_tol</code>. No accepted attempt means stability under
 this executed search, not a global-optimum certificate.</p>
+<h2 id="refinement-compared-with-susier">Refinement compared with susieR</h2>
+<p><code>refine=True</code> and <code>refine_fit</code> perform the same prusie search. The table compares
+the Gaussian model with susieR <strong>0.16.6</strong>, commit
+<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>. It describes algorithm choices;
+standard-fit R agreement alone does not validate refinement equivalence.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Step or control</th>
+<th>prusie</th>
+<th>Pinned susieR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stage A</td>
+<td>Cold fit; CS weights are zero with log weight −∞, enforcing hard exclusion</td>
+<td>Cold fit; zero CS weights enter the ordinary <code>log(pi + sqrt(eps))</code> convention, retaining small prior support</td>
+</tr>
+<tr>
+<td>Stage B</td>
+<td>Restore original prior and model; initialize alpha/mu/mu2 from A, reset V and sigma² to original initialization</td>
+<td>Restore original prior; initialize alpha/mu/mu2 from A with ordinary variance initialization</td>
+</tr>
+<tr>
+<td>Objective used to select B</td>
+<td>Recomputed complete post-trim state under the original prior; A's objective is diagnostic only</td>
+<td>Last logged ELBO returned by <code>susie_get_objective</code>; A's objective is not compared with the baseline</td>
+</tr>
+<tr>
+<td>Required absolute gain</td>
+<td>Strictly greater than <code>absolute_tol=1e-3</code></td>
+<td>Strictly greater than fit <code>tol</code>, default <code>1e-4</code></td>
+</tr>
+<tr>
+<td>Relative round stop</td>
+<td>Disabled (<code>relative_tol=None</code>); if set, accepted gain divided by <code>max(1, abs(incumbent objective))</code> is compared with it</td>
+<td>Absolute logged gain divided by <code>max(1, abs(new objective))</code> is compared with fit <code>tol</code></td>
+</tr>
+<tr>
+<td>Convergence eligibility</td>
+<td>Baseline and both A/B fits must be converged; returned <code>converged</code> describes IBSS separately from search status</td>
+<td>No explicit baseline/A/B convergence eligibility test; the outer search overwrites <code>converged</code> with its own status</td>
+</tr>
+<tr>
+<td>Search bound</td>
+<td><code>max_rounds=10</code>; optional candidate budget, unlimited by default</td>
+<td>100 outer rounds; no separate candidate budget</td>
+</tr>
+<tr>
+<td>Invalid or failed candidate</td>
+<td>Record failed stage, reject candidate, retain incumbent; require a finite recomputed objective</td>
+<td>No per-candidate exception recovery or nonfinite filtering in <code>run_refine</code>; underlying fitting/objective errors propagate</td>
+</tr>
+</tbody>
+</table></div>
+<p>The prusie inner defaults are <code>max_iter=100</code> and <code>inner_tol=1e-4</code>, independent
+of the outer improvement threshold. susieR forwards the original fit settings.
+For exact definitions, see the
+<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/refinement.py">prusie implementation</a>,
+<a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/refinement.R">pinned R search</a>
+and <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/susie_get_functions.R">pinned R objective accessor</a>.
+The saved <a href="worked_examples.html">worked examples</a> report executed prusie searches
+with their own source identities and settings; their search outcomes should be
+read separately from the <a href="numerical_accuracy.html">standard-fit comparison</a>.</p>
 <h2 id="compare-before-and-after">Compare before and after</h2>
 <p>Reuse the <code>refined</code> result and the configuration above; these plotting calls do
 not repeat the search:</p>
@@ -147,7 +213,7 @@ search status.</p>
 </tr>
 <tr>
 <td>Stop reason</td>
-<td>Was the criterion satisfied, a cycle detected, or the iteration cap reached?</td>
+<td>Was the criterion satisfied, an eligible cycle stop taken, the iteration cap reached, or a numerical failure detected?</td>
 </tr>
 </tbody>
 </table></div>
@@ -168,6 +234,10 @@ null column; PIP distance does not.</p>
 <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">L</mi><mi mathvariant="normal">B</mi><mi mathvariant="normal">O</mi></mrow><mo>&lt;</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi></mrow></mrow><annotation encoding="application/x-tex">0\leq\Delta\mathrm{ELBO}&lt;\mathrm{tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7804em;vertical-align:-0.136em;"></span><span class="mord">0</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord">Δ</span><span class="mord"><span class="mord mathrm">ELBO</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord"><span class="mord mathrm">tol</span></span></span></span></span></span>. A negative increment does not satisfy it.
 The <code>alpha_pip</code> rule requires both probability distances below their separate
 absolute tolerances; <code>joint</code> requires those conditions and the finite-ELBO rule.
+<code>min_iter=2</code> is the default; a larger value delays successful convergence and
+any cycle stop until that sweep. Repetition of alpha/PIP at lags two through five
+is <strong>diagnostic only for a finite objective in <code>elbo</code> mode</strong>. It cannot stop that
+fit or override an already satisfied convergence criterion.
 Select a different requested rule explicitly when fitting or continuing:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">rule</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">ConvergenceConfig</span><span class="p">(</span><span class="n">criterion</span><span class="o">=</span><span class="s2">&quot;joint&quot;</span><span class="p">,</span> <span class="n">alpha_tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
                                  <span class="n">pip_tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">min_iter</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cycle_lag</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
@@ -176,9 +246,41 @@ Select a different requested rule explicitly when fitting or continuing:</p>
 <p>Pass <code>convergence=rule</code> to the desired operation; merely creating this object
 leaves the completed example unchanged. Plot legends distinguish selected
 stopping thresholds from diagnostic-only thresholds. Relative ELBO change is
-reported separately and is not the default stopping condition. A nonfinite
-increment uses the labelled alpha/PIP fallback; such a nonfinite objective
-cannot win refinement selection.</p>
+reported separately and is not the default stopping condition.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Objective state</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First finite ELBO, following the initial −∞ sentinel</td>
+<td>No convergence check or fallback; a preceding completed sweep is required</td>
+</tr>
+<tr>
+<td>Finite ELBO with a negative or nonfinite increment</td>
+<td>Does not satisfy the ELBO condition; no alpha/PIP fallback</td>
+</tr>
+<tr>
+<td>NaN ELBO in <code>elbo</code> mode</td>
+<td>At or after <code>min_iter</code>, use the labelled <code>alpha_pip_nonfinite_fallback</code> rule; success requires both posterior distances</td>
+</tr>
+<tr>
+<td>NaN ELBO in <code>alpha_pip</code> mode</td>
+<td>Use the explicitly requested posterior rule and record the nonfinite objective</td>
+</tr>
+<tr>
+<td>NaN ELBO in <code>joint</code> mode, or an infinite ELBO in any mode</td>
+<td>Stop with <code>numerical_failure</code> and <code>converged=False</code>, even before <code>min_iter</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>A nonfinite objective cannot win refinement selection. <code>criterion_satisfied</code>
+means the effective rule succeeded; inspect that rule and objective validity
+before interpreting the fit. If no stopping condition holds at <code>max_iter</code>, the
+reason is <code>iteration_limit</code> and <code>converged=False</code>.</p>
 <h2 id="technical-details">Technical details</h2>
 <details>
 <summary>Iteration phases, finalization and objective conventions</summary>
@@ -230,10 +332,16 @@ component summaries. Its alpha display retains rows with maximum alpha at least
 Thresholds, omitted mass and <code>lossy=True</code> are recorded. This display cannot
 reconstruct the posterior. <code>'dense'</code> also records full alpha and moments and is
 intended for small debugging inputs.</p>
-<p>A lag-one fixed point is distinct from a short cycle. With the configuration
-above, a detected cycle of lag two through five retains the complete current
-posterior, reports <code>cycle_detected</code> and leaves IBSS convergence false. Components
-are not averaged across incompatible states.</p>
+<p>A lag-one fixed point is distinct from a short cycle. <code>cycle_lag=5</code> retains the
+default diagnostic history in every mode; <code>cycle_lag=1</code> disables lag-greater-than-one
+detection. Lagged repetition is recorded independently of the stopping decision.
+In explicit <code>alpha_pip</code> or <code>joint</code> mode, or the NaN-ELBO fallback, an eligible
+lag-two-through-five cycle stops only when the requested success criterion has
+not already held and <code>min_iter</code> has been reached. Such an exit reports
+<code>cycle_detected</code> and leaves IBSS convergence false. Finite-ELBO mode continues.
+Every mode retains the complete current posterior; components are not averaged.
+<code>track_fit=False</code>, <code>'compact'</code> and <code>'dense'</code> change recorded history, not fitted
+values or stopping decisions.</p>
 <p>Every search round freezes an incumbent and its CS list. Stage A zeros excluded
 variant weights and normalizes the remaining full prior, including null. Stage B
 transfers alpha/mu/mu2, then resets V and sigma2 to the original model initialization.
@@ -252,7 +360,7 @@ separate outcomes from IBSS stopping.</p>
 to compare modeling or input choices. The <a href="example.html#write-an-offline-report">quick start</a>
 and <a href="api.html#figures-and-local-style">plotting API</a> cover reports, persistence and
 local styles. Optional AI interpretation is separate from deterministic analysis.</p></article>
-<footer><p>prusie 0.2.4.dev1 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>
 </body>

@@ -158,12 +158,18 @@ for each sweep, up to max_iter:
         form its crossproduct residual
         select V and compute the SER posterior (EM updates V after the posterior)
         store the component evidence, KL and new matrix product
+    if requested: check prior variance using the current residual variance
     evaluate expected residual sum of squares and ELBO
-    test convergence after the first sweep
-    if converged: stop
+    record diagnostics and check the requested stopping rule
+    if success, an eligible cycle stop, or numerical failure: stop
     if requested: update residual variance for the next sweep
 trim components below prior_tol and construct summaries
 ```
+
+For finite ELBO with the default rule, the first successful check can occur at
+`min_iter` (two sweeps by default); lagged posterior repetition is diagnostic
+only. [Convergence and refinement](post_analysis.md#read-the-stopping-evidence)
+specifies the signed objective condition and exceptional stops.
 
 For `estimate_prior_method="optim"`, the component update maximizes the SER
 log marginal likelihood $\log\sum_j\pi_j\mathrm{BF}_{\ell j}(V)$ using a Brent

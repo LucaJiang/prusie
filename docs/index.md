@@ -3,7 +3,10 @@
 Fit association summary statistics with a Rust-powered SuSiE implementation,
 then inspect credible sets, convergence and sensitivity in one workflow.
 
-## Fast computation, complete analysis
+## Recorded numerical accuracy and performance
+
+The comparison below measures **0.2.3rc4**. It is historical evidence for that
+version; the current development snapshot is **0.2.4.dev2**.
 
 <!-- generated:highlights:start -->
 

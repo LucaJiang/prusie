@@ -3,8 +3,9 @@
 Install prusie from source with Python ≥3.10. NumPy ≥1.26,<3 is the only Python
 runtime dependency; fitting does not invoke R.
 
-This guide installs the **0.2.4.dev1 preview from `post_analysis`**, the branch
-containing the documented analysis workflow.
+The source instructions below use `main`. This documentation describes the
+**0.2.4.dev2 development snapshot**; record the checkout revision with every
+analysis because development source can change.
 
 ## Build from source
 
@@ -13,7 +14,7 @@ a C linker and Python development headers. The build uses maturin 1.9.6 and
 locked Cargo dependencies.
 
 ```sh
-git clone --branch post_analysis https://github.com/LucaJiang/prusie.git
+git clone --branch main https://github.com/LucaJiang/prusie.git
 cd prusie
 python -m venv .venv
 . .venv/bin/activate
@@ -25,16 +26,29 @@ pinned Rust toolchain using your usual Rust installation before building.
 No BLAS development library is required by the extension. Runtime CPU checks
 select optional system vector math where available, with a scalar fallback.
 
-## Use an available wheel
+## Use a prebuilt wheel
 
-When you have a wheel built for your Python and platform, install its actual
-file with `python -m pip install PATH_TO_WHEEL`. A wheel installation requires
-neither Cargo nor a compiler. Locally prepared artifacts are distinct from a
-published binary release; the source route above is the documented distribution
-route.
+The [v0.2.3rc6 prerelease](https://github.com/LucaJiang/prusie/releases/tag/v0.2.3rc6)
+contains a CPython 3.12 Linux x86-64 wheel tagged `manylinux_2_34` (glibc ≥2.34),
+a source distribution and `SHA256SUMS`. These assets belong to that older version;
+they do not contain the development snapshot described here. The release asset
+list, checked on 12 October 2026, contains no macOS, Windows or other Python-ABI
+wheels.
 
-Executed package checks cover CPython 3.12 on GNU Linux x86-64 with NumPy 2.2.6.
-Wheel filenames specify their Python ABI and minimum manylinux platform tag.
+Download the matching asset and verify it against the release's `SHA256SUMS`.
+For that specific wheel:
+
+```sh
+python -m pip install ./prusie-0.2.3rc6-cp312-cp312-manylinux_2_34_x86_64.whl
+```
+
+Installing a compatible wheel requires neither Cargo nor a compiler. A source
+distribution still requires the build toolchain above. Choose source installation
+for the development API; a wheel's version and platform tags identify the code
+and environment it supports.
+
+The published rc6 package checks cover CPython 3.12 on GNU Linux x86-64 with
+NumPy 2.2.6. These checks do not establish support for unbuilt platform wheels.
 See [contributing](contributing.md) for reproducible builds and payload checks.
 
 ## Optional analysis tools

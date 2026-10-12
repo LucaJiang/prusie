@@ -7,6 +7,10 @@ to float64 as needed.
 Result indices are zero-based. See [inputs](inputs.md) for alignment and
 [results](results.md) for the complete return schema.
 
+The two fitting snippets below illustrate calls on caller-prepared arrays;
+`prusie` must be imported and the displayed input names defined. For a complete
+offline script, start with [the toy example](example.md).
+
 ## susie_rss
 
 Fit Gaussian SuSiE from signed association statistics and LD:
@@ -89,7 +93,7 @@ In missing-n mode, `prior_variance` (default 50) replaces
 `scaled_prior_variance`; changing the latter from 0.2 raises an error.
 
 Full signatures and docstrings are available through Python `help()` and the
-[API source](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/api.py).
+[API source](https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py).
 
 ## SusieResult
 
@@ -115,6 +119,8 @@ correlation. Normal fitting constructs these arguments internally.
 ## load_example
 
 ```python
+import prusie
+
 example = prusie.load_example()
 fit = prusie.susie_rss(**example["inputs"], **example["parameters"])
 ```
@@ -130,6 +136,9 @@ without network access. See the [toy example tutorial](example.md).
 Both fitting interfaces support `s_init=None`, `refine=False`,
 `track_fit=False`, `convergence=None` and `retain_data=False`.
 `ConvergenceConfig` selects exact ELBO, alpha/PIP or joint stopping.
+Finite-ELBO stopping uses signed improvement; lagged posterior cycles remain
+diagnostics in that mode. Successful and statistical cycle exits respect
+`min_iter`; numerical failure is reported separately.
 `track_fit=True` records compact exact metrics and a labelled lossy alpha display;
 `track_fit='dense'` retains full states for small debugging inputs.
 

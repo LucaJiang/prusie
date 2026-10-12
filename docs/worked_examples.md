@@ -10,8 +10,11 @@ condition, then finds a better solution through refinement.
 | Stable | Packaged 500-variant synthetic toy data | [Offline report](examples/post_analysis/stable/index.html), [figure index](examples/post_analysis/stable/figure_index.json) |
 | Problem | Official susieR 200-SNP `FinemappingConvergence` sufficient statistics | [Offline report](examples/post_analysis/problem/index.html), [figure index](examples/post_analysis/problem/figure_index.json) |
 
-Values below are rounded for reading; the linked tables retain complete values,
-variant IDs and comparison support.
+These are saved numerical examples from the source revisions identified under
+[Sources and reproducibility](#sources-and-reproducibility). Their values are
+rounded for reading; the linked tables retain complete values, variant IDs and
+comparison support. Rendering these records with a newer package does not
+remeasure its fits.
 
 ## Stable signals with a prior-sensitive background
 
@@ -136,8 +139,10 @@ separate small-fixture numerical checks do not supply that missing comparison.
 
 ## Choose a signal detail
 
-Select a component according to the question it answers. For the problem result,
-the two retained CS justify distinct detail views:
+Select a component according to the question it answers. This illustrative
+fragment requires the problem fit's posterior `summary` and aligned LD matrix
+`R`; they are not the quick-start toy result. Its two retained CS justify
+distinct detail views:
 
 ```python
 from prusie.plots import plot_signal
@@ -160,13 +165,13 @@ full layouts and exported plotting data, and the
 <summary>Inputs, licenses, numerical provenance and rendering commands</summary>
 
 The stable inputs are independently generated synthetic data; their
-[generation metadata](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/teaching/metadata.json)
-and [GPL-3.0-or-later notice](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/teaching/LICENSE.txt)
+[generation metadata](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/teaching/metadata.json)
+and [GPL-3.0-or-later notice](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/teaching/LICENSE.txt)
 ship with the package. The problem fixture uses a simulated response with
 real-genotype-derived sufficient statistics, without individual genotypes;
-[source metadata](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/convergence/metadata.json)
+[source metadata](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/convergence/metadata.json)
 records the pinned upstream input and BSD-3-Clause license, with
-[upstream attribution](https://github.com/LucaJiang/prusie/blob/post_analysis/src/prusie/data/convergence/LICENSE.txt).
+[upstream attribution](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/convergence/LICENSE.txt).
 
 The reports reuse recorded fits and diagnostics. Their provenance separates
 the numerical producer from the current plotting and reporting source; updating
@@ -205,8 +210,11 @@ does not. Each report includes PNG/SVG, complete CSV tables, lossless JSON/NPZ,
 provenance and a figure index. The compact main figures are supplemented by a
 separate variance-details figure and full search tables.
 
-The interpretations on this page were prepared in the current Codex session for
-human scientific review by reading the saved results. They are separate from the
-optional AI adapter and do not demonstrate a provider/API invocation.
+The interpretation follows the saved posterior and diagnostic records. The
+example command above runs offline statistical analysis and does not request
+AI interpretation. An optional AI request requires explicit `--interpret`,
+`--case stable` and `--model` settings; deterministic results are saved separately
+before the request. See [examples](https://github.com/LucaJiang/prusie/blob/main/examples/README.md)
+for that opt-in interface.
 
 </details>

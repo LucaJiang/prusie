@@ -1,6 +1,6 @@
 # Performance
 
-The comparison measures complete fine-mapping calls in prusie 0.2.3rc4 and
+This historical comparison measures complete fine-mapping calls in prusie 0.2.3rc4 and
 susieR 0.16.6. The results below reanalyze retained measurements from 6 October
 2026; they retain the original executable identities.
 
@@ -53,7 +53,10 @@ Both axes are logarithmic; each point represents one analysis/backend.
 ![Full-process peak memory against variant count for prusie and susieR.](assets/memory_by_variants.svg)
 
 Peak memory includes interpreters, imports, inputs and the retained fit.
-It describes process memory rather than algorithm workspace.
+It describes process memory rather than algorithm workspace. These historical
+records do not measure resident memory immediately before fitting, so their
+ratios cannot quantify incremental fit memory or assign memory savings to the
+algorithm alone.
 [Vector PDF](assets/memory_by_variants.pdf).
 
 ## Methods
@@ -83,6 +86,9 @@ native SER used the recorded optional glibc libmvec AVX2 path. Full loaded-libra
 identities, dependency versions and executable hashes are in the
 [protocol and environment record](assets/r_comparison_protocol.json).
 These measurements apply to the recorded binary and machine.
+Complete-call ratios do not isolate R initialization overhead, a particular
+optimization or numerical-kernel cost; those claims require separate profiling
+or ablation measurements.
 
 Real analyses use L=5, `tol=0.001`, `max_iter=100`, `scaled_prior_variance=0.2`,
 fixed residual variance 1, optimized prior variance, normalized uniform priors,

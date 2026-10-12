@@ -77,7 +77,9 @@ phenotype variance; provide `var_y` only when known for the actual phenotype.
 and retain sample/build provenance. LD is Pearson **r**, not r². Reference sample
 size is separate from the association study's n.
 
-Once prepared, both examples use the same API:
+Once prepared, both examples use the same API. This illustrative fragment
+requires your aligned `signed_z`, `signed_ld`, `study_sample_size` and
+`ordered_variant_ids`; it is not a standalone download-and-fit script:
 
 ```python
 import prusie

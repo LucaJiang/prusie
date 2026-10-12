@@ -59,6 +59,9 @@ and every metadata column.
 If allele recoding multiplies each effect by $d_j\in\{-1,+1\}$, apply the same
 signs to z and both LD axes:
 
+This illustrative fragment assumes aligned NumPy arrays `z`, `R` and a vector
+`signs` containing the required +1 or −1 recoding for each variant:
+
 ```python
 z_new = signs * z
 R_new = signs[:, None] * R * signs[None, :]
@@ -99,6 +102,14 @@ RSS fixes residual variance by default, appropriate when using external LD.
 Estimating it requires in-sample LD consistent with the association summaries;
 requesting it through RSS emits a warning. Sufficient-statistic fitting enables
 estimation by default. A nonpositive or nonfinite estimate raises an error.
+
+With `check_prior=True`, the prior-variance sanity check uses the **current**
+residual variance at the post-sweep check, before that sweep's optional residual
+variance update. In working sufficient-statistic coordinates $Q$ and $u$,
+informative columns have $z_j^2=u_j^2/(Q_{jj}\sigma^2)$. The check rejects a
+component variance above $100\max_j z_j^2$. Zero-information columns do not
+provide a finite marginal z. This check is a diagnostic for extreme fitted
+variance or summary/LD inconsistency, not proof that the input LD is appropriate.
 
 The public RSS iteration limit is 50 and the sufficient-statistic limit is 100;
 these are caps, with early stopping controlled by `tol`. Both default to

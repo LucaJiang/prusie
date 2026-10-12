@@ -101,7 +101,9 @@ necessarily the final null probability when the raw weights do not sum to one.
 Zero biological support is rejected, even with a positive null weight.
 
 For new IDs under a nonuniform prior, provide complete alternative weights in
-the alternative input order. This belongs to the input-change category:
+the alternative input order. This illustrative fragment requires `new_inputs`
+containing the alternative aligned data and `new_variant_weights` in that order;
+they are not provided by the toy example:
 
 ```python
 alternative_inputs = dict(new_inputs, prior_weights=new_variant_weights)

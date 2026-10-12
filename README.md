@@ -3,7 +3,10 @@
 Fit association summary statistics with a Rust-powered SuSiE implementation,
 then inspect credible sets, convergence and sensitivity in one workflow.
 
-## Numerical accuracy and performance
+## Recorded numerical accuracy and performance
+
+The comparison below measures **0.2.3rc4**. It is historical evidence for that
+version; the current development snapshot is **0.2.4.dev2**.
 
 <!-- generated:highlights:start -->
 
@@ -24,11 +27,11 @@ LD diagnostics, sensitivity comparisons and offline reports.
 
 ## Install the development preview
 
-This is the **0.2.4.dev1 preview** on `post_analysis`. Source installation needs
-Python ≥3.10, the pinned Rust toolchain, a C linker and Python headers:
+The development source is on `main`. Source installation needs Python ≥3.10,
+the pinned Rust toolchain, a C linker and Python headers:
 
 ```sh
-git clone --branch post_analysis https://github.com/LucaJiang/prusie.git
+git clone --branch main https://github.com/LucaJiang/prusie.git
 cd prusie
 python -m venv .venv
 . .venv/bin/activate
@@ -36,7 +39,9 @@ python -m pip install '.[analysis]'
 ```
 
 Core fitting needs NumPy at runtime; the optional `analysis` extra adds Matplotlib
-and SciPy. Neither R nor Rust is required after installation.
+and SciPy. Neither R nor Rust is required to run an installed package. The
+[installation guide](docs/install.md) distinguishes source builds from the
+available older prerelease wheel for CPython 3.12 on Linux x86-64.
 
 ## One fit, a readable result
 
@@ -89,7 +94,7 @@ to appear there.
 
 Cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
 [SuSiE-RSS, Zou et al. (2022)](https://doi.org/10.1371/journal.pgen.1010299),
-and identify this prusie 0.2.4.dev1 development snapshot with [CITATION.cff](CITATION.cff).
+and identify this prusie 0.2.4.dev2 development snapshot with [CITATION.cff](CITATION.cff).
 Author and maintainer: Wenxin Jiang.
 
 GPL-3.0-or-later. [LICENSE](LICENSE) and

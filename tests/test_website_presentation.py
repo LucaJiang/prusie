@@ -70,4 +70,6 @@ def test_homepage_and_readme_keep_one_shared_measured_evidence_block():
     home = (ROOT / "docs/index.md").read_text()
     readme = (ROOT / "README.md").read_text()
     assert re.search(expression, home, re.S)[1] == re.search(expression, readme, re.S)[1]
-    assert 'git clone --branch post_analysis' in (ROOT / "docs/install.md").read_text()
+    installation = (ROOT / "docs/install.md").read_text()
+    assert 'git clone --branch main' in installation
+    assert 'git clone --branch post_analysis' not in installation

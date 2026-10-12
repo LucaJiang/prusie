@@ -26,7 +26,8 @@ actual mass greater than 0.95 because variants are included whole. That target i
 posterior mass under the model; it is not a claim of demonstrated repeated-sampling
 coverage in a new study. PIP and CS support do not establish biological mechanism.
 
-Continue from the [quick start](example.md):
+This fragment continues from the [quick start](example.md), with its `prusie`,
+`fit` and `inputs` objects already defined:
 
 ```python
 summary = prusie.summarize(fit, inputs["R"], z=inputs["z"])
@@ -149,10 +150,18 @@ joint rules are selected by `ConvergenceConfig`; the library does not silently
 refit when a rule fails.
 
 `fit.convergence` records the requested and effective rules, actual stopping
-reason, exact last distances and finalization. A nonfinite objective increment
-invokes a labelled alpha/PIP fallback. A multi-state cycle is reported as
-`cycle_detected`, with IBSS convergence false, while retaining the complete
-current posterior; components are not averaged across incompatible states.
+reason, exact last distances and finalization. Finite-ELBO mode records lagged
+alpha/PIP repetition as a diagnostic and continues until its own rule succeeds
+or the iteration cap is reached. Explicit alpha/PIP and joint modes may stop
+on a lagged cycle after `min_iter`, reporting `cycle_detected` with convergence
+false. A successful criterion takes precedence over a cycle diagnostic.
+
+Only an actual NaN objective in ELBO mode permits the labelled alpha/PIP
+fallback. The initial −∞ sentinel or an overflowing difference between finite
+objectives does not. A NaN objective in joint mode, or an infinite objective in
+any mode, reports `numerical_failure`. Numerical failure may stop before
+`min_iter`; successful and cycle exits respect it. Every stop retains the
+complete current posterior; components are not averaged across states.
 Read [convergence and refinement](post_analysis.md) for thresholds, continuation,
 tracking costs and the distinction between stopping and finding a better solution.
 
