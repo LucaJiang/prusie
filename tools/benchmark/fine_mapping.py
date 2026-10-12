@@ -54,6 +54,25 @@ def run_case(inputs, stage='C'):
     return prusie.susie_rss(**inputs)
 
 
+def memory_boundary(prefix, phase):
+    """Coordinate fresh-process RSS sampling, outside all timing calls.
+
+    The external sampler reads current resident memory after inputs and GC,
+    acknowledges readiness, then samples until the returned fit is retained.
+    Files must use a unique prefix. This protocol never subtracts high-water marks.
+    """
+    if prefix is None:
+        return
+    marker = Path(str(prefix) + '.' + phase)
+    marker.write_text(str(os.getpid()) + '\n')
+    acknowledgement = Path(str(prefix) + ('.go' if phase == 'ready' else '.release'))
+    deadline = time.monotonic() + 60
+    while not acknowledgement.exists():
+        if time.monotonic() >= deadline:
+            raise RuntimeError('Memory sampler did not acknowledge ' + phase)
+        time.sleep(.002)
+
+
 def summarize_fit(fit):
     return dict(niter=int(fit.niter), converged=bool(fit.converged),
                 cs_count=len(fit.sets['cs_index']),
@@ -186,7 +205,11 @@ def main():
     parser.add_argument('--mode', choices=('validate', 'time', 'memory'), required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--repeats', type=int, default=7)
+    parser.add_argument('--memory-marker', type=Path,
+                        help='Unique file prefix for an external RSS sampler (memory mode only)')
     args = parser.parse_args()
+    if args.memory_marker is not None and args.mode != 'memory':
+        parser.error('--memory-marker requires --mode memory')
     record = dict(stage='C', backend='prusie', mode=args.mode, status='error',
                   time_seconds=None, peak_rss_mib=None, numerical_errors=None)
     exit_code = 1
@@ -210,6 +233,7 @@ def main():
         for repeat in repeats:
             fit = None
             gc.collect()
+            memory_boundary(args.memory_marker, 'ready')
             with warnings.catch_warnings(record=True) as caught:
                 warnings.simplefilter('always')
                 start_epoch = time.time()
@@ -217,6 +241,7 @@ def main():
                 fit = run_case(inputs)
                 elapsed = (time.perf_counter_ns() - start) / 1e9
                 end_epoch = time.time()
+            memory_boundary(args.memory_marker, 'done')
             # Capture HWM before serialization, hash buffers, or diagnostic arrays.
             peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
             sample = dict(repeat=repeat, warmup=args.mode == 'time' and repeat == 0,

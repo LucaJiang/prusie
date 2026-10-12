@@ -52,6 +52,18 @@ load_case <- function(case) {
     list(arguments=c(list(z=z,R=R),params),variant_ids=ids)
 }
 run_case <- function(inputs) do.call(susieR::susie_rss,inputs$arguments)
+memory_boundary <- function(phase) {
+    prefix <- arg[['memory-marker']]
+    if (is.null(prefix)) return(invisible(NULL))
+    stopifnot(arg$mode=='memory')
+    writeLines(as.character(Sys.getpid()),paste0(prefix,'.',phase))
+    ack <- paste0(prefix,if (phase=='ready') '.go' else '.release')
+    deadline <- proc.time()[['elapsed']]+60
+    while (!file.exists(ack)) {
+        if (proc.time()[['elapsed']]>deadline) stop('Memory sampler acknowledgement timed out')
+        Sys.sleep(.002)
+    }
+}
 summarize_fit <- function(fit) list(
     niter=fit$niter,converged=fit$converged,
     cs_count=length(fit$sets$cs_index),
@@ -115,12 +127,14 @@ tryCatch({
     samples <- list(); fit <- NULL
     for (i in indices) {
         fit <- NULL; gc(verbose=FALSE)
+        memory_boundary('ready')
         warns <- character()
         start_epoch <- as.numeric(Sys.time()); start <- clock()
         fit <- withCallingHandlers(run_case(inputs),
           warning=function(w) {warns<<-c(warns,conditionMessage(w));invokeRestart('muffleWarning')},
           message=function(w) {warns<<-c(warns,conditionMessage(w));invokeRestart('muffleMessage')})
         elapsed <- clock()-start; end_epoch <- as.numeric(Sys.time())
+        memory_boundary('done')
         peak <- peak_rss()
         samples[[length(samples)+1L]] <- c(list(repeat_index=i,'repeat'=i,
           warmup=arg$mode=='time' && i==0L,
