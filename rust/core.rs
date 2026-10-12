@@ -7,7 +7,7 @@
 
 pub mod diagnostics;
 pub(crate) mod input_validation;
-use diagnostics::{Diagnostics, FitControl, Snapshot};
+use diagnostics::{Diagnostics, FitControl, Snapshot, StopDecision};
 #[path = "optimizer.rs"]
 mod optimizer;
 
@@ -1727,13 +1727,14 @@ pub fn fit_controlled(
     } else {
         "none"
     };
-    let max_z = diagonal
+    // In the prepared coordinates, |Xty_j| / sqrt(XtX_jj) is independent of
+    // residual variance. Divide by the CURRENT sigma below, after each sweep
+    // and before its variance update (susieR validate_prior.ss). Zero-information
+    // columns contribute no z score; an entirely empty set keeps R's -Inf max.
+    let max_abs_score = diagonal
         .iter()
         .zip(xty)
-        .filter_map(|(&d, &r)| {
-            let z = ((1.0 / d) * r) / (options.residual_variance / d).sqrt();
-            (!z.is_nan()).then_some(z.abs())
-        })
+        .filter_map(|(&d, &r)| (d > 0.).then(|| r.abs() / d.sqrt()))
         .fold(f64::NEG_INFINITY, f64::max);
     let size = options.l * p;
     let mut output = FitOutput {
@@ -1952,6 +1953,7 @@ pub fn fit_controlled(
                 *fitted += increment;
             }
         }
+        let max_z = max_abs_score / output.sigma2.sqrt();
         if options.check_prior && output.v.iter().any(|&v| v > 100.0 * max_z * max_z) {
             return Err("The estimated prior variance is unreasonably large; check summary statistics and LD consistency".into());
         }
@@ -1966,6 +1968,17 @@ pub fn fit_controlled(
         let elbo = -n / 2.0 * (2.0 * PI * output.sigma2).ln()
             - 1.0 / (2.0 * output.sigma2) * er2
             - sum(output.kl.iter().copied());
+        if !elbo.is_finite()
+            && output
+                .alpha
+                .iter()
+                .chain(&output.mu)
+                .chain(&output.mu2)
+                .chain(&output.v)
+                .any(|x| !x.is_finite())
+        {
+            return Err("Numerical failure: nonfinite posterior state".into());
+        }
         output.elbo.push(elbo);
         output.niter = iteration + 1;
         let improvement = elbo - previous_elbo;
@@ -2025,9 +2038,6 @@ pub fn fit_controlled(
             snapshot.events.push("elbo_decreased".into());
             output.diagnostics.decrease_count += 1;
         }
-        let posterior_stable = snapshot.delta_alpha.is_some_and(|d| d < control.alpha_tol)
-            && snapshot.delta_pip.is_some_and(|d| d < control.pip_tol);
-        let elbo_stable = diagnostics::elbo_stable(improvement, options.tol);
         output.diagnostics.effective_criterion = control.criterion.clone();
         if let Some((lag, da, dp)) = diagnostics::detect_cycle(
             &output.alpha,
@@ -2049,30 +2059,25 @@ pub fn fit_controlled(
                 .into(),
             );
         }
-        if iteration + 1 >= control.min_iter {
-            output.converged = match control.criterion.as_str() {
-                "alpha_pip" => posterior_stable,
-                "joint" => elbo_stable && posterior_stable,
-                _ => elbo_stable,
-            };
-            // Preserve the historical nonfinite fallback, but never average alpha
-            // alone and never recalculate the previous PIP with current activity.
-            if control.criterion == "elbo" && !improvement.is_finite() {
-                output.diagnostics.effective_criterion = "alpha_pip_nonfinite_fallback".into();
-                output.diagnostics.fallback_iterations.push(iteration + 1);
-                output.converged = posterior_stable;
-                output.warnings.push(format!(
-                    "Nonfinite ELBO improvement at iteration {}; using alpha/PIP convergence",
-                    iteration + 1
-                ));
-            }
+        let (decision, fallback) = diagnostics::stopping_decision(control, &snapshot, options.tol);
+        if fallback {
+            output.diagnostics.effective_criterion = "alpha_pip_nonfinite_fallback".into();
+            output.diagnostics.fallback_iterations.push(iteration + 1);
+            output.warnings.push(format!(
+                "NaN ELBO at iteration {}; using alpha/PIP convergence",
+                iteration + 1
+            ));
         }
-        let cycle_stop = snapshot.cycle_lag.is_some_and(|lag| lag > 1);
-        if cycle_stop {
-            output.converged = false;
-            output.diagnostics.stop_reason = "cycle_detected".into();
-        } else if output.converged {
-            output.diagnostics.stop_reason = "criterion_satisfied".into();
+        output.converged = decision == StopDecision::Converged;
+        output.diagnostics.stop_reason = match decision {
+            StopDecision::Converged => "criterion_satisfied",
+            StopDecision::Cycle => "cycle_detected",
+            StopDecision::NumericalFailure => "numerical_failure",
+            StopDecision::Continue => "iteration_limit",
+        }
+        .into();
+        if decision == StopDecision::NumericalFailure {
+            snapshot.events.push("numerical_failure".into());
         }
         if control.track > 0 {
             // Compact mode alpha is thresholded at the binding; only dense mode
@@ -2107,7 +2112,7 @@ pub fn fit_controlled(
         snapshot.alpha_entries.clear();
         snapshot.omitted_mass.clear();
         output.diagnostics.last = Some(snapshot);
-        if output.converged || cycle_stop {
+        if decision != StopDecision::Continue {
             break;
         }
         previous_alpha = Some(output.alpha.clone());
@@ -2544,6 +2549,64 @@ mod tests {
             prior_tol: 1e-9,
             null_index: None,
         }
+    }
+
+    #[test]
+    fn prior_guard_uses_current_and_warm_start_residual_variance() {
+        let mut settings = options(2);
+        settings.prior_variance = 50.;
+        settings.check_prior = true;
+        settings.estimate_residual_variance = true;
+        settings.max_iter = 1;
+        let q = [9., 0., 0., 9.];
+        for method in ["none", "EM"] {
+            settings.estimate_prior_variance = method != "none";
+            settings.estimate_prior_method = if method == "none" { "optim" } else { method }.into();
+            let first = fit(&q, &[3., 0.], 100000., 10., &settings).unwrap();
+            assert!(first.sigma2 > 1000.);
+            assert!(first.v[0] < 100.);
+            settings.max_iter = 2;
+            let error = fit(&q, &[3., 0.], 100000., 10., &settings).err().unwrap();
+            assert!(error.contains("prior variance is unreasonably large"));
+            settings.estimate_residual_variance = false;
+            assert!(fit(&q, &[3., 0.], 100000., 10., &settings).is_ok());
+            settings.estimate_residual_variance = true;
+            settings.max_iter = 1;
+        }
+        settings.estimate_prior_variance = false;
+        settings.estimate_residual_variance = false;
+        let control = FitControl {
+            initial: Some(diagnostics::InitialState {
+                alpha: vec![0.5, 0.5],
+                mu: vec![0., 0.],
+                mu2: vec![0., 0.],
+                v: Some(vec![50.]),
+                sigma2: Some(10000.),
+            }),
+            ..FitControl::default()
+        };
+        assert!(fit_controlled(
+            &q,
+            &[3., 0.],
+            100000.,
+            10.,
+            &settings,
+            false,
+            None,
+            &control
+        )
+        .err()
+        .unwrap()
+        .contains("prior variance is unreasonably large"));
+    }
+
+    #[test]
+    fn no_information_prior_guard_preserves_empty_maximum() {
+        let mut settings = options(2);
+        settings.check_prior = true;
+        let fit = fit(&[0.; 4], &[0.; 2], 99., 100., &settings).unwrap();
+        assert!(fit.converged);
+        assert_eq!(fit.v, vec![0.2]);
     }
 
     #[test]

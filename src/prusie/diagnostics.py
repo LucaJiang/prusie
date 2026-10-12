@@ -8,7 +8,17 @@ class ConvergenceConfig:
 
     ``elbo`` requires 0 ≤ ΔELBO < fit tol. ``alpha_pip`` requires both
     maximum absolute distances below their tolerances. ``joint`` requires all
-    three. Cycles retain the entire current state and are not convergence.
+    three. For finite objectives, lagged cycles are diagnostic only in ``elbo``
+    mode. In ``alpha_pip`` and ``joint`` modes they may stop a fit, retaining
+    the entire current state with ``converged=False``. Both successful and
+    cycle exits respect ``min_iter``; ``cycle_lag`` controls the diagnostic
+    history in every mode.
+
+    A NaN objective permits an explicitly reported alpha/PIP fallback in
+    ``elbo`` mode after ``min_iter``. Joint mode cannot satisfy its objective
+    condition with NaN. Infinite objectives stop as numerical failures in
+    every mode, even before ``min_iter``. The first finite objective following
+    the initial −infinity sentinel is never a fallback or convergence check.
     """
     criterion: str = 'elbo'
     alpha_tol: float = 1e-4
