@@ -27,7 +27,13 @@ read_doubles <- function(path,n) {
 load_case <- function(case) {
     m <- as.integer(case$n_variants)
     z <- read_doubles(absolute(case$z_path),m)
-    if (!is.null(case$R_column_major_path)) {
+    if (!is.null(case$R_gzip_path)) {
+        con <- gzfile(absolute(case$R_gzip_path),'rb')
+        R <- readBin(con,'double',n=m*m,size=8L,endian='little')
+        stopifnot(length(R)==m*m,length(readBin(con,'raw',n=1L))==0L)
+        close(con)
+        dim(R) <- c(m,m)
+    } else if (!is.null(case$R_column_major_path)) {
         R <- read_doubles(absolute(case$R_column_major_path),m*m)
         dim(R) <- c(m,m)
     } else {
@@ -113,7 +119,7 @@ identity <- function() {
 record <- list(case_id=case$case_id,stage='C',backend='susieR',mode=arg$mode,
                n_variants=case$n_variants,L=case$parameters$L,parameters=case$parameters,
                status='error',time_seconds=NULL,peak_rss_mib=NULL,numerical_errors=NULL,
-               matrix_load=if (is.null(case$R_column_major_path)) 'row-major conversion' else 'column-major direct')
+               matrix_load=if (!is.null(case$R_gzip_path)) 'lossless gzip, column-major direct' else if (is.null(case$R_column_major_path)) 'row-major conversion' else 'column-major direct')
 exit_code <- 1L
 tryCatch({
     inputs <- load_case(case)

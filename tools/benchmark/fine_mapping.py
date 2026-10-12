@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import ctypes
 import gc
+import gzip
 import hashlib
 import json
 import os
@@ -30,7 +31,9 @@ THREAD_VARS = ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
 def read_case(path):
     path = Path(path).resolve()
     case = json.loads(path.read_text())
-    for key in ('z_path', 'R_path', 'variant_ids_path'):
+    for key in ('z_path', 'R_path', 'variant_ids_path', 'R_gzip_path'):
+        if key not in case:
+            continue
         case[key] = str((path.parent / case[key]).resolve())
     return case
 
@@ -39,7 +42,23 @@ def load_case(case):
     """Load exactly one trait, preserving every signed float64 input and SNP."""
     m = int(case['n_variants'])
     z = np.fromfile(case['z_path'], dtype='<f8')
-    R = np.fromfile(case['R_path'], dtype='<f8')
+    if 'R_gzip_path' in case:
+        # Lossless input transport only: materialize the same writable dense
+        # array before the fit clock, with bounded decompression buffers.
+        R = np.empty(m*m, dtype='<f8')
+        view = memoryview(R).cast('B')
+        offset = 0
+        with gzip.open(case['R_gzip_path'], 'rb') as stream:
+            while offset < len(view):
+                count = stream.readinto(view[offset:offset+1024*1024])
+                if not count:
+                    raise ValueError('Compressed matrix is shorter than declared')
+                offset += count
+            if stream.read(1):
+                raise ValueError('Compressed matrix is longer than declared')
+        del view
+    else:
+        R = np.fromfile(case['R_path'], dtype='<f8')
     if z.size != m or R.size != m * m:
         raise ValueError('Declared variant count does not match input byte counts')
     ids = Path(case['variant_ids_path']).read_text().splitlines()
