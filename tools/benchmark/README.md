@@ -30,6 +30,33 @@ without competing builds or numerical tests. Peak memory is a separate fresh
 process per case/backend and includes interpreter, imports, inputs and result.
 Linux high-water KiB is converted to MiB.
 
+`--sample-rss` additionally records current resident memory after imports, input
+loading and GC, then samples through the returned fit before export. The target
+interval is 2 ms; actual sample count and largest gap are recorded. Sampled peak
+minus this current baseline is an incremental **lower bound**: short allocation
+spikes may fall between samples. The full-process high-water mark is retained as
+a separate metric. No historical high-water marks are subtracted. The readiness
+handshake is used only in fresh memory processes, never timed calls.
+
+## Controlled dense scaling
+
+```sh
+python tools/benchmark/prepare_scaling.py --output scaling-inputs
+python tools/benchmark/compare_r.py --rscript Rscript \
+  --blas-probe benchmark-work/blas_probe.so --case-manifest scaling-inputs/tasks.json \
+  --sample-rss --output-dir scaling-results
+```
+
+The fixed sizes are 500, 1,000, 2,000, 4,000, 10,000 and 20,000 variants. Inputs
+use dense AR(1) correlation (ρ = 0.4), three fixed effects plus a small deterministic
+oscillation, L = 5, fixed residual variance, estimated prior variance, tol = 0.001
+and max_iter = 100. These performance fixtures are not a simulation study.
+Actual iterations and convergence remain in each record. Generation streams rows
+to disk; a 20,000-variant matrix alone occupies 3.2 GB. Each case records a rough
+four-matrix-plus-2-GiB allocation estimate. Check available address space before
+running and retain allocation failures; the estimate does not guarantee a fit.
+`--sizes` can explicitly select a smaller panel before any fitting outcomes.
+
 Every completed settings-matched timing pair with valid positive times is
 included, independently of numerical differences, convergence and CS presence.
 `max_iter` is an iteration budget, not a requirement to execute all iterations.

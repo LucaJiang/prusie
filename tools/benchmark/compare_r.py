@@ -11,24 +11,34 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 import numpy as np
 
 from compare_fits import compare
 from prepare_fixture import prepare, ROOT
 from prepare_teaching import prepare as prepare_teaching
+from rss_sampler import Sampler
 
 HERE = Path(__file__).resolve().parent
 
 
 def invoke(command, output, environment):
+    sampler = Sampler(str(output)+'.marker') if '--memory-marker' in command else None
     with output.with_suffix('.log').open('w') as log:
-        process = subprocess.run(command, env=environment, stdout=log, stderr=subprocess.STDOUT)
+        process = subprocess.Popen(command, env=environment, stdout=log, stderr=subprocess.STDOUT)
+        while process.poll() is None:
+            if sampler is not None:
+                sampler.poll()
+            time.sleep(.002 if sampler else .05)
     if output.exists():
         record = json.loads(output.read_text())
     else:
         record = dict(status='error', error='Backend exited without a JSON record',
                       time_seconds=None, peak_rss_mib=None)
+        output.write_text(json.dumps(record, indent=2) + '\n')
+    if sampler is not None:
+        record['fit_stage_memory'] = sampler.result()
         output.write_text(json.dumps(record, indent=2) + '\n')
     return record, process.returncode
 
@@ -42,12 +52,20 @@ def main():
     parser.add_argument('--repeats', type=int, default=7)
     parser.add_argument('--validation-only', action='store_true')
     parser.add_argument('--fixture', choices=('independent', 'regression'), default='independent')
+    parser.add_argument('--case-manifest', type=Path,
+                        help='Frozen list of case_path records, such as prepare_scaling.py tasks.json')
+    parser.add_argument('--sample-rss', action='store_true',
+                        help='Also sample current RSS during fresh memory calls (Linux)')
     args = parser.parse_args()
     if not args.validation_only and (args.repeats < 7 or args.blas_probe is None):
         parser.error('Timing requires --blas-probe and at least seven retained repeats')
     out = args.output_dir.resolve()
     out.mkdir(parents=True, exist_ok=False)
-    if args.fixture == 'independent':
+    if args.case_manifest:
+        tasks = json.loads(args.case_manifest.read_text())
+        paths = [(args.case_manifest.resolve().parent/task['case_path']).resolve() for task in tasks]
+        manifest = {'cases':list(map(str,paths)), 'timed_cases':list(map(str,paths))}
+    elif args.fixture == 'independent':
         case_file = prepare_teaching(ROOT / 'src/prusie/data/teaching', out / 'inputs')
         manifest = {'cases': [case_file.name], 'timed_cases': [case_file.name]}
     else:
@@ -67,6 +85,7 @@ def main():
                     memory='One separate fresh process and one full fit per case/backend; process HWM includes imports/loading',
                     summary='Geometric mean paired median-R/median-Python runtime; memory ratios reported separately',
                     validation_only=args.validation_only)
+    protocol['sample_current_rss'] = args.sample_rss
     (out / 'protocol.json').write_text(json.dumps(protocol, indent=2) + '\n')
     rows = []
     commands = []
@@ -74,7 +93,7 @@ def main():
         case_path = out / 'inputs' / filename
         case = json.loads(case_path.read_text())
         case_dir = out / case['case_id']
-        case_dir.mkdir()
+        case_dir.mkdir(parents=True)
         measurements = {}
         modes = ['validate']
         if filename in manifest['timed_cases'] and not args.validation_only:
@@ -89,6 +108,8 @@ def main():
                             '--repeats', str(args.repeats)]
                 if backend == 'R' and args.blas_probe:
                     command += ['--blas-probe', str(args.blas_probe.resolve())]
+                if mode == 'memory' and args.sample_rss:
+                    command += ['--memory-marker', str(dest)+'.marker']
                 record, status = invoke(command, dest, env)
                 measurements[backend, mode] = record
                 commands.append(dict(case_id=case['case_id'], backend=backend, mode=mode,
