@@ -24,11 +24,22 @@ class Sampler:
         self.samples = []
         self.baseline = None
         self.finished = False
+        self.process_error = None
 
     def marker(self, suffix):
         return Path(str(self.prefix) + '.' + suffix)
 
     def poll(self):
+        try:
+            self._poll()
+        except (FileNotFoundError, ProcessLookupError) as error:
+            # A backend killed by its resource limit may disappear between
+            # Popen.poll and the /proc read. Preserve the failed measurement.
+            self.process_error = str(error)
+
+    def _poll(self):
+        if self.process_error is not None:
+            return
         if self.finished:
             return
         if self.pid is None:
@@ -46,7 +57,8 @@ class Sampler:
 
     def result(self):
         if not self.finished:
-            return dict(status='incomplete', samples=len(self.samples))
+            return dict(status='incomplete', samples=len(self.samples),
+                        process_error=self.process_error)
         times, rss = zip(*self.samples)
         return dict(
             status='ok', baseline_rss_bytes=self.baseline,

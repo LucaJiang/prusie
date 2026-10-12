@@ -75,6 +75,7 @@ def memory_boundary(prefix, phase):
 
 def summarize_fit(fit):
     return dict(niter=int(fit.niter), converged=bool(fit.converged),
+                stop_reason=fit.convergence.get('stop_reason'),
                 cs_count=len(fit.sets['cs_index']),
                 cs_component_ids=[int(x) for x in fit.sets['cs_index']],
                 status='converged' if fit.converged else 'nonconverged')
