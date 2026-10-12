@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.4.dev2 — stopping and prior validation (unreleased)
+
+- Keep finite-ELBO fits running through repeated alpha/PIP diagnostics until the
+  ELBO criterion or iteration limit is reached; respect minimum iterations and
+  distinguish numerical failure from the first iteration's sentinel.
+- Evaluate the prior-variance guard using the residual variance at the current
+  checking phase, including continued fits.
+- Add a compact result representation and require an explicit model for the
+  isolated optional AI adapter. Save offline statistical outputs before any
+  opt-in explanation request.
+- Clarify convergence and refinement documentation, retain independent reference
+  regressions, and exclude historical review snapshots from source distributions.
+
 ## 0.2.4.dev1 — post-analysis (unreleased)
 
 - Preserve requested convergence controls across continuation, refinement and

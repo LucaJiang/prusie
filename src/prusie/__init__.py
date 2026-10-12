@@ -4,7 +4,7 @@ from .result import SusieResult
 from .datasets import load_example
 
 __all__ = ["susie_rss", "susie_suff_stat", "SusieResult", "load_example"]
-__version__ = "0.2.4.dev1"
+__version__ = "0.2.4.dev2"
 
 from .diagnostics import ConvergenceConfig, diagnose_convergence
 from .refinement import RefinementConfig, refine_fit, continue_fit, evaluate_objective

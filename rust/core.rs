@@ -1568,6 +1568,7 @@ pub fn fit(
     fit_layout(xtx, xty, yty, n, options, false)
 }
 
+#[cfg(test)]
 pub fn fit_layout(
     xtx: &[f64],
     xty: &[f64],
@@ -1579,6 +1580,7 @@ pub fn fit_layout(
     fit_layout_operator(xtx, xty, yty, n, options, column_major, None)
 }
 
+#[cfg(test)]
 pub fn fit_layout_operator(
     xtx: &[f64],
     xty: &[f64],

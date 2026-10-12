@@ -6,7 +6,7 @@ build-backend = "maturin"
 authors = [{name = "Wenxin Jiang"}]
 maintainers = [{name = "Wenxin Jiang"}]
 name = "prusie"
-version = "0.2.4.dev1"
+version = "0.2.4.dev2"
 description = "SuSiE summary-statistics inference with a native Rust IBSS core"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.26,<3"]
@@ -16,7 +16,7 @@ classifiers = ["License :: OSI Approved :: GNU General Public License v3 or late
 
 [project.urls]
 Repository = "https://github.com/LucaJiang/prusie"
-Documentation = "https://github.com/LucaJiang/prusie/tree/main/docs"
+Documentation = "https://lucajiang.github.io/prusie/"
 Issues = "https://github.com/LucaJiang/prusie/issues"
 
 [project.optional-dependencies]
@@ -27,8 +27,8 @@ analysis = ["scipy>=1.11", "matplotlib>=3.7"]
 python-source = "src"
 module-name = "prusie._native"
 features = ["extension-module", "vector-math"]
-exclude = ["dist/**", "target/**", "**/*.orig", "**/*.rej", "**/__pycache__/**", ".pytest_cache/**"]
-include = [{path = "src/prusie/data/**", format = ["wheel", "sdist"]}, {path = "docs/**", format = "sdist"}, {path = "docs/.nojekyll", format = "sdist"}, {path = "tests/**", format = "sdist"}, {path = "examples/**", format = "sdist"}, {path = "tools/**", format = "sdist"}, {path = ".github/**", format = "sdist"}, {path = ".github/workflows/ci.yml", format = "sdist"}, {path = "requirements-dev.lock", format = "sdist"}, {path = "CITATION.cff", format = "sdist"}, {path = "CHANGELOG.md", format = "sdist"}, {path = "THIRD_PARTY_NOTICES.md", format = "sdist"}]
+exclude = ["dist/**", "target/**", "**/*.orig", "**/*.rej", "**/__pycache__/**", ".pytest_cache/**", "docs/review/**"]
+include = [{path = "dev/references/**", format = "sdist"}, {path = "src/prusie/data/**", format = ["wheel", "sdist"]}, {path = "docs/**", format = "sdist"}, {path = "docs/.nojekyll", format = "sdist"}, {path = "tests/**", format = "sdist"}, {path = "examples/**", format = "sdist"}, {path = "tools/**", format = "sdist"}, {path = ".github/**", format = "sdist"}, {path = ".github/workflows/ci.yml", format = "sdist"}, {path = "requirements-dev.lock", format = "sdist"}, {path = "CITATION.cff", format = "sdist"}, {path = "CHANGELOG.md", format = "sdist"}, {path = "THIRD_PARTY_NOTICES.md", format = "sdist"}]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
