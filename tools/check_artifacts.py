@@ -18,6 +18,9 @@ import sys
 import tarfile
 import tomllib
 import zipfile
+from license_check import check_licenses, notice_text
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def sha(path):
@@ -38,25 +41,25 @@ def inspect_wheel(path):
                     'prusie/data/teaching/metadata.json', 'prusie/data/teaching/reference.npz',
                     'prusie/data/teaching/reference.json', 'prusie/data/teaching/checksums.json',
                     'prusie/data/teaching/LICENSE.txt', 'prusie/__init__.py', 'prusie/api.py', 'prusie/result.py',
-                    'prusie/_licenses/LICENSE-R', 'prusie/_licenses/LICENSE-susieR',
-                    'prusie/_licenses/LICENSE-susieR-0.16.6',
-                    'prusie/_licenses/THIRD_PARTY_NOTICES.md',
-                    'prusie/_licenses/Rust_THIRD_PARTY_NOTICES.md']
+                    'prusie/data/convergence/LICENSE.txt',
+                    'prusie/data/convergence/LICENSE-BSD-3-Clause.txt']
         assert all(n in names for n in required), 'Missing wheel code/license payload'
         native = [n for n in names if n.startswith('prusie/_native.') and n.endswith(('.so', '.pyd'))]
         assert len(native) == 1, 'Wheel must include one native extension'
-        assert any(n.startswith(dist + '/licenses/') and n.endswith('/LICENSE') for n in names), 'Missing main license'
-        assert any(n.startswith('prusie/_licenses/cargo/') for n in names), 'Missing Rust dependency licenses'
-        notice = archive.read('prusie/_licenses/THIRD_PARTY_NOTICES.md').decode()
-        assert 'Redistribution and use in source and binary forms' in notice
-        assert 'THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS' in notice
-        assert 'GPL-2.0-or-later' in notice and 'GPL-3.0-or-later' in notice
+        license_check = check_licenses(ROOT)
+        for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+            members = [n for n in names if n.startswith(dist + '/licenses/') and n.endswith('/' + name)]
+            assert len(members) == 1, f'Missing or duplicated distribution notice: {name}'
+            assert archive.read(members[0]) == (ROOT / name).read_bytes(), f'Altered distribution notice: {name}'
+        assert 'License-Expression: GPL-3.0-or-later' in metadata
+        assert not any(n.startswith('prusie/_licenses/') for n in names), 'Obsolete duplicated notice directory'
         assert not any('/docs/review/' in n or n.startswith(('docs/', 'tests/', 'dev/')) for n in names)
         return dict(filename=path.name, sha256=sha(path), compressed_bytes=path.stat().st_size,
                     unpacked_bytes=sum(x.file_size for x in archive.infolist()), WHEEL=wheel, METADATA=metadata,
                     runtime_requirements=requirements, docs_dependencies_absent=True,
                     native_members=native,
                     native_sha256=hashlib.sha256(archive.read(native[0])).hexdigest(),
+                    license_content_verified=license_check,
                     license_members=[n for n in names if 'license' in n.lower() or 'notices' in n.lower()])
 
 
@@ -114,20 +117,26 @@ def main():
                     'src/prusie/data/teaching/metadata.json', 'src/prusie/data/teaching/LICENSE.txt',
                     'tools/generate_example.py', 'tools/generate_results.py', 'Cargo.toml', 'Cargo.lock', 'build.rs', 'rust-toolchain.toml',
                     'bindings/lib.rs', 'rust/core.rs', 'rust/optimizer.rs', 'rust/vector_math.c',
-                    'rust/LICENSE-R', 'rust/LICENSE-susieR', 'rust/LICENSE-susieR-0.16.6',
-                    'LICENSE', 'THIRD_PARTY_NOTICES.md', 'src/prusie/_licenses/THIRD_PARTY_NOTICES.md',
+                    'LICENSE', 'THIRD_PARTY_NOTICES.md', 'tools/license_check.py', 'tools/notice_manifest.json',
                     'tests/test_reference.py', 'tests/test_offline_example.py',
                     'dev/references/restricted_numpy_susie.py', 'tests/data/cycle_seed312.npz',
                     'examples/data/inputs.npz', 'examples/data/r_fits.npz',
                     'examples/data/LICENSE.GPL-3', 'examples/check_example.py',
                     'tools/math_render.py', 'tools/render_math.cjs', 'tools/model_examples.py',
                     'tools/math-assets.lock.json', 'tools/vendor/katex/katex.js',
-                    'tools/vendor/katex/LICENSE', 'docs/assets/katex/LICENSE',
+                    'docs/notices.html',
                     'docs/assets/katex/katex.min.css', 'tests/test_math_docs.py']
         assert all((source / name).is_file() for name in required), 'Incomplete buildable sdist'
         record['sdist']['required_source_payload'] = {n: sha(source / n) for n in required}
+        record['sdist']['license_content_verified'] = check_licenses(source)
+        for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+            assert (source / name).read_bytes() == (ROOT / name).read_bytes(), f'Source notice mismatch: {name}'
+        assert not (source / 'src/prusie/_licenses').exists(), 'Obsolete duplicated notice directory'
         math_assets = json.loads((source/'tools/math-assets.lock.json').read_text())
         assert all(sha(source/name) == expected for name, expected in math_assets['files'].items())
+        math_notice = math_assets['notice']
+        text = notice_text((source / math_notice['source']).read_text(), math_notice['id'])
+        assert hashlib.sha256(text.encode()).hexdigest() == math_notice['sha256']
         record['sdist']['math_assets_verified'] = len(math_assets['files'])
         record['sdist']['math_license'] = math_assets['license']
 

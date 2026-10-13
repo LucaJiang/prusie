@@ -24,6 +24,8 @@
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="numerical_accuracy.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
+<li><a href="#current-development-version-024dev2">Current development version: 0.2.4.dev2</a></li>
+<li><a href="#historical-comparison-023rc4">Historical comparison: 0.2.3rc4</a></li>
 <li><a href="#variant-inclusion-probabilities">Variant inclusion probabilities</a></li>
 <li><a href="#posterior-arrays-bayes-factors-and-objective">Posterior arrays, Bayes factors and objective</a></li>
 <li><a href="#credible-sets">Credible sets</a></li>
@@ -32,6 +34,91 @@
 </ul>
 </div>
 </details><h1 id="numerical-accuracy">Numerical accuracy</h1>
+<h2 id="current-development-version-024dev2">Current development version: 0.2.4.dev2</h2>
+<p>New comparisons against susieR 0.16.6 at commit <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>
+use compute commit <code>ff379ada284a63a3cf1770d43faacc6b929dc923</code>. All 200 frozen real
+trait analyses pass maximum absolute PIP error ≤10⁻⁵ with zero relative tolerance,
+plus input, model and probability validity checks. Iteration counts, convergence
+flags and credible-set component/member identities agree in all 200 cases.
+CS order is immaterial; sets are matched by their original component IDs.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Quantity</th>
+<th>GWAS maximum absolute difference</th>
+<th>eQTL maximum absolute difference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PIP</td>
+<td>9.139611×10⁻⁹</td>
+<td>1.220497×10⁻⁸</td>
+</tr>
+<tr>
+<td>alpha</td>
+<td>9.140027×10⁻⁹</td>
+<td>1.220497×10⁻⁸</td>
+</tr>
+<tr>
+<td>mu</td>
+<td>5.260663×10⁻¹⁰</td>
+<td>2.340635×10⁻⁸</td>
+</tr>
+<tr>
+<td>mu2</td>
+<td>1.394811×10⁻¹⁰</td>
+<td>3.704008×10⁻⁹</td>
+</tr>
+<tr>
+<td>V</td>
+<td>4.078631×10⁻⁶</td>
+<td>1.486289×10⁻⁷</td>
+</tr>
+<tr>
+<td>sigma2</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>ELBO</td>
+<td>1.000124×10⁻⁵</td>
+<td>3.917756×10⁻⁸</td>
+</tr>
+<tr>
+<td>KL</td>
+<td>7.010086×10⁻⁸</td>
+<td>1.171606×10⁻⁷</td>
+</tr>
+<tr>
+<td>lbf</td>
+<td>2.821602×10⁻⁵</td>
+<td>2.743060×10⁻⁷</td>
+</tr>
+<tr>
+<td>lbf_variable</td>
+<td>2.821542×10⁻⁵</td>
+<td>3.389438×10⁻⁷</td>
+</tr>
+</tbody>
+</table></div>
+<p>Intermediate fields are retained as diagnostics using absolute and relative
+tolerances of 10⁻⁶. Region25/GWAS exceeds that diagnostic rule for V and
+lbf_variable; its PIP passes the stated PIP criterion. Maximum credible-set
+coverage differences are 2.14×10⁻⁹ (GWAS) and 2.59×10⁻⁹ (eQTL); maximum purity
+difference is 8.88×10⁻¹⁶ in both groups. These results describe standard fits with
+the <a href="performance.html#methods">fixed real-panel settings</a>.</p>
+<p>A separate parameter panel executes the same pinned R reference for 58 outcomes:
+54 returned fits and four expected prior-guard errors. It covers RSS and sufficient
+statistics, fixed and estimated residual variance, optim/EM/simple/fixed prior
+variance, nonuniform priors, standardization and stopping regressions. All 54
+returned fits pass PIP and validity checks; the four error cases match the
+expected prior-guard rejection in both implementations. A restricted independent NumPy reference also passes
+31 supported comparisons; it rejects unsupported boundary inputs explicitly.
+The preserved cycling example converges in 49 sweeps in both implementations,
+with zero maximum PIP difference. Refinement is tested separately and retains
+the <a href="post_analysis.html#refinement-compared-with-susier">documented search differences</a>.</p>
+<h2 id="historical-comparison-023rc4">Historical comparison: 0.2.3rc4</h2>
 <p>The historical real-data comparison uses prusie 0.2.3rc4 and susieR 0.16.6 at commit
 <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>. It reanalyzes saved full fits from
 6 October 2026 using the matched inputs and parameters described in

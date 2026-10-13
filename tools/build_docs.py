@@ -12,6 +12,7 @@ from pathlib import Path
 import markdown
 from pygments.formatters import HtmlFormatter
 from math_render import StaticMath, check_assets
+from license_check import check_licenses
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
@@ -90,6 +91,7 @@ def page_toc(filename: str, markdown_document) -> str:
 
 def build(check: bool = False) -> None:
     check_assets()
+    check_licenses(ROOT)
     config = json.loads((ROOT / "tools/site_config.json").read_text())
     version = re.search(
         r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M
@@ -169,6 +171,25 @@ def build(check: bool = False) -> None:
             stale.append("docs/assets/highlight.css")
     else:
         css_path.write_text(css)
+    # Pages is distributed independently of the source root. Render the two
+    # authoritative root files so attribution also remains available offline.
+    notices = '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">' \
+        '<meta name="viewport" content="width=device-width, initial-scale=1">' \
+        '<title>License and third-party notices · prusie</title>' \
+        '<style>body{max-width:80ch;margin:2em auto;padding:0 1em;' \
+        'font:16px/1.6 sans-serif}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>' \
+        '</head><body><p><a href="citation.html">Citation and license</a></p>' \
+        '<h1>License and third-party notices</h1>' \
+        '<p>Generated from the authoritative repository root files.</p>'
+    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
+        notices += f'<h2>{name}</h2><pre>{html.escape((ROOT / name).read_text())}</pre>'
+    notices += '</body></html>\n'
+    notice_path = DOCS / "notices.html"
+    if check:
+        if not notice_path.exists() or notice_path.read_text() != notices:
+            stale.append("docs/notices.html")
+    else:
+        notice_path.write_text(notices)
     if stale:
         raise SystemExit("Stale rendered documentation: " + ", ".join(stale))
     if not check:

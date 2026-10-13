@@ -21,7 +21,10 @@ COLORS = {'prusie': '#0072B2', 'susieR': '#D55E00'}
 def save(fig, output, name):
     for ext in ('svg', 'png'):
         metadata = {'Date': None} if ext == 'svg' else {'Software': 'prusie benchmark tools'}
-        fig.savefig(output / (name + '.' + ext), bbox_inches='tight', dpi=180, metadata=metadata)
+        path = output / (name + '.' + ext)
+        fig.savefig(path, bbox_inches='tight', dpi=180, metadata=metadata)
+        if ext == 'svg':
+            path.write_text('\n'.join(line.rstrip() for line in path.read_text().splitlines())+'\n')
     plt.close(fig)
 
 
@@ -85,7 +88,10 @@ def main():
         ax.legend(frameon=False, fontsize=8)
     axes[0, 0].set_yscale('log')
     axes[0, 1].set_yscale('log')
-    axes[1, 1].set_yscale('log')
+    # A sampled increment can legitimately be zero when an allocation spike is
+    # missed or existing resident pages suffice. Keep that lower bound visible.
+    axes[1, 1].set_yscale('symlog', linthresh=.001)
+    axes[1, 1].set_ylim(bottom=0)
     save(fig, args.output, 'controlled_scaling')
 
 

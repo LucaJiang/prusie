@@ -8,11 +8,11 @@ maintainers = [{name = "Wenxin Jiang"}]
 name = "prusie"
 version = "0.2.4.dev2"
 description = "SuSiE summary-statistics inference with a native Rust IBSS core"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 dependencies = ["numpy>=1.26,<3"]
 readme = "README.md"
-license = { file = "LICENSE" }
-classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 
 [project.urls]
 Repository = "https://github.com/LucaJiang/prusie"

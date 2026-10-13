@@ -4,7 +4,6 @@
   "npm_integrity": "sha512-XCHRdUw4lf3SKBaJe4EvgqIuWwkPSo9XoeO8GjQW94Bp7TWv9hNhzZjZ+OH9yf1UmLygb7DIT5GSFQiyt16zYg==",
   "license": "MIT",
   "files": {
-    "docs/assets/katex/LICENSE": "766ccc1f306c885aa45542a9846bbd0a505b27a0374f146778171c2254ce18e3",
     "docs/assets/katex/fonts/KaTeX_AMS-Regular.ttf": "68534840bcfdd2bffb6f0e8deb48684dd01e7f04ea2813267577afb906de1d13",
     "docs/assets/katex/fonts/KaTeX_AMS-Regular.woff": "30da91e84c893f875e252689faebdc590b2871145e8adc7f9a9d4dbd8ce0b251",
     "docs/assets/katex/fonts/KaTeX_AMS-Regular.woff2": "0cdd387c9590a1a9f9794560022dbb59654a7d86f187aa0c81495ad42d3a7308",
@@ -66,7 +65,11 @@
     "docs/assets/katex/fonts/KaTeX_Typewriter-Regular.woff": "e14fed02b1aba7ce9f5afd5844b5d0321b22351febc720e0de8b8723527609f7",
     "docs/assets/katex/fonts/KaTeX_Typewriter-Regular.woff2": "71d517d67827787cfabdf186914cc3358eda539e37931941f2b2fd4a21f68c0b",
     "docs/assets/katex/katex.min.css": "19095127357ed6d29fe0a63a6b000c913a89f7f1963b765dd3715e97c9852e75",
-    "tools/vendor/katex/LICENSE": "766ccc1f306c885aa45542a9846bbd0a505b27a0374f146778171c2254ce18e3",
     "tools/vendor/katex/katex.js": "8f1f4fb1080439c012bb8fddf424fa253e9144ab4cdd7dc0eae0e92cd04a5e33"
+  },
+  "notice": {
+    "source": "THIRD_PARTY_NOTICES.md",
+    "id": "notice-766ccc1f306c885a",
+    "sha256": "766ccc1f306c885aa45542a9846bbd0a505b27a0374f146778171c2254ce18e3"
   }
 }

@@ -31,15 +31,18 @@
 </ul>
 </div>
 </details><h1 id="installation">Installation</h1>
-<p>Install prusie from source with Python ≥3.10. NumPy ≥1.26,&lt;3 is the only Python
+<p>Install prusie from source with CPython 3.10–3.13. NumPy ≥1.26,&lt;3 is the only Python
 runtime dependency; fitting does not invoke R.</p>
-<p>The source instructions below use <code>main</code>. This documentation describes the
-<strong>0.2.4.dev2 development snapshot</strong>; record the checkout revision with every
-analysis because development source can change.</p>
+<p>Repository <code>main</code> provides the <strong>0.2.4.dev2 development snapshot</strong> described here.
+It is not a stable release. Record the installed version and source revision
+with every analysis; the older prerelease assets below contain different code.</p>
 <h2 id="build-from-source">Build from source</h2>
 <p>Source builds need the Rust toolchain pinned in <code>rust-toolchain.toml</code> (1.98.1),
 a C linker and Python development headers. The build uses maturin 1.9.6 and
 locked Cargo dependencies.</p>
+<p>The pinned PyO3 0.23.5 build supports CPython through 3.13. Package metadata
+therefore requires Python ≥3.10,&lt;3.14; supporting newer interpreters needs a
+separate binding update and validation.</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>main<span class="w"> </span>https://github.com/LucaJiang/prusie.git
 <span class="nb">cd</span><span class="w"> </span>prusie
 python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
@@ -64,12 +67,18 @@ For that specific wheel:</p>
 </code></pre></div>
 
 <p>Installing a compatible wheel requires neither Cargo nor a compiler. A source
-distribution still requires the build toolchain above. Choose source installation
-for the development API; a wheel's version and platform tags identify the code
-and environment it supports.</p>
+distribution still requires the build toolchain above. Build from <code>main</code> for
+the documented development API. A wheel's version and platform tags identify
+the code and environment it supports; local validation builds are not published
+download assets.</p>
 <p>The published rc6 package checks cover CPython 3.12 on GNU Linux x86-64 with
 NumPy 2.2.6. These checks do not establish support for unbuilt platform wheels.
 See <a href="contributing.html">contributing</a> for reproducible builds and payload checks.</p>
+<p>The 0.2.4.dev2 development checks also exercised installed Linux x86-64 wheels
+on Python 3.10.12, 3.12.2 and 3.13.5. Valid NumPy combinations included 1.26.4,
+2.2.6 and 2.5.3. These local build checks do not imply that corresponding
+development wheels have been published or that other operating systems were
+tested.</p>
 <h2 id="optional-analysis-tools">Optional analysis tools</h2>
 <p>From the same checkout, install plotting and LD-diagnostic dependencies:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span>

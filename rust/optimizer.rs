@@ -4,7 +4,7 @@
 // Copyright (C) 2003-2004 The R Foundation.
 // Copyright (C) 1998-2023 The R Core Team.
 // R's routine derives from Richard Brent, Algorithms for Minimization
-// without Derivatives (1973). See LICENSE-R and THIRD_PARTY_NOTICES.md.
+// without Derivatives (1973). See the root THIRD_PARTY_NOTICES.md for R's terms.
 
 /// Minimize a scalar objective with the stopping and step rules used by
 /// R's `optim(method = "Brent")`. The tolerance is R optim's default reltol,

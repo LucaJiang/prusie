@@ -12,6 +12,11 @@
   opt-in explanation request.
 - Clarify convergence and refinement documentation, retain independent reference
   regressions, and exclude historical review snapshots from source distributions.
+- Clarify development-source installation and keep R comparisons distinct from
+  evidence for an individual optimization.
+- Remove unused imports and obsolete development constraints; centralize
+  license texts and dependency notices at the repository root, with verified
+  copies in built distributions and the offline documentation.
 
 ## 0.2.4.dev1 — post-analysis (unreleased)
 

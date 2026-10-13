@@ -1,5 +1,82 @@
 # Performance
 
+These measurements compare prusie with the pinned R implementation. They do
+not establish a speed improvement over an earlier prusie version. The dev2
+stopping and prior-variance changes correct numerical behavior; no direct
+before/after runtime claim is made for those fixes. Individual optimizations
+require a separate complete-call comparison in which more than half of the
+fixed applicable cases have lower median runtime.
+
+<!-- current:measurements:start -->
+## Current development version: 0.2.4.dev2
+
+Measured **0.2.4.dev2** against susieR 0.16.6.
+
+| Analysis | Cases | Maximum PIP error | Paired runtime speedup | Median full-process memory ratio |
+| --- | --- | --- | --- | --- |
+| GWAS | 100 | 9.14e-09 | 26.23× | 6.345× |
+| eQTL | 100 | 1.22e-08 | 21.62× | 6.24× |
+
+Runtime is the geometric mean of per-case susieR/prusie ratios of seven-repeat medians. Memory is the median ratio of fresh-process peaks, including interpreters and inputs. These are complete-call observations on a fixed panel, not measurements of a particular optimization.
+
+The numerical code, input panel and fitting parameters were frozen before these measurements. Compute commit: `ff379ada284a63a3cf1770d43faacc6b929dc923`. The measured CPython 3.12 wheel SHA256 is `7fbc1305a17dfeb2decf446c4703096d4a677a843ce0225641a9fe03300d139a`; the native extension SHA256 is `509f2f1b7c7f330807263241cd3f6e2ac122d938c43fd41c22a209f7a8643816`. Later documentation commits do not change that computation.
+
+| Analysis | prusie median (ms) | susieR median (ms) | Faster / tied / slower | prusie repeat IQR/median | susieR repeat IQR/median |
+| --- | --- | --- | --- | --- | --- |
+| GWAS | 5.185 | 141.7 | 100 / 0 / 0 | 0.09743 | 0.1439 |
+| eQTL | 4.613 | 88.13 | 100 / 0 / 0 | 0.101 | 0.1271 |
+
+Absolute runtime columns are across-case medians of within-case medians. Counts use every case in the fixed denominator; ties do not count as faster. Both unconverged and no-CS cases remain included. Per-repeat records and convergence/CS strata are retained in the downloads.
+
+![Current complete-call timings by variant count.](assets/current_20261012/runtime_by_variants.svg)
+
+| Analysis / backend | Full-process peak (MiB) | Current prefit RSS (MiB) | Sampled fit peak (MiB) | Sampled increment (MiB) |
+| --- | --- | --- | --- | --- |
+| GWAS / prusie | 41.21 | 39.01 | 41.21 | 2.312 |
+| GWAS / susieR | 265.9 | 237.7 | 265.9 | 28.18 |
+| eQTL / prusie | 41.31 | 39.11 | 41.31 | 2.291 |
+| eQTL / susieR | 261.5 | 237.7 | 261.5 | 23.74 |
+
+Each column is a separate across-case median. Full-process peak is a fresh process high-water mark. The prefit baseline is current resident memory after imports, inputs and GC. The sampled increment is the fit-stage sampled peak minus that same current baseline, never a difference of historical high-water marks. Target sampling interval is 2 ms; observed maximum intervals are retained. Short allocation spikes can be missed, so sampled peaks and increments are lower bounds.
+
+The largest observed sampling gaps on the real panel were 35.1 ms for prusie and 404.5 ms for R. Thus the target interval is not a guaranteed resolution, particularly for short fits. Full-process high-water marks remain the primary memory measure.
+
+![Current full-process RSS by variant count.](assets/current_20261012/memory_by_variants.svg)
+
+### Controlled dense scaling
+
+This separate deterministic panel fixes L=5, n=5000, AR(1) correlation rho=0.4 and effects [8,7,6] at [p//5,p//2,4p//5], with 0.15 cos(0.73j) background. It uses tol=0.001, max_iter=100, optimized prior variance and fixed residual variance 1. It is a computational measurement fixture.
+
+Independent validation passes the PIP criterion for all six scales (maximum absolute difference 2.62×10⁻¹¹), with matching convergence flags and CS members. At p=20,000, prusie takes three sweeps and R four; their ELBO trace lengths therefore differ. Complete-call timing retains that observed iteration difference.
+
+| Variables | Backend | Retained median (s) | Iterations | Converged | Full-process peak (MiB) | Sampled increment (MiB) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 500 | prusie | 0.006436 | 3 | True | 41.72 | 0.6641 |
+| 500 | susieR | 0.09579 | 3 | True | 265.9 | 28.36 |
+| 1000 | prusie | 0.01623 | 3 | True | 48.43 | 1.648 |
+| 1000 | susieR | 0.2449 | 3 | True | 280.7 | 35.35 |
+| 2000 | prusie | 0.06377 | 3 | True | 71.5 | 2.352 |
+| 2000 | susieR | 0.7726 | 3 | True | 389.8 | 121.8 |
+| 4000 | prusie | 0.2385 | 3 | True | 164.7 | 4.148 |
+| 4000 | susieR | 3.953 | 3 | True | 829.9 | 470.3 |
+| 10000 | prusie | 1.39 | 3 | True | 808.9 | 3.672 |
+| 10000 | susieR | 26.46 | 3 | True | 3819 | 2818 |
+| 20000 | prusie | 6.947 | 3 | True | 3106 | 14.26 |
+| 20000 | susieR | 102 | 4 | True | 1.385e+04 | 1.057e+04 |
+
+![Controlled scaling: complete-call time, fresh-process peak, iterations and sampled RSS.](assets/current_20261012/controlled_scaling.svg)
+
+All six sizes were attempted within a hard 16 GiB process address-space limit after allocation preflight. Lossless gzip transports are checked against the frozen complete matrix-byte hashes and fully materialized as dense arrays before fitting. This transport changes startup I/O; full-process RSS includes its actual loading cost. Curves connect measured sizes only. Any unavailable cells remain explicitly unavailable.
+
+### Current measurement protocol and records
+
+The full public-call boundary and matched settings are detailed under Methods below. One warmup precedes seven retained repeats; backends run sequentially with one numerical thread. Imports, file reads, explicit GC and exports are outside each fit clock. The machine was shared; host pressure and repeat variability were recorded. Process address space was limited to 16 GiB. The [current environment record](assets/current_20261012/protocol.json) identifies AMD EPYC 9754, Linux x86-64/glibc 2.35, CPython 3.12.2, NumPy 2.2.6, R 4.4.0/OpenBLAS 0.3.20 and the actual native/BLAS library hashes. Complete-call ratios do not isolate individual kernel costs.
+
+[Real-panel summary and strata](assets/current_20261012/real_summary.json) · [Real-panel case/repeat CSV](assets/current_20261012/real_cases.csv) · [Scaling summary](assets/current_20261012/scaling_summary.json) · [Scaling case/repeat CSV](assets/current_20261012/scaling_cases.csv). These downloads contain anonymous case labels and aggregate diagnostics, not association or genotype inputs.
+
+## Historical comparison: 0.2.3rc4
+<!-- current:measurements:end -->
+
 This historical comparison measures complete fine-mapping calls in prusie 0.2.3rc4 and
 susieR 0.16.6. The results below reanalyze retained measurements from 6 October
 2026; they retain the original executable identities.

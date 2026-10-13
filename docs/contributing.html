@@ -135,7 +135,12 @@ only when more than half of applicable cases have lower median runtime;
 correctness or allocation savings alone do not establish that result.</p>
 <p>Retain GPL package terms, susieR's BSD notices, the R optimizer's attribution
 and data licenses. KaTeX's local documentation resources carry their own MIT
-notice. Cite the methods and identify the source revision as described in
+notice. Maintain <code>LICENSE</code> and <code>THIRD_PARTY_NOTICES.md</code> at the repository root;
+the build includes them in distribution metadata and renders <code>docs/notices.html</code>
+for offline use. <code>tools/license_check.py</code> verifies complete upstream text hashes
+and coverage of the locked Cargo dependencies. Keep that mapping current when
+updating a dependency. Preserve the small checksummed raw data notices.
+Cite the methods and identify the source revision as described in
 <a href="citation.html">Citation</a>. Focused changes and their tests can be proposed through
 the repository's issue and pull-request workflow.</p></article>
 <footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>

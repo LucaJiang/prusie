@@ -10,6 +10,7 @@ import subprocess
 from markdown.extensions import Extension
 from markdown.treeprocessors import Treeprocessor
 from markdown.util import AtomicString
+from license_check import notice_text
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -26,6 +27,10 @@ def check_assets():
             raise ValueError(
                 f"Math asset differs from tools/math-assets.lock.json: {name}"
             )
+    notice = lock["notice"]
+    text = notice_text((ROOT / notice["source"]).read_text(), notice["id"])
+    if hashlib.sha256(text.encode()).hexdigest() != notice["sha256"]:
+        raise ValueError("KaTeX's complete MIT notice must accompany the math assets")
 
 
 class MathTreeprocessor(Treeprocessor):

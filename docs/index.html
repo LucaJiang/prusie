@@ -26,10 +26,41 @@
 <p>Fit association summary statistics with a Rust-powered SuSiE implementation,
 then inspect credible sets, convergence and sensitivity in one workflow.</p>
 <h2 id="recorded-numerical-accuracy-and-performance">Recorded numerical accuracy and performance</h2>
-<p>The comparison below measures <strong>0.2.3rc4</strong>. It is historical evidence for that
-version; the current development snapshot is <strong>0.2.4.dev2</strong>.</p>
-<!-- generated:highlights:start -->
+<!-- current:highlights:start -->
+<p>Measured <strong>0.2.4.dev2</strong> against susieR 0.16.6.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Analysis</th>
+<th>Cases</th>
+<th>Maximum PIP error</th>
+<th>Paired runtime speedup</th>
+<th>Median full-process memory ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GWAS</td>
+<td>100</td>
+<td>9.14e-09</td>
+<td>26.23×</td>
+<td>6.345×</td>
+</tr>
+<tr>
+<td>eQTL</td>
+<td>100</td>
+<td>1.22e-08</td>
+<td>21.62×</td>
+<td>6.24×</td>
+</tr>
+</tbody>
+</table></div>
+<p>Runtime is the geometric mean of per-case susieR/prusie ratios of seven-repeat medians. Memory is the median ratio of fresh-process peaks, including interpreters and inputs. These are complete-call observations on a fixed panel, not measurements of a particular optimization.</p>
+<!-- current:highlights:end -->
 
+<details>
+<summary>Historical 0.2.3rc4 comparison</summary>
+<!-- generated:highlights:start -->
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -56,7 +87,7 @@ version; the current development snapshot is <strong>0.2.4.dev2</strong>.</p>
 </table></div>
 <p>100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.</p>
 <!-- generated:highlights:end -->
-
+</details>
 <p>Use <a href="numerical_accuracy.html">numerical accuracy</a> and <a href="performance.html">performance</a>
 for the full comparison and measurement methods. The Python workflow adds
 explicit continuation and refinement, LD diagnostics, comparisons across settings,

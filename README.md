@@ -5,8 +5,20 @@ then inspect credible sets, convergence and sensitivity in one workflow.
 
 ## Recorded numerical accuracy and performance
 
-The comparison below measures **0.2.3rc4**. It is historical evidence for that
-version; the current development snapshot is **0.2.4.dev2**.
+<!-- current:highlights:start -->
+Measured **0.2.4.dev2** against susieR 0.16.6.
+
+| Analysis | Cases | Maximum PIP error | Paired runtime speedup | Median full-process memory ratio |
+| --- | --- | --- | --- | --- |
+| GWAS | 100 | 9.14e-09 | 26.23× | 6.345× |
+| eQTL | 100 | 1.22e-08 | 21.62× | 6.24× |
+
+Runtime is the geometric mean of per-case susieR/prusie ratios of seven-repeat medians. Memory is the median ratio of fresh-process peaks, including interpreters and inputs. These are complete-call observations on a fixed panel, not measurements of a particular optimization.
+<!-- current:highlights:end -->
+
+<details markdown="1">
+<summary>Historical 0.2.3rc4 comparison</summary>
+
 
 <!-- generated:highlights:start -->
 
@@ -18,6 +30,8 @@ version; the current development snapshot is **0.2.4.dev2**.
 100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.
 <!-- generated:highlights:end -->
 
+</details>
+
 See [numerical accuracy](docs/numerical_accuracy.md) and
 [performance](docs/performance.md) for methods and complete results. The Python
 workflow combines PIPs and credible sets with explicit continuation, refinement,
@@ -27,8 +41,9 @@ LD diagnostics, sensitivity comparisons and offline reports.
 
 ## Install the development preview
 
-The development source is on `main`. Source installation needs Python ≥3.10,
-the pinned Rust toolchain, a C linker and Python headers:
+Repository `main` provides the **0.2.4.dev2 development snapshot** described here.
+It is not a stable release. Source installation needs CPython 3.10–3.13, the
+pinned Rust toolchain, a C linker and Python headers:
 
 ```sh
 git clone --branch main https://github.com/LucaJiang/prusie.git

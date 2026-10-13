@@ -89,6 +89,16 @@ one per line. Relative paths resolve against the case JSON. No preprocessing,
 filtering or allele changes happen in the fitting driver. A complete reproducible
 case records all nondefault options, provenance and hashes before execution.
 
+For large, bitwise symmetric controlled-scaling matrices, an optional
+`R_gzip_path` can identify a lossless gzip copy of the same byte stream. Verify
+its complete uncompressed SHA256 against the frozen `R.bin` before use. Both
+drivers materialize the full dense matrix before fitting; no sparse or
+approximate LD operation is introduced. Python decompresses in bounded buffers
+into a writable contiguous array; R reads into its dense column-major vector.
+Record this transport choice because input loading affects full-process RSS,
+although it is outside the fitting clock. Use the ordinary separate row/column
+files for matrices that are not bitwise symmetric.
+
 Validation exports alpha, moments, PIPs, natural-log BFs, variances, ELBO, KL and
 original CS component/member IDs, returned mass and purity. The R adapter also
 retains its original RDS fit. `compare_fits.py` checks PIP absolute error ≤1e-5,
@@ -101,5 +111,8 @@ its unit tests cover empty CSs, both-max-iteration fits, failures and true error
 maxima. `import_records.py` can import the original controlled evidence archive
 using `--evidence-root`, `--output` and a run-local `--private-receipt`.
 The public `tools/generate_results.py` needs only retained normalized records.
+`plot_current.py --real REAL.json --scaling SCALING.json --output FIGURES`
+plots current summaries with complete-call timing, actual iteration counts,
+full-process RSS and the separately labeled sampled incremental memory.
 See [reproducibility](../../docs/reproducibility.md) for the distinction between
 record regeneration and input-level reruns.

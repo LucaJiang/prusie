@@ -123,6 +123,11 @@ correctness or allocation savings alone do not establish that result.
 
 Retain GPL package terms, susieR's BSD notices, the R optimizer's attribution
 and data licenses. KaTeX's local documentation resources carry their own MIT
-notice. Cite the methods and identify the source revision as described in
+notice. Maintain `LICENSE` and `THIRD_PARTY_NOTICES.md` at the repository root;
+the build includes them in distribution metadata and renders `docs/notices.html`
+for offline use. `tools/license_check.py` verifies complete upstream text hashes
+and coverage of the locked Cargo dependencies. Keep that mapping current when
+updating a dependency. Preserve the small checksummed raw data notices.
+Cite the methods and identify the source revision as described in
 [Citation](citation.md). Focused changes and their tests can be proposed through
 the repository's issue and pull-request workflow.

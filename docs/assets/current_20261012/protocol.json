@@ -1,0 +1,149 @@
+{
+  "created_at": "2026-10-12T10:07:50.611920+00:00",
+  "compute_code_commit": "ff379ada284a63a3cf1770d43faacc6b929dc923",
+  "version": "0.2.4.dev2",
+  "wheel_sha256": "7fbc1305a17dfeb2decf446c4703096d4a677a843ce0225641a9fe03300d139a",
+  "native_sha256": "509f2f1b7c7f330807263241cd3f6e2ac122d938c43fd41c22a209f7a8643816",
+  "Python": "3.12.2 | packaged by conda-forge | (main, Feb 16 2024, 20:50:58) [GCC 12.3.0]",
+  "NumPy": "2.2.6",
+  "platform": "Linux-5.15.0-186-generic-x86_64-with-glibc2.35",
+  "affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31
+  ],
+  "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "timing": {
+    "repeats": 7,
+    "warmup": 1,
+    "threads": 1,
+    "sequential_backends": true,
+    "exclusive_original_two_slots": true,
+    "full_public_call": true,
+    "included": "validation, RSS preparation, IBSS, posterior/credible-set summaries",
+    "excluded": "imports, input reads, explicit garbage collection, output serialization"
+  },
+  "memory": {
+    "full_process": "Fresh backend/case process VmHWM or ru_maxrss, captured before output export",
+    "sampled": "Current RSS baseline after imports/inputs/GC; sample fit-phase RSS at target2ms through retained result; increment = sampled peak minus current baseline, lower bound"
+  },
+  "source_sha256": {
+    "src/prusie/__init__.py": "a4b110ab2339ae25f2759c4dc44dc60b9e7902c9d1a6983768a027a19caf8eb2",
+    "src/prusie/_array_layout.py": "9ee2a16065650e78fca673c02538abbfcc3e9da7b46e60387b2017876a9a5a86",
+    "src/prusie/_style.py": "9951ce822b879c782227d4e61b01a348a06cef7a1b87fe4f0da5cfc92bda9560",
+    "src/prusie/ai.py": "260bc941f3b57a62d9ae7cb50bf9db1e1e844c0f41b43c9413dfeccc5b9ab05e",
+    "src/prusie/analysis.py": "cf25f4be6889f723546a4645df5e334ab9bf4fdedaa5271a40a68de1d8d93e3b",
+    "src/prusie/api.py": "d81084b989fe2440fc64cc4f8243af552d519c9992dc66d2446ce15dfeac440e",
+    "src/prusie/comparison.py": "fa9c59d97074391ea24fddf38a70f01fb4a71b963db8422aff954349ef4aad44",
+    "src/prusie/datasets.py": "ad099c2d987ec4072afc5f0e257033e21d5e1f6f574e0ff59783ca0194c9849c",
+    "src/prusie/diagnostics.py": "d1bbc9f4803e498584b79b736088eabf8c8dc9d96c95965c483ed99b280d15da",
+    "src/prusie/ld.py": "6bc6abb69663ee562631f2c520e60aa367ff07e9e03e4350440bdad61cb42592",
+    "src/prusie/plots.py": "80e99b5c123a32d6eb2e6cf45d8eb6b9cb0e8dcaff2a6491818320d18b91cf4c",
+    "src/prusie/posterior.py": "1b0546af8b7868eee359bcf105df1f17f329fb14ca5db9a68ff86b5f2958c8f6",
+    "src/prusie/refinement.py": "7fc58bd9e958429ffbef4ddf041a0b8b9f73ba42319d4079f4d288d18344a1b6",
+    "src/prusie/report.py": "ff38b93e62efc2f839fd542797f41b486b4d1c74ecf043888c279bfa9f86cddc",
+    "src/prusie/result.py": "f44abb3766b2c99cbe6d6a49380bbe7d644a918a085ed39a81e2a473bb15fce2",
+    "rust/core.rs": "75ddcf41f558fd7c64d2fc56489ae13acd2640aac3dd6cd6fb7e3700d586b29c",
+    "rust/diagnostics.rs": "bdface23e3468a590c5143fe09476e3f99428bdf7cb0dfe094ceb982f93861d1",
+    "rust/input_validation.rs": "befbbb3e5c9dc1a3b89e958a09a7631728c9cfde1b0dcf6ae8fee8996bb79dbe",
+    "rust/optimizer.rs": "7b665faec04e388fa428a835557d3a3b8fba0c9f354f714e2a68e1c4eed36f23",
+    "rust/ser_context_tests.rs": "b8d5d53e69538f712ab15aabf3bf1cfbd044ccd2ef803beaf29cc663fd5c4c1b",
+    "rust/vector_math.rs": "5125c68ff4c2d4f640b085c0ad512eeea188b04f58b0e6c591549ebf11d430f4",
+    "rust/vector_math.c": "1b2b052c27144342d1bde39722322b9357974f5ff23a0d7f19efccdf2ca8cbfb",
+    "bindings/array_layout.rs": "849666be133d56dca99fe858b05876756c2fb904da1bd69d554aee0e011843e3",
+    "bindings/diagnostic_helpers.rs": "60611a2ae43c641a2fdccc212b160d59f97604e9daf757c8c08aaa27ec896697",
+    "bindings/lib.rs": "265e1408c24a4243fd66bf8116f382ed79294837c5e2a048d84b015c18ac91ab",
+    "bindings/prepare_helpers.rs": "f7f3effd061a5f662bdc46ff81137e236100537c2b6c893f0da175a3ee0b6f2c",
+    "bindings/summary_helpers.rs": "d767159e930f5f6f764db1c0affca48059734ee5ba4108799e55ad32d28e477a",
+    "Cargo.toml": "aabd34db8ebb5813d181017e9f657168bdbe612da4742d8fb549ba41bcdd57f7",
+    "Cargo.lock": "8a8e6cd15f4f6e6c879414019ccadd3d87257f089530f5357e2c6f61b2426804",
+    "build.rs": "859462d2ac8f6a15303c0fe1d6ca4d1cd4c608251e17c13de5e5457cbcf9a5e2",
+    "rust-toolchain.toml": "887f9be066a15585a2c583578e84b0fcb541126d81546276bad3d2ff00d61167"
+  },
+  "reference_lock_sha256": "7a48758b90e6b641540ccf846fc0609b020ed1369a5cd2a1292e32d817281291",
+  "cpu": "AMD EPYC 9754 128-Core Processor",
+  "build": {
+    "profile": "release",
+    "features": [
+      "extension-module",
+      "vector-math"
+    ],
+    "RUSTFLAGS": null,
+    "CARGO_ENCODED_RUSTFLAGS": null
+  },
+  "native_ser_math": "optional_glibc_libmvec_avx2_masked_exp",
+  "python_libraries": [
+    {
+      "library": "libscipy_openblas64_-56d6093b.so",
+      "sha256": "0bd815d04b6b54990e3cccc7528fbb696456d09569f533d0390c13f0cdc4dd4a",
+      "threads": 1
+    },
+    {
+      "library": "libmvec.so.1",
+      "sha256": "44e31b0cd6dcb6f8147ffc820f51e7140c429a6e0e7724dd00ad0ea4d18f4f51",
+      "threads": null
+    }
+  ],
+  "R": {
+    "version": "0.16.6",
+    "expected_reference_commit": "8e56a8e038e989856d106d9ca5175cc664fea9d2",
+    "R": "R version 4.4.0 (2024-04-24)",
+    "platform": "x86_64-conda-linux-gnu",
+    "blas": {
+      "config": "OpenBLAS 0.3.20 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Zen MAX_THREADS=64",
+      "threads": 1
+    },
+    "loaded_libraries": [
+      "R",
+      "blas_probe.so",
+      "libR.so",
+      "libblas.so.3",
+      "libcblas.so.3.9.0",
+      "liblapack.so.3.9.0",
+      "libopenblasp-r0.3.20.so"
+    ]
+  },
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "BLIS_NUM_THREADS": "1",
+    "PRUSIE_NUM_THREADS": "1"
+  },
+  "scipy_in_timed_call": "Not imported or required by the timed standard susie_rss call.",
+  "resource_policy": {
+    "address_space_bytes_per_process": 17179869184,
+    "aggregate_rss_target_bytes": 51539607552,
+    "aggregate_and_host_controls": "Best effort; not a whole-host guarantee."
+  }
+}

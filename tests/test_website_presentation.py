@@ -1,5 +1,6 @@
 """Website structure uses the real Markdown/template pipeline without fitting."""
 from html.parser import HTMLParser
+from html import escape
 from pathlib import Path
 import sys
 
@@ -41,6 +42,8 @@ def test_homepage_and_tutorial_use_distinct_navigation_chrome(tmp_path, monkeypa
     docs = tmp_path / "docs"
     (docs / "assets").mkdir(parents=True)
     (tmp_path / "tools/site_config.json").write_text((ROOT / "tools/site_config.json").read_text())
+    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md", "Cargo.lock", "tools/notice_manifest.json"):
+        (tmp_path / name).write_bytes((ROOT / name).read_bytes())
     (tmp_path / "pyproject.toml").write_text('version = "0.2.4.dev1"\n')
     (docs / "index.md").write_text((ROOT / "docs/index.md").read_text())
     (docs / "example.md").write_text('# Example\n\n## Fit\n\nRead [results](results.md).\n')
@@ -48,6 +51,9 @@ def test_homepage_and_tutorial_use_distinct_navigation_chrome(tmp_path, monkeypa
     monkeypatch.setattr(build_docs, "DOCS", docs)
     build_docs.build()
     build_docs.build(check=True)
+    notices = (docs / "notices.html").read_text()
+    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
+        assert escape((ROOT / name).read_text()) in notices
     homepage = (docs / "index.html").read_text()
     guide = (docs / "example.html").read_text()
     assert 'class="on-this-page"' not in homepage
@@ -57,19 +63,28 @@ def test_homepage_and_tutorial_use_distinct_navigation_chrome(tmp_path, monkeypa
     assert any(tag == "details" and a.get("class") == "site-nav" and "open" in a for tag, a in elements)
     assert any(tag == "span" and a.get("class") == "version-number" for tag, a in elements)
     assert '<span class="version-badge">Development</span>' in homepage
-    assert homepage.count("<table>") == 1  # Benchmark evidence, never the entrance links.
+    assert homepage.count("<table>") == 2  # Current and historical evidence only.
+    assert homepage.index('current:highlights:start') < homepage.index('generated:highlights:start')
+    history_start = homepage.index('<summary>Historical 0.2.3rc4 comparison</summary>')
+    history_end = homepage.index('</details>', history_start)
+    assert history_start < homepage.index('generated:highlights:start') < history_end
     assert 'class="start-links"' in homepage
     assert homepage.index('generated:highlights:start') < homepage.index('class="start-links"')
     assert homepage.index('class="start-links"') < homepage.index('id="one-fit-a-readable-result"')
     assert '0.2.3rc4 made on 6 October 2026' in homepage
 
 
-def test_homepage_and_readme_keep_one_shared_measured_evidence_block():
+def test_homepage_and_readme_share_current_and_historical_evidence_blocks():
     import re
-    expression = r'<!-- generated:highlights:start -->(.*?)<!-- generated:highlights:end -->'
     home = (ROOT / "docs/index.md").read_text()
     readme = (ROOT / "README.md").read_text()
-    assert re.search(expression, home, re.S)[1] == re.search(expression, readme, re.S)[1]
+    for kind in ('current', 'generated'):
+        expression = rf'<!-- {kind}:highlights:start -->(.*?)<!-- {kind}:highlights:end -->'
+        home_blocks = re.findall(expression, home, re.S)
+        readme_blocks = re.findall(expression, readme, re.S)
+        assert len(home_blocks) == len(readme_blocks) == 1
+        assert home_blocks == readme_blocks
+    assert 'Measured **0.2.4.dev2** against susieR 0.16.6.' in home
     installation = (ROOT / "docs/install.md").read_text()
     assert 'git clone --branch main' in installation
     assert 'git clone --branch post_analysis' not in installation
