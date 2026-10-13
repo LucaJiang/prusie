@@ -3,7 +3,7 @@
 The likelihood uses the same working sufficient statistics in every candidate.
 Stage A's changed-prior objective is recorded, never used for model selection.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections.abc import Mapping
 import copy
 import hashlib

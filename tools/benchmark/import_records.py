@@ -7,7 +7,6 @@ result-only regeneration entrance is tools/generate_results.py.
 from __future__ import annotations
 import argparse, hashlib, json, re
 from pathlib import Path
-import numpy as np
 from summary import classify, paired, array_error, FIELDS, summarize
 
 

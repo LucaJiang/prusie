@@ -16,14 +16,13 @@ import os
 from pathlib import Path
 import platform
 import resource
-import sys
 import time
 import warnings
 
 import numpy as np
 import prusie
 
-FIELDS = ('pip', 'alpha', 'mu', 'mu2', 'lbf_variable', 'lbf', 'V', 'sigma2', 'elbo', 'KL')
+from compare_fits import FIELDS
 THREAD_VARS = ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
                'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'PRUSIE_NUM_THREADS')
 
