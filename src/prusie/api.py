@@ -1,4 +1,4 @@
-"""Validated RSS transformations and native sufficient-statistics inference."""
+"Validated RSS transformations and native sufficient-statistics inference."
 
 from __future__ import annotations
 
@@ -23,9 +23,7 @@ from .refinement import RefinementConfig, data_signature, initial_options, make_
 from .result import SusieResult
 
 
-def _vector(
-    value: ArrayLike, name: str, size: int | None = None
-) -> NDArray[np.float64]:
+def _vector(value: ArrayLike, name: str, size: int | None = None) -> NDArray[np.float64]:
     array = np.asarray(value, dtype=np.float64)
     if array.ndim != 1 or array.size == 0:
         raise ValueError(f"{name} must be a nonempty one-dimensional array")
@@ -59,9 +57,7 @@ def _matrix(
     return np.ascontiguousarray(array)
 
 
-def _scalar(
-    value: float, name: str, *, lower: float = 0.0, strict: bool = False
-) -> float:
+def _scalar(value: float, name: str, *, lower: float = 0.0, strict: bool = False) -> float:
     if np.ndim(value) != 0:
         raise ValueError(f"{name} must be a scalar")
     value = float(value)
@@ -93,9 +89,7 @@ def _metadata(variant_ids, variant_metadata, m):
             [str(i) for i in range(m)] if variant_ids is None else variant_ids, dtype=str
         )
         if ids.shape != (m,) or len(set(ids.tolist())) != m or np.any(ids == ""):
-            raise ValueError(
-                "variant_ids must contain m distinct nonempty IDs in input order"
-            )
+            raise ValueError("variant_ids must contain m distinct nonempty IDs in input order")
     metadata = (
         {}
         if variant_metadata is None
@@ -340,11 +334,7 @@ def _susie_suff_stat(
     if _rss_matrix_validated:
         # Private RSS-only route: the caller checked every raw and scaled
         # matrix entry together. Public suff-stat calls cannot set this flag.
-        assert (
-            isinstance(XtX, np.ndarray)
-            and XtX.shape == (m, m)
-            and XtX.dtype == np.float64
-        )
+        assert isinstance(XtX, np.ndarray) and XtX.shape == (m, m) and XtX.dtype == np.float64
     else:
         XtX = _matrix(XtX, "XtX", m, scale=_rss_matrix_scale)
     ids, metadata = _metadata(variant_ids, variant_metadata, m)
@@ -409,11 +399,7 @@ def _susie_suff_stat(
     # The current reference normalizes default and explicit priors alike.
     weights /= math.fsum(weights)
     p = len(Xty)
-    means = (
-        np.full(p, np.nan)
-        if X_colmeans is None
-        else np.asarray(X_colmeans, dtype=float)
-    )
+    means = np.full(p, np.nan) if X_colmeans is None else np.asarray(X_colmeans, dtype=float)
     if means.ndim == 0:
         means = np.full(p, means)
     elif null_index is not None and means.shape == (m,):
@@ -442,9 +428,7 @@ def _susie_suff_stat(
         # and complete materialization fallback. Keep the original orientation.
         crossproduct = XtX.T
     else:
-        crossproduct = _native.prepare_crossproduct(
-            XtX, inverse_scales, scales, _rss_matrix_scale
-        )
+        crossproduct = _native.prepare_crossproduct(XtX, inverse_scales, scales, _rss_matrix_scale)
         if crossproduct is None:
             # Portable NumPy fallback when runtime SIMD or contiguous input is absent.
             crossproduct = np.empty((p, p), dtype=np.float64, order="F")
@@ -478,19 +462,48 @@ def _susie_suff_stat(
             matrix_inverse_scales=inverse_scales,
             matrix_scales=scales,
         )
-    control, resolution = resolve_convergence(s_init if hasattr(s_init, 'params') else None, convergence)
+    control, resolution = resolve_convergence(
+        s_init if hasattr(s_init, "params") else None, convergence
+    )
     level = tracking_level(track_fit)
     options.update(control.options(), track_level=level)
-    signature = data_signature(crossproduct,crossresponse,yty,n,scales,_rss_matrix_scale,ids,metadata)
+    signature = data_signature(
+        crossproduct, crossresponse, yty, n, scales, _rss_matrix_scale, ids, metadata
+    )
     if s_init is not None:
-        options.update(initial_options(s_init,ids=ids,metadata=metadata,scales=scales,
-              null_index=null_index,signature=signature,L=min(L,p),weights=weights,
-              estimate_prior_variance=bool(estimate_prior_variance),
-              estimate_residual_variance=bool(estimate_residual_variance),prior_variance=options["prior_variance"]))
+        options.update(
+            initial_options(
+                s_init,
+                ids=ids,
+                metadata=metadata,
+                scales=scales,
+                null_index=null_index,
+                signature=signature,
+                L=min(L, p),
+                weights=weights,
+                estimate_prior_variance=bool(estimate_prior_variance),
+                estimate_residual_variance=bool(estimate_residual_variance),
+                prior_variance=options["prior_variance"],
+            )
+        )
     prepared = None
     if retain_data or level or refine is not False or s_init is not None:
-        prepared = make_prepared(crossproduct,crossresponse,yty,n,options,XtX,diagonal,
-                                 scales,means,y_mean_value,signature,_rss_matrix_scale,ids,metadata)
+        prepared = make_prepared(
+            crossproduct,
+            crossresponse,
+            yty,
+            n,
+            options,
+            XtX,
+            diagonal,
+            scales,
+            means,
+            y_mean_value,
+            signature,
+            _rss_matrix_scale,
+            ids,
+            metadata,
+        )
     native = _native.fit(crossproduct, crossresponse, yty, n, options)
     for message in native["warnings"]:
         _warn(message, collected)
@@ -542,11 +555,9 @@ def _susie_suff_stat(
         convergence=control.options(),
         convergence_resolution=resolution,
     )
-    intercept = y_mean_value - float(
-        np.sum(means * np.sum(alpha * native["mu"], axis=0) / scales)
-    )
+    intercept = y_mean_value - float(np.sum(means * np.sum(alpha * native["mu"], axis=0) / scales))
     summary, trace = convergence_summary(native, options, control)
-    summary['config_resolution'] = resolution.copy()
+    summary["config_resolution"] = resolution.copy()
     fit = SusieResult(
         variant_ids=ids,
         alpha=alpha,
@@ -571,12 +582,15 @@ def _susie_suff_stat(
         intercept=intercept,
         KL=native["KL"],
         XtXr=native["XtXr"],
-        convergence=summary, trace=trace, cs_audit=cs_audit,
-        data_signature=signature, _prepared=prepared,
+        convergence=summary,
+        trace=trace,
+        cs_audit=cs_audit,
+        data_signature=signature,
+        _prepared=prepared,
     )
     if refine is not False:
         if not isinstance(refine, (bool, RefinementConfig)):
-            raise TypeError('refine must be False, True, or a RefinementConfig')
+            raise TypeError("refine must be False, True, or a RefinementConfig")
         fit = refine_fit(fit, refine if isinstance(refine, RefinementConfig) else None)
     return fit
 
@@ -717,14 +731,12 @@ def susie_rss(
         var_y = _scalar(var_y, "var_y", strict=True)
     if n is None:
         _warn(
-            "n is missing: using the upstream large-sample noncentrality-parameter likelihood",
+            ("n is missing: using the upstream large-sample noncentrality-parameter likelihood"),
             extra_warnings,
         )
         XtX, Xty, yty, effective_n = R, z, 1.0, 2.0
         if scaled_prior_variance != 0.2:
-            raise ValueError(
-                "Missing-n mode uses prior_variance, not scaled_prior_variance"
-            )
+            raise ValueError("Missing-n mode uses prior_variance, not scaled_prior_variance")
         effective_scaled_prior, effective_standardize = prior_variance, False
         scale_kind = "noncentrality"
     else:
@@ -755,7 +767,10 @@ def susie_rss(
         )
     if estimate_residual_variance:
         _warn(
-            "Estimating residual variance requires in-sample LD consistent with the summary statistics",
+            (
+                "Estimating residual variance requires in-sample LD consistent "
+                "with the summary statistics"
+            ),
             extra_warnings,
         )
     fit = _susie_suff_stat(

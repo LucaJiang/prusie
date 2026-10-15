@@ -66,8 +66,9 @@ The installed 500-variant synthetic toy example works offline:
 import prusie
 
 example = prusie.load_example()
-fit = prusie.susie_rss(**example["inputs"], **example["parameters"],
-                       track_fit="compact", retain_data=True)
+fit = prusie.susie_rss(
+    **example["inputs"], **example["parameters"], track_fit="compact", retain_data=True
+)
 summary = prusie.summarize(fit, example["inputs"]["R"], z=example["inputs"]["z"])
 print(prusie.summary_text(summary).splitlines()[0])
 print(f"IBSS: {fit.convergence['stop_reason']} ({fit.niter} sweeps)")

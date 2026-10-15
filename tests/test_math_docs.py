@@ -56,9 +56,7 @@ $$
     ],
 )
 def test_math_and_highlighted_code_copy_original_text(language, code):
-    html, _ = render_markdown(
-        f"$x_j$ and `echo $PATH`\n\n```{language}\n{code}\n```", "code.md"
-    )
+    html, _ = render_markdown(f"$x_j$ and `echo $PATH`\n\n```{language}\n{code}\n```", "code.md")
     assert html.count('class="katex"') == 1
     assert "<code>echo $PATH</code>" in html
     pre = html[html.index("<pre>") : html.index("</pre>")]

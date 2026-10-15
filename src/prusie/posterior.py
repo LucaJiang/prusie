@@ -91,16 +91,21 @@ def credible_sets(
         coverage=np.empty(0),
         actual_coverage=np.empty(0),
         requested_coverage=coverage,
-        purity={
-            key: np.empty(0)
-            for key in ("min_abs_corr", "mean_abs_corr", "median_abs_corr")
-        },
+        purity={key: np.empty(0) for key in ("min_abs_corr", "mean_abs_corr", "median_abs_corr")},
     )
     if coverage is None or min_abs_corr is None:
         if audit is not None:
-            audit.extend(dict(component_id=i, candidate_members=[], reasons=["disabled"],
-                              stages=["disabled"], requested_coverage=coverage,
-                              min_abs_corr=min_abs_corr) for i in range(len(alpha)))
+            audit.extend(
+                dict(
+                    component_id=i,
+                    candidate_members=[],
+                    reasons=["disabled"],
+                    stages=["disabled"],
+                    requested_coverage=coverage,
+                    min_abs_corr=min_abs_corr,
+                )
+                for i in range(len(alpha))
+            )
         return empty
     candidates, seen, records = [], set(), {}
     for i, row in enumerate(alpha):
@@ -118,10 +123,16 @@ def credible_sets(
                 reasons.append("inactive")
             if not len(members):
                 reasons.append("unavailable")
-            record = dict(component_id=i, candidate_members=members.tolist(),
-                          reasons=reasons, stages=["candidate", "deduplicate", "activity"],
-                          requested_coverage=coverage, min_abs_corr=min_abs_corr,
-                          active_threshold=1e-9, actual_coverage=float(row[members].sum()))
+            record = dict(
+                component_id=i,
+                candidate_members=members.tolist(),
+                reasons=reasons,
+                stages=["candidate", "deduplicate", "activity"],
+                requested_coverage=coverage,
+                min_abs_corr=min_abs_corr,
+                active_threshold=1e-9,
+                actual_coverage=float(row[members].sum()),
+            )
             audit.append(record)
             records[i] = record
         if V[i] > 1e-9 and len(members) and not duplicate:
@@ -142,16 +153,12 @@ def credible_sets(
             inv = None
             if covariance_scales is not None:
                 scales = np.asarray(covariance_scales)[members]
-                inv = np.divide(
-                    1.0, scales, out=np.zeros_like(scales), where=scales != 0
-                )
+                inv = np.divide(1.0, scales, out=np.zeros_like(scales), where=scales != 0)
                 # Preserve the original reciprocal dtype/rounding, then satisfy
                 # the native f64 boundary (a no-op for ordinary fit outputs).
                 inv = np.asarray(inv, dtype=np.float64)
             if native_correlation is None:
-                native_correlation = native_array(
-                    np.asarray(correlation, dtype=np.float64)
-                )
+                native_correlation = native_array(np.asarray(correlation, dtype=np.float64))
             values = _native.cs_pairwise_abs(
                 native_correlation, members, inv, min_abs_corr, covariance_multiplier
             )
@@ -165,14 +172,18 @@ def credible_sets(
             # mean and median while retaining the same minimum-r decision.
             if not minimum >= min_abs_corr:
                 if record is not None:
-                    record["reasons"].append("low_purity" if np.isfinite(minimum) else "unavailable")
+                    record["reasons"].append(
+                        "low_purity" if np.isfinite(minimum) else "unavailable"
+                    )
                 continue
             purity = (minimum, float(values.mean()), float(np.median(values)))
         if purity[0] >= min_abs_corr:
             retained.append((i, members, purity))
             if record is not None:
                 record["reasons"].append("retained")
-                record["purity"] = dict(zip(("min_abs_corr", "mean_abs_corr", "median_abs_corr"), purity, strict=True))
+                record["purity"] = dict(
+                    zip(("min_abs_corr", "mean_abs_corr", "median_abs_corr"), purity, strict=True)
+                )
         elif record is not None:
             record["reasons"].append("low_purity")
     if not retained:
@@ -189,8 +200,6 @@ def credible_sets(
         requested_coverage=coverage,
         purity={
             key: np.array([x[2][j] for x in result])
-            for j, key in enumerate(
-                ("min_abs_corr", "mean_abs_corr", "median_abs_corr")
-            )
+            for j, key in enumerate(("min_abs_corr", "mean_abs_corr", "median_abs_corr"))
         },
     )

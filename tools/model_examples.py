@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Calculate the small probability/matrix examples and check their document text."""
+"Calculate the small probability/matrix examples and check their document text."
 
 from __future__ import annotations
 
@@ -88,30 +88,67 @@ def calculate():
 
 def snippets(x):
     c, ser = x["cache"], x["ser"]
+
     def vec(a):
         return "(" + ", ".join(f"{v:g}" for v in a) + ")"
+
     return {
-        "wald": f"The adjusted statistic is **{x['wald_adjusted']:.6f}** and the working crossproduct is "
-        f"**{x['wald_g']:.6f}** (with $Q_{{jj}}=99$ for unit LD diagonal).\n",
-        "pip": f"The resulting PIPs are **{vec(x['pip'])}**, whose sum is {sum(x['pip']):g}.\n",
-        "cs": f"The actual posterior mass is **{x['cs_mass']:.2f}**. If the two variants have signed "
-        f"correlation $r=-{x['cs_min_abs_corr']:g}$, the minimum, mean and median absolute pairwise "
-        f"correlation are all **{x['cs_min_abs_corr']:g}**, so the set passes <code>min_abs_corr=0.5</code>.\n",
-        "cache": f"The products are $\\mathbf u_1={vec(c['u1'])}^T$ and "
-        f"$\\mathbf u_2={vec(c['u2'])}^T$, giving $\\mathbf f={vec(c['fitted'])}^T$. "
-        f"Component 1 uses residual **{vec(c['residual'])}**. Replacing its mean by "
-        f"$\\mathbf m_1^{{\\mathrm{{new}}}}={vec(c['new_m1'])}^T$ changes the fitted "
-        f"crossproduct to **{vec(c['replacement'])}**.\n",
-        "ser": f"For $s^2={ser['s2']:g}$, $V={ser['V']:g}$ and marginal estimates "
-        f"$(0.1,0.2,0.3)$, the common log term is {ser['constant']:.6f} and the "
-        f"denominator is {ser['denominator']:.2f}. The log Bayes factors are "
-        f"**{vec([round(v, 6) for v in ser['bf']])}**.\n",
+        "wald": (
+            f"The adjusted statistic is **{x['wald_adjusted']:.6f}"
+            f"** and the working crossproduct is "
+            f"**{x['wald_g']:.6f}"
+            f"** (with $Q_{{jj}}=99$ for unit LD diagonal).\n"
+        ),
+        "pip": (f"The resulting PIPs are **{vec(x['pip'])}**, whose sum is {sum(x['pip']):g}.\n"),
+        "cs": (
+            f"The actual posterior mass is **{x['cs_mass']:.2f}"
+            f"**. If the two variants have signed "
+            f"correlation $r=-{x['cs_min_abs_corr']:g}"
+            f"$, the minimum, mean and median absolute "
+            f"pairwise "
+            f"correlation are all **{x['cs_min_abs_corr']:g}"
+            f"**, so the set passes <code>min_abs_corr=0.5</code>.\n"
+        ),
+        "cache": (
+            f"The products are $\\mathbf u_1={vec(c['u1'])}"
+            f"^T$ and "
+            f"$\\mathbf u_2={vec(c['u2'])}"
+            f"^T$, giving $\\mathbf f={vec(c['fitted'])}"
+            f"^T$. "
+            f"Component 1 uses residual **{vec(c['residual'])}"
+            f"**. Replacing its mean by "
+            f"$\\mathbf m_1^{{\\mathrm{{new}}}}={vec(c['new_m1'])}"
+            f"^T$ changes the fitted "
+            f"crossproduct to **{vec(c['replacement'])}"
+            f"**.\n"
+        ),
+        "ser": (
+            f"For $s^2={ser['s2']:g}"
+            f"$, $V={ser['V']:g}"
+            f"$ and marginal estimates "
+            f"$(0.1,0.2,0.3)$, the common log term "
+            f"is {ser['constant']:.6f}"
+            f" and the "
+            f"denominator is {ser['denominator']:.2f}"
+            f". The log Bayes factors are "
+            f"**{vec([round(v, 6) for v in ser['bf']])}"
+            f"**.\n"
+        ),
         "memory": f"At $p=5000$, $8p^2={x['matrix_bytes']:,}$ bytes, or "
         f"approximately **{x['matrix_MiB']:.1f} MiB**.\n",
-        "columns": f"The signed coefficient is $0.2+0.3-(-0.1)={x['signed_coefficient']:g}$, "
-        f"and the product is **{vec(x['signed_product'])}**.\n",
-        "logsum": f"A 60-digit decimal calculation gives **{float(x['logsumexp']):.12f}**; "
-        f"the first normalized weight is **{float(x['normalized_first']):.12f}**.\n",
+        "columns": (
+            f"The signed coefficient is $0.2+0.3-(-0.1)={x['signed_coefficient']:g}"
+            f"$, "
+            f"and the product is **{vec(x['signed_product'])}"
+            f"**.\n"
+        ),
+        "logsum": (
+            f"A 60-digit decimal calculation gives "
+            f"**{float(x['logsumexp']):.12f}"
+            f"**; "
+            f"the first normalized weight is **{float(x['normalized_first']):.12f}"
+            f"**.\n"
+        ),
     }
 
 
@@ -140,6 +177,7 @@ def build(check=False):
         else:
             path.write_text(updated)
     path = ROOT / "docs/assets/model_calculations.json"
+
     # These are displayed instructional values, not frozen inference references.
     # Ignore insignificant last-bit platform differences in elementary arithmetic.
     def display_values(value):

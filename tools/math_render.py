@@ -20,13 +20,8 @@ def check_assets():
     lock = json.loads((ROOT / "tools/math-assets.lock.json").read_text())
     for name, expected in lock["files"].items():
         path = ROOT / name
-        if (
-            not path.is_file()
-            or hashlib.sha256(path.read_bytes()).hexdigest() != expected
-        ):
-            raise ValueError(
-                f"Math asset differs from tools/math-assets.lock.json: {name}"
-            )
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            raise ValueError(f"Math asset differs from tools/math-assets.lock.json: {name}")
     notice = lock["notice"]
     text = notice_text((ROOT / notice["source"]).read_text(), notice["id"])
     if hashlib.sha256(text.encode()).hexdigest() != notice["sha256"]:
@@ -47,9 +42,7 @@ class MathTreeprocessor(Treeprocessor):
             wrapped = node.text or ""
             opening, closing = (r"\[", r"\]") if display else (r"\(", r"\)")
             if not (wrapped.startswith(opening) and wrapped.endswith(closing)):
-                raise ValueError(
-                    f"{self.page}: unexpected protected math node {wrapped!r}"
-                )
+                raise ValueError(f"{self.page}: unexpected protected math node {wrapped!r}")
             nodes.append(node)
             formulas.append(dict(tex=wrapped[2:-2], display=display))
         if not formulas:
@@ -78,9 +71,7 @@ class MathTreeprocessor(Treeprocessor):
             if node.tag == "div":
                 node.set("tabindex", "0")
                 node.set("role", "region")
-                node.set(
-                    "aria-label", "Mathematical formula; scroll horizontally if needed"
-                )
+                node.set("aria-label", "Mathematical formula; scroll horizontally if needed")
 
 
 class StaticMath(Extension):

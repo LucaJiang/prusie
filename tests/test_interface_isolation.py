@@ -1,4 +1,5 @@
 """Public display and optional-service isolation; all AI calls are mocked."""
+
 import hashlib
 import importlib.util
 import json
@@ -33,14 +34,15 @@ assert 'matplotlib' not in sys.modules
 assert 'scipy' not in sys.modules
 print(prusie.__file__)
 """
-    result = subprocess.run([sys.executable, "-B", "-c", script],
-                            text=True, capture_output=True, check=False)
+    result = subprocess.run(
+        [sys.executable, "-B", "-c", script], text=True, capture_output=True, check=False
+    )
     assert result.returncode == 0, result.stderr
     assert "prusie" in result.stdout
 
 
 def test_result_repr_only_reads_stored_shape_and_status():
-    fit = prusie.susie_rss(z=np.array([4., .2, -.3]), R=np.eye(3), n=200, L=2)
+    fit = prusie.susie_rss(z=np.array([4.0, 0.2, -0.3]), R=np.eye(3), n=200, L=2)
     original = fit.as_dict()
     text = repr(fit)
     assert text.startswith("SusieResult(variables=3, components=2, credible_sets=")
@@ -52,10 +54,13 @@ def test_result_repr_only_reads_stored_shape_and_status():
 
     class ShapeOnly:
         shape = (2, 3)
+
         def __array__(self, *args, **kwargs):
             raise AssertionError("repr must not materialize or reduce arrays")
+
         def __repr__(self):
             raise AssertionError("repr must not format arrays")
+
     fit.alpha = ShapeOnly()
     fit.sets = {"cs": {"L0": [0], "L7": [1]}}
     fit.convergence = {"stop_reason": "max_iter"}
@@ -74,25 +79,41 @@ def test_example_preserves_statistics_before_optional_failure(tmp_path, monkeypa
     pytest.importorskip("matplotlib")
     import prusie.ai as ai
     from prusie.report import load_analysis
+
     example = example_module()
     monkeypatch.setattr(example, "make_figures", lambda *args: {})
     before = {}
     calls = []
+
     def unavailable(self, bundle, *, consent=False, **kwargs):
         assert request_ai, "Offline example must never call the AI provider"
         assert consent is True and self.model == "test-explicit-model"
-        for name in ("index.html", "evidence.json", "analysis_summary.json", "summary.txt",
-                     "receipt.json", "fits/analysis.json", "fits/arrays.npz"):
+        for name in (
+            "index.html",
+            "evidence.json",
+            "analysis_summary.json",
+            "summary.txt",
+            "receipt.json",
+            "fits/analysis.json",
+            "fits/arrays.npz",
+        ):
             before[name] = (tmp_path / name).read_bytes()
         assert json.loads(before["evidence.json"])["sha256"] == bundle["sha256"]
         calls.append(bundle["sha256"])
         raise RuntimeError("Mock service unavailable")
+
     monkeypatch.setattr(ai.CodexCLI, "interpret", unavailable)
+
     def forbidden(*args, **kwargs):
         raise AssertionError("No external process may run during statistical analysis")
+
     monkeypatch.setattr(subprocess, "Popen", forbidden)
-    result = example.execute("stable", tmp_path, interpret=request_ai,
-                             model="test-explicit-model" if request_ai else None)
+    result = example.execute(
+        "stable",
+        tmp_path,
+        interpret=request_ai,
+        model="test-explicit-model" if request_ai else None,
+    )
     assert Path(result["html"]).is_file()
     fits = load_analysis(tmp_path / "fits")
     assert fits["refined"].pip.shape == fits["baseline"].pip.shape
@@ -103,7 +124,10 @@ def test_example_preserves_statistics_before_optional_failure(tmp_path, monkeypa
         record = json.loads((tmp_path / "ai_interpretation.json").read_text())
         assert record["status"] == "failed" and record["error_type"] == "RuntimeError"
         assert record["evidence_sha256"] == calls[0]
-        assert record["source_files_sha256"]["evidence.json"] == hashlib.sha256(before["evidence.json"]).hexdigest()
+        assert (
+            record["source_files_sha256"]["evidence.json"]
+            == hashlib.sha256(before["evidence.json"]).hexdigest()
+        )
         assert json.loads((tmp_path / "analysis.json").read_text())["schema_version"]
     else:
         assert not calls and not (tmp_path / "ai_interpretation.json").exists()
@@ -126,11 +150,12 @@ def test_plot_does_not_call_optional_provider(monkeypatch):
 
     import prusie.ai as ai
     from prusie.plots import plot_convergence
+
     def forbidden(*args, **kwargs):
         raise AssertionError("Plots must not request AI interpretation")
+
     monkeypatch.setattr(ai.CodexCLI, "interpret", forbidden)
-    fit = prusie.susie_rss(z=np.array([4., .2, -.3]), R=np.eye(3), n=200,
-                         L=2, track_fit=True)
+    fit = prusie.susie_rss(z=np.array([4.0, 0.2, -0.3]), R=np.eye(3), n=200, L=2, track_fit=True)
     plotted = plot_convergence(fit)
     figure = plotted[0] if isinstance(plotted, tuple) else plotted
     figure.canvas.draw()

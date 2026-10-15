@@ -1,4 +1,5 @@
 """Execute the documented standalone and sequential workflows as copied."""
+
 import re
 from contextlib import redirect_stdout
 from io import StringIO
@@ -41,6 +42,7 @@ def test_quickstart_and_result_fragment_share_the_declared_context():
 
 def test_convergence_walkthrough_runs_as_written():
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -51,7 +53,9 @@ def test_convergence_walkthrough_runs_as_written():
 
 
 def test_api_packaged_example_is_self_contained():
-    source = (ROOT / "docs/api.md").read_text().split("## load_example\n", 1)[1].split("\n## ", 1)[0]
+    source = (
+        (ROOT / "docs/api.md").read_text().split("## load_example\n", 1)[1].split("\n## ", 1)[0]
+    )
     code = re.search(r"```python\n(.*?)\n```", source, re.S)[1]
     namespace = {}
     exec(compile(code, "<API packaged example>", "exec"), namespace)

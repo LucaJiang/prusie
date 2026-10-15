@@ -42,9 +42,7 @@ def test_matrix_normalizes_once_before_scan(monkeypatch, layout):
 def test_nan_purity_is_still_rejected_after_early_guard(monkeypatch):
     # Independently exercise the Python comparison, even if the Rust helper
     # would normally reject this NaN before returning a pair vector.
-    monkeypatch.setattr(
-        posterior._native, "cs_pairwise_abs", lambda *args: np.array([np.nan])
-    )
+    monkeypatch.setattr(posterior._native, "cs_pairwise_abs", lambda *args: np.array([np.nan]))
     result = posterior.credible_sets(np.array([[0.5, 0.5]]), [1.0], np.eye(2))
     assert result["cs"] == []
 
@@ -62,7 +60,5 @@ def test_cs_aliases_deduplication_order_and_original_component_ids():
 
 @pytest.mark.parametrize("coverage,minimum", [(None, 0.5), (0.95, None)])
 def test_disabled_sets_do_not_access_matrix(coverage, minimum):
-    result = posterior.credible_sets(
-        None, None, None, coverage=coverage, min_abs_corr=minimum
-    )
+    result = posterior.credible_sets(None, None, None, coverage=coverage, min_abs_corr=minimum)
     assert result["cs"] == [] and result["requested_coverage"] == coverage

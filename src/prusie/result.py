@@ -43,19 +43,25 @@ class SusieResult:
     XtXr: np.ndarray
     convergence: dict[str, Any] = field(default_factory=dict)
     trace: list[dict[str, Any]] = field(default_factory=list)
-    refinement: dict[str, Any] = field(default_factory=lambda: dict(status='not_executed',stop_reason='not_requested',history=[],total_fits=0))
+    refinement: dict[str, Any] = field(
+        default_factory=lambda: dict(
+            status="not_executed", stop_reason="not_requested", history=[], total_fits=0
+        )
+    )
     cs_audit: list[dict[str, Any]] = field(default_factory=list)
-    data_signature: str = ''
+    data_signature: str = ""
     _prepared: Any = field(default=None, repr=False, compare=False)
 
     def __repr__(self):
         """Describe stored dimensions and status without recomputing statistics."""
         reason = self.convergence.get("stop_reason", "not_available")
-        return (f"SusieResult(variables={len(self.variant_ids)}, "
-                f"components={self.alpha.shape[0]}, "
-                f"credible_sets={len(self.sets.get('cs') or {})}, "
-                f"niter={self.niter}, converged={self.converged}, "
-                f"stop_reason={reason!r})")
+        return (
+            f"SusieResult(variables={len(self.variant_ids)}, "
+            f"components={self.alpha.shape[0]}, "
+            f"credible_sets={len(self.sets.get('cs') or {})}, "
+            f"niter={self.niter}, converged={self.converged}, "
+            f"stop_reason={reason!r})"
+        )
 
     @property
     def ibss_converged(self):
@@ -64,15 +70,19 @@ class SusieResult:
 
     @property
     def refinement_status(self):
-        return self.refinement.get('status', 'not_executed')
+        return self.refinement.get("status", "not_executed")
 
     @property
     def refinement_stop_reason(self):
-        return self.refinement.get('stop_reason', 'not_requested')
+        return self.refinement.get("stop_reason", "not_requested")
 
     def as_dict(self) -> dict[str, Any]:
         """Return a shallow mapping, preserving arrays without copying."""
-        return {field.name: getattr(self, field.name) for field in fields(self) if not field.name.startswith("_")}
+        return {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+            if not field.name.startswith("_")
+        }
 
     @property
     def coef(self) -> np.ndarray:

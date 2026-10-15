@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render all docs/*.md deterministically; pip install -r tools/docs-requirements.txt."""
+"Render all docs/*.md deterministically; pip install -r tools/docs-requirements.txt."
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ DOCS = ROOT / "docs"
 
 
 def render_markdown(source: str, page: str):
-    """Use the same protected math/highlighting pipeline for pages and tests."""
+    "Use the same protected math/highlighting pipeline for pages and tests."
     md = markdown.Markdown(
         extensions=[
             "fenced_code",
@@ -51,16 +51,20 @@ def render_markdown(source: str, page: str):
 
 
 def decorate_body(body: str) -> str:
-    """Add local scroll regions and original-image links to rendered content."""
+    "Add local scroll regions and original-image links to rendered content."
     body = body.replace(
-        "<pre>", '<pre tabindex="0" aria-label="Code example; scroll horizontally if needed">'
+        "<pre>", ('<pre tabindex="0" aria-label="Code example; scroll horizontally if needed">')
     )
     body = re.sub(r'(href="[^"#?:]+)\.md(?=[#"])', r"\1.html", body)
     body = re.sub(
         r"(<table>.*?</table>)",
-        '<div class="table-wrap" role="region" aria-label="Data table" '
-        'tabindex="0" data-scroll-label="Scroll horizontally to view all columns.">\\1</div>',
-        body, flags=re.S,
+        (
+            '<div class="table-wrap" role="region" aria-label="Data '
+            'table" tabindex="0" data-scroll-label="Scroll '
+            'horizontally to view all columns.">\\1</div>'
+        ),
+        body,
+        flags=re.S,
     )
 
     def figure(match):
@@ -72,30 +76,36 @@ def decorate_body(body: str) -> str:
         complex_figure = classes is not None and "figure-complex" in classes[1].split()
         wrapper_class = "figure-wrap figure-complex" if complex_figure else "figure-wrap"
         # Source attributes have already been HTML-escaped by Markdown.
-        return (f'<figure class="doc-figure"><div class="{wrapper_class}" role="region" '
-                'aria-label="Scientific figure" tabindex="0" '
-                'data-scroll-label="Scroll horizontally to inspect the full figure.">'
-                f'{image}</div><figcaption><a href="{source[1]}">Open original figure</a>'
-                '</figcaption></figure>')
+        return (
+            f'<figure class="doc-figure"><div class="{wrapper_class}'
+            f'" role="region" '
+            'aria-label="Scientific figure" tabindex="0" '
+            'data-scroll-label="Scroll horizontally to inspect the full figure.">'
+            f"{image}"
+            f'</div><figcaption><a href="{source[1]}'
+            f'">Open original figure</a>'
+            "</figcaption></figure>"
+        )
 
     return re.sub(r"<p>\s*(<img [^>]+>)\s*</p>", figure, body)
 
 
 def page_toc(filename: str, markdown_document) -> str:
-    """Keep in-page navigation on long pages, after a direct homepage opening."""
+    "Keep in-page navigation on long pages, after a direct homepage opening."
     if filename == "index.md" or not markdown_document.toc_tokens:
         return ""
-    return ('<details class="on-this-page"><summary>On this page</summary>'
-            f'{markdown_document.toc}</details>')
+    return (
+        '<details class="on-this-page"><summary>On this page</summary>'
+        f"{markdown_document.toc}"
+        f"</details>"
+    )
 
 
 def build(check: bool = False) -> None:
     check_assets()
     check_licenses(ROOT)
     config = json.loads((ROOT / "tools/site_config.json").read_text())
-    version = re.search(
-        r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M
-    )[1]
+    version = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M)[1]
     stale = []
     for path in sorted(DOCS.glob("*.md")):
         body, md = render_markdown(path.read_text(), path.relative_to(ROOT).as_posix())
@@ -106,23 +116,22 @@ def build(check: bool = False) -> None:
         for group, entries in config["navigation"]:
             links = []
             for label, target in entries:
-                active = (
-                    ' aria-current="page"'
-                    if target == path.with_suffix(".html").name
-                    else ""
-                )
-                links.append(
-                    f'<a href="{html.escape(target)}"{active}>{html.escape(label)}</a>'
-                )
+                active = ' aria-current="page"' if target == path.with_suffix(".html").name else ""
+                links.append(f'<a href="{html.escape(target)}"{active}>{html.escape(label)}</a>')
             nav.append(
-                f'<div class="nav-group"><p class="nav-label">{html.escape(group)}</p>{"".join(links)}</div>'
+                f'<div class="nav-group"><p class="nav-label">{html.escape(group)}'
+                f"</p>{''.join(links)}"
+                f"</div>"
             )
         toc = page_toc(path.name, md)
         target = config.get("redirects", {}).get(path.with_suffix(".html").name)
         redirect = (
             (
-                f'<meta http-equiv="refresh" content="0; url={html.escape(target)}">\n'
-                f'<link rel="canonical" href="{html.escape(target)}">'
+                f'<meta http-equiv="refresh" content="0; '
+                f"url={html.escape(target)}"
+                f'">\n'
+                f'<link rel="canonical" href="{html.escape(target)}'
+                f'">'
             )
             if target
             else ""
@@ -145,7 +154,7 @@ def build(check: bool = False) -> None:
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">{config["mark"]}</span><span>{config["package"]}<small>{html.escape(config["tagline"])}</small></span></a>
-<div class="version"><span class="version-number">{version}</span><span class="version-badge">{'Development' if '.dev' in version else 'Release candidate'}</span></div>
+<div class="version"><span class="version-number">{version}</span><span class="version-badge">{"Development" if ".dev" in version else "Release candidate"}</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation">{"".join(nav)}</nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
@@ -157,7 +166,7 @@ def build(check: bool = False) -> None:
 </div>
 </body>
 </html>
-'''
+'''  # noqa: E501 - Preserve generated HTML bytes.
         dest = path.with_suffix(".html")
         if check:
             if not dest.exists() or dest.read_text() != output:
@@ -173,17 +182,21 @@ def build(check: bool = False) -> None:
         css_path.write_text(css)
     # Pages is distributed independently of the source root. Render the two
     # authoritative root files so attribution also remains available offline.
-    notices = '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">' \
-        '<meta name="viewport" content="width=device-width, initial-scale=1">' \
-        '<title>License and third-party notices · prusie</title>' \
-        '<style>body{max-width:80ch;margin:2em auto;padding:0 1em;' \
-        'font:16px/1.6 sans-serif}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>' \
-        '</head><body><p><a href="citation.html">Citation and license</a></p>' \
-        '<h1>License and third-party notices</h1>' \
-        '<p>Generated from the authoritative repository root files.</p>'
+    notices = (
+        '<!doctype html>\n<html lang="en"><head><meta '
+        'charset="utf-8"><meta name="viewport" '
+        'content="width=device-width, '
+        'initial-scale=1"><title>License and third-party '
+        "notices · "
+        "prusie</title><style>body{max-width:80ch;margin:2em "
+        "auto;padding:0 1em;font:16px/1.6 "
+        "sans-serif}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style></head><body><p>"
+        '<a href="citation.html">Citation and license</a></p><h1>License and third-party notices'
+        "</h1><p>Generated from the authoritative repository root files.</p>"
+    )
     for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
-        notices += f'<h2>{name}</h2><pre>{html.escape((ROOT / name).read_text())}</pre>'
-    notices += '</body></html>\n'
+        notices += f"<h2>{name}</h2><pre>{html.escape((ROOT / name).read_text())}</pre>"
+    notices += "</body></html>\n"
     notice_path = DOCS / "notices.html"
     if check:
         if not notice_path.exists() or notice_path.read_text() != notices:
@@ -193,12 +206,8 @@ def build(check: bool = False) -> None:
     if stale:
         raise SystemExit("Stale rendered documentation: " + ", ".join(stale))
     if not check:
-        (DOCS / ".nojekyll").write_text(
-            "# Serve this directory as static GitHub Pages content.\n"
-        )
-    print(
-        f"{'Checked' if check else 'Built'} {len(list(DOCS.glob('*.md')))} static pages"
-    )
+        (DOCS / ".nojekyll").write_text("# Serve this directory as static GitHub Pages content.\n")
+    print(f"{'Checked' if check else 'Built'} {len(list(DOCS.glob('*.md')))} static pages")
 
 
 if __name__ == "__main__":
