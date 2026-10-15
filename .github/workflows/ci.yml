@@ -3,6 +3,25 @@ on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      CARGO_BUILD_JOBS: '4'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned Python lint tools
+        run: python -m pip install -c requirements-dev.lock ruff==0.16.9
+      - name: Install the repository's pinned Rust lint tools
+        run: rustup show
+      - run: ruff check
+      - run: ruff format --check
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets --no-default-features -- -D warnings
+      - run: cargo clippy --locked --all-targets --no-default-features --features vector-math -- -D warnings
   numpy-compatibility:
     runs-on: ubuntu-24.04
     strategy:

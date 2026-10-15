@@ -28,7 +28,7 @@ python-source = "src"
 module-name = "prusie._native"
 features = ["extension-module", "vector-math"]
 exclude = ["dist/**", "target/**", "**/*.orig", "**/*.rej", "**/__pycache__/**", ".pytest_cache/**", "docs/review/**"]
-include = [{path = "dev/references/**", format = "sdist"}, {path = "src/prusie/data/**", format = ["wheel", "sdist"]}, {path = "docs/**", format = "sdist"}, {path = "docs/.nojekyll", format = "sdist"}, {path = "tests/**", format = "sdist"}, {path = "examples/**", format = "sdist"}, {path = "tools/**", format = "sdist"}, {path = ".github/**", format = "sdist"}, {path = ".github/workflows/ci.yml", format = "sdist"}, {path = "requirements-dev.lock", format = "sdist"}, {path = "CITATION.cff", format = "sdist"}, {path = "CHANGELOG.md", format = "sdist"}, {path = "THIRD_PARTY_NOTICES.md", format = "sdist"}]
+include = [{path = "rustfmt.toml", format = "sdist"}, {path = "dev/references/**", format = "sdist"}, {path = "src/prusie/data/**", format = ["wheel", "sdist"]}, {path = "docs/**", format = "sdist"}, {path = "docs/.nojekyll", format = "sdist"}, {path = "tests/**", format = "sdist"}, {path = "examples/**", format = "sdist"}, {path = "tools/**", format = "sdist"}, {path = ".github/**", format = "sdist"}, {path = ".github/workflows/ci.yml", format = "sdist"}, {path = "requirements-dev.lock", format = "sdist"}, {path = "CITATION.cff", format = "sdist"}, {path = "CHANGELOG.md", format = "sdist"}, {path = "THIRD_PARTY_NOTICES.md", format = "sdist"}]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

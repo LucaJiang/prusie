@@ -192,6 +192,7 @@ def main():
             "Cargo.lock",
             "build.rs",
             "rust-toolchain.toml",
+            "rustfmt.toml",
             "bindings/lib.rs",
             "rust/core.rs",
             "rust/optimizer.rs",
