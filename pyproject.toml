@@ -32,3 +32,32 @@ include = [{path = "dev/references/**", format = "sdist"}, {path = "src/prusie/d
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+# Preserve upstream copies, frozen evidence, and generated documentation byte for byte.
+extend-exclude = ["tools/vendor", "docs", "examples/data", "src/prusie/data", "tests/data", "tests/fixtures"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Mathematical signs and Greek labels are intentional output, not identifiers.
+"examples/check_example.py" = ["RUF001"]
+"src/prusie/_style.py" = ["RUF001"]
+"src/prusie/plots.py" = ["RUF001"]
+# Preserve the mathematical minus sign in the convergence criterion documentation.
+"src/prusie/diagnostics.py" = ["RUF002"]
+# These tests exercise exactly those Unicode labels, including variant IDs.
+"tests/test_plot_review_semantics.py" = ["RUF001"]
+"tests/test_plots_report.py" = ["RUF001"]
+# Published mathematical signs and typographic punctuation are frozen page content.
+"tools/generate_results.py" = ["RUF001"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+# Executable examples inside docstrings are not part of this formatting pass.
+docstring-code-format = false
