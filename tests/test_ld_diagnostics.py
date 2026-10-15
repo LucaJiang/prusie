@@ -2,8 +2,10 @@
 import json
 import os
 from pathlib import Path
+
 import numpy as np
 import pytest
+
 from prusie.ld import estimate_s_rss, kriging_rss, prepare_ld
 
 
@@ -51,9 +53,9 @@ def test_missing_z_is_recorded_without_automatic_flip():
     assert result["variants"][0]["standardized_residual"] is None
     assert np.isfinite(result["variants"][0]["working_standardized_residual"])
     assert result["status_counts"]["unassessed"] == 1
-    with pytest.raises(ValueError,match="n must"):
+    with pytest.raises(ValueError,match=r"n must"):
         estimate_s_rss([1,2],np.eye(2),n=1)
-    with pytest.raises(ValueError,match="nonnegative"):
+    with pytest.raises(ValueError,match=r"nonnegative"):
         kriging_rss([1,2],np.eye(2),s=-1)
 
 
@@ -89,7 +91,7 @@ def test_independent_r_full_likelihood_mixture_certificate():
     certified=json.loads(Path(certified_path).read_text())
     disagreements=[]
     for key,oracle in certified["cases"].items():
-        name,kind=key.split("/")
+        name,_kind=key.split("/")
         case=raw["cases"][name]
         n=None if case["n"] in ("Inf",None,{}) else case["n"]
         result=kriging_rss(case["z"],case["R"],n,s=oracle["s"])

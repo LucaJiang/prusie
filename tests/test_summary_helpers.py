@@ -46,7 +46,7 @@ def test_symmetry_tolerance_matches_full_numpy(scale):
             if expected:
                 _native.validate_matrix(value, 'XtX')
             else:
-                with pytest.raises(ValueError, match='symmetric'):
+                with pytest.raises(ValueError, match=r'symmetric'):
                     _native.validate_matrix(value, 'XtX')
 
 
@@ -110,7 +110,7 @@ def test_correlation_validation_exact_boundaries(diagonal, offdiag):
         if valid:
             np.testing.assert_array_equal(_matrix(value, 'R', 2, correlation=True), value)
         else:
-            with pytest.raises(ValueError, match='signed correlation'):
+            with pytest.raises(ValueError, match=r'signed correlation'):
                 _matrix(value, 'R', 2, correlation=True)
 
 
@@ -132,7 +132,7 @@ def test_lazy_rss_matches_materialized_sufficient_statistics(n, options, monkeyp
     before = [x.copy() for x in (r, z, crossproduct, x_ty)]
     materialized = susie_suff_stat(crossproduct, x_ty, n - 1, n, **kwargs)
     lazy = susie_rss(z, r, n, **kwargs)
-    for actual, expected in zip((r, z, crossproduct, x_ty), before):
+    for actual, expected in zip((r, z, crossproduct, x_ty), before, strict=True):
         np.testing.assert_array_equal(actual.view(np.uint64), expected.view(np.uint64))
     np.testing.assert_allclose(materialized.pip, lazy.pip, atol=1e-5, rtol=0)
     for fit in [materialized, lazy]:
@@ -162,13 +162,13 @@ def test_lazy_rss_matches_materialized_sufficient_statistics(n, options, monkeyp
 def test_scaled_xtx_symmetry_is_rechecked_in_rss():
     r = np.array([[1., 9e-13], [0., 1.]])
     _matrix(r, 'R', 2, correlation=True)
-    with pytest.raises(ValueError, match='symmetric'):
+    with pytest.raises(ValueError, match=r'symmetric'):
         susie_rss([2., 1.], r, 100, L=1)
 
 
 def test_scaled_xtx_overflow_is_rejected_in_rss():
     r = np.eye(2) * (1. + 1e-9)
-    with pytest.raises(ValueError, match='finite'):
+    with pytest.raises(ValueError, match=r'finite'):
         susie_rss([2., 1.], r, np.finfo(float).max, L=1, check_prior=False)
 
 
@@ -176,7 +176,7 @@ def test_scaled_xtx_overflow_is_rejected_in_rss():
 def test_equal_nonfinite_pairs_are_rejected(value):
     r = np.eye(40)
     r[1, 9] = r[9, 1] = value
-    with pytest.raises(ValueError, match='finite'):
+    with pytest.raises(ValueError, match=r'finite'):
         _matrix(r, 'R', len(r), correlation=True)
 
 
@@ -224,7 +224,7 @@ def test_combined_rss_checks_match_two_complete_checks(scale, defect):
 def test_public_suff_stat_does_not_expose_matrix_validation_bypass():
     with pytest.raises(TypeError):
         susie_suff_stat(np.eye(2), [1., 0.], 99., 100, _rss_matrix_validated=True)
-    with pytest.raises(ValueError, match='finite'):
+    with pytest.raises(ValueError, match=r'finite'):
         susie_suff_stat([[1., np.nan], [np.nan, 1.]], [1., 0.], 99., 100)
 
 
@@ -251,7 +251,7 @@ def test_native_input_preserves_bits_and_ownership_for_unit_scales(monkeypatch, 
         expected = raw.T * (1. / scale)[None, :] / scale[:, None]
         before = matrix.view(np.uint64).copy()
 
-        def capture(crossproduct, *args):
+        def capture(crossproduct, *args, matrix=matrix, expected=expected):
             assert crossproduct.flags.f_contiguous
             assert not np.shares_memory(crossproduct, matrix)
             np.testing.assert_array_equal(crossproduct.view(np.uint64), expected.view(np.uint64))
@@ -308,7 +308,7 @@ def test_public_numpy_fallback_matches_dispatch(monkeypatch):
 
 
 def test_contiguous_preparation_invalid_shape():
-    with pytest.raises(ValueError, match='dimensions'):
+    with pytest.raises(ValueError, match=r'dimensions'):
         _native.prepare_crossproduct(np.eye(3), np.ones(2), np.ones(3))
 
 
@@ -352,7 +352,7 @@ def test_transposed_proof_reads_every_entry_and_preserves_bits(size):
         for j in range(size):
             original = matrix[i, j]
             matrix[i, j] = np.nan
-            with pytest.raises(ValueError, match='finite'):
+            with pytest.raises(ValueError, match=r'finite'):
                 _native.validate_rss_matrix(matrix, 99., True)
             matrix[i, j] = original
 
@@ -373,10 +373,7 @@ def test_transpose_proof_falls_back_for_near_symmetry(delta):
             assert outcomes[0] == outcomes[1]
 
 
-"""Negative strides must preserve logical diagonal and symmetry semantics."""
-import numpy as np
-import pytest
-from prusie import _native
+# Negative strides must preserve logical diagonal and symmetry semantics.
 
 
 @pytest.mark.parametrize('size', [4, 5, 32, 33])

@@ -1,12 +1,11 @@
 """Measurement-helper checks using the existing frozen fixture, without fits."""
-from copy import deepcopy
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
 import pytest
-
-from compare_fits import compare, FIELDS
+from compare_fits import FIELDS, compare
 from fine_mapping import load_case
 
 DATA = Path(__file__).resolve().parents[2] / 'examples/data'
@@ -42,7 +41,7 @@ def test_load_case_preserves_complete_signed_matrix(tmp_path):
     assert inputs['R'].dtype == np.float64 and inputs['variant_ids'] == ids
     assert np.any(inputs['z'] < 0)
     case['n_variants'] = 499
-    with pytest.raises(ValueError, match='byte counts'):
+    with pytest.raises(ValueError, match=r'byte counts'):
         load_case(case)
 
 

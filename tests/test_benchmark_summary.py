@@ -1,8 +1,7 @@
 """Scientific summary definitions and outcome-independent inclusion."""
-import copy
 import importlib.util
-import math
 from pathlib import Path
+
 import pytest
 
 spec=importlib.util.spec_from_file_location('summary',Path(__file__).resolve().parents[1]/'tools/benchmark/summary.py')

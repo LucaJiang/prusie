@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Freeze a separately executed toy example reference; never touches older fixtures."""
-import argparse,hashlib,json
+import argparse
+import hashlib
+import json
 from pathlib import Path
+
 import numpy as np
 
 

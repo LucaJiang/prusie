@@ -1,8 +1,8 @@
 """Supplemental analytical acceptance-bound cases requested by independent D."""
 import numpy as np
 import pytest
-from prusie import _native
 
+from prusie import _native
 
 BOUND = np.finfo(float).max / 2
 

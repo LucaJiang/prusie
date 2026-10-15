@@ -13,16 +13,17 @@ import gzip
 import hashlib
 import json
 import os
-from pathlib import Path
 import platform
 import resource
 import time
 import warnings
+from pathlib import Path
 
 import numpy as np
+from compare_fits import FIELDS
+
 import prusie
 
-from compare_fits import FIELDS
 THREAD_VARS = ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
                'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'PRUSIE_NUM_THREADS')
 
@@ -133,7 +134,7 @@ def validate_fit(fit, inputs):
         if not np.all((values >= 0) & (values <= 1)):
             errors.append('probability bounds: ' + key)
     mass_error = float(np.max(abs(fit.alpha.sum(axis=1) - 1)))
-    active = fit.V > inputs.get('prior_tol', 1e-9)
+    active = inputs.get('prior_tol', 1e-9) < fit.V
     pip = 1 - np.prod(1 - fit.alpha[active], axis=0)
     if fit.null_index is not None:
         pip = np.delete(pip, fit.null_index)
@@ -166,7 +167,7 @@ def validate_fit(fit, inputs):
         purity = (float(pairs.min()), float(pairs.mean()), float(np.median(pairs))) if pairs.size else (1., 1., 1.)
         delta = dict(coverage=abs(mass - float(fit.sets['coverage'][k])),
                      **{key: abs(value - float(fit.sets['purity'][key][k]))
-                        for key, value in zip(('min_abs_corr', 'mean_abs_corr', 'median_abs_corr'), purity)})
+                        for key, value in zip(('min_abs_corr', 'mean_abs_corr', 'median_abs_corr'), purity, strict=True)})
         cs_errors.append(dict(component_id_0based=int(component), errors=delta))
         if max(delta.values()) > 1e-10 or mass + 1e-10 < inputs.get('coverage', .95):
             errors.append('CS coverage/purity identity')
@@ -242,12 +243,9 @@ def main():
                       L=case['parameters'].get('L', 10), parameters=case['parameters'])
         inputs = load_case(case)
         samples = []
-        if args.mode == 'time':
-            # One warmup, then one complete result retained at a time. Explicit
-            # GC and deletion happen outside each clock, equally for both backends.
-            repeats = range(args.repeats + 1)
-        else:
-            repeats = range(1)
+        # One warmup, then one complete result retained at a time. Explicit
+        # GC and deletion happen outside each clock, equally for both backends.
+        repeats = range(args.repeats + 1) if args.mode == 'time' else range(1)
         fit = None
         for repeat in repeats:
             fit = None

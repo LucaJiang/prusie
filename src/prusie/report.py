@@ -14,8 +14,9 @@ import html
 import json
 import math
 import struct
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 
@@ -506,7 +507,8 @@ def write_report(summary: Mapping, directory: str | Path, *, figures=None, ld=No
     extra_tables["refinement_attempts"] = attempts
     extra_tables["refinement_stages"] = stages
     tables.extend(export_tables(extra_tables, directory / "tables"))
-    escape = lambda value: html.escape(str(value), quote=True)
+    def escape(value):
+        return html.escape(str(value), quote=True)
     sections = [f'<header><h1>{escape(title)}</h1>']
     supplied = dict(provenance or {}) | dict(annotations or {})
     identity = {key: supplied[key] for key in ("trait", "gene", "locus") if supplied.get(key) is not None}

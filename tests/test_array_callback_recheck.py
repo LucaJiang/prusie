@@ -1,6 +1,7 @@
 """Numeric conversion must not leave a stale typed NumPy wrapper."""
 import numpy as np
 import pytest
+
 from prusie import _native
 
 
@@ -43,6 +44,6 @@ def test_callback_rechecks_every_typed_array(change, boundary):
         'fit_matrix':lambda:_native.fit(matrix,inverse,99.,100.,options),
         'fit_vector':lambda:_native.fit(matrix,inverse,99.,100.,options),
     }
-    with pytest.raises(ValueError,match='dtype or rank changed|float64 array after option conversion'):
+    with pytest.raises(ValueError,match=r'dtype or rank changed|float64 array after option conversion'):
         calls[boundary]()
     assert value.called

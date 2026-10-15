@@ -11,13 +11,14 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import platform
 import subprocess
 import sys
 import tarfile
-import tomllib
 import zipfile
+from pathlib import Path
+
+import tomllib
 from license_check import check_licenses, notice_text
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -94,7 +95,7 @@ def main():
         log = work / 'logs' / (label + '.log')
         with log.open('w') as output:
             process = subprocess.run(list(map(str, argv)), cwd=cwd, env=active_env,
-                                     stdout=output, stderr=subprocess.STDOUT)
+                                     stdout=output, stderr=subprocess.STDOUT, check=False)
         record['steps'].append(dict(label=label, argv=list(map(str, argv)), cwd=str(cwd),
                                     exit_code=process.returncode, log=str(log)))
         save()

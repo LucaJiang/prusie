@@ -1,11 +1,10 @@
 """Execute the documented standalone and sequential workflows as copied."""
+import re
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
-import re
 
 import pytest
-
 
 ROOT = Path(__file__).resolve().parents[1]
 

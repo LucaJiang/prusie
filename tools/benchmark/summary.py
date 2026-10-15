@@ -1,6 +1,8 @@
 """Statistics for completed, settings-matched full fine-mapping calls."""
 from __future__ import annotations
+
 import math
+
 import numpy as np
 
 FIELDS = ('pip', 'alpha', 'mu', 'mu2', 'lbf_variable', 'lbf', 'V', 'sigma2', 'elbo', 'KL')

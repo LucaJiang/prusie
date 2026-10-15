@@ -1,11 +1,11 @@
 """Exercise public calls and prove both checksum and numerical failure paths."""
-from pathlib import Path
 import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -24,7 +24,7 @@ def run_example(tmp_path, data=DATA, case=None):
             '--output-dir', str(tmp_path/'result')]
     if case is not None:
         args += ['--case', case]
-    result = subprocess.run(args, cwd=tmp_path, env=env, capture_output=True, text=True)
+    result = subprocess.run(args, cwd=tmp_path, env=env, capture_output=True, text=True, check=False)
     return result, json.loads((tmp_path/'result/report.json').read_text())
 
 

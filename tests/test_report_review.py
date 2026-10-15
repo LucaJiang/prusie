@@ -1,6 +1,6 @@
 """Report semantics: useful summaries and complete, separate machine evidence."""
-from html.parser import HTMLParser
 import json
+from html.parser import HTMLParser
 from pathlib import Path
 
 import numpy as np
@@ -144,6 +144,7 @@ def test_failed_mixture_and_missing_z_diagnose_plot_report(monkeypatch, tmp_path
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     import prusie.ld as diagnostics
     from prusie.plots import plot_ld_diagnostics
 

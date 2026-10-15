@@ -1,23 +1,32 @@
 #!/usr/bin/env python3
 """Regenerate fine-mapping tables, records and vector figures from retained data."""
 from __future__ import annotations
-import argparse,csv,io,json,re,sys
+
+import argparse
+import csv
+import io
+import json
+import re
+import sys
 from pathlib import Path
-import numpy as np
+
 import matplotlib
+import numpy as np
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter, FixedLocator, NullFormatter
+from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools/benchmark'))
-from summary import paired,summarize,FIELDS
+from summary import FIELDS, paired, summarize  # noqa: E402 - Local tool path must be set first.
 
 
 def text_json(value):return json.dumps(value,indent=2,allow_nan=False)+'\n'
 def table(headers,rows):
     # A vertical bar in a scientific label is text, not another table column.
-    cell=lambda value:str(value).replace('|', '&#124;')
+    def cell(value):
+        return str(value).replace('|', '&#124;')
     return '\n| '+' | '.join(map(cell,headers))+' |\n| '+' | '.join(['---']*len(headers))+' |\n'+''.join('| '+' | '.join(map(cell,row))+' |\n' for row in rows)
 def f(x):return f'{x:.3g}'
 
@@ -100,10 +109,10 @@ def main():
             fig.savefig(b,format=ext,bbox_inches='tight',metadata=md);out(f'docs/assets/{name}.{ext}',b.getvalue())
         plt.close(fig)
     rng=np.random.default_rng(20261007);fig,axes=plt.subplots(1,2,figsize=(8.6,3.4),layout='constrained')
-    for ax,key,title,label in zip(axes,['speedup','memory_ratio'],['A  Runtime','B  Peak memory'],['Runtime ratio (susieR / prusie)','Peak-memory ratio (susieR / prusie)']):
+    for ax,key,title,label in zip(axes,['speedup','memory_ratio'],['A  Runtime','B  Peak memory'],['Runtime ratio (susieR / prusie)','Peak-memory ratio (susieR / prusie)'], strict=True):
         values=[[c[key] for c in cases if c['group']==g and c['timing_eligible'] and c[key] is not None] for g in real]
         bp=ax.boxplot(values,positions=[1,2],widths=.43,showfliers=False,patch_artist=True,medianprops={'color':'#111111','linewidth':1.6})
-        for j,(a,color) in enumerate(zip(values,colors)):
+        for j,(a,color) in enumerate(zip(values,colors, strict=True)):
             bp['boxes'][j].set(facecolor=color,alpha=.15)
             ax.scatter(j+1+rng.uniform(-.13,.13,len(a)),a,s=10,alpha=.45,color=color,linewidths=0)
         ax.axhline(1,color='#777777',ls='--',lw=.8);ax.set(xticks=[1,2],xticklabels=real,ylabel=label,title=title);ax.set_yscale('log');ax.yaxis.set_major_formatter(FuncFormatter(lambda x,pos:f'{x:g}×'));ax.grid(axis='y',alpha=.15)
@@ -112,7 +121,7 @@ def main():
     save(fig,'r_comparison')
     for measure,label,filename in [('runtime','Median complete-call time (ms)','runtime_by_variants'),('memory','Peak memory (MiB)','memory_by_variants')]:
         fig,axes=plt.subplots(1,2,figsize=(8.6,3.4),layout='constrained')
-        for ax,g in zip(axes,real):
+        for ax,g in zip(axes,real, strict=True):
             rows=[c for c in cases if c['group']==g and c['timing_eligible']]
             for k,color,marker in [('prusie',colors[0],'o'),('susieR',colors[1],'^')]:
                 vals=[c['backends'][k]['runtime_seconds']['median']*1000 if measure=='runtime' else c['backends'][k]['peak_memory_mib'] for c in rows]
@@ -120,7 +129,7 @@ def main():
             ax.set(xlabel='Variants in analysis',ylabel=label,title=g);ax.set_xscale('log');ax.set_yscale('log');ax.grid(alpha=.15);ax.legend(frameon=False,fontsize=9)
         save(fig,filename)
     fig,axes=plt.subplots(1,2,figsize=(8.6,3.3),layout='constrained')
-    for ax,g,color in zip(axes,real,colors):
+    for ax,g,color in zip(axes,real,colors, strict=True):
         rows=[c for c in cases if c['group']==g and c['numerical']['outputs_valid']]
         ax.scatter([c['n_variants'] for c in rows],[c['numerical']['errors']['pip']['max_abs_error'] for c in rows],s=15,color=color,alpha=.65)
         ax.set(xlabel='Variants in analysis',ylabel='Maximum absolute PIP difference',title=g);ax.set_yscale('symlog',linthresh=1e-14);ax.set_xscale('log');ax.grid(alpha=.15)

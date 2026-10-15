@@ -1,8 +1,10 @@
 """Comparisons keep IDs, directions, ambiguity and unobserved posterior mass."""
 import copy
+
 import numpy as np
 import pytest
 from test_post_analysis import toy_fit
+
 from prusie.comparison import compare_fits, comparison_relations, run_sensitivity, sensitivity_key
 
 
@@ -22,7 +24,7 @@ def test_permutations_component_order_and_allele_recode():
     assert {(e["component_a"],e["component_b"]) for e in compared["signal_relations"]} == {(0,1),(1,0)}
     assert all(x == -1 for x in compared["alignments"][0]["directions"].values())
     b.variant_metadata["effect_allele"][0] = "T"
-    with pytest.raises(ValueError,match="incompatible"):
+    with pytest.raises(ValueError,match=r"incompatible"):
         compare_fits({"a":a,"b":b})
 
 
@@ -84,7 +86,7 @@ def test_explicit_plan_cache_fixed_variance_and_report_only():
     run_sensitivity(inputs,plan,fit_function=fitting,cache=cache,software_version="test")
     assert len(calls) == before
     bad=[dict(name="both",changes={"L":2,"prior_weights":[.5,.3,.2]})]
-    with pytest.raises(ValueError,match="single"):
+    with pytest.raises(ValueError,match=r"single"):
         run_sensitivity(inputs,bad,fit_function=fitting)
     assert len(calls) == before
 
@@ -122,13 +124,13 @@ def test_provided_baseline_preserves_settings_and_rejects_mismatches():
     assert not out["fits"]["L2"].params["estimate_prior_variance"]
     assert out["fits"]["L2"].params["scaled_prior_variance"] == .1
     assert out["baseline_validation"]["raw_input_identity"].startswith("not_assessed")
-    with pytest.raises(ValueError,match="variant_ids"):
+    with pytest.raises(ValueError,match=r"variant_ids"):
         run_sensitivity(dict(inputs,variant_ids=["b","a","c"]),[],baseline=fit)
-    with pytest.raises(ValueError,match="L differs"):
+    with pytest.raises(ValueError,match=r"L differs"):
         run_sensitivity(inputs,[],baseline=fit,baseline_settings={"L":2})
-    with pytest.raises(ValueError,match="sample size"):
+    with pytest.raises(ValueError,match=r"sample size"):
         run_sensitivity(dict(inputs,n=201),[],baseline=fit)
-    with pytest.raises(ValueError,match="duplicate"):
+    with pytest.raises(ValueError,match=r"duplicate"):
         run_sensitivity(inputs,[],baseline_settings={"n":200})
 
 
@@ -139,7 +141,7 @@ def test_missing_n_uses_noncentrality_variance_parameter():
                             baseline_settings={"L":1})
     assert out["fits"]["fixed"].params["prior_variance"] == 5.
     assert out["records"][-1]["analysis"] == "fixed_effect_variance_prior"
-    with pytest.raises(ValueError,match="uses prior_variance"):
+    with pytest.raises(ValueError,match=r"uses prior_variance"):
         run_sensitivity(inputs,[dict(name="wrong",changes={"scaled_prior_variance":.1})])
 
 
@@ -208,7 +210,7 @@ def test_large_formal_cs_members_below_pip_threshold_remain_candidates():
     assert {x["variant_id"] for x in out["variants"] if x["candidate"]} == members
     assert all(x["candidate_sources"]["baseline"] == ["formal_cs_member"]
                for x in out["variants"] if x["candidate"])
-    with pytest.raises(ValueError, match="top_candidates"):
+    with pytest.raises(ValueError, match=r"top_candidates"):
         compare_fits({"a": a}, top_candidates=True)
 
 

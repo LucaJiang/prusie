@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Prepare portable binary inputs for a live-R toy example comparison."""
-import argparse,hashlib,json
+import argparse
+import hashlib
+import json
 from pathlib import Path
+
 import numpy as np
 
 

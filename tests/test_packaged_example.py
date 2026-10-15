@@ -1,7 +1,10 @@
 """Installed-resource toy example and independent reference checks."""
+import io
+import json
 from importlib.resources import files
-import io,json
+
 import numpy as np
+
 import prusie
 
 

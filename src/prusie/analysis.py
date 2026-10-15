@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import copy
 import math
+
 import numpy as np
+
 from .posterior import credible_sets
 
 _UNSET = object()
@@ -140,7 +142,7 @@ def summarize(fit, R=None, *, coverage=_UNSET, min_abs_corr=_UNSET, proxy_r=0.99
         audit = [dict(component_id=i, reasons=["unavailable"], stages=[],
                       explanation="The fitting pipeline did not record a CS audit.") for i in range(len(alpha))]
     components, cs_rows, proxies, relations, prior_rows = [], [], [], [], []
-    formal = {int(i): (members, k) for k, (i, members) in enumerate(zip(sets["cs_index"], sets["cs"]))}
+    formal = {int(i): (members, k) for k, (i, members) in enumerate(zip(sets["cs_index"], sets["cs"], strict=True))}
     weights = np.asarray(fit.params.get("prior_weights", []), dtype=float)
     weights = _biological(fit, weights) if len(weights) == fit.alpha.shape[1] else weights
     prior_available = weights.shape == (p,)

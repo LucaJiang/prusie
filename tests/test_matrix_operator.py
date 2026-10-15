@@ -1,6 +1,7 @@
 """Analytical native-boundary checks for exact matrix factorization and fallbacks."""
 import numpy as np
 import pytest
+
 from prusie import _native
 
 
@@ -41,7 +42,7 @@ def test_invalid_factor_metadata_rejected(change):
 
 
 def test_partial_factor_metadata_rejected():
-    with pytest.raises(ValueError,match='Missing native option'):
+    with pytest.raises(ValueError,match=r'Missing native option'):
         _native.fit(np.eye(3),np.array([.1,0.,0.]),20.,21.,dict(options(),matrix_global_scale=1.))
 
 
@@ -63,7 +64,7 @@ def test_native_rejects_incompatible_byte_layout_before_rust_view(operator,layou
         response=np.ndarray((3,),dtype=np.float64,buffer=storage,strides=(9,));response[:]=[.1,0.,0.]
     settings=options()
     if operator:settings.update(matrix_global_scale=1.,matrix_inverse_scales=[1.]*3,matrix_scales=[1.]*3)
-    with pytest.raises(ValueError,match='aligned.*byte strides'):
+    with pytest.raises(ValueError,match=r'aligned.*byte strides'):
         _native.fit(matrix,response,20.,21.,settings)
 
 
@@ -95,7 +96,7 @@ def test_singleton_minimum_stride_rejected_before_borrow(which):
     if which in ('vector','both'):
         storage_v=np.array([.1])
         response=np.ndarray((1,),dtype=np.float64,buffer=storage_v,strides=(step,))
-    with pytest.raises(ValueError,match='byte strides'):
+    with pytest.raises(ValueError,match=r'byte strides'):
         _native.fit(matrix,response,20.,21.,one_options())
 
 
@@ -112,7 +113,7 @@ def test_aligned_singleton_odd_stride_preserves_scalar_fit(step):
 
 def test_multielement_negative_stride_retains_native_contiguity_restriction():
     matrix=np.eye(3)[::-1,::-1]
-    with pytest.raises(ValueError,match='contiguous'):
+    with pytest.raises(ValueError,match=r'contiguous'):
         _native.fit(matrix,np.array([.1,0.,0.]),20.,21.,options())
 
 
@@ -127,7 +128,7 @@ def test_empty_unaligned_pointer_rejected_independently_of_numpy_flags(which):
         storage_v=np.zeros(2,dtype=np.uint8)
         response=np.ndarray((0,),dtype=np.float64,buffer=storage_v,offset=1)
         assert response.ctypes.data%8==1
-    with pytest.raises(ValueError,match='aligned'):
+    with pytest.raises(ValueError,match=r'aligned'):
         _native.fit(matrix,response,20.,21.,one_options())
 
 
@@ -152,7 +153,7 @@ def test_factor_conversion_precedes_final_geometry_guard(field, which):
     settings = dict(options(), matrix_global_scale=1.,
                     matrix_inverse_scales=[1.]*3, matrix_scales=[1.]*3)
     settings[field] = ChangeStride() if field == 'matrix_global_scale' else [ChangeStride(), 1., 1.]
-    with pytest.raises(ValueError, match='byte strides'):
+    with pytest.raises(ValueError, match=r'byte strides'):
         _native.fit(matrix, response, 20., 21., settings)
     assert called == [True]
 
@@ -194,6 +195,6 @@ def test_option_conversion_rechecks_numpy_rank_and_dtype(field, which, change):
     settings = dict(one_options(), matrix_global_scale=1.,
                     matrix_inverse_scales=[1.], matrix_scales=[1.])
     settings[field] = [ChangeType()] if field in ('matrix_inverse_scales', 'matrix_scales') else ChangeType()
-    with pytest.raises(ValueError, match='must remain.*float64'):
+    with pytest.raises(ValueError, match=r'must remain.*float64'):
         _native.fit(matrix, response, 20., 21., settings)
     assert called == [True]

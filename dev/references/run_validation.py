@@ -7,17 +7,18 @@ import argparse
 import copy
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import warnings
-import shutil
 from pathlib import Path
 
 import numpy as np
 import scipy
-import prusie
+from restricted_numpy_susie import credible_sets_ref, susie_rss_ref, susie_ss_ref
 from validation_panel import cases
-from restricted_numpy_susie import susie_ss_ref, susie_rss_ref, credible_sets_ref
+
+import prusie
 
 FIELDS = ('pip','alpha','mu','mu2','V','sigma2','elbo','KL','lbf','lbf_variable')
 
@@ -53,7 +54,7 @@ def native_record(f):
     names=('min_abs_corr','mean_abs_corr','median_abs_corr')
     cs=[dict(component=int(c),members=m.tolist(),coverage=float(v),
              purity=[float(f.sets['purity'][key][i]) for key in names])
-        for i,(c,m,v) in enumerate(zip(f.sets['cs_index'],f.sets['cs'],f.sets['coverage']))]
+        for i,(c,m,v) in enumerate(zip(f.sets['cs_index'],f.sets['cs'],f.sets['coverage'], strict=True))]
     return dict(status='returned',fields={k:getattr(f,k) for k in FIELDS},
         niter=f.niter,converged=f.converged,stop_reason=f.convergence['stop_reason'],sets=cs)
 
@@ -111,7 +112,7 @@ def main():
             rationale='Native artifact changed; fixed reference and identical inputs do not require refitting R'))
     else:
         with (a.output/'R.log').open('w') as log:
-            result=subprocess.run(command,stdout=log,stderr=subprocess.STDOUT)
+            result=subprocess.run(command,stdout=log,stderr=subprocess.STDOUT, check=False)
         if result.returncode: raise RuntimeError(f'R failed, see {a.output}/R.log')
     reference=json.loads((a.output/'raw_R.json').read_text())
     raw_native={}; raw_numpy={}; comparisons=[]; refinement_fits={}

@@ -3,8 +3,9 @@
 Sampling reports a lower bound on the fit-stage peak, independently of the
 backend's full-process high-water mark. This module never changes fitting inputs.
 """
-from pathlib import Path
 import time
+from itertools import pairwise
+from pathlib import Path
 
 
 def resident_bytes(pid):
@@ -59,14 +60,14 @@ class Sampler:
         if not self.finished:
             return dict(status='incomplete', samples=len(self.samples),
                         process_error=self.process_error)
-        times, rss = zip(*self.samples)
+        times, rss = zip(*self.samples, strict=True)
         return dict(
             status='ok', baseline_rss_bytes=self.baseline,
             sampled_fit_peak_rss_bytes=max(rss),
             sampled_incremental_peak_bytes=max(rss)-self.baseline,
             returned_fit_rss_bytes=rss[-1], samples=len(rss),
             target_interval_seconds=self.target_interval_seconds,
-            max_observed_interval_seconds=max(b-a for a, b in zip(times, times[1:])),
+            max_observed_interval_seconds=max(b-a for a, b in pairwise(times)),
             sampled_boundary_seconds=times[-1]-times[0],
             definition='Current RSS after imports, inputs and GC; sampled until a returned fit is retained, before export. Increment = sampled peak minus this current-RSS baseline.',
             limitation='Sampled peak and increment are lower bounds; short allocation spikes between samples can be missed. Handshake waits are outside timing mode. Full-process HWM is a separate backend metric.',

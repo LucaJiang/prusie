@@ -1,7 +1,9 @@
 """Analytical RSS reconstruction, independent of real phenotype metadata."""
 import warnings
+
 import numpy as np
 import pytest
+
 import prusie
 
 
@@ -50,7 +52,7 @@ def test_known_variance_matches_explicit_sufficient_statistics(
     assert actual.niter == expected.niter
     assert actual.converged == expected.converged
     assert actual.sets == expected.sets
-    for array, before in zip((R, beta, se), original):
+    for array, before in zip((R, beta, se), original, strict=True):
         np.testing.assert_array_equal(array, before)
 
 

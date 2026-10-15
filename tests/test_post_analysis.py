@@ -1,9 +1,11 @@
 """Posterior semantics, exact pipeline audit, and immutable report re-extraction."""
-from types import SimpleNamespace
 import copy
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
-from prusie.analysis import summarize, _normal_log10p
+
+from prusie.analysis import _normal_log10p, summarize
 from prusie.posterior import credible_sets, marginal_pip
 
 
@@ -80,7 +82,7 @@ def test_posterior_filter_reextract_does_not_run_ibss(monkeypatch):
     assert summary["credible_sets"][0]["size"] == 3
     assert len(fit.sets["cs"][0]) == 2
     assert summary["cs_extraction"] == "posterior_only_no_IBSS"
-    with pytest.raises(ValueError,match="explicit R"):
+    with pytest.raises(ValueError,match=r"explicit R"):
         summarize(fit,coverage=.95)
     assert not summarize(fit,coverage=None)["credible_sets"]
 

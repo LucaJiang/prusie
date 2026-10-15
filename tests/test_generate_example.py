@@ -3,11 +3,11 @@ import importlib.util
 import io
 import json
 import os
-from pathlib import Path
 import platform
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -51,7 +51,7 @@ def test_archive_encoding_does_not_define_numerical_reproducibility(generated):
 def test_frozen_corruption_is_rejected_even_with_valid_regeneration(name,tmp_path,generated):
     data=tmp_path/'teaching';shutil.copytree(DATA,data)
     path=data/name;path.write_bytes(path.read_bytes()+b' ')
-    with pytest.raises(ValueError,match='Frozen'):
+    with pytest.raises(ValueError,match=r'Frozen'):
         generator.check_frozen(data,*generated)
 
 
@@ -62,7 +62,7 @@ def test_rehashing_altered_frozen_data_cannot_bypass_integrity(tmp_path,generate
     hashes=json.loads((data/'checksums.json').read_text())
     hashes['metadata.json']=hashlib.sha256(path.read_bytes()).hexdigest()
     (data/'checksums.json').write_text(json.dumps(hashes,indent=2)+'\n')
-    with pytest.raises(ValueError,match='manifest'):
+    with pytest.raises(ValueError,match=r'manifest'):
         generator.check_frozen(data,*generated)
 
 
@@ -87,7 +87,7 @@ def test_structural_and_nonfinite_changes_rejected(mutation,generated):
 @pytest.mark.parametrize('name,value',[('seed',20261008),('LD_population_rho',.8),('numpy_version','unrecorded')])
 def test_metadata_changes_rejected(name,value,generated):
     arrays,metadata=generated
-    with pytest.raises(ValueError,match='metadata'):
+    with pytest.raises(ValueError,match=r'metadata'):
         generator.check_frozen(DATA,arrays,metadata|{name:value})
 
 

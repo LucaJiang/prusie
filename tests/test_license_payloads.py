@@ -1,14 +1,15 @@
 """Reject missing upstream terms or newly unaccounted bundled dependencies."""
 import json
-from pathlib import Path
 import shutil
 import sys
+from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
-from license_check import check_licenses
+# The checkout's tool must be imported after setting its path.
+from license_check import check_licenses  # noqa: E402
 
 
 def source_copy(tmp_path):
@@ -28,7 +29,7 @@ def test_removed_disclaimer_is_rejected(tmp_path):
     original = notices.read_text()
     assert 'THE SOFTWARE IS PROVIDED "AS IS"' in original
     notices.write_text(original.replace('THE SOFTWARE IS PROVIDED "AS IS"', '', 1))
-    with pytest.raises(ValueError, match='Incomplete or altered upstream terms'):
+    with pytest.raises(ValueError, match=r'Incomplete or altered upstream terms'):
         check_licenses(root)
 
 
@@ -38,5 +39,5 @@ def test_unaccounted_cargo_version_is_rejected(tmp_path):
     manifest = json.loads(path.read_text())
     manifest['cargo_components'].pop()
     path.write_text(json.dumps(manifest))
-    with pytest.raises(ValueError, match='dependency versions'):
+    with pytest.raises(ValueError, match=r'dependency versions'):
         check_licenses(root)

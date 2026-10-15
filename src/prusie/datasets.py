@@ -1,9 +1,10 @@
 """Packaged toy examples for offline use and installation checks."""
 
-from importlib.resources import files
 import hashlib
 import io
 import json
+from importlib.resources import files
+
 import numpy as np
 
 

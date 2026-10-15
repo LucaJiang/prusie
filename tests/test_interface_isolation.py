@@ -2,9 +2,9 @@
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -112,9 +112,9 @@ def test_example_preserves_statistics_before_optional_failure(tmp_path, monkeypa
 
 def test_example_rejects_implicit_model_and_nonpublic_transmission(tmp_path):
     example = example_module()
-    with pytest.raises(ValueError, match="explicit model"):
+    with pytest.raises(ValueError, match=r"explicit model"):
         example.execute("stable", tmp_path, interpret=True)
-    with pytest.raises(ValueError, match="synthetic stable"):
+    with pytest.raises(ValueError, match=r"synthetic stable"):
         example.execute("problem", tmp_path, interpret=True, model="test-model")
     assert not list(tmp_path.iterdir())
 
@@ -123,6 +123,7 @@ def test_plot_does_not_call_optional_provider(monkeypatch):
     matplotlib = pytest.importorskip("matplotlib")
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     import prusie.ai as ai
     from prusie.plots import plot_convergence
     def forbidden(*args, **kwargs):

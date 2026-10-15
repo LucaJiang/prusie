@@ -5,6 +5,7 @@ import subprocess
 import sys
 
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,14 +21,14 @@ def posterior():
     alpha = np.arange(24, 0, -1, dtype=float)
     alpha /= alpha.sum()
     rows = [{'variant_id': v, 'pip': float(a), 'position': 1_000_000 + 100*i,
-             'neg_log10_p': float(i)/4} for i, (v, a) in enumerate(zip(ids, alpha))]
+             'neg_log10_p': float(i)/4} for i, (v, a) in enumerate(zip(ids, alpha, strict=True))]
     components = [{'component_id': 2, 'ranking': ids, 'alpha': alpha.tolist(),
                    'cumulative_posterior': np.cumsum(alpha).tolist()}]
     return {'variants': rows, 'components': components,
             'credible_sets': [{'component_id': 2, 'members': ids[:19], 'requested_coverage': .95}],
             'prior_influence': [{'component_id': 2, 'variant_id': v, 'alpha': float(a),
                  'prior_weight': 1/24, 'effective_prior_weight': 1/24, 'conditional_log_bf': float(i)}
-                 for i, (v, a) in enumerate(zip(ids[::-1], alpha[::-1]))],
+                 for i, (v, a) in enumerate(zip(ids[::-1], alpha[::-1], strict=True))],
             'convergence': {'requested_criterion': 'elbo', 'effective_criterion': 'elbo',
                             'stop_reason': 'elbo_tolerance', 'tol': .01, 'alpha_tol': .002, 'pip_tol': .003},
             'trace': [{'iteration': i+1, 'elbo': -1_000_000.+delta, 'delta_elbo': change,
@@ -51,7 +52,7 @@ def incomplete_ld():
 
 def test_style_is_lazy_and_probability_endpoints_are_honest():
     result = subprocess.run([sys.executable, '-c',
-        'import sys; import prusie._style; assert "matplotlib" not in sys.modules'], capture_output=True, text=True)
+        'import sys; import prusie._style; assert "matplotlib" not in sys.modules'], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
     assert format_number(0., probability=True) == '0'
     assert format_number(1., probability=True) == '1'
@@ -204,7 +205,7 @@ def test_no_cs_trace_and_styles_preserve_source_and_global_configuration(posteri
     assert json.dumps(posterior, sort_keys=True) == snapshot
     # Matplotlib rc_context deliberately does not restore backend; reject this
     # non-local setting before it can alter the caller's plotting environment.
-    with pytest.raises(ValueError, match='backend is not a local style option'):
+    with pytest.raises(ValueError, match=r'backend is not a local style option'):
         plots.plot_locus(posterior, style={'backend': 'svg'})
     assert plt.rcParams == rc
     assert matplotlib.get_backend() == backend

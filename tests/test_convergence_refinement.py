@@ -1,9 +1,18 @@
 """Independent phase, state and search invariants for bounded Gaussian examples."""
 import copy
+
 import numpy as np
 import pytest
-from prusie import (susie_rss,susie_suff_stat,ConvergenceConfig,RefinementConfig,
-                    continue_fit,refine_fit,evaluate_objective)
+
+from prusie import (
+    ConvergenceConfig,
+    RefinementConfig,
+    continue_fit,
+    evaluate_objective,
+    refine_fit,
+    susie_rss,
+    susie_suff_stat,
+)
 from prusie.posterior import marginal_pip
 
 
@@ -26,7 +35,8 @@ def test_tracking_does_not_change_fit_and_metrics_are_phase_exact():
     exact(a,b);exact(a,c)
     assert not a.trace and len(b.trace)==b.niter
     assert b.trace[0]['max_abs_delta_alpha'] is None
-    for prev,cur in zip(b.trace,b.trace[1:]):
+    # Adjacent iterations intentionally leave the final left-hand element unpaired.
+    for prev,cur in zip(b.trace,b.trace[1:], strict=False):
         aa,bb=np.array(prev['alpha']),np.array(cur['alpha'])
         pa=marginal_pip(aa,prev['V'],prior_tol=b.params['prior_tol'])
         pb=marginal_pip(bb,cur['V'],prior_tol=b.params['prior_tol'])
@@ -37,9 +47,9 @@ def test_tracking_does_not_change_fit_and_metrics_are_phase_exact():
         assert cur['delta_elbo']==cur['elbo']-prev['elbo']
     for row in c.trace:
         assert row['lossy'] and 'alpha' not in row
-        for l in range(len(b.V)):
-            kept=sum(v for i,j,v in row['alpha_entries'] if i==l)
-            assert abs(kept+row['omitted_mass'][l]-1)<1e-12
+        for component in range(len(b.V)):
+            kept=sum(v for i,j,v in row['alpha_entries'] if i==component)
+            assert abs(kept+row['omitted_mass'][component]-1)<1e-12
 
 
 def test_no_active_null_and_component_swaps():
@@ -97,7 +107,7 @@ def test_resize_L_and_minimal_explicit_state():
     f=small(L=1)
     g=small(L=3,s_init=f);assert g.alpha.shape==(3,3)
     h=small(L=1,s_init=g);assert h.alpha.shape==(1,3)
-    with pytest.raises(ValueError,match='metadata'):small(s_init=dict(alpha=f.alpha,mu=f.mu,mu2=f.mu2))
+    with pytest.raises(ValueError,match=r'metadata'):small(s_init=dict(alpha=f.alpha,mu=f.mu,mu2=f.mu2))
     state=dict(alpha=f.alpha,mu=f.mu,mu2=f.mu2,variant_ids=f.variant_ids,
                scales=f.X_column_scale_factors,null_index=f.null_index,data_signature=f.data_signature)
     h=small(L=1,s_init=state);assert h.converged
@@ -141,13 +151,13 @@ def test_refinement_failure_no_cs_budget_and_original_prior():
 
 def test_objective_rejects_mutated_model_identity():
     f=small();f.params['prior_weights']=[1.,0.,0.]
-    with pytest.raises(ValueError,match='prior'):evaluate_objective(f)
+    with pytest.raises(ValueError,match=r'prior'):evaluate_objective(f)
     r=refine_fit(f)
     assert r.refinement_status=='unsupported'
     f=small();g=small(z=[4.,2.,0.])
-    with pytest.raises(ValueError,match='identity'):evaluate_objective(f,g._prepared)
+    with pytest.raises(ValueError,match=r'identity'):evaluate_objective(f,g._prepared)
     f=small();f.sigma2*=2
-    with pytest.raises(ValueError,match='Fixed residual'):evaluate_objective(f)
+    with pytest.raises(ValueError,match=r'Fixed residual'):evaluate_objective(f)
 
 
 @pytest.mark.parametrize('kind',['ids','alleles'])
@@ -155,7 +165,7 @@ def test_retained_identity_cannot_be_relabelled(kind):
     f=small(variant_ids=['a','b','c'],variant_metadata={'effect_allele':['A','C','A'],'other_allele':['G','T','C']})
     if kind=='ids':f.variant_ids[:]=f.variant_ids[::-1]
     else:f.variant_metadata['effect_allele'][0]='G'
-    with pytest.raises(ValueError,match='IDs/order|allele'):continue_fit(f)
+    with pytest.raises(ValueError,match=r'IDs/order|allele'):continue_fit(f)
     assert refine_fit(f).refinement_status=='unsupported'
 
 

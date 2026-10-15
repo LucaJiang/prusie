@@ -1,9 +1,10 @@
 """Bounded semantic tests for plots, offline evidence and persistence."""
 import copy
 from html.parser import HTMLParser
-import json
+from typing import ClassVar
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +18,7 @@ from prusie.report import evidence_bundle, load_analysis, save_analysis, write_r
 def summary():
     return {
         "variants": [{"variant_id": name, "pip": pip, "position": 100 + i * 10, "neg_log10_p": i}
-                     for i, (name, pip) in enumerate(zip(("vα", "v2", "v3"), (.8, .4, 0.)))],
+                     for i, (name, pip) in enumerate(zip(("vα", "v2", "v3"), (.8, .4, 0.), strict=True))],
         "components": [{"component_id": 4, "ranking": ["vα", "v2", "v3"],
                         "alpha": [.7, .3, 0.], "cumulative_posterior": [.7, 1., 1.], "null_mass": 0.}],
         "credible_sets": [{"component_id": 4, "members": ["vα", "v2"], "requested_coverage": .95},
@@ -82,7 +83,7 @@ def test_supplied_axes_missing_trace_and_coordinate_rules(summary, tmp_path):
     assert "Variant index" in axes[-1].get_xlabel()
     assert all(not ax.get_xlabel() for ax in axes[:-1])
     plt.close(figure)
-    with pytest.raises(ValueError, match="physical"):
+    with pytest.raises(ValueError, match=r"physical"):
         plots.plot_locus(summary, genes={})
     gtf = tmp_path / "toy.gtf"
     gtf.write_text('1\tlocal\ttranscript\t100\t200\t.\t+\t.\tgene_id "g"; transcript_id "t";\n')
@@ -110,7 +111,7 @@ def test_lossless_json_npz_all_types_and_nan_payload(tmp_path):
     with np.load(tmp_path / "arrays.npz", allow_pickle=False) as archive:
         assert all(not archive[key].dtype.hasobject for key in archive.files)
     (tmp_path / "arrays.npz").write_bytes(b"tampered")
-    with pytest.raises(ValueError, match="checksum"):
+    with pytest.raises(ValueError, match=r"checksum"):
         load_analysis(tmp_path)
 
 
@@ -127,7 +128,7 @@ def test_evidence_and_offline_html(summary, tmp_path):
     receipt = write_report(summary, tmp_path, figures={"Locus <toy>": figure},
                            provenance={"data_checksums": {"toy": "known"}}, title="<toy>")
     class Links(HTMLParser):
-        references = []
+        references: ClassVar[list] = []
         def handle_starttag(self, tag, attrs):
             self.references.extend(v for k, v in attrs if k in ("href", "src"))
     page = (tmp_path / "index.html").read_text()
@@ -150,7 +151,7 @@ def test_real_fit_all_views_and_result_roundtrip(tmp_path):
     from prusie.analysis import summarize
     from prusie.comparison import compare_fits
     from prusie.ld import diagnose_ld
-    from prusie.refinement import refine_fit, RefinementConfig
+    from prusie.refinement import RefinementConfig, refine_fit
     z = np.array([4., 1., -.5, .2])
     R = np.eye(4)
     fit = susie_rss(z=z, R=R, n=200, L=2, variant_ids=["toy_a", "toy_b", "toy_c", "toy_d"],

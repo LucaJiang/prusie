@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Check examples and Pages from an independent source directory with installed packages."""
 from __future__ import annotations
+
 import argparse
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -47,7 +48,7 @@ def main():
         call_env = env.copy()
         if i == 0:
             call_env['PATH'] = str(out/'no-executables')
-        result = subprocess.run(command, cwd=source, env=call_env, capture_output=True, text=True)
+        result = subprocess.run(command, cwd=source, env=call_env, capture_output=True, text=True, check=False)
         (out/f'check-{i}.log').write_text(result.stdout + result.stderr)
         print(result.stdout, end='')
         print(result.stderr, end='', file=sys.stderr)

@@ -1,5 +1,6 @@
 """Run the packaged example from any working directory, without R or downloads."""
 import numpy as np
+
 import prusie
 
 example = prusie.load_example()

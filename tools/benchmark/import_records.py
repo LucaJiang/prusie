@@ -5,9 +5,14 @@ This entrance requires the original controlled input/evidence archive. The publi
 result-only regeneration entrance is tools/generate_results.py.
 """
 from __future__ import annotations
-import argparse, hashlib, json, re
+
+import argparse
+import hashlib
+import json
+import re
 from pathlib import Path
-from summary import classify, paired, array_error, FIELDS, summarize
+
+from summary import FIELDS, array_error, classify, paired, summarize
 
 
 def read(p): return json.loads(Path(p).read_text())
@@ -105,7 +110,7 @@ def main():
             assert all(row['backends'][k]['niter']==100 for k in ('prusie','susieR'))
         cases.append(row)
     artifact=tracked(root/'reports/artifact_manifest.json'); layout=tracked(root/'reports/environment_and_layout.json')
-    protocol=tracked(root/'shared/protocol.json');clock=tracked(root/'shared/protocol_clock_final.prefrozen.json')
+    tracked(root/'shared/protocol.json');tracked(root/'shared/protocol_clock_final.prefrozen.json')
     freeze=tracked(root/'shared/formal_freeze_receipt.json')
     # Preserve all measured identities, with the old binary explicitly identified.
     provenance=dict(measurement_date='2026-10-06',analysis='Reanalysis of retained fits and measurements; no real-panel refitting',

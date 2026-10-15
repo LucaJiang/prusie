@@ -9,7 +9,9 @@ from __future__ import annotations
 import hashlib
 import math
 import time
+
 import numpy as np
+
 from .analysis import _correlation
 
 _REFERENCE = "stephenslab/susieR@8e56a8e038e989856d106d9ca5175cc664fea9d2:R/susie_rss_utils.R"

@@ -1,5 +1,6 @@
 """Outcome-independent software cases; uses only bundled synthetic fixtures."""
 from pathlib import Path
+
 import numpy as np
 
 

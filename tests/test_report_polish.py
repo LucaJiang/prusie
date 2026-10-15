@@ -2,7 +2,6 @@
 import builtins
 import copy
 import csv
-from html.parser import HTMLParser
 import json
 from pathlib import Path
 
@@ -59,6 +58,7 @@ def test_text_and_report_do_not_fit_compute_ld_or_import_plotting(monkeypatch, t
 
 def test_report_svg_retains_editable_text_after_plot_style_exits(tmp_path):
     import xml.etree.ElementTree as ET
+
     import matplotlib as mpl
     import matplotlib.pyplot as plt
 

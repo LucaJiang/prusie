@@ -1,6 +1,7 @@
 """Native option snapshots preserve private sequence and callback semantics."""
 import numpy as np
 import pytest
+
 from prusie import _native, susie_rss
 
 

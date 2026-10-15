@@ -1,8 +1,9 @@
 """Positional labels retain their exact values, Unicode width and metadata copy."""
 import numpy as np
 import pytest
-from prusie.api import _metadata
+
 from prusie import susie_rss
+from prusie.api import _metadata
 
 
 @pytest.mark.parametrize('m,width', [(1,1),(9,1),(10,1),(99,2),(100,2),(999,3),(1000,3)])
@@ -19,10 +20,10 @@ def test_positional_id_boundaries(m, width):
 def test_empty_and_explicit_ids_keep_validation():
     ids, _ = _metadata(None, None, 0)
     assert ids.shape == (0,) and ids.dtype == np.dtype('<U1')
-    with pytest.raises(ValueError, match='nonempty'):
+    with pytest.raises(ValueError, match=r'nonempty'):
         susie_rss([], np.empty((0,0)), 100)
     for ids in (['a','a'], ['a',''], ['a']):
-        with pytest.raises(ValueError, match='distinct nonempty'):
+        with pytest.raises(ValueError, match=r'distinct nonempty'):
             _metadata(ids, None, 2)
 
 

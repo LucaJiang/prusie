@@ -10,9 +10,9 @@ import re
 from pathlib import Path
 
 import markdown
-from pygments.formatters import HtmlFormatter
-from math_render import StaticMath, check_assets
 from license_check import check_licenses
+from math_render import StaticMath, check_assets
+from pygments.formatters import HtmlFormatter
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"

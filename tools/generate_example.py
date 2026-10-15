@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """Generate one independent Gaussian SuSiE toy example."""
 from __future__ import annotations
-import argparse, hashlib, io, json
+
+import argparse
+import hashlib
+import io
+import json
 from pathlib import Path
+
 import numpy as np
 
 ROOT=Path(__file__).resolve().parents[1]

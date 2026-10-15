@@ -1,6 +1,7 @@
 """Convergence controls and exact state summaries for Gaussian IBSS."""
-from dataclasses import dataclass
 import math
+from dataclasses import dataclass
+
 
 @dataclass(frozen=True)
 class ConvergenceConfig:

@@ -1,5 +1,4 @@
 """Requested controls survive continuation, search, persistence and hashing."""
-import copy
 import hashlib
 import json
 
@@ -8,7 +7,7 @@ import pytest
 
 from prusie import ConvergenceConfig, RefinementConfig, continue_fit, refine_fit, susie_rss
 from prusie.diagnostics import resolve_convergence
-from prusie.refinement import data_signature, _hash_float64_c_order, _HASH_BUFFER_ELEMENTS
+from prusie.refinement import _HASH_BUFFER_ELEMENTS, _hash_float64_c_order, data_signature
 from prusie.report import load_analysis, save_analysis
 
 
@@ -173,6 +172,7 @@ def test_hash_implementation_and_tracking_leave_default_posterior_exact(monkeypa
 
 def test_development_identity_is_distinct_and_installed():
     import importlib.metadata
+
     import prusie
     assert prusie.__version__ == importlib.metadata.version('prusie')
     assert prusie.__version__ != '0.2.3rc6'

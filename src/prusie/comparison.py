@@ -8,12 +8,14 @@ from __future__ import annotations
 import copy
 import dataclasses
 import hashlib
-import json
-from importlib.metadata import PackageNotFoundError, version
-import itertools
 import inspect
+import itertools
+import json
 import math
+from importlib.metadata import PackageNotFoundError, version
+
 import numpy as np
+
 from .analysis import _biological, _correlation, _ids, summarize
 
 
@@ -45,7 +47,7 @@ def _signals(fit):
     ids, alpha = _ids(fit), _biological(fit, fit.alpha)
     formal = {int(i): {int(x)-int(fit.null_index is not None and x > fit.null_index)
                       for x in members if x != fit.null_index}
-              for i, members in zip(fit.sets["cs_index"], fit.sets["cs"])}
+              for i, members in zip(fit.sets["cs_index"], fit.sets["cs"], strict=True)}
     records = []
     for i, a in enumerate(alpha):
         active = bool(fit.V[i] > fit.params.get("prior_tol", 1e-9))
@@ -65,7 +67,7 @@ def _signals(fit):
                           effective_fraction=effective/len(ids) if effective is not None and ids else None,
                           biological_mass=mass, cs_size=len(formal[i]) if retained else None,
                           definition="entropy effective candidates normalized over biological variants")
-        record = dict(component_id=i, alpha={x: float(v) for x, v in zip(ids, a)},
+        record = dict(component_id=i, alpha={x: float(v) for x, v in zip(ids, a, strict=True)},
                       cs={ids[j] for j in formal.get(i, set())},
                       top=ids[top] if top is not None else None,
                       V=float(fit.V[i]), active=active, cs_retained=retained,
@@ -230,7 +232,7 @@ def compare_fits(fits, *, baseline=None, R=None, ld_reference=None,
     if isinstance(top_candidates, bool) or not isinstance(top_candidates, (int, np.integer)) or top_candidates < 0:
         raise ValueError("top_candidates must be a nonnegative integer")
     ids = {name: _ids(fit) for name, fit in fits.items()}
-    maps = {name: dict(zip(ids[name], map(float, fit.pip))) for name, fit in fits.items()}
+    maps = {name: dict(zip(ids[name], map(float, fit.pip), strict=True)) for name, fit in fits.items()}
     signals = {name: _signals(fit) for name, fit in fits.items()}
     universe = sorted(set.union(*(set(v) for v in ids.values())) if mode == "union" else set.intersection(*(set(v) for v in ids.values())))
     common_support = set(universe) if mode == "common" else None
@@ -288,7 +290,7 @@ def compare_fits(fits, *, baseline=None, R=None, ld_reference=None,
         correlation = float(np.corrcoef(pa, pb)[0, 1]) if len(shared) > 1 and np.std(pa) > 0 and np.std(pb) > 0 else None
         pairwise.append(dict(setting_a=na, setting_b=nb, shared_variant_count=len(shared),
             support_scope=support_scope, full_region_pip_correlation=correlation,
-            max_abs_delta_pip=max((abs(a-b) for a, b in zip(pa, pb)), default=None),
+            max_abs_delta_pip=max((abs(a-b) for a, b in zip(pa, pb, strict=True)), default=None),
             candidate_max_abs_delta_pip=max((abs(maps[na][x]-maps[nb][x]) for x in ordered_shared
                 if candidate_sources[x]), default=None)))
         edges = []
@@ -419,7 +421,7 @@ def sensitivity_key(inputs, settings, *, initialization="cold", software_version
 
 def _sensitivity_inputs(data, *, explicit_ids=False):
     """Validate variant-indexed RSS inputs before any member of a plan fits."""
-    from .api import _metadata, _vector, _matrix, _scalar
+    from .api import _matrix, _metadata, _scalar, _vector
     if not isinstance(data, dict):
         raise ValueError("sensitivity inputs must be a mapping")
     if explicit_ids and ("variant_ids" not in data or data["variant_ids"] is None):
@@ -476,9 +478,8 @@ def _alternative_sensitivity_inputs(alt, settings, baseline_ids, baseline_metada
     supplied_prior = data.pop("prior_weights", None)
     # A full input mapping can restate the null setting, but changing it is not
     # implicit permission to change a second model factor.
-    if "null_weight" in data:
-        if not np.array_equal(data.pop("null_weight"), settings.get("null_weight", 0.)):
-            raise ValueError("alternative inputs must retain baseline null_weight")
+    if "null_weight" in data and not np.array_equal(data.pop("null_weight"), settings.get("null_weight", 0.)):
+        raise ValueError("alternative inputs must retain baseline null_weight")
     if "s_init" in data:
         raise ValueError("alternative inputs are cold-started; s_init is not supported")
     if set(data) & set(options):
@@ -582,9 +583,9 @@ def run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, cach
         if expected_kind is not None and expected_kind != ("z" if "z" in inputs else "bhat_shat"):
             raise ValueError("supplied baseline input scale/kind differs")
         for key, given in settings.items():
-            if key in baseline.params and key not in ("prior_weights", "s_init", "track_fit", "retain_data", "convergence"):
-                if not np.array_equal(given, baseline.params[key]):
-                    raise ValueError(f"baseline_settings {key} differs from supplied baseline")
+            if (key in baseline.params and key not in ("prior_weights", "s_init", "track_fit", "retain_data", "convergence")
+                    and not np.array_equal(given, baseline.params[key])):
+                raise ValueError(f"baseline_settings {key} differs from supplied baseline")
         # Reuse recorded model settings, so a one-factor change does not silently
         # reset L or variance strategy to public defaults.
         allowed_settings = set(inspect.signature(susie_rss).parameters)-set(inputs)-{"s_init","variant_metadata","variant_ids","z","R","n","bhat","shat"}

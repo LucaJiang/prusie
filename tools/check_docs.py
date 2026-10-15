@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Check local Markdown/Pages links, HTML anchors/assets and package metadata offline."""
 from __future__ import annotations
+
 import argparse
 import ast
-from html.parser import HTMLParser
 import json
-from pathlib import Path
 import re
+from html.parser import HTMLParser
+from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,10 +43,10 @@ def check():
         for target in page.links:
             url = urlsplit(target)
             if url.scheme or url.netloc:
-                if target.startswith(('http:', 'https:', '//')) and re.search(r'(?:src|href)="' + re.escape(target) + '"', path.read_text()):
-                    # External hyperlinks are fine; runtime assets must stay local.
-                    if target in re.findall(r'<(?:script|link|img)[^>]+(?:src|href)="([^"]+)"', path.read_text()):
-                        errors.append(f'{path.relative_to(ROOT)}: external runtime asset {target}')
+                # External hyperlinks are fine; runtime assets must stay local.
+                if (target.startswith(('http:', 'https:', '//')) and re.search(r'(?:src|href)="' + re.escape(target) + '"', path.read_text())
+                        and target in re.findall(r'<(?:script|link|img)[^>]+(?:src|href)="([^"]+)"', path.read_text())):
+                    errors.append(f'{path.relative_to(ROOT)}: external runtime asset {target}')
                 continue
             checked += 1
             dest = (path.parent / unquote(url.path)).resolve() if url.path else path

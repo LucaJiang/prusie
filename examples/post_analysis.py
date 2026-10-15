@@ -5,13 +5,22 @@ python examples/post_analysis.py --output-dir output/post-analysis --case both
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import time
+from pathlib import Path
+
 import numpy as np
+
 import prusie
-from prusie.plots import (plot_locus,plot_signal,plot_convergence,plot_refinement,
-                         plot_ld_diagnostics,plot_sensitivity,plot_prior_influence)
-from prusie.report import write_report,save_analysis,load_analysis
+from prusie.plots import (
+    plot_convergence,
+    plot_ld_diagnostics,
+    plot_locus,
+    plot_prior_influence,
+    plot_refinement,
+    plot_sensitivity,
+    plot_signal,
+)
+from prusie.report import load_analysis, save_analysis, write_report
 
 
 def checksum(a):

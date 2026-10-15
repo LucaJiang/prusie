@@ -1,6 +1,7 @@
 """Posterior summaries mapped to pinned susieR 0.16.6 Gaussian scope."""
 
 import numpy as np
+
 from . import _native
 from ._array_layout import native_array
 
@@ -171,7 +172,7 @@ def credible_sets(
             retained.append((i, members, purity))
             if record is not None:
                 record["reasons"].append("retained")
-                record["purity"] = dict(zip(("min_abs_corr", "mean_abs_corr", "median_abs_corr"), purity))
+                record["purity"] = dict(zip(("min_abs_corr", "mean_abs_corr", "median_abs_corr"), purity, strict=True))
         elif record is not None:
             record["reasons"].append("low_purity")
     if not retained:

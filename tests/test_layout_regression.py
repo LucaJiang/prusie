@@ -1,7 +1,9 @@
 """Deterministic analytical cases for new layout, full validation and ownership."""
 import numpy as np
 import pytest
+
 from prusie import susie_rss, susie_suff_stat
+
 
 @pytest.mark.parametrize('mode',['known_n','missing_n','effects','null','EM','fixed','residual'])
 def test_layout_and_no_mutation(mode):

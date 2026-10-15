@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import warnings as warning_module
 import math
+import warnings as warning_module
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -12,11 +12,15 @@ from numpy.typing import ArrayLike, NDArray
 
 from . import _native
 from ._array_layout import native_array
+from .diagnostics import (
+    convergence_summary,
+    nonconvergence_message,
+    resolve_convergence,
+    tracking_level,
+)
 from .posterior import credible_sets, marginal_pip
+from .refinement import RefinementConfig, data_signature, initial_options, make_prepared, refine_fit
 from .result import SusieResult
-from .diagnostics import (ConvergenceConfig, tracking_level, convergence_summary,
-                          resolve_convergence, nonconvergence_message)
-from .refinement import data_signature, make_prepared, initial_options, refine_fit, RefinementConfig
 
 
 def _vector(

@@ -1,6 +1,6 @@
 """Public regressions for signed ELBO stopping and the current-sigma2 guard."""
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -82,7 +82,7 @@ def test_prior_guard_changes_decision_after_sigma2_update(standardize, method):
         first = susie_suff_stat(**dict(args, max_iter=1))
     assert first.sigma2 > 1000.
     assert np.max(first.V) <= 100.
-    with pytest.raises(ValueError, match='prior variance is unreasonably large'):
+    with pytest.raises(ValueError, match=r'prior variance is unreasonably large'):
         susie_suff_stat(**args)
     fixed = susie_suff_stat(**dict(args, estimate_residual_variance=False))
     assert fixed.sigma2 == 1.

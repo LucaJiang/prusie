@@ -8,15 +8,14 @@ Backend processes run sequentially. This is deliberately outside default CI.
 import argparse
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
-
 from compare_fits import compare
-from prepare_fixture import prepare, ROOT
+from prepare_fixture import ROOT, prepare
 from prepare_teaching import prepare as prepare_teaching
 from rss_sampler import Sampler
 

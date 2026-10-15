@@ -35,7 +35,7 @@ def main():
             for j in range(p):
                 powers[np.abs(positions-j)].astype('<f8').tofile(stream)
         effects = [p//5, p//2, 4*p//5]
-        z = sum(b*powers[np.abs(positions-j)] for j, b in zip(effects, [8., 7., 6.]))
+        z = sum(b*powers[np.abs(positions-j)] for j, b in zip(effects, [8., 7., 6.], strict=True))
         z += .15*np.cos(positions*.73)
         z.astype('<f8').tofile(dest/'z.bin')
         (dest/'ids.txt').write_text(''.join(f'v{j}\n' for j in positions))

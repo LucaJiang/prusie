@@ -13,6 +13,7 @@ import numpy as np
 from scipy.optimize import minimize_scalar
 from scipy.special import logsumexp
 
+
 def _lbf(betahat, shat2, v):
     if not np.all(np.isfinite(shat2)) or np.any(shat2 <= np.finfo(float).eps):
         raise ValueError("Reference excludes sampling variances at or below machine epsilon")
@@ -69,33 +70,34 @@ def susie_ss_ref(XtX, Xty, yty, n, L=10, scaled_prior_variance=0.2,
     XtXr = np.zeros(p)
     elbos = []; prev = -np.inf; converged = False
     for it in range(max_iter):
-        for l in range(L):
-            XtXr -= A @ (alpha[l] * mu[l])
+        for component in range(L):
+            XtXr -= A @ (alpha[component] * mu[component])
             r = b - XtXr
             bh = r / d; s2 = sigma2 / d
-            ll = lambda v: logsumexp(_lbf(bh, s2, v) + logpi)
-            v = V[l]
+            def ll(v, bh=bh, s2=s2):
+                return logsumexp(_lbf(bh, s2, v) + logpi)
+            v = V[component]
             if estimate_prior_variance and method == "optim":
-                res = minimize_scalar(lambda lv: -ll(np.exp(lv)), bounds=(-30, 15),
+                res = minimize_scalar(lambda lv, ll=ll: -ll(np.exp(lv)), bounds=(-30, 15),
                                       method="bounded", options={"xatol": 1e-10})
                 cand = np.exp(res.x)
                 if -ll(cand) <= -ll(v):
                     v = cand
-            if estimate_prior_variance and method in ("optim", "simple"):
-                if ll(0.0) + check_null_threshold >= ll(v):
-                    v = 0.0
+            if (estimate_prior_variance and method in ("optim", "simple")
+                    and ll(0.0) + check_null_threshold >= ll(v)):
+                v = 0.0
             lb = _lbf(bh, s2, v)
             lpo = lb + logpi
             m = lpo.max(); w = np.exp(lpo - m)
-            alpha[l] = w / w.sum()
-            lbf[l] = m + np.log(w.sum()); lbfv[l] = lb
+            alpha[component] = w / w.sum()
+            lbf[component] = m + np.log(w.sum()); lbfv[component] = lb
             pv = v * s2 / (v + s2)
-            mu[l] = pv / s2 * bh; mu2[l] = pv + mu[l] ** 2
+            mu[component] = pv / s2 * bh; mu2[component] = pv + mu[component] ** 2
             if estimate_prior_variance and method == "EM":
-                v = np.sum(alpha[l] * mu2[l])
-            V[l] = v
-            KL[l] = -lbf[l] - 0.5 * np.sum((-2 * alpha[l] * mu[l] * bh + alpha[l] * mu2[l]) / s2)
-            XtXr += A @ (alpha[l] * mu[l])
+                v = np.sum(alpha[component] * mu2[component])
+            V[component] = v
+            KL[component] = -lbf[component] - 0.5 * np.sum((-2 * alpha[component] * mu[component] * bh + alpha[component] * mu2[component]) / s2)
+            XtXr += A @ (alpha[component] * mu[component])
         B = alpha * mu
         bbar = B.sum(0)
         erss = (yty - 2 * bbar @ b + bbar @ A @ bbar
@@ -112,10 +114,10 @@ def susie_ss_ref(XtX, Xty, yty, n, L=10, scaled_prior_variance=0.2,
             sigma2 = erss / n
             if not np.isfinite(sigma2) or not 1e-12 <= sigma2 <= 1e12:
                 raise ValueError("Residual variance left the restricted reference domain")
-    keep = V >= prior_tol
-    for l in np.where(~keep)[0]:
-        V[l] = 0; alpha[l] = pi; mu[l] = 0; mu2[l] = 0; lbfv[l] = 0; lbf[l] = 0; KL[l] = 0
-    act = V > prior_tol
+    keep = prior_tol <= V
+    for component in np.where(~keep)[0]:
+        V[component] = 0; alpha[component] = pi; mu[component] = 0; mu2[component] = 0; lbfv[component] = 0; lbf[component] = 0; KL[component] = 0
+    act = prior_tol < V
     pip = 1 - np.prod(1 - alpha[act], axis=0) if act.any() else np.zeros(p)
     return dict(alpha=alpha, mu=mu, mu2=mu2, V=V, sigma2=sigma2, elbo=np.array(elbos),
                 niter=len(elbos), converged=converged, pip=pip, lbf=lbf, KL=KL,
@@ -142,16 +144,16 @@ def credible_sets_ref(alpha, V, R, coverage=0.95, min_abs_corr=0.5):
     if not 0 < coverage <= 1 or not 0 <= min_abs_corr <= 1:
         raise ValueError("Invalid credible-set coverage or correlation threshold")
     out = []
-    for l in range(alpha.shape[0]):
-        if V[l] <= 1e-9:
+    for component in range(alpha.shape[0]):
+        if V[component] <= 1e-9:
             continue
-        order = np.argsort(-alpha[l], kind="stable")
-        k = int(np.searchsorted(np.cumsum(alpha[l][order]), coverage) + 1)
+        order = np.argsort(-alpha[component], kind="stable")
+        k = int(np.searchsorted(np.cumsum(alpha[component][order]), coverage) + 1)
         members = np.sort(order[:k])
         sub = np.abs(R[np.ix_(members, members)])
         purity = sub.min()
         if purity >= min_abs_corr:
-            out.append((l, members.tolist(), float(alpha[l][members].sum()), purity))
+            out.append((component, members.tolist(), float(alpha[component][members].sum()), purity))
     # susieR also drops duplicate sets (same members)
     seen, uniq = set(), []
     for cs in out:

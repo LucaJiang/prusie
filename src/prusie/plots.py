@@ -9,13 +9,20 @@ tables retain prioritized records; explicit pagination is available.
 from __future__ import annotations
 
 import functools
-from pathlib import Path
 import re
 import textwrap
+from pathlib import Path
 
 import numpy as np
-from ._style import (COLORS, PLOT_STYLE, format_number, format_pip_cell,
-                     format_ld_cell, annotation_color)
+
+from ._style import (
+    COLORS,
+    PLOT_STYLE,
+    annotation_color,
+    format_ld_cell,
+    format_number,
+    format_pip_cell,
+)
 
 
 def _local_style(function):
@@ -236,7 +243,8 @@ def plot_locus(summary, *, R=None, reference_variant=None, genes=None, axes=None
             raise ValueError("Convert the gene table to 1-based closed coordinates explicitly")
         qc = summary.get("input_qc", {})
         study = qc.get("study_information", {})
-        known_build = lambda x: x not in (None, "not_assessed", "unknown", "")
+        def known_build(x):
+            return x not in (None, "not_assessed", "unknown", "")
         declared_builds = {value for value in (qc.get("genome_build"), study.get("genome_build")) if known_build(value)}
         if len(declared_builds) > 1:
             raise ValueError("Variant genome builds differ between metadata sources")
@@ -370,7 +378,7 @@ def _select_component(summary, component_id, variant_id):
         if variant_id is not None:
             return float(alpha[ranking.index(variant_id)]) if variant_id in ranking else -np.inf
         pips = {row["variant_id"]: _number(row.get("pip")) for row in summary.get("variants", [])}
-        return max((pips.get(v, 0.) * float(a) for v, a in zip(ranking, alpha)), default=0.)
+        return max((pips.get(v, 0.) * float(a) for v, a in zip(ranking, alpha, strict=True)), default=0.)
     return max(candidates, key=lambda c: (support(c), -int(c["component_id"])))
 
 
@@ -485,7 +493,7 @@ def plot_signal(summary, component_id=None, *, variant_id=None, R=None, axes=Non
     return figure, axs, {"component": component, "credible_set": cs, "within_cs_r": within, "proxies": proxies,
                          "selected_variant": variant_id, "all_components": summary.get("components", []),
                          "displayed_variant_ids": labels, "displayed_full_rank_indices": selected,
-                         "variant_label_map": dict(zip(labels, _display_labels(labels))),
+                         "variant_label_map": dict(zip(labels, _display_labels(labels), strict=True)),
                          "max_variants": max_variants, "cumulative_posterior_renormalized": False,
                          "selected_posterior_mass": selected_mass, "ld_measure": ld_measure,
                          "displayed_ld": within ** 2 if within is not None and ld_measure == 'r2' else within,
@@ -516,7 +524,8 @@ def _plot_convergence_stage(fit_or_summary, *, axes=None, variance_components=No
     if not trace:
         for ax in axs:
             _missing(ax, 'Trace not recorded; history cannot be reconstructed')
-    for ax, key, label in zip(axs, keys, metric_labels):
+    # Variance axes are handled separately; visit only the available metric axes here.
+    for ax, key, label in zip(axs, keys, metric_labels, strict=False):
         values = np.asarray([_number(row.get(key)) for row in trace])
         if key == 'elbo' and relative_elbo:
             finite = values[np.isfinite(values)]
@@ -593,7 +602,7 @@ def _plot_convergence_stage(fit_or_summary, *, axes=None, variance_components=No
         sa.plot(iterations, [_number(row.get('sigma2')) for row in trace], color=color, marker='o')
         sa.set_ylabel('Residual variance σ²' + (' (fixed)' if summary.get('sigma2_fixed') else ''))
         va.grid(axis='y'); sa.grid(axis='y')
-    events = [{'iteration': int(iteration), 'events': row.get('events')} for iteration, row in zip(iterations, trace)
+    events = [{'iteration': int(iteration), 'events': row.get('events')} for iteration, row in zip(iterations, trace, strict=True)
               if row.get('events')]
     for ax in axs:
         if len(iterations):
@@ -670,7 +679,7 @@ def _formal_sets(value):
         return value.get("credible_sets", [])
     ids = list(value.variant_ids)
     return [{"component_id": int(c), "members": [str(ids[int(j)]) for j in m]}
-            for c, m in zip(value.sets.get("cs_index", []), value.sets.get("cs", []))]
+            for c, m in zip(value.sets.get("cs_index", []), value.sets.get("cs", []), strict=True)]
 
 
 @_local_style
@@ -689,7 +698,7 @@ def plot_refinement(before, after, *, comparison=None, axes=None,
     def values(value):
         if isinstance(value, dict):
             return {v["variant_id"]: v["pip"] for v in value["variants"]}
-        return dict(zip(value.variant_ids.tolist(), value.pip.tolist()))
+        return dict(zip(value.variant_ids.tolist(), value.pip.tolist(), strict=True))
     a, b = values(before), values(after)
     ids = list(dict.fromkeys([*a, *b]))
     av, bv = [a.get(v, np.nan) for v in ids], [b.get(v, np.nan) for v in ids]
@@ -747,7 +756,7 @@ def plot_refinement(before, after, *, comparison=None, axes=None,
     axs[0].set_xlabel(f"{'Main candidates' if candidates_only else 'Variants'} ({len(shown_ids)} of {len(ids)})")
     axs[0].legend()
     candidate_states = []
-    for row, delta in zip(history, improvements):
+    for row, delta in zip(history, improvements, strict=True):
         stages = row.get('stages', {})
         if row.get('accepted'):
             state = 'Accepted'
@@ -828,7 +837,7 @@ def plot_refinement(before, after, *, comparison=None, axes=None,
                          "all_component_relations": comparison.get("component_relations", []) if comparison else [],
                          "table_page": table_page, "table_page_size": table_page_size, "layout": layout,
                          "displayed_variant_ids": shown_ids, "candidates_only": candidates_only,
-                         "variant_label_map": dict(zip(shown_ids, _display_labels(shown_ids))),
+                         "variant_label_map": dict(zip(shown_ids, _display_labels(shown_ids), strict=True)),
                          "candidate_selection": ('explicit variant IDs + all formal CS members' if variant_ids is not None else
                             'all formal CS members + top ten PIPs + PIP ≥ 0.1' if candidates_only else 'full region'),
                          "candidate_statuses": candidate_states, "objective_definition": 'original-prior post-trim ELBO'}
@@ -847,10 +856,10 @@ def plot_ld_diagnostics(diagnostics, *, axes=None, table_page=0, table_page_size
     compact = _layout(layout)
     if auxiliary not in ('residual', 'log_lr'):
         raise ValueError("auxiliary must be 'residual' or 'log_lr'")
-    from .ld import diagnostic_status, diagnostic_counts, diagnostic_input_missing
+    from .ld import diagnostic_counts, diagnostic_input_missing, diagnostic_status
     rows = diagnostics.get("variants", [])
     states = np.asarray([diagnostic_status(row) for row in rows])
-    details = [row for row, state in zip(rows, states) if state != "not_flagged"]
+    details = [row for row, state in zip(rows, states, strict=True) if state != "not_flagged"]
     shown_count = min(len(details), table_page_size) if table_page_size else len(details)
     figure, axs = _axes(axes, 2 if compact else 3,
                         figsize=(8.5, 6.3) if compact else (11, 5.6 + max(2.6, .32 * shown_count)))
@@ -965,6 +974,7 @@ def plot_sensitivity(comparison, *, candidates_only=True, axes=None, layer="sign
     The default candidate policy is recorded by :func:`compare_fits`.
     """
     import matplotlib.pyplot as plt
+
     from .comparison import comparison_relations
     compact = _layout(layout)
     display_names = dict(display_names or {})
@@ -1107,18 +1117,18 @@ def plot_sensitivity(comparison, *, candidates_only=True, axes=None, layer="sign
         'candidates_only': candidates_only, 'all_variant_records': all_rows,
         'layer': layer, 'baseline_only': baseline_only, 'all_component_relations': comparison.get('component_relations', []),
         'table_page': table_page, 'table_page_size': table_page_size, 'layout': layout,
-        'display_names': dict(zip(settings, labels)), 'cell_annotations': annotated,
+        'display_names': dict(zip(settings, labels, strict=True)), 'cell_annotations': annotated,
         'display_text': text_matrix, 'annotation_colors': text_colors, 'caption_details': caption_details,
         'display_policy': {'cmap': color_map.name, 'normalization': [0, 1], 'scale': 'linear',
             'annotation_rule': 'at most 18 rows, 7 settings and 100 cells',
             'annotation_format': 'exact 0/1; <0.01 or >0.99 for interior tails; otherwise two decimals; NA for missing',
             'row_labels': 'all selected candidates; long IDs uniquely abbreviated',
-            'rendered_setting_labels': dict(zip(settings, tick_labels))},
+            'rendered_setting_labels': dict(zip(settings, tick_labels, strict=True))},
         'relation_counts': counts, 'baseline_changes': baseline_changes, 'maximum_baseline_change': maximum, 'maximum_change_outside_candidates': outside_maximum,
         'mode': comparison.get('mode'), 'support': comparison.get('support', {}),
         'fit_settings': comparison.get('fit_settings', {}), 'source_comparison': comparison,
         'candidate_selection': comparison.get('rules', {}).get('candidates', 'saved candidate flags'),
-        'variant_label_map': dict(zip([r['variant_id'] for r in rows], _display_labels([r['variant_id'] for r in rows])))}
+        'variant_label_map': dict(zip([r['variant_id'] for r in rows], _display_labels([r['variant_id'] for r in rows]), strict=True))}
 
 
 @_local_style
@@ -1162,7 +1172,7 @@ def plot_prior_influence(summary, component_id=None, *, variant_id=None, variant
     figure, axs = _axes(axes, 3, figsize=(8.5, 6.6) if compact else None)
     displayed_ids = [r['variant_id'] for r in rows]
     for ax, key, label in zip(axs, ('prior_weight', 'conditional_log_bf', 'alpha'),
-                            ('Variant prior', 'Conditional log BF', 'Component alpha')):
+                            ('Variant prior', 'Conditional log BF', 'Component alpha'), strict=True):
         ax.bar(range(len(rows)), [_number(row.get(key)) for row in rows],
                color=[_component_color(component_id) if r['variant_id'] in cs_members else COLORS['missing'] for r in rows],
                edgecolor=COLORS['text'], linewidth=.35)
@@ -1189,4 +1199,4 @@ def plot_prior_influence(summary, component_id=None, *, variant_id=None, variant
         'all_prior_influence': all_rows, 'selected_variant': variant_id,
         'selected_variant_ids': None if chosen is None else sorted(chosen),
         'displayed_variant_ids': displayed_ids, 'candidate_selection': rule, 'layout': layout,
-        'variant_label_map': dict(zip(displayed_ids, _display_labels(displayed_ids)))}
+        'variant_label_map': dict(zip(displayed_ids, _display_labels(displayed_ids), strict=True))}

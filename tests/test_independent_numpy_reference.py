@@ -1,9 +1,11 @@
 """Analytic and native checks for the deliberately restricted NumPy oracle."""
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+
 import numpy as np
 import pytest
 from scipy.special import logsumexp
+
 import prusie
 
 _path = Path(__file__).resolve().parents[1]/'dev/references/restricted_numpy_susie.py'

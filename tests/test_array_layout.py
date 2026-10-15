@@ -1,9 +1,10 @@
 """Valid byte-layout inputs are normalized before typed native views exist."""
 import numpy as np
 import pytest
+
 from prusie import _native, susie_rss, susie_suff_stat
-from prusie.posterior import credible_sets
 from prusie._array_layout import native_array
+from prusie.posterior import credible_sets
 
 
 def unusual(values, kind):
@@ -80,7 +81,7 @@ def test_direct_native_rejects_unsupported_geometry(kind, boundary):
         'fit_matrix': lambda: _native.fit(matrix, good, 99., 100., options),
         'fit_vector': lambda: _native.fit(np.eye(3), vector, 99., 100., options),
     }
-    with pytest.raises(ValueError, match='aligned|byte strides'):
+    with pytest.raises(ValueError, match=r'aligned|byte strides'):
         calls[boundary]()
 
 
@@ -94,10 +95,10 @@ def test_degenerate_geometry_checked_before_view(size, stride):
         normalized = native_array(vector)
         assert normalized.ctypes.data % 8 == 0 and normalized.strides == (8,)
         np.testing.assert_array_equal(normalized, [1.])
-    with pytest.raises(ValueError, match='aligned|byte strides'):
+    with pytest.raises(ValueError, match=r'aligned|byte strides'):
         _native.complete_finite_scan(vector)
     matrix = np.ndarray((size, size), dtype=float, buffer=buffer, strides=(stride, stride))
-    with pytest.raises(ValueError, match='aligned|byte strides'):
+    with pytest.raises(ValueError, match=r'aligned|byte strides'):
         _native.validate_rss_matrix(matrix, 99.)
     if size:
         result = susie_rss(vector, matrix, 100., L=1)

@@ -1,6 +1,7 @@
 """Finiteness classifications include NaN payloads and remain read only."""
 import numpy as np
 import pytest
+
 from prusie import _native
 
 

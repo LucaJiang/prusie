@@ -1,7 +1,9 @@
 """Standalone CS covariance scales retain reciprocal rounding across dtypes."""
 import numpy as np
 import pytest
+
 from prusie.posterior import credible_sets
+
 
 @pytest.mark.parametrize('dtype', [np.float64, np.float32, np.float16, np.dtype('>f8')])
 @pytest.mark.parametrize('zero', [False, True])

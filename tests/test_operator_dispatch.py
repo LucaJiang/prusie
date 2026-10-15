@@ -1,7 +1,9 @@
 """API wiring proof using exact materialization, not the new native operator."""
 import warnings
+
 import numpy as np
 import pytest
+
 from prusie import _native, susie_rss, susie_suff_stat
 
 
@@ -16,7 +18,7 @@ def assert_results_equal(a, b):
     for name in ['cs_index', 'coverage', 'actual_coverage']:
         np.testing.assert_array_equal(a.sets[name], b.sets[name])
     assert len(a.sets['cs']) == len(b.sets['cs'])
-    for x, y in zip(a.sets['cs'], b.sets['cs']):
+    for x, y in zip(a.sets['cs'], b.sets['cs'], strict=True):
         np.testing.assert_array_equal(x, y)
     for name in a.sets['purity']:
         np.testing.assert_array_equal(a.sets['purity'][name], b.sets['purity'][name])

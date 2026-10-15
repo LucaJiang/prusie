@@ -14,10 +14,11 @@ import json
 from pathlib import Path
 
 import numpy as np
+from post_analysis import make_figures
+
 import prusie
 from prusie.diagnostics import resolve_convergence
-from prusie.report import load_analysis, save_analysis, write_report, _plain
-from post_analysis import make_figures
+from prusie.report import _plain, load_analysis, save_analysis, write_report
 
 ROOT=Path(__file__).resolve().parents[1]
 HISTORICAL=ROOT/'docs/review/post_analysis/examples'
@@ -114,7 +115,7 @@ def render(case,output,render_source,refresh,sensitivity_dir=None):
     import matplotlib.pyplot as plt
     plt.close('all')
     return dict(case=case,figures=len(figures),maximum_sensitivity_pip_difference=max_pip_difference,
-                evidence_sha256=receipt['evidence_sha256'] if 'evidence_sha256' in receipt else None)
+                evidence_sha256=receipt.get('evidence_sha256', None))
 
 
 def main():

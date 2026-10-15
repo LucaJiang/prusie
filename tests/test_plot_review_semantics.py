@@ -3,6 +3,7 @@ import copy
 from types import SimpleNamespace
 
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -181,22 +182,22 @@ def test_gene_locus_filters_and_known_mismatch_with_rsid(tmp_path):
     plt.close(view[0])
     changed = copy.deepcopy(summary)
     changed['variants'][0]['metadata']['chromosome'] = '2'
-    with pytest.raises(ValueError, match='chromosomes differ'):
+    with pytest.raises(ValueError, match=r'chromosomes differ'):
         plots.plot_locus(changed, genes=genes)
     empty_track = plots.read_gene_track(gtf, genome_build='toy_build', source='test',
                                         chromosome='1', start=1000, end=2000)
     assert not empty_track['records']
-    with pytest.raises(ValueError, match='chromosomes differ'):
+    with pytest.raises(ValueError, match=r'chromosomes differ'):
         plots.plot_locus(changed, genes=empty_track)
     changed['variants'][0]['metadata'] = {'chromosome': '1', 'genome_build': 'other_build'}
-    with pytest.raises(ValueError, match='genome builds differ'):
+    with pytest.raises(ValueError, match=r'genome builds differ'):
         plots.plot_locus(changed, genes=genes)
     changed['variants'][0]['metadata'] = {}
     view = plots.plot_locus(changed, genes=genes)
     assert view[2]['coordinate_status'] == {'chromosome': 'not_assessed', 'genome_build': 'not_assessed'}
     assert 'not_assessed' in view[1][-1].get_title()
     plt.close(view[0])
-    with pytest.raises(ValueError, match='requires chromosome'):
+    with pytest.raises(ValueError, match=r'requires chromosome'):
         plots.read_gene_track(gtf, genome_build='toy', source='test', start=10)
 
 
@@ -238,7 +239,7 @@ def test_prior_explicit_component_keeps_minimal_legacy_table_support():
 
 
 def test_native_summary_study_information_checks_gene_build_and_chromosome(tmp_path):
-    from prusie import susie_rss, summarize
+    from prusie import summarize, susie_rss
     fit = susie_rss(z=[3., 1.], R=np.eye(2), n=100, L=1,
                     variant_ids=['rs12', 'rs13'], variant_metadata={'position': [100, 120]})
     gtf = tmp_path / 'local.gtf'
@@ -249,18 +250,18 @@ def test_native_summary_study_information_checks_gene_build_and_chromosome(tmp_p
     assert view[2]['coordinate_status'] == {'chromosome': 'matched', 'genome_build': 'matched'}
     plt.close(view[0])
     mismatch = summarize(fit, input_info={'genome_build': 'build2', 'chromosome': '1'})
-    with pytest.raises(ValueError, match='genome builds differ'):
+    with pytest.raises(ValueError, match=r'genome builds differ'):
         plots.plot_locus(mismatch, genes=genes)
     mismatch = summarize(fit, input_info={'genome_build': 'build1', 'chromosome': '2'})
-    with pytest.raises(ValueError, match='chromosomes differ'):
+    with pytest.raises(ValueError, match=r'chromosomes differ'):
         plots.plot_locus(mismatch, genes=genes)
     mismatch = summarize(fit, metadata={'chromosome': ['2', '2']},
                          input_info={'genome_build': 'build1', 'chromosome': '1'})
-    with pytest.raises(ValueError, match='chromosomes differ between metadata'):
+    with pytest.raises(ValueError, match=r'chromosomes differ between metadata'):
         plots.plot_locus(mismatch, genes=genes)
     mismatch = summarize(fit, metadata={'genome_build': ['build2', 'build2']},
                          input_info={'genome_build': 'build1', 'chromosome': '1'})
-    with pytest.raises(ValueError, match='Variant genome builds differ'):
+    with pytest.raises(ValueError, match=r'Variant genome builds differ'):
         plots.plot_locus(mismatch, genes=genes)
 
 
@@ -293,7 +294,7 @@ def test_nonfinite_fallback_selects_alpha_pip_thresholds():
 def test_explicit_signal_view_keeps_cs_and_full_posterior_without_renormalizing():
     ids=[f'rs{i}' for i in range(30)]
     alpha=np.full(30,1/30)
-    summary={'variants':[{'variant_id':v,'pip':float(a)} for v,a in zip(ids,alpha)],
+    summary={'variants':[{'variant_id':v,'pip':float(a)} for v,a in zip(ids,alpha, strict=True)],
         'components':[{'component_id':0,'ranking':ids,'alpha':alpha,
                        'cumulative_posterior':np.cumsum(alpha),'null_mass':0}],
         'credible_sets':[{'component_id':0,'members':ids[:29], 'requested_coverage':.95}],
@@ -306,5 +307,5 @@ def test_explicit_signal_view_keeps_cs_and_full_posterior_without_renormalizing(
     plt.close(view[0])
     summary['credible_sets'][0]['members']=ids[:2]
     view=plots.plot_signal(summary,0,variant_id='rs29',max_variants=3)
-    assert view[2]['displayed_variant_ids']==ids[:3]+['rs29']
+    assert view[2]['displayed_variant_ids']==[*ids[:3], 'rs29']
     plt.close(view[0])

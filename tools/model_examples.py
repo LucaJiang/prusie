@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import argparse
-from decimal import Decimal, localcontext
 import json
 import math
+from decimal import Decimal, localcontext
 from pathlib import Path
 
 import numpy as np
@@ -88,7 +88,8 @@ def calculate():
 
 def snippets(x):
     c, ser = x["cache"], x["ser"]
-    vec = lambda a: "(" + ", ".join(f"{v:g}" for v in a) + ")"
+    def vec(a):
+        return "(" + ", ".join(f"{v:g}" for v in a) + ")"
     return {
         "wald": f"The adjusted statistic is **{x['wald_adjusted']:.6f}** and the working crossproduct is "
         f"**{x['wald_g']:.6f}** (with $Q_{{jj}}=99$ for unit LD diagonal).\n",

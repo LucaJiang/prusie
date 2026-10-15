@@ -3,19 +3,25 @@
 The likelihood uses the same working sufficient statistics in every candidate.
 Stage A's changed-prior objective is recorded, never used for model selection.
 """
-from dataclasses import dataclass
-from collections.abc import Mapping
 import copy
 import hashlib
 import math
 import time
+from collections.abc import Mapping
+from dataclasses import dataclass
 from functools import cached_property
 from types import MappingProxyType
+
 import numpy as np
+
 from . import _native
+from .diagnostics import (
+    convergence_summary,
+    nonconvergence_message,
+    resolve_convergence,
+    tracking_level,
+)
 from .posterior import credible_sets, marginal_pip
-from .diagnostics import (ConvergenceConfig, tracking_level, convergence_summary,
-                          resolve_convergence, nonconvergence_message)
 
 
 def _readonly(value):
@@ -125,7 +131,7 @@ def initial_options(s_init, *, ids,metadata,scales,null_index,signature,L,weight
         raise ValueError('Initialization alpha must be finite, nonnegative and normalized')
     if np.any(mu2<mu*mu): raise ValueError('Initialization mu2 must be >= mu squared')
     keep=min(L,len(alpha)); out={}
-    for name,a in zip(('alpha','mu','mu2'),arrays):
+    for name,a in zip(('alpha','mu','mu2'),arrays, strict=True):
         target=np.broadcast_to(weights,(L,p)).copy() if name=='alpha' else np.zeros((L,p))
         target[:keep]=a[:keep]; out['init_'+name]=target.ravel()
     if 'V' in state:
@@ -174,7 +180,7 @@ def evaluate_objective(fit, data=None, *, prior_weights=None, hard_exclusion=Fal
     if not data.options['estimate_prior_variance']:
         expected_v=data.options['prior_variance']
         if expected_v<data.options['prior_tol']:expected_v=0.
-        if np.any(fit.V!=expected_v):raise ValueError('Fixed prior variance differs from original model')
+        if np.any(expected_v != fit.V):raise ValueError('Fixed prior variance differs from original model')
     a,m,m2=fit.alpha,fit.mu,fit.mu2
     if not all(np.isfinite(x).all() for x in (a,m,m2,fit.V)) or not math.isfinite(fit.sigma2) or fit.sigma2<=0:
         raise ValueError('Nonfinite or invalid posterior state')
@@ -186,17 +192,17 @@ def evaluate_objective(fit, data=None, *, prior_weights=None, hard_exclusion=Fal
     effective=pi+np.sqrt(np.finfo(float).eps)
     if hard_exclusion: effective=np.where(pi==0,0.,effective)
     kl=[]
-    for l,v in enumerate(fit.V):
+    for component,v in enumerate(fit.V):
         if v==0:
-            if np.any(m[l]!=0) or np.any(m2[l]!=0): raise ValueError('V=0 component has nonzero moments')
+            if np.any(m[component]!=0) or np.any(m2[component]!=0): raise ValueError('V=0 component has nonzero moments')
             kl.append(0.); continue
-        use=a[l]>0
+        use=a[component]>0
         if np.any(effective[use]<=0): raise ValueError('Posterior mass on hard-excluded variant')
-        categorical=float(np.sum(a[l,use]*np.log(a[l,use]/effective[use])))
+        categorical=float(np.sum(a[component,use]*np.log(a[component,use]/effective[use])))
         physical=use & (d>0)
-        s2=m2[l,physical]-m[l,physical]**2
+        s2=m2[component,physical]-m[component,physical]**2
         if np.any(s2<=0): raise ValueError('Non-positive conditional variance in active component')
-        normal=.5*float(np.sum(a[l,physical]*(m2[l,physical]/v-1+np.log(v/s2))))
+        normal=.5*float(np.sum(a[component,physical]*(m2[component,physical]/v-1+np.log(v/s2))))
         kl.append(categorical+normal)
     objective=-data.n/2*np.log(2*np.pi*fit.sigma2)-er2/(2*fit.sigma2)-sum(kl)
     if not np.isfinite(objective): raise ValueError('Nonfinite objective')
@@ -326,7 +332,7 @@ def refine_fit(fit, config=None, *, convergence=None):
         incumbent=best; incumbent_obj=current; candidates=[]; failures=0; evaluated=0
         budget_exhausted=False
         # Freeze the complete incumbent and its CS list for this round.
-        for component,members in zip(incumbent.sets['cs_index'],incumbent.sets['cs']):
+        for component,members in zip(incumbent.sets['cs_index'],incumbent.sets['cs'], strict=True):
             if config.candidate_budget is not None and attempts>=config.candidate_budget:
                 budget_exhausted=True;break
             row=dict(round=round_id,component=int(component),excluded_indices=members.tolist(),

@@ -1,12 +1,12 @@
 """Website structure uses the real Markdown/template pipeline without fitting."""
-from html.parser import HTMLParser
-from html import escape
-from pathlib import Path
 import sys
+from html import escape
+from html.parser import HTMLParser
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
-import build_docs
+import build_docs  # noqa: E402 - Import the checkout's renderer after setting its path.
 
 
 class Elements(HTMLParser):

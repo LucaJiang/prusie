@@ -10,12 +10,12 @@ import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import tempfile
 import time
+from pathlib import Path
 from typing import Protocol
 from urllib.parse import urlparse
 
@@ -231,7 +231,7 @@ class CodexCLI:
                    "--output-last-message", str(output), "--color", "never"]
         for key, value in overrides.items():
             command.extend(["-c", f"{key}={value}"])
-        return command + ["-"]
+        return [*command, "-"]
 
     @staticmethod
     def _stop(process):

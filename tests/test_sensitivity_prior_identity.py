@@ -87,7 +87,7 @@ def extended():
 def test_new_ids_under_nonuniform_prior_require_explicit_complete_weights(provided):
     calls = []
     baseline = susie_rss(**inputs(), **options([.8, .15, .05])) if provided else None
-    with pytest.raises(ValueError, match='new.*explicit.*prior_weights'):
+    with pytest.raises(ValueError, match=r'new.*explicit.*prior_weights'):
         run_sensitivity(inputs(), [dict(name='valid', changes={'L': 2}),
                                    dict(name='new', inputs=extended())],
                         baseline=baseline, baseline_settings=options([.8, .15, .05]),
@@ -130,7 +130,7 @@ def test_uniform_new_ids_extend_equal_raw_weights(prior, provided):
                                  [1e308, 1e308], [1.], [[.5, .5]]])
 def test_invalid_alternative_weights_reject_entire_plan_before_any_fit(prior):
     calls = []
-    with pytest.raises(ValueError, match='prior_weights'):
+    with pytest.raises(ValueError, match=r'prior_weights'):
         run_sensitivity(inputs(), [dict(name='valid', changes={'L': 2}),
                                    dict(name='bad', inputs=dict(inputs([0, 1]), prior_weights=prior))],
                         fit_function=lambda **kw: calls.append(kw))
@@ -140,7 +140,7 @@ def test_invalid_alternative_weights_reject_entire_plan_before_any_fit(prior):
 @pytest.mark.parametrize('null', [0., .2])
 def test_zero_support_subset_is_rejected_even_with_null(null):
     calls = []
-    with pytest.raises(ValueError, match='prior_weights'):
+    with pytest.raises(ValueError, match=r'prior_weights'):
         run_sensitivity(inputs(), [dict(name='zero', inputs=inputs([1, 2]))],
                         baseline_settings=options([1., 0., 0.], null),
                         fit_function=lambda **kw: calls.append(kw))
@@ -162,7 +162,7 @@ def test_input_dimensions_ids_and_metadata_validated_before_any_fit(change):
 @pytest.mark.parametrize('null', [-.1, 1., np.nan, np.inf])
 def test_invalid_null_weight_is_preflighted(null):
     calls = []
-    with pytest.raises(ValueError, match='null_weight'):
+    with pytest.raises(ValueError, match=r'null_weight'):
         run_sensitivity(inputs(), [], baseline_settings=options(None, null),
                         fit_function=lambda **kw: calls.append(kw))
     assert calls == []
@@ -181,7 +181,7 @@ def test_inherited_metadata_is_reindexed_without_mutation(metadata_in_settings):
         np.testing.assert_array_equal(fit.variant_metadata[key], values[[2, 0]])
         np.testing.assert_array_equal((settings if metadata_in_settings else data)['variant_metadata'][key], values)
     assert out['records'][-1]['input_resolution']['metadata_policy'] == 'reindex_existing_columns'
-    with pytest.raises(ValueError, match='new.*variant_metadata'):
+    with pytest.raises(ValueError, match=r'new.*variant_metadata'):
         run_sensitivity(data, [dict(name='new', inputs=dict(extended(), prior_weights=None))], baseline_settings=settings)
 
 

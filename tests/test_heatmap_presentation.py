@@ -1,26 +1,30 @@
 """Heatmap rendering semantics on bounded saved-style evidence; no fits required."""
 import copy
+from itertools import pairwise
+
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
 import numpy as np
 import pytest
+from matplotlib.colors import Normalize
+
 from prusie import plots
-from prusie._style import annotation_color, format_pip_cell, format_ld_cell
+from prusie._style import annotation_color, format_ld_cell, format_pip_cell
 
 
 def comparison(values, settings=('baseline', 'alternative')):
     return {'settings': list(settings), 'baseline': settings[0], 'mode': 'union',
             'support': {'pairwise_metrics': 'pairwise_intersection'},
-            'variants': [{'variant_id': f'v{i}', 'pips': dict(zip(settings, row)), 'candidate': True}
+            'variants': [{'variant_id': f'v{i}', 'pips': dict(zip(settings, row, strict=True)), 'candidate': True}
                          for i, row in enumerate(values)], 'signal_relations': []}
 
 
 def signal(count=2):
     ids = [f'v{i}' for i in range(count)]
     alpha = np.ones(count) / count
-    return {'variants': [{'variant_id': value, 'pip': float(a)} for value, a in zip(ids, alpha)],
+    return {'variants': [{'variant_id': value, 'pip': float(a)} for value, a in zip(ids, alpha, strict=True)],
             'credible_sets': [{'component_id': 4, 'members': ids, 'requested_coverage': .95}],
             'components': [{'component_id': 4, 'ranking': ids, 'alpha': alpha.tolist(),
                             'cumulative_posterior': np.cumsum(alpha).tolist()}]}
@@ -163,7 +167,7 @@ def test_current_sized_settings_wrap_without_touching_and_keep_every_row():
     view = plots.plot_sensitivity(source, layout='compact', display_names=labels)
     view[0].canvas.draw()
     boxes = [tick.get_window_extent(view[0].canvas.get_renderer()) for tick in view[1][0].get_xticklabels()]
-    assert all(first.x1 < second.x0 for first, second in zip(boxes[:-1], boxes[1:]))
+    assert all(first.x1 < second.x0 for first, second in pairwise(boxes))
     assert len(view[1][0].get_yticklabels()) == 15
     assert view[2]['display_names'] == labels
     assert not view[1][1].tables

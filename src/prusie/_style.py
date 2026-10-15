@@ -96,9 +96,9 @@ def format_ld_cell(value):
 def annotation_color(rgba, *, background=(1., 1., 1., 1.)):
     """Choose black/white by contrast against the actual mapped cell color."""
     alpha = float(rgba[3]) if len(rgba) > 3 else 1.
-    rgb = [alpha * float(c) + (1. - alpha) * float(b) for c, b in zip(rgba[:3], background[:3])]
+    rgb = [alpha * float(c) + (1. - alpha) * float(b) for c, b in zip(rgba[:3], background[:3], strict=True)]
     linear = [c / 12.92 if c <= .04045 else ((c + .055) / 1.055) ** 2.4 for c in rgb]
-    luminance = sum(c * w for c, w in zip(linear, (.2126, .7152, .0722)))
+    luminance = sum(c * w for c, w in zip(linear, (.2126, .7152, .0722), strict=True))
     return '#000000' if (luminance + .05) / .05 >= 1.05 / (luminance + .05) else '#ffffff'
 
 

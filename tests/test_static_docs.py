@@ -1,8 +1,8 @@
 """Offline syntax highlighting and the HTML-parser comparison regression."""
-import importlib.util
-from pathlib import Path
 import re
 from html.parser import HTMLParser
+from pathlib import Path
+
 import markdown
 
 ROOT=Path(__file__).resolve().parents[1]

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
+from license_check import notice_text
 from markdown.extensions import Extension
 from markdown.treeprocessors import Treeprocessor
 from markdown.util import AtomicString
-from license_check import notice_text
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -71,7 +71,7 @@ class MathTreeprocessor(Treeprocessor):
         rendered = json.loads(result.stdout)
         if len(rendered) != len(nodes):
             raise ValueError(f"{self.page}: incomplete math renderer response")
-        for node, markup in zip(nodes, rendered):
+        for node, markup in zip(nodes, rendered, strict=True):
             # Stash KaTeX HTML/MathML so subsequent Markdown processors cannot
             # reinterpret underscores, tags or entity escapes inside formulas.
             node.text = AtomicString(self.md.htmlStash.store(markup))

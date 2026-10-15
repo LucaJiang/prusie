@@ -1,9 +1,9 @@
 """Evidence and subprocess mocks; no network request is made by these tests."""
-import copy
 import json
-from pathlib import Path
 import subprocess
 import threading
+from pathlib import Path
+from typing import ClassVar
 
 import pytest
 
@@ -43,15 +43,15 @@ def test_reject_hallucinated_numbers_references_and_schema(mutation, match):
 
 def test_invalid_json_and_tampered_fact():
     bundle, response = sample()
-    with pytest.raises(InterpretationError, match="Invalid JSON"):
+    with pytest.raises(InterpretationError, match=r"Invalid JSON"):
         validate_interpretation("not JSON", bundle)
     bundle["facts"][0]["value"] = "forged"
-    with pytest.raises(InterpretationError, match="does not match"):
+    with pytest.raises(InterpretationError, match=r"does not match"):
         validate_interpretation(response, bundle)
 
 
 class MockProcess:
-    instances = []
+    instances: ClassVar[list] = []
     mode = "valid"
     response = None
 
@@ -139,7 +139,7 @@ def test_cancelled_before_start_and_bounded_attempts(tmp_path):
     event.set()
     bundle, _ = sample()
     assert CodexCLI(tmp_path).interpret(bundle, consent=True, cancel=event)["status"] == "cancelled"
-    with pytest.raises(ValueError, match="one or two"):
+    with pytest.raises(ValueError, match=r"one or two"):
         CodexCLI(tmp_path, max_attempts=3)
 
 
@@ -148,9 +148,9 @@ def test_custom_provider_fails_closed_without_safe_config(tmp_path):
     result = CodexCLI(tmp_path, model="test-model").interpret(bundle, consent=True)
     assert result["status"] == "unavailable" and not result["transmitted"]
     assert result["provider_requested"] == "OpenAI"
-    with pytest.raises(ValueError, match="non-secret"):
+    with pytest.raises(ValueError, match=r"non-secret"):
         CodexCLI(tmp_path, provider_config={"env_key": "SECRET"})
-    with pytest.raises(ValueError, match="official OpenAI"):
+    with pytest.raises(ValueError, match=r"official OpenAI"):
         CodexCLI(tmp_path, provider_config={"name": "OpenAI", "wire_api": "responses",
                                            "requires_openai_auth": True, "base_url": "https://example.com/v1"})
 
@@ -191,5 +191,5 @@ def test_unspecified_model_requires_configuration_without_startup(tmp_path, monk
 
 @pytest.mark.parametrize("model", ["", "   ", 123, False])
 def test_invalid_model_identifiers_rejected(tmp_path, model):
-    with pytest.raises(ValueError, match="model must be"):
+    with pytest.raises(ValueError, match=r"model must be"):
         CodexCLI(tmp_path, model=model)

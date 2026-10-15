@@ -1,8 +1,11 @@
 """Independent D check of actual native operator on existing analytical cases."""
 import warnings
+
 import numpy as np
 import pytest
+
 from prusie import _native, susie_rss, susie_suff_stat
+
 
 @pytest.mark.parametrize('kind', ['known_n', 'missing_n', 'effects', 'no_information'])
 @pytest.mark.parametrize('layout', ['C', 'F', 'strided'])

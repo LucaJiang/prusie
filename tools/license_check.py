@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+
 try:
     import tomllib
 except ModuleNotFoundError:  # Python 3.10 remains in the supported test matrix.

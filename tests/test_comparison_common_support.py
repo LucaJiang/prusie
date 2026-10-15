@@ -41,8 +41,8 @@ def assert_global_support(out, fits, common):
         assert pair["shared_variant_count"] == len(common)
         assert pair["support_scope"] == "global_intersection"
         a, b = fits[pair["setting_a"]], fits[pair["setting_b"]]
-        pa = dict(zip(a.variant_ids, a.pip))
-        pb = dict(zip(b.variant_ids, b.pip))
+        pa = dict(zip(a.variant_ids, a.pip, strict=True))
+        pb = dict(zip(b.variant_ids, b.pip, strict=True))
         expected = max((abs(pa[x] - pb[x]) for x in common), default=None)
         assert pair["max_abs_delta_pip"] == expected
         if not common:
@@ -57,14 +57,14 @@ def assert_global_support(out, fits, common):
             if component is None:
                 continue
             fit = fits[relation[f"setting_{side}"]]
-            alpha = dict(zip(fit.variant_ids, fit.alpha[component]))
+            alpha = dict(zip(fit.variant_ids, fit.alpha[component], strict=True))
             omitted = math.fsum(weight for variant, weight in alpha.items() if variant not in common)
             key = "unobserved_mass" if relation.get("side") == side else f"unobserved_mass_{side}"
             assert relation[key] == pytest.approx(omitted, abs=1e-15, rel=0)
         if "posterior_overlap" in relation:
             a, b = fits[relation["setting_a"]], fits[relation["setting_b"]]
-            aa = dict(zip(a.variant_ids, a.alpha[relation["component_a"]]))
-            ab = dict(zip(b.variant_ids, b.alpha[relation["component_b"]]))
+            aa = dict(zip(a.variant_ids, a.alpha[relation["component_a"]], strict=True))
+            ab = dict(zip(b.variant_ids, b.alpha[relation["component_b"]], strict=True))
             assert relation["posterior_overlap"] == math.fsum(min(aa[x], ab[x]) for x in common)
             assert set(relation["cs_overlap"]) <= common
 
@@ -80,10 +80,10 @@ def test_three_and_four_native_fits_use_global_support_everywhere(heterogeneous,
     for name, fit in fits.items():
         np.testing.assert_array_equal(fit.alpha, before[name][0])
         np.testing.assert_array_equal(fit.pip, before[name][1])
-        for actual, original in zip(fit.sets["cs"], before[name][2]["cs"]):
+        for actual, original in zip(fit.sets["cs"], before[name][2]["cs"], strict=True):
             np.testing.assert_array_equal(actual, original)
         record = out["components"][name][0]
-        assert record["alpha"] == dict(zip(fit.variant_ids, fit.alpha[0]))
+        assert record["alpha"] == dict(zip(fit.variant_ids, fit.alpha[0], strict=True))
         assert record["resolution"]["biological_mass"] == pytest.approx(1.)
     # A/B each observe rsB, but it is outside the declared all-fit support.
     ab = next(row for row in out["component_relations"] if row["setting_a"] == "A" and row["setting_b"] == "B")
@@ -125,7 +125,7 @@ def test_union_keeps_pairwise_support_and_missing_pip(heterogeneous):
     row = next(r for r in out["variants"] if r["variant_id"] == "rsB")
     assert row["pips"]["C"] is None and row["pips"]["D"] is None
     assert row["missing_settings"] == ["C", "D"]
-    for alignment, pair in zip(out["alignments"], out["pairwise"]):
+    for alignment, pair in zip(out["alignments"], out["pairwise"], strict=True):
         expected = set(heterogeneous[pair["setting_a"]].variant_ids) & set(heterogeneous[pair["setting_b"]].variant_ids)
         assert alignment["shared_ids"] == sorted(expected)
         assert pair["shared_variant_count"] == len(expected)
@@ -187,5 +187,6 @@ def test_identical_support_retains_numeric_metrics_and_signal_layers(heterogeneo
     for field in ("variants", "components", "layer_summary"):
         assert common[field] == union[field]
     for field in ("pairwise", "signal_relations", "component_relations", "display_matches"):
-        stripped = lambda value: [{key: item for key, item in row.items() if key != "support_scope"} for row in value]
+        def stripped(value):
+            return [{key: item for key, item in row.items() if key != "support_scope"} for row in value]
         assert stripped(common[field]) == stripped(union[field])

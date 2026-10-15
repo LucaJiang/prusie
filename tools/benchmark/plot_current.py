@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
@@ -46,7 +47,7 @@ def main():
         ('memory', 'Full-process peak RSS (MiB)', 'memory_by_variants'),
     ]:
         fig, axes = plt.subplots(1, 2, figsize=(8.6, 3.5), layout='constrained')
-        for ax, group, title in zip(axes, ('gwas', 'eqtl'), ('GWAS', 'eQTL')):
+        for ax, group, title in zip(axes, ('gwas', 'eqtl'), ('GWAS', 'eQTL'), strict=True):
             rows = [r for r in real['records'] if r['group'] == group and r['timing_eligible'] and
                     (key != 'memory' or r['memory_eligible'])]
             for backend, marker in [('prusie', 'o'), ('susieR', '^')]:
@@ -82,7 +83,7 @@ def main():
     for ax, title, ylabel in zip(axes.flat,
                                 ['A  Complete call: median and IQR', 'B  Fresh-process peak',
                                  'C  Completed IBSS sweeps', 'D  Current-RSS sampling'],
-                                ['Seconds', 'GiB', 'Iterations', 'GiB']):
+                                ['Seconds', 'GiB', 'Iterations', 'GiB'], strict=True):
         ax.set(title=title, xlabel='Variables (p)', ylabel=ylabel, xscale='log')
         ax.grid(alpha=.15)
         ax.legend(frameon=False, fontsize=8)

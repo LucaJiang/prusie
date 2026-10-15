@@ -1,10 +1,11 @@
 """Redistributable analytical cases from pinned official susieR 0.16.6."""
 import json
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pytest
+
 import prusie
 
 REFERENCE = json.loads((Path(__file__).parent / 'fixtures/pinned_susieR_gaussian.json').read_text())
@@ -23,5 +24,5 @@ def test_pinned_gaussian_analytical_case(case):
     assert fit.variant_ids.tolist() == expected['variant_ids']
     assert fit.null_index == expected['null_index']
     assert 1 <= fit.niter <= case['args']['max_iter']
-    for members, component, mass in zip(fit.sets['cs'], fit.sets['cs_index'], fit.sets['coverage']):
+    for members, component, mass in zip(fit.sets['cs'], fit.sets['cs_index'], fit.sets['coverage'], strict=True):
         np.testing.assert_allclose(fit.alpha[component, members].sum(), mass, atol=1e-12, rtol=0)

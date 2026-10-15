@@ -12,12 +12,13 @@ import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import platform
 import sys
 import warnings
+from pathlib import Path
 
 import numpy as np
+
 import prusie
 
 DATA = Path(__file__).resolve().parent / 'data'
@@ -122,7 +123,7 @@ def check_validity(fit, ids, correlation, params):
     require((fit.V >= 0).all() and fit.sigma2 > 0 and (fit.mu2 >= 0).all(), 'Invalid variance/second moment')
     require(1 <= fit.niter <= params['max_iter'] and len(fit.elbo) == fit.niter, 'Invalid iteration count/trace')
     active = np.asarray(fit.V) > params['prior_tol']
-    expected_pip = np.array([1 - math.prod(1 - float(fit.alpha[l, j]) for l in np.flatnonzero(active))
+    expected_pip = np.array([1 - math.prod(1 - float(fit.alpha[component, j]) for component in np.flatnonzero(active))
                              for j in range(m)])
     pip_identity_error = float(np.max(abs(fit.pip - expected_pip)))
     require(pip_identity_error <= VALIDITY_ATOL, f'PIP probability identity error {pip_identity_error:g}')
@@ -162,7 +163,7 @@ def check_validity(fit, ids, correlation, params):
         pair_values = np.abs(correlation[np.ix_(members, members)])[np.triu_indices(len(members), 1)]
         expected_purity = (float(pair_values.min()), float(pair_values.mean()), float(np.median(pair_values))) if len(pair_values) else (1., 1., 1.)
         purity = {key: float(cs['purity'][key][i]) for key in ('min_abs_corr', 'mean_abs_corr', 'median_abs_corr')}
-        for (key, value), expected in zip(purity.items(), expected_purity):
+        for (key, value), expected in zip(purity.items(), expected_purity, strict=True):
             require(abs(value - expected) <= VALIDITY_ATOL, f'Purity {key} disagrees with signed LD for component {component}')
         require(purity['min_abs_corr'] + VALIDITY_ATOL >= params['min_abs_corr'], 'CS purity below requested threshold')
         records.append({'component_id_0based': component, 'members_0based': members.tolist(),

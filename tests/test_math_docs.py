@@ -1,8 +1,8 @@
 """The real documentation pipeline protects TeX, highlights code and fails closed."""
 
+import sys
 from html.parser import HTMLParser
 from pathlib import Path
-import sys
 
 import pytest
 
