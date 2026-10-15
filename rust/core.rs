@@ -122,7 +122,7 @@ fn positive_pairwise_sum(values: &mut [f64]) -> f64 {
         for j in 0..pairs {
             values[j] = values[2 * j] + values[2 * j + 1];
         }
-        if length % 2 != 0 {
+        if !length.is_multiple_of(2) {
             values[pairs] = values[length - 1];
         }
         length = pairs + length % 2;
@@ -619,6 +619,8 @@ struct SingleEffect<'a> {
     v: f64,
 }
 
+// Keep statistical inputs and caller-owned scratch/output buffers explicit.
+#[allow(clippy::too_many_arguments)]
 fn single_effect<'a>(
     xtr: &[f64],
     diagonal: &[f64],
@@ -640,7 +642,7 @@ fn single_effect<'a>(
     // The matrix diagonal remains fixed throughout this fit.
     if sampling_cache
         .as_ref()
-        .map_or(true, |sampling| sampling.sigma2 != sigma2)
+        .is_none_or(|sampling| sampling.sigma2 != sigma2)
     {
         *sampling_cache = Some(SerSampling::new(
             diagonal,
@@ -655,7 +657,7 @@ fn single_effect<'a>(
     let mut context = None;
     let mut likelihood = |v| {
         let context = context.get_or_insert_with(|| {
-            SerLikelihood::from_sampling_reusing(&betahat, sampling, log_prior, buffers)
+            SerLikelihood::from_sampling_reusing(betahat, sampling, log_prior, buffers)
         });
         context.evaluate(v, likelihood_scratch)
     };
@@ -689,14 +691,7 @@ fn single_effect<'a>(
         context.probabilities_into(v, posterior.lbf, posterior.alpha);
     } else {
         // Fixed-V/EM retain lazy setup: do not construct unused invariants.
-        log_probabilities_into(
-            v,
-            betahat,
-            &shat2,
-            log_prior,
-            posterior.lbf,
-            posterior.alpha,
-        );
+        log_probabilities_into(v, betahat, shat2, log_prior, posterior.lbf, posterior.alpha);
     }
     if let Some(context) = context.take() {
         context.return_buffers(buffers);
@@ -831,6 +826,8 @@ fn multiply(matrix: ArrayView2<'_, f64>, vector: &[f64], output: &mut [f64]) {
 /// Compare every finite entry; Boolean AND allows a full SIMD comparison per
 /// chunk without weakening equality or treating a signature as proof.
 #[inline(always)]
+// Retain the explicit SIMD comparison groups and their separately checked remainder.
+#[allow(clippy::chunks_exact_to_as_chunks)]
 fn exact_column_chunks(column: &[f64], other: &[f64], sign: f64) -> bool {
     assert_eq!(column.len(), other.len());
     let mut xs = column.chunks_exact(4);
@@ -1094,7 +1091,7 @@ impl ExactColumns {
         let threads = std::env::var("PRUSIE_NUM_THREADS")
             .ok()
             .and_then(|value| value.parse::<usize>().ok())
-            .filter(|&value| value >= 1 && value <= 32)
+            .filter(|&value| (1..=32).contains(&value))
             .unwrap_or(1);
         if threads > 1 && matrix.nrows() >= 1024 {
             if let Some(plan) = Self::parallel(matrix, threads) {
@@ -1146,8 +1143,7 @@ impl ExactColumns {
         let records = std::thread::scope(|scope| {
             let mut handles = Vec::new();
             let mut failed = false;
-            for worker in 1..workers {
-                let jobs = &bins[worker];
+            for (worker, jobs) in bins.iter().enumerate().skip(1) {
                 let signs = &signs;
                 match std::thread::Builder::new()
                     .name(format!("prusie-discovery-{worker}"))
@@ -1438,6 +1434,8 @@ impl ExactColumns {
 // Complete bounded-entry proof also proves finiteness: NaN and infinities
 // fail ordered abs<=2 comparison. Boolean AND groups permit portable SIMD.
 #[inline(never)]
+// Preserve the explicit SIMD lane checks and finite-range proof, including the tail.
+#[allow(clippy::chunks_exact_to_as_chunks)]
 fn operator_entries_bounded(values: &[f64]) -> bool {
     let mut chunks = values.chunks_exact(8);
     for c in &mut chunks {
@@ -1548,7 +1546,7 @@ fn expected_residual_sum_squares(
     // needs no L*p temporary.
     // Linearity: sum_l XtX*b_l = XtX*sum_l b_l. All products were computed
     // after the corresponding component update, so no stale coefficients enter.
-    yty - 2.0 * dot(&mean, xty) + dot(&mean, &fitted) - sum(component_quadratics.iter().copied())
+    yty - 2.0 * dot(mean, xty) + dot(mean, fitted) - sum(component_quadratics.iter().copied())
         + sum((0..fit.v.len()).flat_map(|effect| {
             let offset = effect * p;
             (0..p).map(move |j| diagonal[j] * (fit.alpha[offset + j] * fit.mu2[offset + j]))
@@ -1602,6 +1600,8 @@ pub fn fit_layout_operator(
     )
 }
 
+// Preserve the sufficient-statistic entry point and its explicit convergence controls.
+#[allow(clippy::too_many_arguments)]
 pub fn fit_controlled(
     xtx: &[f64],
     xty: &[f64],
@@ -1619,6 +1619,8 @@ pub fn fit_controlled(
     // This certificate checks every raw entry inside this call. Its success
     // establishes finite input and the safe operator range together; failure
     // merely retains full finiteness validation and matrix materialization.
+    // Keep each numerical bound next to the corresponding scaling factor check.
+    #[allow(clippy::manual_range_contains)]
     let operator_bounded = scaling.is_some_and(|scale| {
         scale.global >= 1.
             && scale.global <= 1e9
@@ -1733,6 +1735,8 @@ pub fn fit_controlled(
     // residual variance. Divide by the CURRENT sigma below, after each sweep
     // and before its variance update (susieR validate_prior.ss). Zero-information
     // columns contribute no z score; an entirely empty set keeps R's -Inf max.
+    // Keep the zero-information guard and its guarded division in one expression.
+    #[allow(clippy::filter_map_bool_then)]
     let max_abs_score = diagonal
         .iter()
         .zip(xty)
@@ -1840,6 +1844,8 @@ pub fn fit_controlled(
     // A warm start never trusts caller caches: rebuild each Q E[b_l].
     if control.initial.is_some() {
         for l in 0..options.l {
+            // Preserve component/variant indexing across the coordinated posterior arrays.
+            #[allow(clippy::needless_range_loop)]
             for j in 0..p {
                 component[j] = output.alpha[l * p + j] * output.mu[l * p + j];
             }
@@ -1856,6 +1862,8 @@ pub fn fit_controlled(
                 multiply(matrix, &component, &mut product);
             }
             component_products[l * p..(l + 1) * p].copy_from_slice(&product);
+            // Keep the original warm-start accumulation order explicit.
+            #[allow(clippy::needless_range_loop)]
             for j in 0..p {
                 output.xtxr[j] += product[j];
             }
@@ -2354,6 +2362,8 @@ mod tests {
             } else {
                 0.2 * 0.1 / (0.2 + 0.1)
             };
+            // The independent bitwise oracle uses the posterior's original variant indices.
+            #[allow(clippy::needless_range_loop)]
             for j in 0..2 {
                 let mean = variance / 0.1 * (xtr[j] / 10.0);
                 assert_eq!(posterior.mu[j].to_bits(), mean.to_bits());
@@ -3060,6 +3070,8 @@ mod tests {
             .map(|i| (settings.prior_weights[i] + f64::EPSILON.sqrt()) * bf[class(i)])
             .collect();
         let total: f64 = weights.iter().sum();
+        // Keep the normalized-weight oracle aligned explicitly with each output variant.
+        #[allow(clippy::needless_range_loop)]
         for i in 0..p {
             assert!((result.alpha[i] - weights[i] / total).abs() < 1e-12);
         }

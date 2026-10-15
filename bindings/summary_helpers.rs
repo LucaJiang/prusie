@@ -160,6 +160,8 @@ fn cs_pairwise_abs<'py>(
                 if let Some(ref scales) = inv {
                     value = value * scales[i] * scales[j];
                 }
+                // Negation deliberately rejects NaN as well as below-threshold pairs.
+                #[allow(clippy::neg_cmp_op_on_partial_ord)]
                 if !(value.abs() >= threshold) {
                     return Ok(None);
                 }

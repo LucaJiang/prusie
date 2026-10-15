@@ -147,8 +147,8 @@ fn fit<'py>(
     let item = std::mem::size_of::<f64>() as isize;
     let compatible = !xtx.data().is_null()
         && !xty.data().is_null()
-        && (xtx.data() as usize) % align == 0
-        && (xty.data() as usize) % align == 0
+        && (xtx.data() as usize).is_multiple_of(align)
+        && (xty.data() as usize).is_multiple_of(align)
         && xtx
             .shape()
             .iter()

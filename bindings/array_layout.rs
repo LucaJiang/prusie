@@ -16,7 +16,7 @@ pub(crate) fn ensure_layout<T: Element, D: Dimension>(
     let alignment = std::mem::align_of::<T>();
     let mut span = 0usize;
     let valid = !array.data().is_null()
-        && (array.data() as usize) % alignment == 0
+        && (array.data() as usize).is_multiple_of(alignment)
         && array
             .shape()
             .iter()
