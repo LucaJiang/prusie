@@ -69,7 +69,7 @@ allowed-confusables = ["α", "γ", "σ", "ℓ", "×", "−"]
 # Preserve the mathematical minus sign in the convergence criterion documentation.
 "src/prusie/diagnostics.py" = ["RUF002"]
 # These tests exercise exactly those Unicode labels, including variant IDs.
-"tests/test_plot_review_semantics.py" = ["RUF001"]
+"tests/test_plot_semantics.py" = ["RUF001"]
 "tests/test_plots_report.py" = ["RUF001"]
 # Published mathematical signs and typographic punctuation are frozen page content.
 "tools/generate_results.py" = ["RUF001"]
