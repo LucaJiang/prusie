@@ -1,63 +1,41 @@
-# SuSiE fine-mapping in Python
+# prusie: SuSiE fine-mapping from summary statistics
 
-prusie fits the Sum of Single Effects (SuSiE) regression model to association
-summary statistics and LD (SuSiE-RSS), or to sufficient statistics, and returns
-posterior inclusion probabilities (PIPs) and credible sets. The iterative
-Bayesian stepwise selection (IBSS) algorithm is implemented in Rust and follows
-susieR 0.16.6. Further functions report convergence, refinement, LD
-diagnostics and sensitivity to model settings.
+prusie is a fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for
+Python. It fits association summary statistics and linkage disequilibrium (LD),
+or sufficient statistics, and returns posterior inclusion probabilities (PIPs)
+and credible sets. Numerical comparisons with susieR 0.16.6 show agreement to
+within 1e-5 in PIP across the 200 GWAS and eQTL analyses described below.
 
-## Recorded numerical accuracy and performance
+## Installation
 
-<!-- current:highlights:start -->
-Measured **0.2.4.dev2** against susieR 0.16.6.
+This checkout contains **0.2.4.dev2** (development version). Building from source requires CPython 3.10–3.13,
+the Rust toolchain pinned in `rust-toolchain.toml`, a C linker and the Python
+development headers:
 
-| Analysis | Cases | Maximum PIP error | Paired runtime speedup | Median full-process memory ratio |
-| --- | --- | --- | --- | --- |
-| GWAS | 100 | 9.14e-09 | 26.23× | 6.345× |
-| eQTL | 100 | 1.22e-08 | 21.62× | 6.24× |
+```sh
+git clone --branch main https://github.com/LucaJiang/prusie.git
+cd prusie
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install '.[analysis]'
+```
 
-Runtime is the geometric mean of per-case susieR/prusie ratios of seven-repeat medians. Memory is the median ratio of fresh-process peaks, including interpreters and inputs. These are complete-call observations on a fixed panel, not measurements of a particular optimization.
-<!-- current:highlights:end -->
+Fitting requires only NumPy at run time; the optional `analysis` extra adds
+Matplotlib and SciPy for figures and LD diagnostics. An installed package
+requires neither R nor Rust. The [installation guide](install.md) also
+describes the earlier prerelease wheel for CPython 3.12 on Linux x86-64.
 
-<details markdown="1">
-<summary>Historical 0.2.3rc4 comparison</summary>
+## Example
 
-
-<!-- generated:highlights:start -->
-
-| Analysis | Maximum absolute PIP difference | Paired runtime speedup¹ | Median peak-memory ratio² |
-| --- | --- | --- | --- |
-| GWAS | 9.14e-09 | 37.4× | 6.94× |
-| eQTL | 1.22e-08 | 33.6× | 6.8× |
-
-100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.
-<!-- generated:highlights:end -->
-
-</details>
-
-See [numerical accuracy](numerical_accuracy.md) and [performance](performance.md)
-for the methods and complete results. Agreement with susieR is a check of the
-implementation; it does not by itself establish that the model assumptions hold
-for a given dataset.
-
-<div class="start-links" markdown="1">
-
-[Install](install.md) [Quick start](example.md) [Worked examples](worked_examples.md)
-
-</div>
-
-## One fit, a readable result
-
-The packaged synthetic toy example with 500 variants can be fitted offline
-after installation. This code fits the model once and summarizes the posterior:
+The packaged synthetic toy example with 500 variants can be fitted offline:
 
 ```python
 import prusie
 
 example = prusie.load_example()
-fit = prusie.susie_rss(**example["inputs"], **example["parameters"],
-                       track_fit="compact", retain_data=True)
+fit = prusie.susie_rss(
+    **example["inputs"], **example["parameters"], track_fit="compact", retain_data=True
+)
 summary = prusie.summarize(fit, example["inputs"]["R"], z=example["inputs"]["z"])
 print(prusie.summary_text(summary).splitlines()[0])
 print(f"IBSS: {fit.convergence['stop_reason']} ({fit.niter} sweeps)")
@@ -74,29 +52,55 @@ CS 0: syn0100
 CS 1: syn0350
 ```
 
-Each of the two credible sets contains a single variant in this toy example.
-The [quick start](example.md) explains their PIPs and posterior mass and then
-produces figures and an offline report. Refinement, LD diagnostics and
-sensitivity analyses are separate steps that the code above does not run.
+The [quick-start tutorial](example.md) explains these PIPs and credible
+sets (CS) and then produces figures and an offline report from the same fit.
+
+## Accuracy and performance
+
+<!-- current:highlights:start -->
+Measured **0.2.4.dev2** against susieR 0.16.6.
+
+| Analysis | Loci | Max. absolute PIP difference vs susieR | Speed-up¹ | Memory ratio² |
+| --- | --- | --- | --- | --- |
+| GWAS | 100 | 9.14e-09 | 26× | 6.3× |
+| eQTL | 100 | 1.22e-08 | 22× | 6.2× |
+
+¹ Geometric mean of per-locus susieR/prusie runtime ratios. ² Median per-locus susieR/prusie ratio of peak resident memory (RSS), including the interpreter and inputs.
+<!-- current:highlights:end -->
+
+AMD EPYC 9754, Linux x86-64; one numerical thread per fit.
+See [performance](performance.md) for the data, software and measurement
+protocol, and [numerical accuracy](numerical_accuracy.md) for validation.
 
 ## Sensitivity and refinement
 
-![Candidate PIPs of the toy example under four settings: the two leading credible sets persist, while a fixed scaled prior variance changes the PIPs of other variants.](examples/post_analysis/stable/figure_5.png)
+![Candidate PIPs under four settings: leading credible sets persist while a fixed prior variance changes PIPs elsewhere.](examples/post_analysis/stable/figure_5.png)
 
-In the toy example the two leading credible sets persist across these
-settings, whereas a fixed positive scaled prior variance increases the PIPs of
-other variants. The [worked examples](worked_examples.md) discuss this
-distinction and a second example in which refinement finds a solution with a
-higher objective, while a pair of variants in strong LD remains unresolved.
+Fixing the scaled prior variance at a positive value preserves the two leading
+credible sets but raises PIP at other variants: `syn0143` changes from about
+5.3e-11 to 0.2544. All five components retain positive prior variance, including
+three without a credible set. The [worked examples](worked_examples.md) explain
+this sensitivity and a second example in which refinement finds a higher ELBO.
 
-## Reading a result
+## Documentation
 
-- [Reading results](results.md): which variants have posterior support, and how concentrated is each single effect?
-- [Convergence and refinement](post_analysis.md): did IBSS satisfy its stopping rule, and does refinement find a solution with a higher objective?
-- [Sensitivity and LD](sensitivity.md): which conclusions change with model settings or input assumptions?
-- [Worked examples](worked_examples.md): how do these results combine in an interpretation?
+<div class="start-links" markdown="1">
 
-The [API](api.md), [input guide](inputs.md) and [statistical model](model.md)
-give the precise inputs, outputs and definitions. [Reproducibility](reproducibility.md)
-distinguishes regenerating figures from refitting models, and
-[citation and license](citation.md) identifies the methods and the software version.
+[Quick start](example.md) [Reading results](results.md) [Worked examples](worked_examples.md)
+
+</div>
+
+- [Convergence and refinement](post_analysis.md): stopping rules and alternative starting solutions.
+- [Sensitivity and LD](sensitivity.md): model choices, variant alignment and input diagnostics.
+- [API](api.md), [inputs](inputs.md) and [statistical model](model.md): definitions and interfaces.
+- [Reproducibility](reproducibility.md): example data, reference results and measurement scripts.
+
+## Citation and license
+
+Please cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
+[SuSiE-RSS, Zou et al. (2022)](https://doi.org/10.1371/journal.pgen.1010299),
+and identify the prusie version using [CITATION.cff](https://github.com/LucaJiang/prusie/blob/main/CITATION.cff).
+Author and maintainer: Wenxin Jiang. No DOI is assigned to the software.
+
+Copyright © 2026 Wenxin Jiang. Licensed under [GPL-3.0-or-later](licenses/LICENSE);
+see [third-party notices](third-party.html) for upstream attribution.

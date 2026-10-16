@@ -92,23 +92,21 @@ def test_homepage_and_tutorial_use_distinct_navigation_chrome(tmp_path, monkeypa
     )
     assert any(tag == "span" and a.get("class") == "version-number" for tag, a in elements)
     assert '<span class="version-badge">Development</span>' in homepage
-    assert homepage.count("<table>") == 2  # Current and historical evidence only.
-    assert homepage.index("current:highlights:start") < homepage.index("generated:highlights:start")
-    history_start = homepage.index("<summary>Historical 0.2.3rc4 comparison</summary>")
-    history_end = homepage.index("</details>", history_start)
-    assert history_start < homepage.index("generated:highlights:start") < history_end
+    assert homepage.count("<table>") == 1
+    assert "current:highlights:start" in homepage
+    assert "generated:highlights:start" not in homepage
     assert 'class="start-links"' in homepage
-    assert homepage.index("generated:highlights:start") < homepage.index('class="start-links"')
-    assert homepage.index('class="start-links"') < homepage.index('id="one-fit-a-readable-result"')
-    assert "0.2.3rc4 made on 6 October 2026" in homepage
+    assert homepage.index('id="installation"') < homepage.index('id="example"')
+    assert homepage.index('id="example"') < homepage.index('id="accuracy-and-performance"')
+    assert homepage.index('id="accuracy-and-performance"') < homepage.index('id="documentation"')
 
 
-def test_homepage_and_readme_share_current_and_historical_evidence_blocks():
+def test_homepage_and_readme_share_measurement_table():
     import re
 
     home = (ROOT / "docs/index.md").read_text()
     readme = (ROOT / "README.md").read_text()
-    for kind in ("current", "generated"):
+    for kind in ("current",):
         expression = rf"<!-- {kind}:highlights:start -->(.*?)<!-- {kind}:highlights:end -->"
         home_blocks = re.findall(expression, home, re.S)
         readme_blocks = re.findall(expression, readme, re.S)

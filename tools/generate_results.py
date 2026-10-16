@@ -20,6 +20,7 @@ from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools/benchmark"))
+from render_tables import render  # noqa: E402 - Local benchmark tools.
 from summary import FIELDS, paired, summarize  # noqa: E402 - Local tool path must be set first.
 
 
@@ -60,19 +61,19 @@ def main():
     def out(name, value):
         outputs[ROOT / name] = value.encode() if isinstance(value, str) else value
 
-    def fragment(file, key, value):
+    def fragment(file, key, value, prefix="generated"):
         path = ROOT / file
         s = outputs.get(path, path.read_bytes()).decode()
         pattern = (
-            rf"<!-- generated:{key}"
-            rf":start -->.*?<!-- generated:{key}"
+            rf"<!-- {prefix}:{key}"
+            rf":start -->.*?<!-- {prefix}:{key}"
             rf":end -->"
         )
         assert re.search(pattern, s, re.S), f"Missing marker {file}:{key}"
         s = re.sub(
             pattern,
             lambda m: (
-                f"<!-- generated:{key}:start -->\n{value.rstrip()}\n<!-- generated:{key}:end -->"
+                f"<!-- {prefix}:{key}:start -->\n{value.rstrip()}\n<!-- {prefix}:{key}:end -->"
             ),
             s,
             flags=re.S,
@@ -189,117 +190,22 @@ def main():
         )
         writer.writerow(row)
     out("docs/assets/r_comparison_cases.tsv", buf.getvalue())
-    highlights = table(
-        [
-            "Analysis",
-            "Maximum absolute PIP difference",
-            "Paired runtime speedup¹",
-            "Median peak-memory ratio²",
-        ],
+    earlier = table(
+        ["Analysis", "Speed-up (geometric mean)", "Peak RSS ratio (median)"],
         [
             [
                 g,
-                f(groups[g]["errors"]["pip"]["max_abs_error"]),
-                f(groups[g]["runtime_speedup_geometric_mean"]) + "×",
-                f(groups[g]["memory_ratio_distribution"]["median"]) + "×",
+                f"{groups[g]['runtime_speedup_geometric_mean']:.2g}×",
+                f"{groups[g]['memory_ratio_distribution']['median']:.2g}×",
             ]
             for g in real
         ],
     )
-    highlights += (
-        f"\n{groups['GWAS']['analyses']}"
-        f" GWAS locus analyses and {groups['eQTL']['analyses']}"
-        f" eQTL analyses, each with {min(groups[g]['variant_count_range'][0] for g in real)}"
-        f"–{max(groups[g]['variant_count_range'][1] for g in real)}"
-        f" variants, compared with susieR {evidence['provenance']['susieR_version']}"
-        f". "
-    )
-    highlights += (
-        "¹ Geometric mean of per-case ratios of median runtimes "
-        "(susieR/prusie). ² Median per-case ratio of "
-        "full-process peak memory (susieR/prusie). "
-    )
-    highlights += (
-        "Results reanalyze measurements of prusie 0.2.3rc4 made "
-        "on 6 October 2026; these values identify that measured "
-        "version.\n"
-    )
-    for page in ("README.md", "docs/index.md"):
-        fragment(page, "highlights", highlights)
-    absolute = table(
-        [
-            "Analysis",
-            "prusie time (ms)",
-            "susieR time (ms)",
-            "prusie peak memory (MiB)",
-            "susieR peak memory (MiB)",
-        ],
-        [
-            [
-                g,
-                f(groups[g]["runtime_seconds"]["prusie"]["median"] * 1000),
-                f(groups[g]["runtime_seconds"]["susieR"]["median"] * 1000),
-                f(groups[g]["peak_memory_mib"]["prusie"]["median"]),
-                f(groups[g]["peak_memory_mib"]["susieR"]["median"]),
-            ]
-            for g in real
-        ],
-    )
-    absolute += (
-        "\nRuntime columns are medians across cases of each "
-        "case’s median retained-repeat time. Memory columns are "
-        "separate across-case medians of fresh-process peaks.\n"
-    )
-    absolute += table(
-        [
-            "Analysis",
-            "Runtime speedup, geometric mean",
-            "Per-case speedup median [Q1, Q3]",
-            "Speedup range",
-            "Median memory ratio",
-            "Median memory reduction",
-        ],
-        [
-            [
-                g,
-                f(groups[g]["runtime_speedup_geometric_mean"]) + "×",
-                (
-                    f"{f(groups[g]['runtime_speedup_distribution']['median'])}"
-                    f" [{f(groups[g]['runtime_speedup_distribution']['q1'])}"
-                    f", {f(groups[g]['runtime_speedup_distribution']['q3'])}"
-                    f"]"
-                ),
-                (
-                    f"{f(groups[g]['runtime_speedup_distribution']['min'])}"
-                    f"–{f(groups[g]['runtime_speedup_distribution']['max'])}"
-                ),
-                f(groups[g]["memory_ratio_distribution"]["median"]) + "×",
-                (f"{100 * groups[g]['memory_reduction_distribution']['median']:.1f}%"),
-            ]
-            for g in real
-        ],
-    )
-    fragment("docs/performance.md", "absolute", absolute)
-    variability = table(
-        ["Analysis", "prusie repeat IQR/median", "susieR repeat IQR/median"],
-        [
-            [
-                g,
-                f(groups[g]["repeat_iqr_over_median"]["prusie"]["median"]),
-                f(groups[g]["repeat_iqr_over_median"]["susieR"]["median"]),
-            ]
-            for g in real
-        ],
-    )
-    variability += (
-        "\nEach entry is the median across cases of its "
-        "seven-repeat IQR/median. Individual repeat times and "
-        "case ranges are retained in the downloadable records.\n"
-    )
-    fragment("docs/performance.md", "variability", variability)
+    fragment("docs/performance.md", "earlier", earlier)
+    render(ROOT, fragment, table)
     panel = evidence["provenance"]["real_panel"]
     panel_text = (
-        f"The fixed panel contains {panel['regions']}"
+        f"The data cover {panel['regions']}"
         f" genomic windows: 100 analyses of one "
         f"FinnGen R10 inflammatory "
         f"bowel disease GWAS (K11_IBD_STRICT; "
@@ -343,7 +249,7 @@ def main():
             f"Across the evaluated {g}"
             f" analyses, the maximum absolute difference "
             f"in variant PIPs "
-            f"relative to susieR 0.16.6 was {groups[g]['errors']['pip']['max_abs_error']:.8g}"
+            f"relative to susieR 0.16.6 was {groups[g]['errors']['pip']['max_abs_error']:.2e}"
             f"."
         )
         for g in real
