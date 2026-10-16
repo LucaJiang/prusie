@@ -1,9 +1,12 @@
-//! Native sufficient-statistic SuSiE solver following pinned susieR 0.16.6 (Gaussian scope).
+//! Native solver for SuSiE on sufficient statistics (Gaussian model), following
+//! susieR 0.16.6.
 //!
-//! Rust owns the complete sequential IBSS loop, single-effect posterior,
-//! variance updates, expected residual sum of squares, and ELBO. Python selects
-//! RSS/standardization scales and assembles metadata and posterior summaries;
-//! Rust binding helpers also validate/prepare matrices and extract CS purity.
+//! Rust carries out the sequential IBSS loop: the single-effect regression
+//! (SER) posteriors, the prior- and residual-variance updates, the expected
+//! residual sum of squares and the ELBO. Python chooses the RSS and
+//! standardization scales and assembles metadata and posterior summaries;
+//! binding helpers validate and prepare matrices and compute credible-set
+//! purity.
 
 pub mod diagnostics;
 pub(crate) mod input_validation;
@@ -22,7 +25,7 @@ use ndarray::{ArrayView2, ShapeBuilder};
 use std::borrow::Cow;
 use std::f64::consts::PI;
 
-/// Already validated and standardized parameters at the Python/Rust boundary.
+/// Validated and standardized fitting options received from Python.
 pub struct FitOptions {
     pub l: usize,
     pub prior_variance: f64,
@@ -39,9 +42,9 @@ pub struct FitOptions {
     pub null_index: Option<usize>,
 }
 
-/// Native output arrays use component-major (row-major L by p) storage.
+/// Fit results; L × p arrays are stored row by row (one row per single effect).
 pub struct FitOutput {
-    // Test-only observation of the actual lazy-discovery branch; no Python field.
+    // Records which matrix-product plan was chosen, for tests only.
     #[cfg(test)]
     exact_column_plan: Option<(usize, bool)>,
     pub alpha: Vec<f64>,
@@ -60,8 +63,8 @@ pub struct FitOutput {
     pub diagnostics: Diagnostics,
 }
 
-/// Compensated scalar reductions protect cancellation in likelihood/objective
-/// sums. Dense matrix products use the library's contiguous reduction freely.
+/// Compensated (Neumaier) summation, used for likelihood and objective sums
+/// that are prone to cancellation. Dense matrix products do not use it.
 fn sum(values: impl Iterator<Item = f64>) -> f64 {
     let mut total: f64 = 0.0;
     let mut correction = 0.0;
@@ -81,7 +84,9 @@ fn dot(x: &[f64], y: &[f64]) -> f64 {
     sum(x.iter().zip(y).map(|(x, y)| x * y))
 }
 
-/// Gaussian SER BF, with epsilon flooring and no-information handling.
+/// Gaussian SER log Bayes factors and unnormalized log posterior weights.
+/// Sampling variances are floored at machine epsilon; variants without
+/// information (nonfinite estimate or variance) receive a log Bayes factor of 0.
 fn log_probabilities_into(
     prior_variance: f64,
     betahat: &[f64],
@@ -113,8 +118,8 @@ fn log_probabilities(v: f64, beta: &[f64], shat2: &[f64], prior: &[f64]) -> (Vec
     (bf, po)
 }
 
-/// Balanced pairwise reduction for nonnegative likelihood weights.
-/// This composition leaves posterior and signed KL/ER2 sums compensated.
+/// Pairwise (tree) summation of nonnegative likelihood weights. Posterior and
+/// signed KL/ER2 sums use the compensated `sum` instead.
 fn positive_pairwise_sum(values: &mut [f64]) -> f64 {
     let mut length = values.len();
     while length > 1 {
@@ -137,8 +142,8 @@ fn log_sum_exp(x: &mut [f64]) -> f64 {
 fn log_sum_exp_at(x: &mut [f64], known_maximum: Option<f64>) -> f64 {
     let largest =
         known_maximum.unwrap_or_else(|| x.iter().copied().fold(f64::NEG_INFINITY, f64::max));
-    // Apply the optional-vector/scalar exponential first, then the existing
-    // balanced positive reduction. Posterior and signed sums are unchanged.
+    // Exponentials (vector or scalar backend), then pairwise summation of the
+    // nonnegative terms.
     vector_math::exp_shift_inplace(x, largest);
     largest + positive_pairwise_sum(x).ln()
 }
@@ -150,8 +155,8 @@ fn log_likelihood(
     log_prior: &[f64],
     scratch: &mut [f64],
 ) -> f64 {
-    // Same per-SNP BF arithmetic as log_probabilities, then log_sum_exp.
-    // Only the posterior log weights are needed during the V search.
+    // The same per-variant Bayes factor arithmetic as log_probabilities, followed
+    // by log_sum_exp; the prior-variance search needs only this marginal value.
     for (((&beta, &s2), &prior), value) in beta
         .iter()
         .zip(shat2)
@@ -169,7 +174,8 @@ fn log_likelihood(
     log_sum_exp(scratch)
 }
 
-// Four-wide objective arithmetic uses separate multiplies/adds (no FMA).
+// Four-lane arithmetic with separate multiplies and adds (no FMA), matching the
+// scalar path.
 // SAFETY: AVX2 must be available. Slices have equal length, terms.len() <= 16,
 // and each group is either usize::MAX or a valid terms index. Storage is Rust-owned.
 #[cfg(all(has_vector_math, target_arch = "x86_64"))]
@@ -240,8 +246,8 @@ unsafe fn ser_group_fill_avx2(
     }
 }
 
-/// Fit-local sampling variances and exact group layout. Residual variance is
-/// part of the cache identity; every buffer belongs to this one public fit.
+/// Sampling variances s_j² = σ²/Q_jj and their grouping into equal values, for
+/// one fit. The cache is valid only for the residual variance it was built with.
 struct SerSampling {
     sigma2: f64,
     shat2: Vec<f64>,
@@ -287,8 +293,8 @@ impl SerSampling {
     }
 }
 
-/// Reusable search storage owned by one fit. Only capacities persist between
-/// components: every beta-dependent value and group maximum is rebuilt.
+/// Search storage reused across the single effects of one fit. Only capacities
+/// are reused; values that depend on the marginal estimates are recomputed.
 #[derive(Default)]
 struct SerBuffers {
     half_beta_squared: Vec<f64>,
@@ -298,9 +304,10 @@ struct SerBuffers {
     group_max_half_beta_squared: Vec<f64>,
 }
 
-/// A SER search changes V while beta, s² and prior weights stay fixed. Exact
-/// equal s² values share logarithms/denominators; no rounding or binning occurs.
-/// Standardized RSS inputs often have a few distinct floating s² values.
+/// SER log marginal likelihood as a function of V, with the marginal estimates,
+/// s² and prior weights fixed. Variants with exactly equal s² share the
+/// logarithm and denominator; values are not rounded or binned. Standardized
+/// RSS inputs typically have few distinct s² values.
 struct SerLikelihood<'a> {
     beta: &'a [f64],
     shat2: &'a [f64],
@@ -313,9 +320,9 @@ struct SerLikelihood<'a> {
     uniform_log_prior: Option<f64>,
     group_max_half_beta_squared: Vec<f64>,
     has_no_information: bool,
-    // A private objective search stays on its constructing OS thread, invokes
-    // no Python callbacks, and never changes fenv controls. Recreate this flag
-    // for the next search; exponential helpers keep their own live guards.
+    // A search runs on one thread, calls no Python code and does not change the
+    // floating-point environment, so this flag is sampled once per search; the
+    // exponential helpers check their own conditions on every call.
     #[cfg(all(has_vector_math, target_arch = "x86_64"))]
     group_fill_avx2: bool,
 }
@@ -336,8 +343,9 @@ impl<'a> SerLikelihood<'a> {
         log_prior: &'a [f64],
         buffers: &mut SerBuffers,
     ) -> Self {
-        // Nonfinite beta can remove a variance group in the original path.
-        // Retain that exact handling, including zero-information columns.
+        // With a nonfinite estimate, the ungrouped construction removes that
+        // variant from the variance groups; use it, including for
+        // zero-information columns.
         if !sampling.grouped || beta.iter().any(|b| !b.is_finite()) {
             return Self::new_reusing(beta, &sampling.shat2, log_prior, buffers);
         }
@@ -411,7 +419,7 @@ impl<'a> SerLikelihood<'a> {
             let group = match result.safe_groups.iter().position(|&s| s == safe) {
                 Some(group) => group,
                 None => {
-                    // Bound setup cost for unstandardized, heterogeneous inputs.
+                    // Limit setup cost for heterogeneous (unstandardized) inputs.
                     if result.safe_groups.len() == 16 {
                         result.grouped = false;
                         break;
@@ -467,8 +475,8 @@ impl<'a> SerLikelihood<'a> {
                 self.uniform_log_prior = None;
                 return;
             }
-            // Finite beta² is nonnegative (including +0). A group maximum
-            // changes only on a new record, so avoid rewriting it otherwise.
+            // A finite β² is nonnegative (possibly +0); the maximum is written
+            // only when it increases.
             if half_beta_squared > self.group_max_half_beta_squared[group] {
                 self.group_max_half_beta_squared[group] = half_beta_squared;
             }
@@ -487,9 +495,9 @@ impl<'a> SerLikelihood<'a> {
             return log_likelihood(v, self.beta, self.shat2, self.log_prior, scratch);
         }
         self.prepare_group_terms(v);
-        // Share the exact group coefficient across objective SNPs. Preserve
-        // the original division path at exceptional scales, where distributing
-        // the division could lose a representable intermediate.
+        // Use one coefficient per variance group. At exceptional scales, where
+        // factoring out the division could lose a representable intermediate,
+        // use the per-variant division of log_likelihood instead.
         if self.terms.iter().any(|&(_, denominator, scale)| {
             !denominator.is_finite() || !(scale.is_normal() || (v == 0.0 && scale == 0.0))
         }) {
@@ -497,19 +505,18 @@ impl<'a> SerLikelihood<'a> {
         }
         if v >= 0.0 {
             if let Some(prior) = self.uniform_log_prior {
-                // At V=0 every valid BF is exactly zero. Equal finite priors
-                // therefore give p copies of exp(0)=1 in the same reduction.
-                // Keep prior+ln(p), including its rounding, instead of assuming
-                // a normalized prior gives an exactly zero marginal likelihood.
-                // prepare_maximum already excluded overflowing beta squares;
-                // exceptional group coefficients took the original path above.
+                // At V = 0 every finite log Bayes factor is exactly zero, so
+                // equal priors give p terms exp(0) = 1. Return prior + ln(p),
+                // with its rounding, rather than assuming that a normalized
+                // prior gives exactly zero. Overflowing β² values were excluded
+                // by prepare_maximum, and exceptional coefficients returned above.
                 if v == 0.0 && prior.is_finite() {
                     return prior + (self.beta.len() as f64).ln();
                 }
-                // The current nonnegative coefficient makes BF monotone in
-                // beta² within each exact variance group. All SNP weights are
-                // still evaluated in original order; only the maximum scan is
-                // replaced by a preselected exact group maximum.
+                // With a nonnegative coefficient the Bayes factor increases
+                // with β² within a variance group, so the group maxima give the
+                // largest log weight. All variant weights are still computed in
+                // their original order.
                 let mut largest = if self.has_no_information {
                     prior
                 } else {
@@ -522,10 +529,10 @@ impl<'a> SerLikelihood<'a> {
                 }
                 #[cfg(all(has_vector_math, target_arch = "x86_64"))]
                 if self.terms.len() <= 4 && self.group_fill_avx2 {
-                    // SAFETY: the selected backend proves runtime AVX2 and
-                    // default caller controls. Group construction bounds every
-                    // index or uses usize::MAX; lengths equal the owned scratch.
-                    // The kernel changes neither operation nor SNP order.
+                    // SAFETY: the selected backend guarantees AVX2 at run time
+                    // and the default floating-point controls. Every group index
+                    // is in bounds or usize::MAX, and the lengths equal those of
+                    // the owned scratch. Operations and variant order are unchanged.
                     unsafe {
                         ser_group_fill_avx2(
                             &self.half_beta_squared,
@@ -577,8 +584,8 @@ impl<'a> SerLikelihood<'a> {
             log_probabilities_into(v, self.beta, self.shat2, self.log_prior, lbf, lpo);
             return;
         }
-        // Rebuild the terms for the selected V, which may differ from the
-        // last objective argument. The destination is this component's row.
+        // Recompute the terms for the selected V, which can differ from the last
+        // value evaluated by the search; the output is this effect's row.
         self.prepare_group_terms(v);
         for ((((&half_beta_squared, &group), &prior), bf_out), po_out) in self
             .half_beta_squared
@@ -608,8 +615,9 @@ impl<'a> SerLikelihood<'a> {
     }
 }
 
-/// Disjoint rows of the final fit arrays. A row is overwritten only after its
-/// previous matrix product has been removed from the fitted sufficient statistic.
+/// Mutable rows of the fit arrays for one single effect. A row is overwritten
+/// only after the effect's previous matrix product has been subtracted from the
+/// fitted crossproduct.
 struct SingleEffect<'a> {
     alpha: &'a mut [f64],
     mu: &'a mut [f64],
@@ -619,7 +627,10 @@ struct SingleEffect<'a> {
     v: f64,
 }
 
-// Keep statistical inputs and caller-owned scratch/output buffers explicit.
+/// One SER update of a single effect from its crossproduct residual `xtr`:
+/// choose V by `method` ("optim", "simple", "EM" or "none"), then write the
+/// posterior inclusion probabilities, conditional moments and log Bayes factors.
+// Statistical inputs and caller-owned scratch and output buffers are passed explicitly.
 #[allow(clippy::too_many_arguments)]
 fn single_effect<'a>(
     xtr: &[f64],
@@ -638,8 +649,8 @@ fn single_effect<'a>(
     for ((&d, &r), beta) in diagonal.iter().zip(xtr).zip(betahat.iter_mut()) {
         *beta = (1.0 / d) * r;
     }
-    // Sampling variances depend on sigma2; rebuild after its update.
-    // The matrix diagonal remains fixed throughout this fit.
+    // Sampling variances depend on σ² and are rebuilt after it is updated;
+    // the matrix diagonal is fixed for the whole fit.
     if sampling_cache
         .as_ref()
         .is_none_or(|sampling| sampling.sigma2 != sigma2)
@@ -652,8 +663,8 @@ fn single_effect<'a>(
     }
     let sampling = sampling_cache.as_ref().expect("sampling initialized");
     let shat2 = &sampling.shat2;
-    // Fixed-V and EM paths never evaluate this objective. Prepare its
-    // invariants only when optim/simple actually request the first value.
+    // Fixed-V and EM updates never evaluate the marginal likelihood; its
+    // context is built only when "optim" or "simple" first needs a value.
     let mut context = None;
     let mut likelihood = |v| {
         let context = context.get_or_insert_with(|| {
@@ -666,8 +677,8 @@ fn single_effect<'a>(
     if method == "optim" {
         let (log_v, objective) = optimizer::minimize(|lv| -likelihood(lv.exp()), -30.0, 15.0)?;
         let candidate = log_v.exp();
-        // The winning objective is already evaluated by Brent. Retain the
-        // exact old-V exp(log(V_init)) comparison required by the R semantics.
+        // The Brent search already returns the objective at the candidate. As
+        // in susieR, the current V is compared after the round trip exp(log V).
         let old_v = v_init.ln().exp();
         let old_likelihood = likelihood(old_v);
         if objective <= -old_likelihood {
@@ -690,7 +701,7 @@ fn single_effect<'a>(
     if let Some(context) = &mut context {
         context.probabilities_into(v, posterior.lbf, posterior.alpha);
     } else {
-        // Fixed-V/EM retain lazy setup: do not construct unused invariants.
+        // Fixed-V and EM updates do not build the search context.
         log_probabilities_into(v, betahat, shat2, log_prior, posterior.lbf, posterior.alpha);
     }
     if let Some(context) = context.take() {
@@ -701,8 +712,8 @@ fn single_effect<'a>(
         .iter()
         .copied()
         .fold(f64::NEG_INFINITY, f64::max);
-    // This row first holds log weights, then weights, then normalized alpha.
-    // Other component rows remain untouched throughout the sequential update.
+    // The row holds log weights, then weights, then normalized α; the rows of
+    // the other effects are not touched during this update.
     vector_math::exp_shift_inplace(posterior.alpha, largest);
     let total = sum(posterior.alpha.iter().copied());
     for value in posterior.alpha.iter_mut() {
@@ -723,12 +734,12 @@ fn single_effect<'a>(
             (0.0, 0.0)
         };
         *mean = post_mean;
-        // mu2 is E[a_l² | gamma_l=j], including conditional variance.
+        // mu2 = E[a_ℓ² | γ_ℓ = j], the conditional second moment.
         *second = post_variance + post_mean * post_mean;
     }
     if method == "EM" {
-        // Gaussian EM updates V after computing posterior moments/evidence.
-        // The caller forms KL from that posterior; EM has no null BF test.
+        // EM sets V to the posterior second moment after the posterior has been
+        // computed; KL uses that posterior. EM has no comparison with V = 0.
         v = dot(posterior.alpha, posterior.mu2);
     }
     let model_lbf = largest + total.ln();
@@ -746,9 +757,9 @@ fn single_effect<'a>(
     Ok(posterior)
 }
 
-/// Accumulate four nonzero columns while each output vector is in registers.
-/// The four multiply/add pairs retain ascending-column order and ordinary f64
-/// rounding. This reduces output loads/stores, not the matrix or its rank.
+/// Accumulate four nonzero columns at a time, keeping each output element in a
+/// register. Columns are added in ascending order with ordinary f64 rounding;
+/// only output loads and stores are reduced.
 #[inline(always)]
 fn multiply_columns_grouped(values: &[f64], vector: &[f64], output: &mut [f64]) {
     output.fill(0.0);
@@ -823,10 +834,10 @@ fn multiply(matrix: ArrayView2<'_, f64>, vector: &[f64], output: &mut [f64]) {
     }
 }
 
-/// Compare every finite entry; Boolean AND allows a full SIMD comparison per
-/// chunk without weakening equality or treating a signature as proof.
+/// Exact equality of two columns up to sign. Combining the four comparisons of
+/// a chunk with `&` permits a SIMD comparison without weakening equality.
 #[inline(always)]
-// Retain the explicit SIMD comparison groups and their separately checked remainder.
+// The explicit four-element groups and the separately checked remainder are intended.
 #[allow(clippy::chunks_exact_to_as_chunks)]
 fn exact_column_chunks(column: &[f64], other: &[f64], sign: f64) -> bool {
     assert_eq!(column.len(), other.len());
@@ -880,8 +891,9 @@ fn hash_exact_column(column: &[f64], sign: f64, sampled: bool) -> u64 {
     hasher.finish()
 }
 
-/// Independent candidate-signature buckets. Hashes propose comparisons only;
-/// every returned signed relation is established by full float64 equality.
+/// Assign the columns of each signature bucket to representatives. Hashes only
+/// propose candidates; every returned signed relation is confirmed by exact
+/// equality of the full float64 columns.
 fn exact_bucket_batch(
     values: &[f64],
     p: usize,
@@ -997,8 +1009,8 @@ unsafe fn exact_rows_avx2(
         while i < vector_end {
             let indices = _mm256_loadu_si256(mapped.as_ptr().add(i).cast());
             let representative = _mm256_i64gather_pd::<8>(column.as_ptr(), indices);
-            // +0/-0 masks flip only the sign bit, exactly implementing the
-            // previously verified +/-1 row relation, including signed zeros.
+            // XOR with a +0 or −0 mask flips only the sign bit, which applies
+            // the ±1 row relation exactly, including to signed zeros.
             let expected = _mm256_xor_pd(representative, _mm256_loadu_pd(negative.as_ptr().add(i)));
             let actual = _mm256_loadu_pd(column.as_ptr().add(i));
             let equal = _mm256_cmp_pd::<_CMP_EQ_OQ>(actual, expected);
@@ -1044,8 +1056,9 @@ fn exact_rows_block(
     exact_rows_scalar(values, p, mapped, negative, columns)
 }
 
-/// Exact equality classes of full standardized matrix columns, including sign.
-/// Every SNP remains in the posterior; only its matrix contribution is grouped.
+/// Classes of exactly equal working-matrix columns, up to sign. Every variant
+/// keeps its own prior and posterior; only its contribution to matrix products
+/// is computed through its class representative.
 struct ExactColumns {
     assignments: Vec<(usize, f64)>,
     representatives: Vec<usize>,
@@ -1057,8 +1070,8 @@ struct ExactColumns {
 }
 
 impl ExactColumns {
-    /// Distinct canonical signatures are a lower bound on exact classes. Too
-    /// many signatures prove that the desired redundancy cannot be present.
+    /// The number of distinct sampled signatures is a lower bound on the number
+    /// of classes; more than 7p/8 signatures rule out the required redundancy.
     fn may_reduce(matrix: ArrayView2<'_, f64>) -> bool {
         use std::collections::{hash_map::DefaultHasher, HashSet};
         use std::hash::Hasher;
@@ -1138,8 +1151,8 @@ impl ExactColumns {
             loads[target] += bucket.len();
             bins[target].push(bucket);
         }
-        // Scoped workers read immutable borrowed matrix memory while the caller
-        // holds the GIL. Each worker returns owned records; no shared mutation.
+        // Scoped threads read the borrowed matrix, which is immutable while the
+        // caller holds the GIL; each thread returns its own records.
         let records = std::thread::scope(|scope| {
             let mut handles = Vec::new();
             let mut failed = false;
@@ -1188,8 +1201,8 @@ impl ExactColumns {
         if assignments.iter().any(|&(g, _)| g == usize::MAX) {
             return None;
         }
-        // Restoring original representative and SNP order preserves the serial
-        // class summation order and compact matrix accumulation order.
+        // Restoring the original order of representatives and variants gives
+        // the same summation and compact-matrix order as the serial construction.
         Some(Self::finish_parallel(
             matrix,
             assignments,
@@ -1243,9 +1256,9 @@ impl ExactColumns {
                 (g, 1.)
             });
             assignments.push(assignment);
-            // Bound candidate scans on uninformative signatures (e.g. an identity
-            // matrix whose sampled rows are mostly zero). Large buckets switch
-            // to full-column hashes and still verify every proposed match.
+            // Limit candidate scans for uninformative signatures (for example an
+            // identity matrix, whose sampled rows are mostly zero). Large buckets
+            // switch to full-column hashes; every proposed match is still verified.
             if let Bucket::Few(ids) = bucket {
                 if ids.len() > 8 {
                     let mut map: HashMap<u64, Vec<usize>> = HashMap::new();
@@ -1276,8 +1289,8 @@ impl ExactColumns {
             return Self::finish(matrix, assignments, representatives);
         }
         let values = matrix.as_slice_memory_order().expect("contiguous columns");
-        // This second scope starts after discovery workers have joined, so the
-        // maximum active numerical thread count remains the requested count.
+        // This second scope starts after the discovery threads have joined, so
+        // no more than the requested number of threads is active at once.
         let partials = std::thread::scope(|scope| {
             let mut handles = Vec::new();
             let mut failed = false;
@@ -1322,8 +1335,8 @@ impl ExactColumns {
         };
         let compact = if partials.iter().all(Option::is_some) {
             let mut small = Vec::with_capacity(groups * groups);
-            // Join handles were kept in original column-range order. This copy
-            // restores exactly the serial compact layout without arithmetic.
+            // Join handles are kept in column-range order, so concatenating
+            // the results reproduces the serial compact layout exactly.
             for part in partials {
                 small.extend(part.expect("verified column block"));
             }
@@ -1350,10 +1363,10 @@ impl ExactColumns {
         let p = matrix.nrows();
         let values = matrix.as_slice_memory_order().expect("contiguous columns");
         let groups = representatives.len();
-        // Keep a bounded block of verified representative columns in cache
-        // before gathering their compact entries. The 512KiB data target leaves
-        // space for mappings/output on the measured host's 1MiB private L2.
-        // This is portable blocking, not a CPU instruction requirement.
+        // Verify and copy representative columns in blocks of about 512 KiB, so
+        // that each block stays in cache while its compact entries are gathered
+        // (sized for a 1 MiB private L2 cache). This is cache blocking only and
+        // requires no particular CPU instruction set.
         let compact = if matrix.ncols() == p && groups * 8 <= p * 7 {
             let block = (512 * 1024 / (p * std::mem::size_of::<f64>())).max(1);
             let mapped: Vec<i64> = assignments
@@ -1431,10 +1444,11 @@ impl ExactColumns {
     }
 }
 
-// Complete bounded-entry proof also proves finiteness: NaN and infinities
-// fail ordered abs<=2 comparison. Boolean AND groups permit portable SIMD.
+// Checking |x| ≤ 2 for every entry also establishes finiteness, because NaN and
+// infinities fail the ordered comparison. Combining eight checks with `&`
+// permits a SIMD evaluation.
 #[inline(never)]
-// Preserve the explicit SIMD lane checks and finite-range proof, including the tail.
+// The explicit eight-element groups and the separately checked remainder are intended.
 #[allow(clippy::chunks_exact_to_as_chunks)]
 fn operator_entries_bounded(values: &[f64]) -> bool {
     let mut chunks = values.chunks_exact(8);
@@ -1454,8 +1468,9 @@ fn operator_entries_bounded(values: &[f64]) -> bool {
     chunks.remainder().iter().all(|x| x.abs() <= 2.)
 }
 
-/// Exact real-arithmetic factorization of the prepared matrix. Floating-point
-/// reassociation is intentional and validated separately from the default path.
+/// Implicit working matrix Q = a D⁻¹ M D⁻¹, applied as a D⁻¹ (M (D⁻¹ v)). The
+/// factorization is exact in real arithmetic; its different floating-point
+/// association is intentional and tested against the materialized matrix.
 pub struct MatrixScaling<'a> {
     pub global: f64,
     pub inverse: &'a [f64],
@@ -1498,8 +1513,8 @@ fn scaled_multiply(
             return false;
         }
     }
-    // Preserve the full matrix route when factorization creates an intermediate
-    // overflow that the original ordered matrix preparation would avoid.
+    // If the factored product overflows in an intermediate step, multiply by
+    // the materialized matrix instead, whose entry-wise preparation avoids it.
     let values = materialize_scaled(matrix, scaling);
     let p = matrix.nrows();
     let prepared = ArrayView2::from_shape((p, p).f(), &values).expect("prepared dimensions");
@@ -1513,6 +1528,9 @@ struct ResidualScratch {
     component_quadratics: Vec<f64>,
 }
 
+/// Expected residual sum of squares E‖y − Xb‖² under the variational posterior:
+/// yᵀy − 2 b̄ᵀXᵀy + b̄ᵀXᵀX b̄ − ∑_ℓ m_ℓᵀXᵀX m_ℓ + ∑_ℓ ∑_j Q_jj α_ℓj mu2_ℓj,
+/// with m_ℓ = α_ℓ ⊙ μ_ℓ and b̄ = ∑_ℓ m_ℓ, using the stored products Q m_ℓ.
 fn expected_residual_sum_squares(
     xty: &[f64],
     yty: f64,
@@ -1541,11 +1559,10 @@ fn expected_residual_sum_squares(
             fitted[j] += component_products[idx];
         }
     }
-    // Keep l-major/j-minor order and the original multiplication parentheses
-    // in the streamed conditional second moment. The compensated reduction
-    // needs no L*p temporary.
-    // Linearity: sum_l XtX*b_l = XtX*sum_l b_l. All products were computed
-    // after the corresponding component update, so no stale coefficients enter.
+    // The second-moment terms are summed in effect-major, variant-minor order
+    // with the parenthesization Q_jj (α mu2), by compensated summation and
+    // without an L × p temporary. By linearity, ∑_ℓ Q m_ℓ = Q b̄; every product
+    // was formed after its effect's last update.
     yty - 2.0 * dot(mean, xty) + dot(mean, fitted) - sum(component_quadratics.iter().copied())
         + sum((0..fit.v.len()).flat_map(|effect| {
             let offset = effect * p;
@@ -1553,8 +1570,8 @@ fn expected_residual_sum_squares(
         }))
 }
 
-/// Fit from centered sufficient statistics. XtX must be row-major and must
-/// already include any standardization and explicit null column.
+/// Fit from centered sufficient statistics (test entry point). XtX must be
+/// row-major and already include any standardization and null column.
 #[cfg(test)]
 pub fn fit(
     xtx: &[f64],
@@ -1600,7 +1617,10 @@ pub fn fit_layout_operator(
     )
 }
 
-// Preserve the sufficient-statistic entry point and its explicit convergence controls.
+/// Run IBSS on centered sufficient statistics with explicit stopping controls.
+/// `xtx` is row- or column-major (`column_major`) and already includes any
+/// standardization and null column, unless `scaling` describes the
+/// standardization to be applied implicitly.
 #[allow(clippy::too_many_arguments)]
 pub fn fit_controlled(
     xtx: &[f64],
@@ -1616,10 +1636,10 @@ pub fn fit_controlled(
     if p == 0 || p.checked_mul(p) != Some(xtx.len()) || options.l == 0 || options.l > p {
         return Err("Invalid sufficient-statistic dimensions or number of effects".into());
     }
-    // This certificate checks every raw entry inside this call. Its success
-    // establishes finite input and the safe operator range together; failure
-    // merely retains full finiteness validation and matrix materialization.
-    // Keep each numerical bound next to the corresponding scaling factor check.
+    // Every raw entry is checked here. If the bounds hold, the input is finite
+    // and the implicit operator is safe; otherwise the full finiteness check
+    // and the materialized matrix are used. Each bound is stated next to the
+    // corresponding scale check.
     #[allow(clippy::manual_range_contains)]
     let operator_bounded = scaling.is_some_and(|scale| {
         scale.global >= 1.
@@ -1681,8 +1701,8 @@ pub fn fit_controlled(
     ) {
         return Err("Unsupported prior variance estimation method".into());
     }
-    // Python may supply either contiguous layout. Column-major preparation
-    // avoids an extra dense copy while borrowed memory remains under the GIL.
+    // Either contiguous layout is accepted; column-major input is used in place,
+    // avoiding a dense copy, while the borrowed memory is protected by the GIL.
     let columns;
     let matrix = if column_major {
         ArrayView2::from_shape((p, p).f(), xtx).map_err(|error| error.to_string())?
@@ -1691,9 +1711,9 @@ pub fn fit_controlled(
         columns = input.t().as_standard_layout().into_owned().reversed_axes();
         columns.view()
     };
-    // These bounds select only an arithmetic execution route. Every value
-    // outside them retains the original fully materialized matrix semantics.
-    // Within them, every prepared entry is bounded by8e9 and cannot overflow.
+    // The bounds choose only how the arithmetic is carried out: outside them the
+    // scaled matrix is materialized. Within them every prepared entry is at most
+    // 8 × 10⁹ in magnitude and cannot overflow.
     let operator = if operator_bounded { scaling } else { None };
     let prepared;
     let matrix = if let Some(scale) = scaling.filter(|_| operator.is_none()) {
@@ -1731,11 +1751,11 @@ pub fn fit_controlled(
     } else {
         "none"
     };
-    // In the prepared coordinates, |Xty_j| / sqrt(XtX_jj) is independent of
-    // residual variance. Divide by the CURRENT sigma below, after each sweep
-    // and before its variance update (susieR validate_prior.ss). Zero-information
-    // columns contribute no z score; an entirely empty set keeps R's -Inf max.
-    // Keep the zero-information guard and its guarded division in one expression.
+    // In working coordinates |Xty_j|/√XtX_jj does not depend on σ²; the check
+    // below divides by the current σ, after each sweep and before the σ² update
+    // (susieR validate_prior.ss). Zero-information columns have no z-score, and
+    // an empty set gives a maximum of −∞, as in R. The guard and the division
+    // are kept in one expression.
     #[allow(clippy::filter_map_bool_then)]
     let max_abs_score = diagonal
         .iter()
@@ -1819,8 +1839,9 @@ pub fn fit_controlled(
             output.sigma2 = v;
         }
     }
-    // Discovery is lazy; small or currently sparse products retain the full
-    // matrix path. Exact redundancy alone authorizes the compact representation.
+    // Column classes are sought only once, when products are large and at least
+    // p/8 posterior means are nonzero; otherwise the full matrix is used. The
+    // compact representation is used only for exactly redundant columns.
     let mut exact_columns: Option<ExactColumns> = None;
     let mut grouping_checked = false;
     let mut component = vec![0.0; p];
@@ -1841,10 +1862,11 @@ pub fn fit_controlled(
         fitted: vec![0.0; p],
         component_quadratics: Vec::with_capacity(options.l),
     };
-    // A warm start never trusts caller caches: rebuild each Q E[b_l].
+    // With an initial state, every product Q m_ℓ is recomputed; no stored
+    // fitted quantity is reused.
     if control.initial.is_some() {
         for l in 0..options.l {
-            // Preserve component/variant indexing across the coordinated posterior arrays.
+            // Index all posterior arrays by the same effect and variant.
             #[allow(clippy::needless_range_loop)]
             for j in 0..p {
                 component[j] = output.alpha[l * p + j] * output.mu[l * p + j];
@@ -1862,7 +1884,7 @@ pub fn fit_controlled(
                 multiply(matrix, &component, &mut product);
             }
             component_products[l * p..(l + 1) * p].copy_from_slice(&product);
-            // Keep the original warm-start accumulation order explicit.
+            // Accumulate in variant order; this order fixes the rounding of xtxr.
             #[allow(clippy::needless_range_loop)]
             for j in 0..p {
                 output.xtxr[j] += product[j];
@@ -1879,8 +1901,8 @@ pub fn fit_controlled(
     for iteration in 0..options.max_iter {
         for effect in 0..options.l {
             let offset = effect * p;
-            // component_products[l] stores Q E[b_l]. Removing the old product
-            // leaves the fitted crossproduct from the other components.
+            // component_products holds Q m_ℓ for each effect. Subtracting this
+            // effect's product leaves the fitted crossproduct of the others.
             for j in 0..p {
                 output.xtxr[j] -= component_products[offset + j];
                 residual[j] = xty[j] - output.xtxr[j];
@@ -1911,7 +1933,7 @@ pub fn fit_controlled(
             for (j, value) in component.iter_mut().enumerate() {
                 *value = posterior.alpha[j] * posterior.mu[j];
             }
-            // Gaussian SER expected likelihood excludes no-information columns.
+            // Expected SER log likelihood; zero-information columns are excluded.
             let expected_loglik = -0.5
                 * sum((0..p).filter_map(|j| {
                     let s2 = output.sigma2 / diagonal[j];
@@ -2090,8 +2112,8 @@ pub fn fit_controlled(
             snapshot.events.push("numerical_failure".into());
         }
         if control.track > 0 {
-            // Compact mode alpha is thresholded at the binding; only dense mode
-            // retains moment histories. Neither is used to calculate distances.
+            // In compact mode the binding thresholds α for display; only dense
+            // mode records the moments. Distances never use these records.
             snapshot.pip = current_pip.clone();
             if control.track == 2 {
                 snapshot.alpha = output.alpha.clone();
@@ -2152,8 +2174,8 @@ pub fn fit_controlled(
         options.prior_tol,
         options.null_index,
     );
-    // The stored ELBO and XtXr describe the completed iterations before trim.
-    // Upstream trims even at max_iter and does not recompute either cache.
+    // The stored ELBO and XtXr refer to the completed sweeps, before trimming.
+    // As in susieR, trimming also applies at max_iter and neither is recomputed.
     for effect in 0..options.l {
         if output.v[effect] < options.prior_tol {
             output.diagnostics.trimmed_components.push(effect);
@@ -2623,9 +2645,10 @@ mod tests {
 
     #[test]
     fn streamed_second_moments_match_materialized_order_bits() {
-        // Preserve an independent copy of the old storage/reduction algorithm.
-        // Fits include ordinary/strong signals, fixed/estimated sigma2, and a
-        // zero-information column; no tolerance hides a changed rounding order.
+        // Compare with an independent implementation that materializes the
+        // L × p second-moment terms. Fits include ordinary and strong signals,
+        // fixed and estimated σ², and a zero-information column; the comparison
+        // is bitwise, so any change in rounding order is detected.
         for strong in [false, true] {
             for estimate_residual in [false, true] {
                 for degenerate in [false, true] {
@@ -2792,7 +2815,7 @@ mod tests {
             assert!(values.iter().all(|&x| x == 0.0));
         }
         assert_eq!(result.elbo.len(), 1);
-        // Trace/cache stay pre-trim, per the pinned finalization contract.
+        // Trace and fitted products refer to the state before trimming, as in susieR.
         assert!(result.xtxr.iter().any(|&x| x != 0.0));
     }
 
@@ -3160,8 +3183,8 @@ mod tests {
     #[test]
     fn blocked_serial_finish_discards_partial_output_after_later_block_failure() {
         // Closed-form incidence matrix with 65 exact column classes. For
-        // p=1024 the512KiB block contains64 columns, so failure in class64
-        // occurs after the first64 compact columns have already been copied.
+        // p = 1024 a 512 KiB block contains 64 columns, so the failure in class
+        // 64 occurs after the first 64 compact columns have already been copied.
         let p = 1024;
         let groups = 65;
         let mut values = vec![0.; p * p];

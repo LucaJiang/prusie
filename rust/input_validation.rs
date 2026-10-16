@@ -1,8 +1,8 @@
-//! Complete prepared-input checks; no matrix values are changed or omitted.
+//! Finiteness checks of prepared inputs; values are neither changed nor skipped.
 
-/// A Boolean reduction allows independent finite predicates to be evaluated
-/// together. This is equivalent to rejecting any nonfinite entry; it scans the
-/// full slice even when an invalid entry occurs early. No CPU feature required.
+/// Whether every entry is finite. Combining the predicates with `&` instead of
+/// short-circuiting allows vectorization; the whole slice is always scanned.
+/// No particular CPU feature is required.
 #[inline]
 pub fn all_finite(values: &[f64]) -> bool {
     values

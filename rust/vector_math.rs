@@ -1,4 +1,5 @@
-//! Optional system float64 vector exponential; scalar portable fallback.
+//! Exponentials for the SER weights: the system float64 vector library when it
+//! is available and safe to use, otherwise the scalar `exp`.
 use std::sync::OnceLock;
 
 #[derive(Clone, Copy)]
@@ -18,8 +19,9 @@ fn backend() -> Backend {
         }
         #[cfg(has_vector_math)]
         {
-            // SAFETY: OnceLock serializes initialization, and pointers are
-            // immutable afterward. Missing library/symbols select scalar.
+            // SAFETY: OnceLock serializes initialization, and the function
+            // pointers are immutable afterwards. If the library or its symbols
+            // are missing, the scalar backend is selected.
             let available = unsafe { prusie_vector_init() };
             if available & 2 != 0 && std::is_x86_feature_detected!("avx2") {
                 return Backend::Avx2;
@@ -47,8 +49,8 @@ pub(super) fn backend_name() -> &'static str {
     }
 }
 
-/// Effective group-fill capability for one synchronous SER objective search.
-/// Hardware is cached, but caller controls are sampled afresh for each context.
+/// Whether the AVX2 group-fill kernel may be used for one SER search. CPU support
+/// is cached; the floating-point environment is checked again for each search.
 #[cfg(all(has_vector_math, target_arch = "x86_64"))]
 pub(super) fn group_fill_avx2_allowed() -> bool {
     matches!(backend(), Backend::Avx2) && unsafe { prusie_scalar_environment_required() } == 0
@@ -79,7 +81,7 @@ pub(super) fn exp_shift_inplace(values: &mut [f64], maximum: f64) {
         }
         #[cfg(has_vector_math)]
         Backend::Avx2 => {
-            // SAFETY: runtime CPU detection admits this function only on AVX2.
+            // SAFETY: the backend is selected only after run-time AVX2 detection.
             // The C loop handles its scalar tail without unaligned vector casts.
             unsafe {
                 prusie_exp_shift_avx2(values.as_mut_ptr(), values.len(), maximum);

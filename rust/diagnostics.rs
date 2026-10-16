@@ -1,4 +1,5 @@
-//! Exact online summaries at the post-sweep, pre-residual-variance-update phase.
+//! Convergence metrics and stopping rules, evaluated after each sweep and before
+//! the residual-variance update.
 use super::FitOutput;
 
 #[derive(Default)]
@@ -98,11 +99,12 @@ pub enum StopDecision {
     NumericalFailure,
 }
 
-/// A finite current objective always uses the requested signed ELBO rule.
-/// NaN objectives may use the documented posterior fallback in ELBO mode;
-/// infinities are numerical failures, as in the pinned R objective evaluator.
-/// Joint mode never drops its objective condition. Lagged cycles only stop
-/// explicit posterior/joint modes or the NaN fallback, and are not convergence.
+/// Stopping decision after a sweep. With a finite objective the requested rule
+/// is applied; in 'elbo' mode it requires 0 ≤ ΔELBO < tol. A NaN objective in
+/// 'elbo' mode switches to the α/PIP rule (the second return value). An
+/// infinite objective, or NaN in 'joint' mode, is a numerical failure, as in the
+/// susieR objective evaluation. Cycles at lag > 1 stop only the 'alpha_pip' and
+/// 'joint' modes or the NaN fallback, and do not count as convergence.
 pub fn stopping_decision(
     control: &FitControl,
     snapshot: &Snapshot,
@@ -125,7 +127,7 @@ pub fn stopping_decision(
         _ if fallback => posterior_stable,
         _ => objective_stable,
     };
-    // A diagnostic cannot override an already satisfied convergence criterion.
+    // A satisfied stopping rule takes precedence over a cycle diagnostic.
     if converged {
         return (StopDecision::Converged, fallback);
     }
@@ -150,7 +152,8 @@ pub fn posterior_mean(fit: &FitOutput, p: usize) -> Vec<f64> {
         })
         .collect()
 }
-/// Returns a fixed point (lag 1) separately from a cycle; never mutates posterior.
+/// Smallest lag at which the current α and PIP repeat an earlier state within
+/// the tolerances; lag 1 is a fixed point. The posterior is not modified.
 pub fn detect_cycle(
     alpha: &[f64],
     pip: &[f64],

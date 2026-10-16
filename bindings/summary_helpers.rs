@@ -1,7 +1,7 @@
-//! Allocation-bounded helpers for complete public matrix validation and CS purity.
+//! Matrix validation and credible-set purity with bounded additional memory.
 //!
-//! These helpers borrow NumPy arrays only while holding the GIL. They never
-//! mutate input memory and accept C, F, and arbitrary strided layouts.
+//! NumPy arrays are borrowed only while the GIL is held and are never
+//! modified. C-ordered, F-ordered and strided layouts are accepted.
 use crate::array_layout::ensure_layout;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::exceptions::PyValueError;

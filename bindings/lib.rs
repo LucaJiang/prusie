@@ -1,4 +1,4 @@
-//! Thin NumPy/PyO3 boundary. Iterative inference lives in rust/core.rs.
+//! NumPy/PyO3 interface of the native extension; the IBSS solver is in rust/core.rs.
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -24,10 +24,9 @@ fn vector_option(options: &Bound<'_, PyDict>, name: &str) -> PyResult<Vec<f64>> 
         .get_item(name)?
         .ok_or_else(|| PyValueError::new_err(format!("Missing native option: {name}")))?;
     if let Ok(array) = value.downcast::<PyArray1<f64>>() {
-        // This conversion immediately owns a snapshot, at the same extraction
-        // point as the former Vec conversion. Its short borrow ends before any
-        // later Python conversion callback or the long-lived matrix borrow.
-        // Noncontiguous/private sequence arguments retain scalar extraction.
+        // Copy a contiguous float64 array immediately. The short read borrow
+        // ends before any later Python conversion callback and before the
+        // matrix is borrowed. Other inputs use element-wise extraction.
         if value
             .get_type()
             .is(&PyArray1::<f64>::type_object(value.py()))
@@ -140,7 +139,7 @@ fn fit<'py>(
         )
     })?;
 
-    // rust-numpy0.23 forms Rust references without validating byte alignment,
+    // rust-numpy 0.23 forms Rust references without validating byte alignment,
     // and converts byte strides to element strides by integer division. Check
     // those preconditions before constructing any Rust array view or slice.
     let align = std::mem::align_of::<f64>();
@@ -164,9 +163,9 @@ fn fit<'py>(
             "Native arrays must be aligned with element-compatible byte strides",
         ));
     }
-    // Check metadata before acquiring a PyReadonlyArray borrow: that crate's
-    // borrow key computes stride GCDs and address ranges, including for empty
-    // and singleton arrays. The typed Bound arguments have not acquired it.
+    // Check metadata before acquiring a PyReadonlyArray borrow: the borrow
+    // key of rust-numpy computes stride GCDs and address ranges, including for
+    // empty and singleton arrays. The typed Bound arguments hold no borrow yet.
     let raw_p = xty.shape()[0];
     if raw_p == 0 || xtx.shape() != [raw_p, raw_p] {
         return Err(PyValueError::new_err(
@@ -210,8 +209,8 @@ fn fit<'py>(
     }
     let p = vector.len();
 
-    // Keep the GIL while borrowing NumPy memory. No concurrent Python mutation.
-    // All iterations still run in native Rust; LD never crosses a list/JSON boundary.
+    // The GIL is held while NumPy memory is borrowed, so Python cannot modify
+    // it concurrently. The matrix is passed to the solver without conversion.
     let values = matrix
         .as_slice_memory_order()
         .ok_or_else(|| PyValueError::new_err("Matrix must be contiguous"))?;

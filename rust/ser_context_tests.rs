@@ -1,4 +1,4 @@
-//! Test effective-context freshness without changing any production arithmetic.
+//! Tests that each SER search samples the current floating-point controls.
 #![allow(deprecated)] // Test-only access to the caller's complete MXCSR controls.
 use super::{SerBuffers, SerLikelihood, SerSampling};
 use std::arch::x86_64::{_mm_getcsr, _mm_setcsr};

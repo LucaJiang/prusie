@@ -1,4 +1,4 @@
-//! Check byte geometry before NumPy constructs any typed ndarray view.
+//! Checks of array alignment and strides before rust-numpy creates a typed view.
 use ndarray::Dimension;
 use numpy::{Element, PyArray, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::exceptions::PyValueError;
@@ -7,8 +7,8 @@ use pyo3::prelude::*;
 pub(crate) fn ensure_layout<T: Element, D: Dimension>(
     array: &Bound<'_, PyArray<T, D>>,
 ) -> PyResult<()> {
-    // A later Python numeric argument conversion may mutate dtype/rank after
-    // initial argument extraction. Recheck the typed wrapper before any view.
+    // A Python numeric conversion of a later argument can change the dtype or
+    // rank of this array, so the typed wrapper is checked again here.
     let array = array.as_any().downcast::<PyArray<T, D>>().map_err(|_| {
         PyValueError::new_err("Native array dtype or rank changed during argument conversion")
     })?;
@@ -22,7 +22,7 @@ pub(crate) fn ensure_layout<T: Element, D: Dimension>(
             .iter()
             .zip(array.strides())
             .all(|(&size, &stride)| {
-                // numpy 0.23 adjusts/negates negative strides even on empty axes.
+                // rust-numpy 0.23 adjusts and negates negative strides even on empty axes.
                 if size == 0 || stride % item != 0 {
                     return false;
                 }

@@ -1,4 +1,5 @@
-//! Exact contiguous preparation with runtime SIMD and portable NumPy fallback.
+//! Preparation of the working crossproduct with AVX-512 when available;
+//! otherwise Python uses NumPy with the same operation order.
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
