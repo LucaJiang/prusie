@@ -23,7 +23,7 @@ def test_resources_are_independent_owned_arrays(monkeypatch, tmp_path):
 def test_packaged_reference_and_probability_identities():
     example = prusie.load_example()
     fit = prusie.susie_rss(**example["inputs"], **example["parameters"])
-    folder = files("prusie").joinpath("data/teaching")
+    folder = files("prusie").joinpath("data/toy")
     with np.load(
         io.BytesIO(folder.joinpath("reference.npz").read_bytes()), allow_pickle=False
     ) as ref:

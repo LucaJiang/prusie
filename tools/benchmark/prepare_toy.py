@@ -18,7 +18,7 @@ def prepare(data, output):
         np.asarray(a["R"].T, dtype="<f8").tofile(output / "R_F.bin")
     (output / "ids.txt").write_text("\n".join(metadata["variant_ids"]) + "\n")
     case = dict(
-        case_id="independent_teaching",
+        case_id="independent_toy",
         n_variants=metadata["p"],
         parameters=dict(n=metadata["n"], **metadata["parameters"]),
         z_path="z.bin",
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     p.add_argument(
         "--data",
         type=Path,
-        default=Path(__file__).resolve().parents[2] / "src/prusie/data/teaching",
+        default=Path(__file__).resolve().parents[2] / "src/prusie/data/toy",
     )
     p.add_argument("--output-dir", type=Path, required=True)
     a = p.parse_args()

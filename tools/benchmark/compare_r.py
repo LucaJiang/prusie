@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 from compare_fits import compare
 from prepare_fixture import ROOT, prepare
-from prepare_teaching import prepare as prepare_teaching
+from prepare_toy import prepare as prepare_toy
 from rss_sampler import Sampler
 
 HERE = Path(__file__).resolve().parent
@@ -82,7 +82,7 @@ def main():
         ]
         manifest = {"cases": list(map(str, paths)), "timed_cases": list(map(str, paths))}
     elif args.fixture == "independent":
-        case_file = prepare_teaching(ROOT / "src/prusie/data/teaching", out / "inputs")
+        case_file = prepare_toy(ROOT / "src/prusie/data/toy", out / "inputs")
         manifest = {"cases": [case_file.name], "timed_cases": [case_file.name]}
     else:
         manifest = prepare(ROOT / "examples/data", out / "inputs")

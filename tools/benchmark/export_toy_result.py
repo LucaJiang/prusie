@@ -21,7 +21,7 @@ def main():
     comparison = compare(p, r)
     if not comparison["passed"]:
         raise ValueError("Toy example comparison failed: " + json.dumps(comparison))
-    assert p["case_id"] == r["case_id"] == "independent_teaching"
+    assert p["case_id"] == r["case_id"] == "independent_toy"
     record = dict(
         case_id=p["case_id"],
         source="Separately executed independent toy example fits",

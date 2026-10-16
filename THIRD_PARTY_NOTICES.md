@@ -14,7 +14,7 @@ which are not installed as Python runtime code.
 | [R 4.4 Brent_fmin](https://svn.r-project.org/R/branches/R-4-4-branch/src/library/stats/src/optimize.c) | Adaptation in `rust/optimizer.rs`, also compiled into wheels | Robert Gentleman, Ross Ihaka, R Foundation and R Core Team; [original GPL-2.0-or-later notice](licenses/R-optimizer.txt); combined package under GPL-3.0-or-later |
 | [coloc 6.0.3 teaching fixture](https://github.com/chr1swallace/coloc/tree/8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45) | Frozen format conversions and independent R references in `examples/data`, source distribution only | Chris Wallace and coloc contributors; upstream declares **GPL**, without a version |
 | [susieR FinemappingConvergence](https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData) | Toy sufficient statistics in `src/prusie/data/convergence`, source and wheel | Same susieR holders; [BSD-3-Clause](licenses/susieR-BSD-3-Clause.txt) |
-| prusie teaching data | Independently generated example in `src/prusie/data/teaching`, source and wheel | Wenxin Jiang, 2026; GPL-3.0-or-later |
+| prusie teaching data | Independently generated example in `src/prusie/data/toy`, source and wheel | Wenxin Jiang, 2026; GPL-3.0-or-later |
 
 The susieR source commit is `8e56a8e038e989856d106d9ca5175cc664fea9d2`.
 Its source archive SHA256 is

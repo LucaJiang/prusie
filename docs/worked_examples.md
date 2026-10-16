@@ -165,8 +165,8 @@ full layouts and exported plotting data, and the
 <summary>Inputs, licenses, numerical provenance and rendering commands</summary>
 
 The stable inputs are independently generated synthetic data; their
-[generation metadata](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/teaching/metadata.json)
-and [GPL-3.0-or-later notice](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/teaching/LICENSE.txt)
+[generation metadata](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/toy/metadata.json)
+and [GPL-3.0-or-later notice](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/toy/LICENSE.txt)
 ship with the package. The problem fixture uses a simulated response with
 real-genotype-derived sufficient statistics, without individual genotypes;
 [source metadata](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/convergence/metadata.json)

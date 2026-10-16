@@ -569,11 +569,11 @@ def main():
         ax.set_xscale("log")
         ax.grid(alpha=0.15)
     save(fig, "pip_accuracy")
-    teaching = ROOT / "docs/assets/teaching_result.json"
-    if teaching.exists():
-        t = json.loads(teaching.read_text())
-        ref = np.load(ROOT / "src/prusie/data/teaching/reference.npz")
-        inp = np.load(ROOT / "src/prusie/data/teaching/inputs.npz")
+    toy = ROOT / "docs/assets/toy_result.json"
+    if toy.exists():
+        t = json.loads(toy.read_text())
+        ref = np.load(ROOT / "src/prusie/data/toy/reference.npz")
+        inp = np.load(ROOT / "src/prusie/data/toy/inputs.npz")
         fig, axes = plt.subplots(2, 1, figsize=(8.6, 4.6), sharex=True, layout="constrained")
         x = np.arange(1, 501)
         axes[0].scatter(x, inp["z"], s=8, color=colors[0])
@@ -585,7 +585,7 @@ def main():
         for ax in axes:
             for pos in [100, 350]:
                 ax.axvline(pos, color="#777777", ls="--", lw=0.7)
-        save(fig, "teaching_fit")
+        save(fig, "toy_fit")
         info = (
             f"The independent 500-variant toy example "
             f"fit converged in "
@@ -598,7 +598,7 @@ def main():
             f"."
         )
         for page in ["docs/example.md", "docs/numerical_accuracy.md"]:
-            fragment(page, "teaching", info)
+            fragment(page, "toy", info)
         cs = table(
             ["Original component", "Synthetic variants", "Returned posterior mass", "Minimum |r|"],
             [
@@ -611,7 +611,7 @@ def main():
                 for c in t["cs"]
             ],
         )
-        fragment("docs/example.md", "teaching-cs", cs)
+        fragment("docs/example.md", "toy-cs", cs)
     stale = []
     for path, payload in outputs.items():
         if args.check:

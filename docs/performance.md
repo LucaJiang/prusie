@@ -28,7 +28,7 @@ The numerical code, input panel and fitting parameters were frozen before these 
 
 Absolute runtime columns are across-case medians of within-case medians. Counts use every case in the fixed denominator; ties do not count as faster. Both unconverged and no-CS cases remain included. Per-repeat records and convergence/CS strata are retained in the downloads.
 
-![Current complete-call timings by variant count.](assets/current_20261012/runtime_by_variants.svg)
+![Current complete-call timings by variant count.](assets/benchmark/runtime_by_variants.svg)
 
 | Analysis / backend | Full-process peak (MiB) | Current prefit RSS (MiB) | Sampled fit peak (MiB) | Sampled increment (MiB) |
 | --- | --- | --- | --- | --- |
@@ -41,7 +41,7 @@ Each column is a separate across-case median. Full-process peak is a fresh proce
 
 The largest observed sampling gaps on the real panel were 35.1 ms for prusie and 404.5 ms for R. Thus the target interval is not a guaranteed resolution, particularly for short fits. Full-process high-water marks remain the primary memory measure.
 
-![Current full-process RSS by variant count.](assets/current_20261012/memory_by_variants.svg)
+![Current full-process RSS by variant count.](assets/benchmark/memory_by_variants.svg)
 
 ### Controlled dense scaling
 
@@ -64,15 +64,15 @@ Independent validation passes the PIP criterion for all six scales (maximum abso
 | 20000 | prusie | 6.947 | 3 | True | 3106 | 14.26 |
 | 20000 | susieR | 102 | 4 | True | 1.385e+04 | 1.057e+04 |
 
-![Controlled scaling: complete-call time, fresh-process peak, iterations and sampled RSS.](assets/current_20261012/controlled_scaling.svg)
+![Controlled scaling: complete-call time, fresh-process peak, iterations and sampled RSS.](assets/benchmark/controlled_scaling.svg)
 
 All six sizes were attempted within a hard 16 GiB process address-space limit after allocation preflight. Lossless gzip transports are checked against the frozen complete matrix-byte hashes and fully materialized as dense arrays before fitting. This transport changes startup I/O; full-process RSS includes its actual loading cost. Curves connect measured sizes only. Any unavailable cells remain explicitly unavailable.
 
 ### Current measurement protocol and records
 
-The full public-call boundary and matched settings are detailed under Methods below. One warmup precedes seven retained repeats; backends run sequentially with one numerical thread. Imports, file reads, explicit GC and exports are outside each fit clock. The machine was shared; host pressure and repeat variability were recorded. Process address space was limited to 16 GiB. The [current environment record](assets/current_20261012/protocol.json) identifies AMD EPYC 9754, Linux x86-64/glibc 2.35, CPython 3.12.2, NumPy 2.2.6, R 4.4.0/OpenBLAS 0.3.20 and the actual native/BLAS library hashes. Complete-call ratios do not isolate individual kernel costs.
+The full public-call boundary and matched settings are detailed under Methods below. One warmup precedes seven retained repeats; backends run sequentially with one numerical thread. Imports, file reads, explicit GC and exports are outside each fit clock. The machine was shared; host pressure and repeat variability were recorded. Process address space was limited to 16 GiB. The [current environment record](assets/benchmark/protocol.json) identifies AMD EPYC 9754, Linux x86-64/glibc 2.35, CPython 3.12.2, NumPy 2.2.6, R 4.4.0/OpenBLAS 0.3.20 and the actual native/BLAS library hashes. Complete-call ratios do not isolate individual kernel costs.
 
-[Real-panel summary and strata](assets/current_20261012/real_summary.json) · [Real-panel case/repeat CSV](assets/current_20261012/real_cases.csv) · [Scaling summary](assets/current_20261012/scaling_summary.json) · [Scaling case/repeat CSV](assets/current_20261012/scaling_cases.csv). These downloads contain anonymous case labels and aggregate diagnostics, not association or genotype inputs.
+[Real-panel summary and strata](assets/benchmark/real_summary.json) · [Real-panel case/repeat CSV](assets/benchmark/real_cases.csv) · [Scaling summary](assets/benchmark/scaling_summary.json) · [Scaling case/repeat CSV](assets/benchmark/scaling_cases.csv). These downloads contain anonymous case labels and aggregate diagnostics, not association or genotype inputs.
 
 ## Historical comparison: 0.2.3rc4
 <!-- current:measurements:end -->

@@ -18,7 +18,7 @@ python tools/benchmark/compare_r.py --rscript Rscript \
 ```
 
 The default input is the independently generated 500-variant toy example
-in `src/prusie/data/teaching`. Set `R_LIBS_USER` for your intended R library.
+in `src/prusie/data/toy`. Set `R_LIBS_USER` for your intended R library.
 The output directory must be new. `--validation-only` skips clocks and memory
 measurement and needs no BLAS probe. `--fixture regression` instead uses the
 older attributed fixture, whose existing inputs/references are unchanged.

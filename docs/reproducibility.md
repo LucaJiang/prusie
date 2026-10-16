@@ -36,7 +36,7 @@ builds do not acquire the old timing identity.
 
 ## Rerun the independent example
 
-The wheel includes `prusie/data/teaching`: input arrays, generation metadata,
+The wheel includes `prusie/data/toy`: input arrays, generation metadata,
 checksums, the R reference arrays and reference metadata. `load_example()` uses
 `importlib.resources`, so no repository path is required. To inspect the
 resources:
@@ -45,7 +45,7 @@ resources:
 from importlib.resources import files
 import json
 
-resources = files("prusie").joinpath("data/teaching")
+resources = files("prusie").joinpath("data/toy")
 reference = json.loads(resources.joinpath("reference.json").read_text())
 print(reference["susieR_version"], reference["susieR_commit"])
 ```

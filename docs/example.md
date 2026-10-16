@@ -176,19 +176,19 @@ z-scores are the marginal regression estimates divided by their standard
 errors, and R is the sample Pearson correlation of the same standardized
 predictors. The data are synthetic; no human study or genome build is implied.
 
-<!-- generated:teaching:start -->
+<!-- generated:toy:start -->
 The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
-<!-- generated:teaching:end -->
+<!-- generated:toy:end -->
 
-<!-- generated:teaching-cs:start -->
+<!-- generated:toy-cs:start -->
 
 | Original component | Synthetic variants | Returned posterior mass | Minimum &#124;r&#124; |
 | --- | --- | --- | --- |
 | 0 | syn0100 | 0.969674 | 1.000000 |
 | 1 | syn0350 | 0.999937 | 1.000000 |
-<!-- generated:teaching-cs:end -->
+<!-- generated:toy-cs:end -->
 
-![Signed z and fitted PIPs, with the two synthetic true effects marked.](assets/teaching_fit.svg){.figure-complex}
+![Signed z and fitted PIPs, with the two synthetic true effects marked.](assets/toy_fit.svg){.figure-complex}
 
 `tools/generate_example.py` uses NumPy PCG64 with seed 20261007, a stationary
 AR(1) correlation of 0.85 between adjacent predictors, sample-standardized

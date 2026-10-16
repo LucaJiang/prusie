@@ -13,7 +13,7 @@ def freeze(record_path, destination):
     record = json.loads(record_path.read_text())
     assert record["status"] == "ok" and record["validity"]["passed"]
     assert record["environment"]["version"] == "0.16.6"
-    assert record["case_id"] == "independent_teaching"
+    assert record["case_id"] == "independent_toy"
     fit = record["fit"]
     fields = ("pip", "alpha", "mu", "mu2", "lbf_variable", "lbf", "V", "sigma2", "elbo", "KL")
     np.savez_compressed(destination / "reference.npz", **{k: np.asarray(fit[k]) for k in fields})
@@ -35,7 +35,7 @@ def freeze(record_path, destination):
         ).hexdigest(),
         source=("Independent toy example fit executed by tools/benchmark/fine_mapping.R"),
         regeneration=(
-            "Prepare inputs using tools/benchmark/prepare_teaching.py; run "
+            "Prepare inputs using tools/benchmark/prepare_toy.py; run "
             "fine_mapping.R in a new output directory; inspect differences "
             "before changing this reference."
         ),

@@ -38,7 +38,7 @@ def load_example():
     >>> example["inputs"]["R"].shape
     (500, 500)
     """
-    directory = files("prusie").joinpath("data/teaching")
+    directory = files("prusie").joinpath("data/toy")
     hashes = json.loads(directory.joinpath("checksums.json").read_text())
     blobs = {
         name: directory.joinpath(name).read_bytes() for name in ("inputs.npz", "metadata.json")

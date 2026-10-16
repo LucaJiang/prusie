@@ -134,7 +134,7 @@ def check_frozen(directory, arrays, metadata):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--output-dir", type=Path, default=ROOT / "src/prusie/data/teaching")
+    p.add_argument("--output-dir", type=Path, default=ROOT / "src/prusie/data/toy")
     p.add_argument("--check", action="store_true")
     a = p.parse_args()
     arrays, metadata = generate()

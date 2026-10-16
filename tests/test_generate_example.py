@@ -19,7 +19,7 @@ spec = importlib.util.spec_from_file_location(
 )
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
-DATA = ROOT / "src/prusie/data/teaching"
+DATA = ROOT / "src/prusie/data/toy"
 
 
 @pytest.fixture(scope="module")
@@ -55,7 +55,7 @@ def test_archive_encoding_does_not_define_numerical_reproducibility(generated):
 
 @pytest.mark.parametrize("name", ["inputs.npz", "metadata.json", "LICENSE.txt", "checksums.json"])
 def test_frozen_corruption_is_rejected_even_with_valid_regeneration(name, tmp_path, generated):
-    data = tmp_path / "teaching"
+    data = tmp_path / "toy"
     shutil.copytree(DATA, data)
     path = data / name
     path.write_bytes(path.read_bytes() + b" ")
@@ -66,7 +66,7 @@ def test_frozen_corruption_is_rejected_even_with_valid_regeneration(name, tmp_pa
 def test_rehashing_altered_frozen_data_cannot_bypass_integrity(tmp_path, generated):
     import hashlib
 
-    data = tmp_path / "teaching"
+    data = tmp_path / "toy"
     shutil.copytree(DATA, data)
     path = data / "metadata.json"
     path.write_text(path.read_text().replace("20261007", "20261008"))

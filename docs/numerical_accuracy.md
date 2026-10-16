@@ -126,15 +126,15 @@ Convergence and the presence of a credible set are different properties.
 
 ## Independent toy example
 
-<!-- generated:teaching:start -->
+<!-- generated:toy:start -->
 The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
-<!-- generated:teaching:end -->
+<!-- generated:toy:end -->
 
-![Signed association statistics and fitted PIPs for the independent synthetic toy example, with its two true effect positions marked.](assets/teaching_fit.svg)
+![Signed association statistics and fitted PIPs for the independent synthetic toy example, with its two true effect positions marked.](assets/toy_fit.svg)
 
 The dashed lines mark the two simulated nonzero effects. This single toy
 example has its own newly executed reference, generation script and packaged
-inputs. See the [toy example tutorial](example.md) and [vector PDF](assets/teaching_fit.pdf).
+inputs. See the [toy example tutorial](example.md) and [vector PDF](assets/toy_fit.pdf).
 
 ## Reproduce the comparisons
 
