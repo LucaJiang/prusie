@@ -1,120 +1,208 @@
-# Third-party sources and notices
+# Third-party notices
 
-prusie is Copyright (c) 2026 Wenxin Jiang and is distributed under
-**GPL-3.0-or-later**. The complete primary license is [LICENSE](LICENSE).
-The components below retain their original terms. The linked texts accompany
-the wheel and source distribution; the inventory also covers website assets,
-which are not installed as Python runtime code.
+prusie is GPL-3.0-or-later; see [LICENSE](LICENSE).
 
-## Scientific sources and data
+## Adapted source code
 
-| Source | Use and distribution | Copyright and terms |
+### susieR
+
+Gaussian SuSiE and SuSiE-RSS code is adapted from
+[susieR 0.16.6](https://github.com/stephenslab/susieR/tree/8e56a8e038e989856d106d9ca5175cc664fea9d2),
+commit `8e56a8e038e989856d106d9ca5175cc664fea9d2`, under BSD-3-Clause:
+
+Copyright (c) 2017-2022, Gao Wang, Peter Carbonetto, Yuxin Zou, Kaiqian Zhang,
+Matthew Stephens.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+ * Neither the name of Gao Wang, Peter Carbonetto, Yuxin Zou, Kaiqian
+   Zhang, Matthew Stephens, nor the names of its contributors may be used
+   to endorse or promote products derived from this software without
+   specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+### R Brent_fmin
+
+[`rust/optimizer.rs`](rust/optimizer.rs) adapts
+[R 4.4 optimize.c](https://svn.r-project.org/R/branches/R-4-4-branch/src/library/stats/src/optimize.c).
+Copyright (C) 1995, 1996 Robert Gentleman and Ross Ihaka;
+Copyright (C) 2003–2004 The R Foundation;
+Copyright (C) 1998–2023 The R Core Team.
+The source retains its GPL-2.0-or-later permission notice and is used under
+GPL-3.0 as part of prusie.
+
+## Rust libraries linked into the binary wheel
+
+The Linux x86-64 wheel uses the following libraries. MIT is selected wherever
+it is offered; the common MIT permission below applies to these attributions,
+except for rust-numpy's separate BSD-2-Clause notice.
+Crate sources are available at `https://crates.io/crates/NAME/VERSION`.
+
+| Crate | Version | Copyright / authors |
 | --- | --- | --- |
-| [susieR 0.16.6](https://github.com/stephenslab/susieR/tree/8e56a8e038e989856d106d9ca5175cc664fea9d2) | Gaussian SuSiE/SuSiE-RSS algorithms and adapted implementation in source and native wheels | Gao Wang, Peter Carbonetto, Yuxin Zou, Kaiqian Zhang, Matthew Stephens, 2017–2022; [BSD-3-Clause](licenses/susieR-BSD-3-Clause.txt) |
-| [R 4.4 Brent_fmin](https://svn.r-project.org/R/branches/R-4-4-branch/src/library/stats/src/optimize.c) | Adaptation in `rust/optimizer.rs`, also compiled into wheels | Robert Gentleman, Ross Ihaka, R Foundation and R Core Team; [original GPL-2.0-or-later notice](licenses/R-optimizer.txt); combined package under GPL-3.0-or-later |
-| [coloc 6.0.3 teaching fixture](https://github.com/chr1swallace/coloc/tree/8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45) | Frozen format conversions and independent R references in `examples/data`, source distribution only | Chris Wallace and coloc contributors; upstream declares **GPL**, without a version |
-| [susieR FinemappingConvergence](https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData) | Toy sufficient statistics in `src/prusie/data/convergence`, source and wheel | Same susieR holders; [BSD-3-Clause](licenses/susieR-BSD-3-Clause.txt) |
-| prusie teaching data | Independently generated example in `src/prusie/data/toy`, source and wheel | Wenxin Jiang, 2026; GPL-3.0-or-later |
+| cfg-if | 1.0.5 | Copyright (c) 2014 Alex Crichton |
+| libc | 0.2.189 | Copyright (c) The Rust Project Developers |
+| matrixmultiply | 0.3.11 | Copyright (c) 2016–2023, 2026 Ulrik Sverdrup “bluss”; (c) 2018 R. Janis Goldschmidt; (c) 2021 DutchGhost and matrixmultiply authors |
+| memoffset | 0.9.1 | Copyright (c) 2017, 2020 Gilad Naaman; (c) 2020 Ralf Jung |
+| ndarray | 0.16.1 | Copyright (c) 2014–2024 Ulrik Sverdrup “bluss”, Jim Turner and ndarray developers |
+| num-complex | 0.4.6 | Copyright (c) 2013–2014 The Rust Project Developers |
+| num-integer | 0.1.47 | Copyright (c) 2013–2014 The Rust Project Developers |
+| num-traits | 0.2.19 | Copyright (c) 2014 The Rust Project Developers |
+| numpy (rust-numpy; BSD-2-Clause) | 0.23.0 | Copyright (c) 2017 Toshiki Teramura |
+| once_cell | 1.21.4 | The once_cell developers |
+| pyo3, pyo3-ffi | 0.23.5 | Copyright (c) 2023–present PyO3 Project and Contributors; (c) 2017 Daniel Grunwald |
+| rawpointer | 0.2.1 | Copyright (c) 2015; Copyright 2016–2019 bluss and rawpointer developers |
+| rustc-hash | 2.1.3 | The rustc-hash developers |
+| unindent | 0.2.4 | The unindent developers |
 
-The susieR source commit is `8e56a8e038e989856d106d9ca5175cc664fea9d2`.
-Its source archive SHA256 is
-`c88c6324da061c83ac9fbac23972cd1e501210c916596ea7678c3115b33f6971`.
-The earlier susieR 0.14.2 reference is retained: its
-[CRAN archive](https://cran.r-project.org/src/contrib/Archive/susieR/susieR_0.14.2.tar.gz)
-has SHA256 `ba02322eb1f7a7cc024c9278aa7903a34d8ad5d6f3b12c168374bc6214ed2c6e`
-and the same copyright holders and BSD terms.
+The statically linked Rust 1.98.1 standard library is MIT-licensed:
+Copyright (c) The Rust Project Contributors / Developers
+([contributors](https://thanks.rust-lang.org)); its backtrace code also retains
+Copyright (c) 2014 Alex Crichton and its channels
+Copyright (c) 2019 The Crossbeam Project Developers.
+Its included libraries share the MIT permission:
 
-The frozen data directories retain their original provenance and checksum files.
-`examples/data/LICENSE.GPL-3` is a supplied GPLv3 text, not evidence that coloc
-specified version 3. The unversioned upstream declaration remains unchanged.
-The convergence example has a simulated response and real-genotype-derived
-sufficient statistics; it contains no individual genotypes.
+| Library | Version | Copyright / authors |
+| --- | --- | --- |
+| addr2line | 0.25.1 | Copyright (c) 2016–2018 The gimli Developers |
+| adler2 | 2.0.1 | The adler2 developers |
+| cfg-if | 1.0.4 | Copyright (c) 2014 Alex Crichton |
+| gimli | 0.32.3 | Copyright (c) 2015 The Rust Project Developers; Copyright 2016 The rust-dwarf Developers |
+| hashbrown | 0.17.1 | Copyright (c) 2016 Amanieu d’Antras |
+| libc | 0.2.185 | Copyright (c) The Rust Project Developers |
+| memchr | 2.7.6 | Copyright (c) 2015 Andrew Gallant |
+| miniz_oxide | 0.8.9 | Copyright 2013–2014 RAD Game Tools and Valve Software; 2010–2014 Rich Geldreich and Tenacious Software LLC; (c) 2017 Frommi; (c) 2017–2024 oyvindln |
+| object | 0.37.3 | Copyright (c) 2015 The Gimli Developers |
+| rustc-demangle | 0.1.27 | Copyright (c) 2014 Alex Crichton |
+
+### MIT permission
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+### rust-numpy: BSD-2-Clause
+
+BSD 2-Clause License
+
+Copyright (c) 2017, Toshiki Teramura
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+### Rust Unicode tables: Unicode-3.0
+
+Rust's character tables retain Copyright (c) 1991–2024 Unicode, Inc.,
+under the following permission:
+
+UNICODE LICENSE V3
+
+COPYRIGHT AND PERMISSION NOTICE
+
+Copyright © 1991-2023 Unicode, Inc.
+
+NOTICE TO USER: Carefully read the following legal agreement. BY
+DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of data files and any associated documentation (the "Data Files") or
+software and any associated documentation (the "Software") to deal in the
+Data Files or Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, and/or sell
+copies of the Data Files or Software, and to permit persons to whom the
+Data Files or Software are furnished to do so, provided that either (a)
+this copyright and permission notice appear with all copies of the Data
+Files or Software, or (b) this copyright and permission notice appear in
+associated Documentation.
+
+THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+THIRD PARTY RIGHTS.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+FILES OR SOFTWARE.
+
+Except as contained in this notice, the name of a copyright holder shall
+not be used in advertising or otherwise to promote the sale, use or other
+dealings in these Data Files or Software without prior written
+authorization of the copyright holder.
+
+## Data
+
+| Dataset | Source | Terms |
+| --- | --- | --- |
+| `src/prusie/data/convergence` | [susieR FinemappingConvergence](https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData) | BSD-3-Clause, susieR notice above; synthetic response with real-genotype-derived sufficient statistics |
+| `examples/data` | [coloc 6.0.3 toy fixture](https://github.com/chr1swallace/coloc/tree/8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45), Chris Wallace and contributors | Upstream declares “GPL” without a version; the supplied `LICENSE.GPL-3` and provenance are retained |
+| `src/prusie/data/toy` | Independently generated prusie toy data, Copyright (c) 2026 Wenxin Jiang | GPL-3.0-or-later; see LICENSE |
 
 ## Documentation assets
 
-[KaTeX 0.16.22](https://registry.npmjs.org/katex/-/katex-0.16.22.tgz) supplies
-`tools/vendor/katex/katex.js` and `docs/assets/katex`. Its JavaScript/CSS use
-[MIT](licenses/MIT.txt), with Khan Academy and contributor attribution.
-The unchanged font files and SVG glyph material carry **OFL-1.1**, including
-Design Science and Khan Academy copyrights and the original reserved font names.
-React-derived utilities retain Facebook's Apache-2.0 attribution.
-See the [specific notices](licenses/KaTeX.txt), [OFL-1.1](licenses/OFL-1.1.txt)
-and [Apache-2.0](licenses/Apache-2.0.txt). Asset hashes remain pinned in
-`tools/math-assets.lock.json`.
-
-## Locked Rust dependencies
-
-The table records every registry component in `Cargo.lock`. Official source
-archives are available from `https://static.crates.io/crates/NAME/NAME-VERSION.crate`;
-their registry checksums are in the lockfile. No dependency source tree is vendored
-into the sdist. Runtime crates contribute code to the native extension; build
-and procedural-macro crates run during compilation. Their notices are retained
-conservatively for generated or embedded code. The project has no direct
-development-only Cargo dependencies.
-
-For components offering MIT OR Apache-2.0, this distribution selects MIT.
-All original MIT copyrights, including notices that supply no named holder,
-are recorded in [Rust-components.txt](licenses/Rust-components.txt), with one
-identical common [MIT grant](licenses/MIT.txt). NumPy's **Rust crate** is
-[BSD-2-Clause](licenses/numpy-rust-BSD-2-Clause.txt), separately from the Python
-NumPy dependency. `unicode-ident` additionally requires
-[Unicode-3.0](licenses/Unicode-3.0.txt). `target-lexicon` uses
-[Apache-2.0](licenses/Apache-2.0.txt) with the [LLVM exception](licenses/LLVM-exception.txt).
-
-| Component | Version | Scope | Selected terms |
-| --- | --- | --- | --- |
-| `autocfg` | 1.5.1 | build/code generation | MIT |
-| `cfg-if` | 1.0.5 | transitive/runtime | MIT |
-| `heck` | 0.5.0 | build/code generation | MIT |
-| `indoc` | 2.0.7 | build/code generation | MIT |
-| `libc` | 0.2.189 | transitive/runtime | MIT |
-| `matrixmultiply` | 0.3.11 | transitive/runtime | MIT |
-| `memoffset` | 0.9.1 | transitive/runtime | MIT |
-| `ndarray` | 0.16.1 | direct/runtime | MIT |
-| `num-complex` | 0.4.6 | transitive/runtime | MIT |
-| `num-integer` | 0.1.47 | transitive/runtime | MIT |
-| `num-traits` | 0.2.19 | transitive/runtime | MIT |
-| `numpy` | 0.23.0 | direct/runtime | BSD-2-Clause |
-| `once_cell` | 1.21.4 | transitive/runtime | MIT |
-| `portable-atomic` | 1.15.0 | target-dependent/runtime | MIT |
-| `portable-atomic-util` | 0.2.8 | target-dependent/runtime | MIT |
-| `proc-macro2` | 1.0.107 | build/code generation | MIT |
-| `pyo3` | 0.23.5 | direct/runtime | MIT |
-| `pyo3-build-config` | 0.23.5 | build/code generation | MIT |
-| `pyo3-ffi` | 0.23.5 | transitive/runtime | MIT |
-| `pyo3-macros` | 0.23.5 | build/code generation | MIT |
-| `pyo3-macros-backend` | 0.23.5 | build/code generation | MIT |
-| `quote` | 1.0.47 | build/code generation | MIT |
-| `rawpointer` | 0.2.1 | transitive/runtime | MIT |
-| `rustc-hash` | 2.1.3 | transitive/runtime | MIT |
-| `rustversion` | 1.0.23 | build/code generation | MIT |
-| `syn` | 2.0.119 | build/code generation | MIT |
-| `target-lexicon` | 0.12.16 | build/code generation | Apache-2.0 WITH LLVM-exception |
-| `unicode-ident` | 1.0.26 | build/code generation | MIT AND Unicode-3.0 |
-| `unindent` | 0.2.4 | transitive/runtime | MIT |
-
-Reviewed feature configuration: Cargo has no default feature; `extension-module`
-enables `pyo3/extension-module`, and `vector-math` adds the project's C helper on
-native Linux x86-64 GNU builds. PyO3's default features remain enabled.
-`portable-atomic` and `portable-atomic-util` cover target-specific atomic support;
-their presence in the lockfile does not imply inclusion in every wheel.
-
-## Rust standard library and system libraries
-
-Rust toolchain: `1.98.1`. The standard library is statically linked into the native
-extension. Its [runtime notices](licenses/Rust-runtime.txt) retain Rust, backtrace,
-channel, Unicode, compiler-builtins and libm attribution, and the notices for
-addr2line 0.25.1, adler2 2.0.1, cfg-if 1.0.4, gimli 0.32.3, hashbrown 0.17.1,
-libc 0.2.185, memchr 2.7.6, miniz_oxide 0.8.9, object 0.37.3 and
-rustc-demangle 0.1.27. These are separate from versions in the project's lockfile.
-Common terms are [MIT](licenses/MIT.txt), [Apache-2.0](licenses/Apache-2.0.txt),
-[LLVM exception](licenses/LLVM-exception.txt) and [Unicode-3.0](licenses/Unicode-3.0.txt).
-Compiler-builtins requires MIT **and** Apache-2.0 WITH LLVM-exception.
-Its [original libm file notices](licenses/Rust-libm.txt) additionally preserve
-Sun/fdlibm permission, David Schultz's BSD terms and CORE-MATH attribution.
-
-The compiler executable and its development dependencies are not redistributed.
-Python, Python NumPy, and dynamically linked operating-system libraries are
-separately supplied dependencies; their full packages are not bundled in prusie.
-Building with another toolchain or for another platform requires reviewing its
-runtime notices before distributing the resulting wheel.
+[KaTeX 0.16.22](https://github.com/KaTeX/KaTeX/tree/v0.16.22) and its fonts are
+included only in the repository and documentation site, not the wheel or sdist.
+The MIT notice, font copyrights and full OFL-1.1 terms are in
+[`docs/assets/katex/LICENSE`](https://github.com/LucaJiang/prusie/blob/main/docs/assets/katex/LICENSE).

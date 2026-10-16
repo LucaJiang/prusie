@@ -67,5 +67,5 @@
     "docs/assets/katex/katex.min.css": "19095127357ed6d29fe0a63a6b000c913a89f7f1963b765dd3715e97c9852e75",
     "tools/vendor/katex/katex.js": "8f1f4fb1080439c012bb8fddf424fa253e9144ab4cdd7dc0eae0e92cd04a5e33"
   },
-  "notice": "licenses/KaTeX.txt"
+  "notice": "docs/assets/katex/LICENSE"
 }
