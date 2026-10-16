@@ -1,10 +1,12 @@
-"""Seven deterministic analysis views with optional, lazily imported Matplotlib.
+"""Figures for fine-mapping results, convergence, refinement, LD and sensitivity.
 
-Every view returns ``(figure, axes, plotted_data)`` and accepts existing axes.
-The functions never mutate input evidence or global plotting configuration.
-Regional views thin axis labels while retaining observations. Compact layouts
-select explicit candidate subsets and return complete source records. Full-layout
-tables retain prioritized records; explicit pagination is available.
+Matplotlib is imported only when a function is called. Each plotting
+function returns ``(figure, axes, plotted_data)`` and accepts existing axes;
+``plotted_data`` records the plotted values and selection rules. Inputs and
+the global Matplotlib configuration are not modified. Axis labels may be
+thinned, but every observation is drawn. Compact layouts show a stated
+subset of candidates and return the complete records; full layouts can
+paginate their tables.
 """
 
 from __future__ import annotations
@@ -96,7 +98,7 @@ def _bottom_labels(axes, label):
 
 
 def _table(ax, rows, labels, *, page=0, page_size=None):
-    """Render an explicit page, without a hidden twelve-row truncation."""
+    """Draw one page of a table; rows are never truncated silently."""
     if not isinstance(page, int) or page < 0:
         raise ValueError("table_page must be a nonnegative integer")
     if page_size is not None and (not isinstance(page_size, int) or page_size < 1):
@@ -150,7 +152,7 @@ def _number(value):
 
 
 def _display_labels(labels):
-    "Readable middle elision; extend prefixes if shortening creates a collision."
+    """Shorten long labels in the middle, lengthening prefixes to keep them distinct."""
     full = [str(label) for label in labels]
     shown = [value if len(value) <= 30 else value[:15] + "…" + value[-10:] for value in full]
     for i, value in enumerate(full):
@@ -168,7 +170,7 @@ def _display_labels(labels):
 
 
 def _variant_ticks(ax, labels, *, axis="x", priority_indices=()):
-    """Thin labels only, deterministically; never thin observations."""
+    """Choose a deterministic subset of tick labels; all observations remain plotted."""
     limit = 6 if any(len(str(label)) > 30 for label in labels) else 12
     priority = list(dict.fromkeys(int(i) for i in priority_indices if 0 <= i < len(labels)))[:limit]
     other = (
@@ -204,11 +206,35 @@ def _chromosome(value):
 def read_gene_track(
     path, *, genome_build, source, transcript_ids=None, chromosome=None, start=None, end=None
 ):
-    """Read a local GTF into explicit 1-based closed transcript intervals.
+    """Read transcript intervals from a local GTF file for :func:`plot_locus`.
 
-    All transcripts are retained unless IDs are supplied. Gene-level GTF rows
-    are used only when no transcript rows exist; no transcript is chosen silently.
-    A user table can instead be passed directly to :func:`plot_locus`.
+    Parameters
+    ----------
+    path : str or Path
+        GTF file.
+    genome_build : str
+        Genome build of the coordinates, recorded with the track.
+    source : str
+        Annotation source, recorded with the track.
+    transcript_ids : iterable of str, optional
+        Transcripts to keep; all are kept by default.
+    chromosome : str, optional
+        Chromosome to keep; required when ``start`` or ``end`` is given.
+    start, end : int, optional
+        One-based closed interval; records overlapping it are kept.
+
+    Returns
+    -------
+    dict
+        Interval records with chromosome, one-based closed start and end,
+        strand, label and transcript ID, together with the build, source,
+        filter and transcript selection.
+
+    Notes
+    -----
+    Gene records are used only when the file contains no transcript records;
+    no transcript is selected implicitly. A table of the same form can be
+    passed to :func:`plot_locus` directly.
     """
     if (start is not None or end is not None) and chromosome is None:
         raise ValueError("Locus interval filtering requires chromosome")
@@ -270,13 +296,40 @@ def plot_locus(
     label_variants=None,
     color_by_ld=False,
 ):
-    """Aligned association, PIP, CS and LD tracks with optional gene intervals.
+    """Plot association, PIP, credible-set and LD tracks for a region.
 
-    ``layout='compact'`` reduces track spacing, retaining every variant. Physical
-    positions use explicit bp/kb/Mb units; absent positions use variant index.
-    ``label_variants`` selects annotations (default: three highest nonzero PIPs).
-    ``color_by_ld=True`` colors association points by the same reference r² as
-    the LD panel, while the separate CS track retains component identities.
+    Parameters
+    ----------
+    summary : dict
+        Output of :func:`prusie.summarize`.
+    R : array_like, optional
+        Signed LD correlation matrix in the variant order of ``summary``; the
+        LD track shows r² with ``reference_variant``.
+    reference_variant : str, optional
+        Reference variant of the LD track; defaults to the highest PIP.
+    genes : dict, optional
+        Gene track from :func:`read_gene_track`, or a table of the same form.
+    axes : sequence of matplotlib Axes, optional
+        Existing axes, one per track.
+    layout : {'full', 'compact'}, default 'full'
+        'compact' reduces track spacing; every variant is still plotted.
+    position_unit : {'auto', 'bp', 'kb', 'Mb'}, default 'auto'
+        Unit of the position axis. Without positions, the variant index is
+        used.
+    label_variants : sequence of str, optional
+        Variants to annotate; defaults to the three highest nonzero PIPs.
+    color_by_ld : bool, default False
+        Color association points by r² with the reference variant.
+    style : dict or False, optional
+        Matplotlib rc settings applied to this figure only; False uses the
+        current settings.
+
+    Returns
+    -------
+    figure : matplotlib Figure
+    axes : ndarray of Axes
+    plotted_data : dict
+        Plotted values and selection rules.
     """
     compact = _layout(layout)
     rows = summary["variants"]
@@ -587,17 +640,44 @@ def plot_signal(
     ld_measure="r",
     cmap=None,
 ):
-    """Ranked alpha and cumulative mass, within-CS signed LD, direct proxies.
+    """Plot the posterior of one single effect, its cumulative mass and LD within its CS.
 
-    An explicit ``max_variants`` focuses on the leading ranks while always
-    including formal CS members and an explicitly selected variant. Cumulative
-    probabilities retain the complete ranking, without renormalizing a subset.
-    The returned component always contains the complete posterior ranking.
-    Compact layout uses CS members plus ten leading candidates by default and
-    keeps proxies in returned data instead of a figure table. ``ld_measure='r2'``
-    is an explicit display option; ``within_cs_r`` always retains signed values.
-    ``cmap`` optionally overrides Reds (r²) or RdBu_r (signed r). Cell labels
-    are display strings only; ``ld_display_text`` is separate from the matrix.
+    Parameters
+    ----------
+    summary : dict
+        Output of :func:`prusie.summarize`.
+    component_id : int, optional
+        Effect to plot. Alternatively, ``variant_id`` selects the effect that
+        contains that variant.
+    variant_id : str, optional
+        Variant used to select the effect; it is always shown.
+    R : array_like, optional
+        Signed LD correlation matrix in the variant order of ``summary``.
+    axes : sequence of matplotlib Axes, optional
+        Existing axes.
+    table_page, table_page_size : int, optional
+        Page of the proxy table to draw.
+    max_variants : int, optional
+        Number of leading variants shown; CS members and ``variant_id`` are
+        always included. Cumulative probabilities use the full ranking.
+    layout : {'full', 'compact'}, default 'full'
+        'compact' shows CS members and ten leading variants and returns the
+        proxies as data instead of drawing a table.
+    ld_measure : {'r', 'r2'}, default 'r'
+        Display signed r or r²; ``within_cs_r`` in the returned data is
+        always signed.
+    cmap : str or Colormap, optional
+        Colormap of the LD matrix; defaults to RdBu_r for r and Reds for r².
+    style : dict or False, optional
+        Matplotlib rc settings applied to this figure only.
+
+    Returns
+    -------
+    figure : matplotlib Figure
+    axes : ndarray of Axes
+    plotted_data : dict
+        The complete posterior ranking of the effect, the plotted subset, the
+        LD matrix and its display text, and the proxies.
     """
     compact = _layout(layout)
     if ld_measure not in ("r", "r2"):
@@ -1043,13 +1123,35 @@ def plot_convergence(
     layout="full",
     relative_elbo=False,
 ):
-    """Independent solver trajectories with requested/effective stopping rules.
+    """Plot convergence metrics of IBSS against the sweep number.
 
-    ``full`` preserves six panels per fit. ``compact`` shows the four solver
-    metrics; ``variance`` shows V and sigma² separately, selecting at most six
-    changing/nonzero components unless explicit ``variance_components`` are
-    supplied. ``relative_elbo=True`` subtracts each trace's first finite ELBO
-    and labels that transformation; exported trace values remain unchanged.
+    Parameters
+    ----------
+    fit_or_summary : SusieResult or dict
+        Fit with ``track_fit`` enabled, or its summary.
+    after : SusieResult or dict, optional
+        A second fit, for example after continuation or refinement, plotted
+        on its own sweep axis.
+    axes : sequence of matplotlib Axes, optional
+        Existing axes.
+    variance_components : sequence of int, optional
+        Effects whose prior variance is shown in the 'variance' layout; by
+        default up to six effects with changing or nonzero V.
+    layout : {'full', 'compact', 'variance'}, default 'full'
+        'full': six panels per fit; 'compact': ELBO, ΔELBO, max |Δα| and
+        max |ΔPIP|; 'variance': V and σ².
+    relative_elbo : bool, default False
+        Plot the ELBO relative to its first finite value; returned trace
+        values are unchanged.
+    style : dict or False, optional
+        Matplotlib rc settings applied to this figure only.
+
+    Returns
+    -------
+    figure : matplotlib Figure
+    axes : ndarray of Axes
+    plotted_data : dict
+        Plotted traces and the requested and effective stopping rules.
     """
     if layout not in ("full", "compact", "variance"):
         raise ValueError("layout must be 'full', 'compact' or 'variance'")
@@ -1145,12 +1247,36 @@ def plot_refinement(
     candidates_only=None,
     variant_ids=None,
 ):
-    """Compare PIPs, B-stage candidates and the accepted incumbent trajectory.
+    """Compare PIPs before and after refinement and show the search path.
 
-    Compact layout uses three panels without a figure table and selects all
-    before/after CS members, ten leading PIPs and PIP >= .1 candidates. Set
-    ``candidates_only=False`` for the region; explicit ``variant_ids`` augment
-    formal CS members. Complete PIPs, stage history and CS tables are returned.
+    Parameters
+    ----------
+    before, after : SusieResult or dict
+        Fits (or summaries) before and after :func:`prusie.refine_fit`.
+    comparison : dict, optional
+        Output of :func:`prusie.compare_fits` for the two fits.
+    axes : sequence of matplotlib Axes, optional
+        Existing axes.
+    table_page, table_page_size : int, optional
+        Page of the credible-set table to draw.
+    layout : {'full', 'compact'}, default 'full'
+        'compact' uses three panels without a table.
+    candidates_only : bool, optional
+        Show only the credible-set members of either fit, the ten leading
+        PIPs and variants with PIP ≥ 0.1. Defaults to True for the compact
+        layout and False otherwise.
+    variant_ids : sequence of str, optional
+        Variants to show together with the credible-set members.
+    style : dict or False, optional
+        Matplotlib rc settings applied to this figure only.
+
+    Returns
+    -------
+    figure : matplotlib Figure
+    axes : ndarray of Axes
+    plotted_data : dict
+        PIPs of both fits, stage-B objective gains relative to each round's
+        incumbent, the accepted objective path and the credible sets.
     """
     compact = _layout(layout)
     from .comparison import comparison_relations
@@ -1450,12 +1576,40 @@ def plot_ld_diagnostics(
     auxiliary="residual",
     label_variants=None,
 ):
-    """Keep completed flip assessments distinct from conditional or missing data.
+    """Plot the LD diagnostics of :func:`prusie.diagnose_ld`.
 
-    Compact layout omits the figure table, preserving it in returned records.
-    The auxiliary panel is ``residual`` or ``log_lr``. Default annotations show
-    up to three flagged/extreme-residual variants; their selection reasons are
-    returned and a large residual is never relabeled as a flip flag.
+    Parameters
+    ----------
+    diagnostics : dict
+        Output of :func:`prusie.diagnose_ld` or :func:`prusie.kriging_rss`.
+    axes : sequence of matplotlib Axes, optional
+        Existing axes.
+    table_page, table_page_size : int, optional
+        Page of the table of flagged and unassessed variants.
+    layout : {'full', 'compact'}, default 'full'
+        'compact' omits the table and returns its rows as data.
+    auxiliary : {'residual', 'log_lr'}, default 'residual'
+        Second panel: standardized conditional residuals or flip log
+        likelihood ratios.
+    label_variants : sequence of str, optional
+        Variants to annotate; defaults to up to three flagged variants or
+        variants with the largest residuals.
+    style : dict or False, optional
+        Matplotlib rc settings applied to this figure only.
+
+    Returns
+    -------
+    figure : matplotlib Figure
+    axes : ndarray of Axes
+    plotted_data : dict
+        Plotted values, the status of each variant and the reason each label
+        was chosen.
+
+    Notes
+    -----
+    Assessed and flagged, assessed and not flagged, conditional-only and
+    unassessed variants are shown separately. A large residual alone is not
+    labelled as a flagged allele flip.
     """
     compact = _layout(layout)
     if auxiliary not in ("residual", "log_lr"):
@@ -1472,7 +1626,8 @@ def plot_ld_diagnostics(
         figsize=(8.5, 6.3) if compact else (11, 5.6 + max(2.6, 0.32 * shown_count)),
     )
     expected = np.asarray([_number(row.get("expected_z")) for row in rows])
-    # Read old persisted data safely: upstream zero replacements are never observations.
+    # Saved records may contain missing z-scores replaced by zero; these are
+    # not observations.
     missing = np.asarray([diagnostic_input_missing(row) for row in rows], dtype=bool)
     observed = np.asarray([_number(row.get("observed_z")) for row in rows])
     residual = np.asarray([_number(row.get("standardized_residual")) for row in rows])
@@ -1669,15 +1824,45 @@ def plot_sensitivity(
     display_names=None,
     cmap=None,
 ):
-    """PIP heatmap with missing variants masked, baseline first and fixed [0, 1].
+    """Plot a heatmap of candidate PIPs across the fits of a comparison.
 
-    Compact layout shows every selected candidate with a short count caption.
-    Full-support maxima and relationships remain in returned data and reports.
-    ``cmap`` overrides Blues; normalization remains linear on [0, 1]. Cell
-    display strings and contrast-selected colors are exported separately from PIPs.
-    ``display_names`` maps actual setting keys to readable labels; raw keys,
-    full parameters, support rules and source comparison remain in plotted data.
-    The default candidate policy is recorded by :func:`compare_fits`.
+    Parameters
+    ----------
+    comparison : dict
+        Output of :func:`prusie.compare_fits`, or the ``comparison`` entry of
+        :func:`prusie.run_sensitivity`.
+    candidates_only : bool, default True
+        Show the candidate variants of the comparison; False shows all.
+    axes : sequence of matplotlib Axes, optional
+        Existing axes.
+    layer : {'signals', 'components'}, default 'signals'
+        Relations shown: between retained credible sets, or between all
+        active effects.
+    baseline_only : bool, default True
+        Show only relations to the baseline.
+    table_page, table_page_size : int, optional
+        Page of the relation table to draw.
+    layout : {'full', 'compact'}, default 'full'
+        'compact' shows every candidate with a short caption.
+    display_names : mapping of str to str, optional
+        Display labels of the settings; stored names are unchanged.
+    cmap : str or Colormap, optional
+        Colormap of the PIPs, on a fixed linear [0, 1] scale; defaults to Blues.
+    style : dict or False, optional
+        Matplotlib rc settings applied to this figure only.
+
+    Returns
+    -------
+    figure : matplotlib Figure
+    axes : ndarray of Axes
+    plotted_data : dict
+        PIP matrix, cell display text and colors, the largest PIP change over
+        all compared variants, relations and the candidate rule.
+
+    Notes
+    -----
+    Variants absent from a fit are shown as missing (NA), not as zero PIP.
+    The baseline is the first column.
     """
     import matplotlib.pyplot as plt
 
@@ -2039,12 +2224,37 @@ def plot_prior_influence(
     layout="full",
     max_variants=None,
 ):
-    """Aligned prior, conditional log BF and alpha, with unchanged source values.
+    """Plot prior weights, conditional log Bayes factors and α for one single effect.
 
-    Compact layout ranks candidates by alpha and includes every formal CS member
-    plus ten leading candidates by default. Explicit ``variant_ids`` also retain
-    all CS members in compact layout. Full layout preserves source-table order.
-    ``max_variants`` changes the leading-candidate count; CS members are retained.
+    Parameters
+    ----------
+    summary : dict
+        Output of :func:`prusie.summarize`.
+    component_id : int, optional
+        Effect to plot; alternatively selected through ``variant_id``.
+    variant_id : str, optional
+        Variant used to select the effect.
+    variant_ids : sequence of str, optional
+        Variants to show; in the compact layout, credible-set members are
+        added.
+    axes : sequence of matplotlib Axes, optional
+        Existing axes.
+    layout : {'full', 'compact'}, default 'full'
+        'compact' ranks variants by α and shows credible-set members and the
+        ten leading variants; 'full' shows the whole table in its source
+        order unless ``variant_ids`` or ``max_variants`` is given.
+    max_variants : int, optional
+        Number of leading variants by α to show together with the
+        credible-set members.
+    style : dict or False, optional
+        Matplotlib rc settings applied to this figure only.
+
+    Returns
+    -------
+    figure : matplotlib Figure
+    axes : ndarray of Axes
+    plotted_data : dict
+        The plotted rows of the prior-influence table, unchanged.
     """
     compact = _layout(layout)
     if max_variants is not None and (

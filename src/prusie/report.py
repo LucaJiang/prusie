@@ -1,8 +1,9 @@
-"""Offline evidence reports and lossless, pickle-free persistence.
+"""Offline reports and lossless, pickle-free storage of analysis results.
 
-JSON stores structure and type tags; NPZ stores exact NumPy bytes. CSV is a
-human-readable export, not the lossless interchange format. Nothing here refits
-a model, loads a remote resource, or invokes an AI provider.
+JSON stores the structure and type tags, and NPZ stores the exact NumPy
+array bytes. CSV files are a readable export, not the lossless format. No
+function in this module fits a model, loads a remote resource or calls an
+AI provider.
 """
 
 from __future__ import annotations
@@ -29,11 +30,27 @@ def _sha(path: Path) -> str:
 
 
 def save_analysis(value: Any, directory: str | Path) -> dict:
-    """Save nested evidence or a SusieResult, retaining IDs, dtypes and NaNs.
+    """Save a SusieResult or nested analysis record without pickle.
 
-    Object arrays are encoded recursively and never pickled. Non-string mapping
-    keys and tuples retain their types. Only recognized result dataclasses are
-    reconstructed on load; arbitrary Python objects are deliberately rejected.
+    Parameters
+    ----------
+    value : SusieResult or nested mapping/sequence
+        Value to save. Arrays keep their dtype, NaN payloads are preserved,
+        object arrays are encoded element by element, and tuples and
+        non-string mapping keys keep their types.
+    directory : str or Path
+        Output directory; ``analysis.json`` and ``arrays.npz`` are written.
+
+    Returns
+    -------
+    dict
+        Path and SHA-256 digest of each written file.
+
+    Raises
+    ------
+    TypeError
+        A value of an unsupported type, including dataclasses other than
+        SusieResult.
     """
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
@@ -70,7 +87,7 @@ def save_analysis(value: Any, directory: str | Path) -> dict:
         if isinstance(item, bytes):
             return {"type": "bytes", "value": base64.b64encode(item).decode("ascii")}
         if isinstance(item, float):
-            # Preserve the complete binary64 representation, including NaN payloads.
+            # Store the IEEE 754 binary64 bytes, preserving NaN payloads.
             return {"type": "float", "value": struct.pack(">d", item).hex()}
         if isinstance(item, complex):
             return {"type": "complex", "real": encode(item.real), "imag": encode(item.imag)}
@@ -95,7 +112,16 @@ def save_analysis(value: Any, directory: str | Path) -> dict:
 
 
 def load_analysis(directory: str | Path) -> Any:
-    "Read :func:`save_analysis` output, checking NPZ integrity without pickle."
+    """Load the output of :func:`save_analysis`.
+
+    The array archive is checked against its recorded SHA-256 digest and read
+    with ``allow_pickle=False``.
+
+    Raises
+    ------
+    ValueError
+        Unsupported schema, checksum mismatch or unknown value tag.
+    """
     directory = Path(directory)
     document = json.loads((directory / "analysis.json").read_text(encoding="utf-8"))
     if document.get("schema_version") != SCHEMA_VERSION:
@@ -156,12 +182,14 @@ def _plain(value):
 def evidence_bundle(
     summary: Mapping, *, ld=None, comparison=None, provenance=None, annotations=None
 ) -> dict:
-    """Build scalar facts with stable JSON-pointer-derived evidence IDs.
+    """Collect scalar facts of an analysis, each with a stable evidence ID.
 
-    Only these explicit analysis products enter the bundle. Dense fit histories,
-    effect moments and raw model matrices are not collected from results.
-    Caller-supplied provenance and annotations are included: review them and the
-    returned bundle before consenting to transmission to an external provider.
+    Each ID is derived from the JSON pointer of the fact. Only the listed
+    summary tables, LD diagnostics, comparison and caller-supplied
+    provenance and annotations are included; dense iteration histories,
+    effect moments and model matrices are not. Review the bundle, including
+    the caller-supplied fields, before transmitting it to an external
+    provider.
     """
     allowed = (
         "variants",
@@ -304,7 +332,10 @@ def evidence_bundle(
 
 
 def export_tables(summary: Mapping, directory: str | Path) -> list[str]:
-    """Export list-of-record tables; nested cells contain readable JSON."""
+    """Write each list-of-records table of ``summary`` as CSV.
+
+    Nested values are written as JSON text. Returns the written paths.
+    """
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     paths = []
@@ -358,13 +389,29 @@ def _select(record, keys):
 def analysis_summary(
     summary: Mapping, *, ld=None, comparison=None, candidate_pip=0.1, top_candidates=10
 ) -> dict:
-    """Create a deterministic reading entry point without fitting or model calls.
+    """Return a compact summary of results, convergence, refinement, LD and sensitivity.
 
-    All formal CS members, the top ``top_candidates`` variants by PIP, and every
-    variant with PIP >= ``candidate_pip`` are included. This is a display policy,
-    not a new statistical threshold. Full-precision records remain in the
-    evidence bundle; this compact view links them by table names, IDs and fields.
-    Legacy comparison records are read through the comparison-layer helper.
+    Parameters
+    ----------
+    summary : mapping
+        Output of :func:`prusie.summarize`.
+    ld : dict, optional
+        Output of :func:`prusie.diagnose_ld`.
+    comparison : dict, optional
+        Output of :func:`prusie.compare_fits`, or a saved record.
+    candidate_pip : float, default 0.1
+        Variants with PIP ≥ candidate_pip are listed as candidates.
+    top_candidates : int, default 10
+        Number of leading variants by PIP listed as candidates.
+
+    Returns
+    -------
+    dict
+        Candidate variants (all credible-set members, the leading variants
+        and those above ``candidate_pip``), credible sets, stopping status,
+        refinement outcome, LD status counts and sensitivity maxima, with
+        references to the full tables. The candidate rule is a display
+        choice, not a statistical threshold. No model is fitted.
     """
     if not 0 <= candidate_pip <= 1:
         raise ValueError("candidate_pip must lie in [0, 1]")
@@ -636,7 +683,7 @@ def analysis_summary(
 
 
 def _display(value, *, probability=False):
-    """Human display only: machine exports retain their full precision."""
+    """Rounded text for display; exported values keep full precision."""
     from ._style import format_number
 
     if isinstance(value, np.generic):
@@ -655,11 +702,34 @@ def _display(value, *, probability=False):
 
 
 def summary_text(summary: Mapping, *, ld=None, comparison=None) -> str:
-    """Return a short reading guide from existing summary tables only.
+    """Return a short plain-text summary of an analysis.
 
-    This display helper never fits a model, computes LD/eigenvalues, or imports
-    plotting libraries. Full records and exact values remain in ``summary``.
-    Use ``print(summary_text(summarize(fit)))`` in a script or terminal.
+    Parameters
+    ----------
+    summary : mapping
+        Output of :func:`prusie.summarize`.
+    ld : dict, optional
+        Output of :func:`prusie.diagnose_ld`.
+    comparison : dict, optional
+        Output of :func:`prusie.compare_fits` or the ``comparison`` entry of
+        :func:`prusie.run_sensitivity`.
+
+    Returns
+    -------
+    str
+        One line each for the counts of variants, credible sets and active
+        effects, every credible set, the leading PIPs, IBSS stopping,
+        refinement, LD diagnostics and, if given, sensitivity maxima.
+
+    Notes
+    -----
+    The text is computed from the existing tables only; no model is fitted,
+    no eigendecomposition is computed and plotting libraries are not
+    imported. Values are rounded for display.
+
+    Examples
+    --------
+    >>> print(summary_text(summarize(fit)))  # doctest: +SKIP
     """
     compact = analysis_summary(summary, ld=ld, comparison=comparison)
     results, fit, search = (compact[key] for key in ("results", "fit", "refinement"))
@@ -758,14 +828,44 @@ def write_report(
     ai=None,
     title="prusie analysis",
 ) -> dict:
-    """Write a result-first offline report and full-precision local exports.
+    """Write an offline HTML report with full-precision exports.
 
-    ``figures`` maps labels to Matplotlib Figures or plot return tuples. Numbered
-    PNG/SVG filenames retain compatibility; ``figure_index.json`` records their
-    labels and report sections. Copy the entire directory to open the HTML and
-    its exports offline. This function does not fit, diagnose LD, access a
-    network, or invoke a model. Supplied provenance is preserved in the evidence
-    export; only a short source description appears on the page.
+    Parameters
+    ----------
+    summary : mapping
+        Output of :func:`prusie.summarize`.
+    directory : str or Path
+        Output directory.
+    figures : mapping, optional
+        Labels mapped to Matplotlib figures or to the tuples returned by the
+        functions in :mod:`prusie.plots`.
+    ld, comparison : dict, optional
+        LD diagnostics and a comparison of fits.
+    provenance : mapping, optional
+        Data checksums, harmonization, parameters and software versions.
+        Fields not supplied are recorded as 'not_assessed'.
+    annotations : mapping, optional
+        Additional caller-supplied facts for the evidence export.
+    ai : optional
+        Interpretation returned by :mod:`prusie.ai`, shown separately from the
+        deterministic results.
+    title : str, default 'prusie analysis'
+        Report title.
+
+    Returns
+    -------
+    dict
+        Absolute paths of the written files under the keys ``html``,
+        ``persistence`` (``analysis.json`` and ``arrays.npz``), ``tables``,
+        ``figures``, ``figure_index``, ``text_summary``, ``analysis_summary``
+        and ``evidence``, and the ``evidence_sha256`` digest.
+
+    Notes
+    -----
+    Copy the whole directory to keep the report links valid. No model is
+    fitted, LD is not diagnosed, and no network or AI service is accessed.
+    The full provenance is written to the evidence export; the page shows
+    only a short description of the sources.
     """
     from ._style import REPORT_CSS
 
@@ -848,8 +948,8 @@ def write_report(
             attempt[f"{phase}_stop"] = stage.get("stop_reason")
             attempt[f"{phase}_iterations"] = stage.get("niter")
             attempt[f"{phase}_converged"] = stage.get("ibss_converged")
-            # Preserve every recorded stage field. Legacy producers may lack
-            # solver controls or timings; absence is not filled with defaults.
+            # Copy every recorded stage field as is; records written without
+            # solver settings or timings are not completed with defaults.
             stages.append(
                 dict(
                     _plain(stage),

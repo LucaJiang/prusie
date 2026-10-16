@@ -1,8 +1,12 @@
-"""Explicit LD diagnostics mapped to susieR 0.16.6 RSS diagnostics.
+"""Consistency diagnostics for z-scores and LD, following susieR 0.16.6.
 
-The model is z ~ N(0, (1-s) R + s I), with the upstream finite-n PVE
-adjustment. Kriging uses a maximum-likelihood normal scale mixture for allele
-flip likelihood ratios. These checks neither modify LD nor refit SuSiE.
+Under the null model of SuSiE-RSS, z ~ N(0, (1 - s)R + sI), where s ≥ 0
+absorbs inconsistency between the z-scores and R. For known n, z-scores are
+first adjusted as z̃_j = z_j ((n - 1)/(z_j² + n - 2))^½. Each z-score is
+compared with its conditional distribution given all other z-scores; a
+normal scale mixture fitted to the standardized residuals gives the
+likelihood ratio for a sign flip of that variant. These diagnostics modify
+neither the LD matrix nor any fit.
 """
 
 from __future__ import annotations
@@ -19,7 +23,11 @@ _REFERENCE = "stephenslab/susieR@8e56a8e038e989856d106d9ca5175cc664fea9d2:R/susi
 
 
 def diagnostic_input_missing(row):
-    "Read explicit or legacy missing-input markers without guessing from zero."
+    """Whether a diagnostic row records a missing input z-score.
+
+    Rows saved without the ``input_missing`` field are recognized by their
+    other missing-value markers; a zero z-score is not treated as missing.
+    """
     return bool(
         row.get("input_missing", False)
         or ("input_z" in row and row["input_z"] is None)
@@ -28,9 +36,10 @@ def diagnostic_input_missing(row):
 
 
 def diagnostic_status(row):
-    """Classify flip assessment, including older saved records without status.
+    """Classify a diagnostic row as flagged, not_flagged, conditional_only or not_assessed.
 
-    Finite conditional moments alone never establish an assessed flip test.
+    Rows saved without a ``status`` field are classified from their flag.
+    Finite conditional moments alone do not make a row assessed.
     """
     if diagnostic_input_missing(row) or row.get("status") == "not_assessed":
         return "not_assessed"
@@ -42,7 +51,7 @@ def diagnostic_status(row):
 
 
 def diagnostic_counts(diagnostics):
-    "Counts of completed flip tests and separately available conditional data."
+    """Count variants by diagnostic status."""
     states = [diagnostic_status(row) for row in diagnostics.get("variants", [])]
     return dict(
         total=len(states),
@@ -63,11 +72,12 @@ def _scipy():
 
 
 def prepare_ld(R, *, r_tol=1e-8, cache=None):
-    """Explicitly decompose LD, optionally reusing a caller-owned content cache.
+    """Eigendecompose an LD matrix for the diagnostics, optionally with a cache.
 
-    Small/negative eigenvalues are set to zero *for this diagnostic only*, as
-    in the pinned reference. The input is unchanged. Indefinite input produces
-    a warning and a recorded eigenvalue, not an silently repaired fitting LD.
+    Eigenvalues below ``r_tol`` are set to zero for the diagnostics only, as
+    in susieR; ``R`` itself is unchanged. If R has an eigenvalue below
+    -r_tol, a warning is recorded. ``cache`` is a caller-owned mapping keyed
+    by matrix content and ``r_tol``.
     """
     start = time.perf_counter()
     raw = np.asarray(R)
@@ -161,15 +171,42 @@ def _estimate(z, decomposition, method):
     )
     if not result.success or not np.isfinite(result.fun):
         raise RuntimeError("LD regularization likelihood optimization did not converge")
-    # Like R's Brent routine, return its interior minimizer, not a clipped endpoint.
+    # As with R's Brent routine, return the interior minimizer without clipping
+    # it to an endpoint.
     return float(result.x)
 
 
 def estimate_s_rss(z, R, n=None, *, r_tol=1e-8, method="null-mle", cache=None, return_info=False):
-    """Estimate upstream RSS null-model regularization (explicit O(p³) work).
+    """Estimate the LD inconsistency parameter s of the SuSiE-RSS null model.
 
-    ``null-partialmle`` can exceed one. Missing z is replaced by zero, as in
-    susieR, and reported when ``return_info=True``. No-n uses unadjusted z.
+    Parameters
+    ----------
+    z : array_like, shape (p,)
+        Marginal z-scores; NaN entries are replaced by zero, as in susieR.
+    R : array_like, shape (p, p)
+        Signed LD correlation matrix in the order of ``z``.
+    n : float, optional
+        Sample size. If given, z-scores are adjusted as described in the
+        module notes; otherwise they are used unadjusted.
+    r_tol : float, default 1e-8
+        Eigenvalues of R below this value are treated as zero.
+    method : {'null-mle', 'null-partialmle', 'null-pseudomle'}, default 'null-mle'
+        Maximum likelihood, the partial estimate from the null space of R
+        (which can exceed one), or maximum pseudo-likelihood.
+    cache : dict, optional
+        Caller-owned eigendecomposition cache.
+    return_info : bool, default False
+        Return a record with the adjusted z-scores, missing indices and
+        decomposition metadata instead of s alone.
+
+    Returns
+    -------
+    float or dict
+        The estimate of s, or the record described above.
+
+    Notes
+    -----
+    The eigendecomposition costs O(p³) operations.
     """
     decomposition = prepare_ld(R, r_tol=r_tol, cache=cache)
     adjusted, missing = _adjust(z, n, len(decomposition["eigenvalues"]))
@@ -188,7 +225,10 @@ def estimate_s_rss(z, R, n=None, *, r_tol=1e-8, method="null-mle", cache=None, r
 
 
 def _mixture(log_likelihood):
-    "Convex likelihood simplex optimization, with an explicit KKT audit."
+    """Maximize the likelihood of the normal scale mixture over the weight simplex.
+
+    The Karush-Kuhn-Tucker (KKT) conditions are checked at the solution.
+    """
     optimize, special = _scipy()
     factors = log_likelihood.max(axis=1)
     likelihood = np.exp(log_likelihood - factors[:, None])
@@ -247,12 +287,52 @@ def kriging_rss(
     flip_log_lr=2.0,
     flip_abs_z=2.0,
 ):
-    """Upstream conditional z and scale-mixture allele-flip diagnostics.
+    """Compare each z-score with its conditional distribution and test for allele flips.
 
-    Flags mean *suspected* mismatch. No allele is flipped or variant removed.
-    Singular ``s=0`` uses the upstream spectral pseudoinverse; it is labelled
-    explicitly and must not be mistaken for a nonsingular conditional model.
-    Entirely undefined conditional variances return not_assessed rows.
+    Parameters
+    ----------
+    z : array_like, shape (p,)
+        Marginal z-scores. NaN entries are replaced by zero for the
+        computation, as in susieR, and those variants are not assessed.
+    R : array_like, shape (p, p)
+        Signed LD correlation matrix in the order of ``z``.
+    n : float, optional
+        Sample size, used to adjust the z-scores.
+    s : float, optional
+        LD inconsistency parameter. Estimated with ``method`` if omitted;
+        values above one are replaced by 0.8, as in susieR.
+    r_tol : float, default 1e-8
+        Eigenvalues of R below this value are treated as zero.
+    method : str, default 'null-mle'
+        Estimator of s; see :func:`estimate_s_rss`.
+    variant_ids : sequence of str, optional
+        Unique identifiers; defaults to positional indices.
+    cache : dict, optional
+        Caller-owned eigendecomposition cache.
+    flip_log_lr : float, default 2
+        Log likelihood-ratio threshold for a flag.
+    flip_abs_z : float, default 2
+        Absolute adjusted z-score threshold for a flag.
+
+    Returns
+    -------
+    dict
+        Per-variant rows (observed and conditional expected z-scores,
+        conditional variance, standardized residual, flip log likelihood
+        ratio, flag and status), the value and source of s, mixture weights,
+        status counts, warnings and the decomposition metadata.
+
+    Notes
+    -----
+    A variant is flagged when its log likelihood ratio exceeds
+    ``flip_log_lr`` and its absolute adjusted z-score exceeds ``flip_abs_z``.
+    A flag indicates a possible allele mismatch; no allele is changed and no
+    variant is removed. With s = 0 and singular R, the spectral
+    pseudoinverse is used and this is recorded. Variants with an undefined
+    conditional variance are reported as not assessed. The mixture weights
+    are a constrained maximum-likelihood solution with a KKT check; susieR,
+    which uses mixsqp, can stop at different weights and so report different
+    likelihood ratios.
     """
     start = time.perf_counter()
     _, special = _scipy()
@@ -280,7 +360,8 @@ def kriging_rss(
     diagonal = np.diag(precision)
     valid = np.isfinite(diagonal) & (diagonal > 0)
     condvar = np.divide(1.0, diagonal, out=np.full(p, np.nan), where=valid)
-    # Match explicit off-diagonal conditional formula; avoid cancellation z-Pz/Pjj.
+    # Conditional mean from the off-diagonal precision entries, as in susieR;
+    # the algebraically equal z - Pz/P_jj is prone to cancellation.
     offdiagonal = precision.copy()
     np.fill_diagonal(offdiagonal, 0.0)
     condmean = -condvar * (offdiagonal @ adjusted)
@@ -389,5 +470,8 @@ def kriging_rss(
 
 
 def diagnose_ld(z, R, n=None, **kwargs):
-    "Alias for the explicit kriging diagnostic, including regularization."
+    """Run :func:`kriging_rss`, estimating s unless it is supplied.
+
+    Keyword arguments are passed to :func:`kriging_rss`.
+    """
     return kriging_rss(z, R, n, **kwargs)

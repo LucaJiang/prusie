@@ -1,4 +1,8 @@
-"Deterministic posterior tables; no fitting, eigen decomposition or network I/O."
+"""Variant, effect and credible-set tables computed from a fitted posterior.
+
+No model is fitted, no eigendecomposition is computed and no network access
+occurs.
+"""
 
 from __future__ import annotations
 
@@ -44,13 +48,13 @@ def _value(v):
 
 
 def _normal_log10p(z):
-    """Two-sided normal tail, including large z where erfc underflows."""
+    """-log10 of the two-sided normal P value, accurate where erfc underflows."""
     z = abs(float(z))
     if not math.isfinite(z):
         return None
     if z < 35:
         return -math.log10(math.erfc(z / math.sqrt(2)))
-    # Mills' expansion; at z >= 35 the first omitted term is < 1e-14.
+    # Asymptotic (Mills ratio) series; for z ≥ 35 the first omitted term is < 1e-14.
     inv = 1 / (z * z)
     series = 1 - inv + 3 * inv**2 - 15 * inv**3 + 105 * inv**4 - 945 * inv**5
     logp = math.log(2) - z * z / 2 - math.log(z) - math.log(2 * math.pi) / 2 + math.log(series)
@@ -82,18 +86,51 @@ def summarize(
     metadata=None,
     input_info=None,
 ):
-    """Return variant, component and CS tables without modifying ``fit``.
+    """Tabulate the posterior of a fit by variant, single effect and credible set.
 
-    ``R`` must be signed correlation in fit variant order. It is used only for
-    explicit posterior CS re-extraction, direct proxy edges and CS relations.
-    Supplying coverage/purity re-extracts CS from the same posterior, without
-    IBSS. None explicitly disables the respective CS option. Unspecified
-    thresholds preserve the fit's formal CS. No LD eigen decomposition occurs.
+    Parameters
+    ----------
+    fit : SusieResult
+        Fitted result; it is not modified.
+    R : array_like, shape (p, p), optional
+        Signed LD correlation matrix in the variant order of ``fit``. Used for
+        LD proxies, relations between credible sets and, when ``coverage`` or
+        ``min_abs_corr`` is given, for re-extracting credible sets.
+    coverage, min_abs_corr : float or None, optional
+        If either is given, credible sets are re-extracted from the same
+        posterior (without refitting) using these thresholds, with the values
+        of the fit for any threshold not given. None disables construction.
+        Otherwise the credible sets of the fit are reported.
+    proxy_r : float, default 0.99
+        Variants outside a credible set with |r| ≥ proxy_r to a member are
+        listed as proxies. Only direct pairs are listed.
+    z : array_like, shape (p,), optional
+        Marginal z-scores, used for -log10 P values when ``pvalues`` is not
+        given (two-sided normal approximation).
+    pvalues : array_like, shape (p,), optional
+        Marginal P values; take precedence over ``z``.
+    metadata : mapping of str to array_like, optional
+        Additional length-p annotation columns.
+    input_info : mapping, optional
+        Study-level information such as genome build or LD source.
 
-    Component entropy uses biological alpha normalized to its biological mass;
-    null mass is separate. Prior odds use current *conditional* component Bayes
-    factors, not external independent evidence. The caller may supply per-variant
-    annotation in ``metadata`` and study information in ``input_info``.
+    Returns
+    -------
+    dict
+        Tables ``variants``, ``components``, ``credible_sets``, ``proxies``,
+        ``cs_relations`` and ``prior_influence``, together with the
+        credible-set audit, input QC summaries, convergence and refinement
+        records, warnings and the definitions of the reported quantities.
+
+    Notes
+    -----
+    The effect entropy H_ℓ = -∑_j a_ℓj log a_ℓj uses α_ℓj renormalized over
+    the non-null variants, and exp(H_ℓ) is reported as the effective number
+    of candidate variants; null mass is reported separately. Prior-influence
+    rows decompose log posterior odds relative to the leading variant into
+    log prior odds and the difference in log Bayes factors. These Bayes
+    factors are conditional on the other effects of the fit and are not
+    independent evidence. No eigendecomposition is computed.
     """
     ids = _ids(fit)
     p = len(ids)
@@ -200,7 +237,7 @@ def summarize(
         effective_weights = np.where(weights == 0, 0.0, effective_weights)
     log_bf = _biological(fit, fit.lbf_variable)
     for i, row in enumerate(alpha):
-        # Lexical ID tie-breaking makes presentation independent of input permutation.
+        # Ties are broken by variant ID, so the ranking does not depend on input order.
         ranking = sorted(range(p), key=lambda j: (-float(row[j]), ids[j]))
         mass = float(row.sum())
         normalized = row[row > 0] / mass if mass > 0 else np.array([])
@@ -224,7 +261,7 @@ def summarize(
         components.append(component)
         if i in formal:
             members, k = formal[i]
-            # Returned sets exclude null; map internal indices back to biological order.
+            # Map internal indices, which include the null column, to variant indices.
             members = [
                 int(j) - int(fit.null_index is not None and j > fit.null_index) for j in members
             ]

@@ -1,7 +1,8 @@
-"""Explicit sensitivity plans and posterior signal comparisons.
+"""Comparison of fits across settings and execution of sensitivity plans.
 
-Comparison never fits a model. Only ``run_sensitivity`` executes a user-supplied
-list of baseline plus one-factor configurations; it never expands a grid.
+:func:`compare_fits` compares existing fits without fitting. Only
+:func:`run_sensitivity` fits models, and only for the baseline and the
+single-factor changes listed in its plan; no grid is expanded.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from .analysis import _biological, _correlation, _ids, summarize
 
 
 def _directions(a, b, shared):
-    "Align explicit alleles, retaining an unassessed state when absent."
+    """Relative allele orientation (+1/-1) of shared variants, or None if unknown."""
     ia, ib = {x: i for i, x in enumerate(_ids(a))}, {x: i for i, x in enumerate(_ids(b))}
     ma, mb = a.variant_metadata, b.variant_metadata
     names = ("effect_allele", "other_allele")
@@ -44,7 +45,7 @@ def _directions(a, b, shared):
 
 
 def _signals(fit):
-    "Retain active components and formal CS support without conflating them."
+    """Records of active effects and of effects with a retained credible set."""
     ids, alpha = _ids(fit), _biological(fit, fit.alpha)
     formal = {
         int(i): {
@@ -58,8 +59,8 @@ def _signals(fit):
     for i, a in enumerate(alpha):
         active = bool(fit.V[i] > fit.params.get("prior_tol", 1e-9))
         retained = i in formal
-        # The inherited CS and PIP activity thresholds can differ. Preserve a
-        # formal CS even at that boundary; label both facts separately.
+        # The PIP activity threshold (prior_tol) and the fixed CS threshold can
+        # differ, so a retained CS is kept even for an effect inactive for PIP.
         if not active and not retained:
             continue
         top = min(range(len(ids)), key=lambda j: (-float(a[j]), ids[j])) if ids else None
@@ -100,7 +101,7 @@ def _signals(fit):
 
 
 def _classify_signal_edges(edges):
-    "Classify only the CS-supported subgraph, independently of diffuse edges."
+    """Label edges between retained credible sets as matched, split, merge or ambiguous."""
     formal = [e for e in edges if e.get("cs_retained_a") and e.get("cs_retained_b")]
     for edge in edges:
         if not (edge.get("cs_retained_a") and edge.get("cs_retained_b")):
@@ -149,7 +150,7 @@ def _unmatched(na, nb, record, side, shared, *, layer, support_scope="pairwise_i
 
 
 def _baseline_first(rows, baseline):
-    "Orient baseline comparisons consistently even for legacy saved results."
+    """Orient relation rows so that the baseline setting is always side a."""
     out = []
     for original in rows:
         if baseline not in (original.get("setting_a"), original.get("setting_b")):
@@ -175,11 +176,27 @@ def _baseline_first(rows, baseline):
 
 
 def comparison_relations(comparison, *, layer="signals", baseline_only=True):
-    """Read current or saved v1 relations without treating diffuse edges as signals.
+    """Return the relations of a comparison record, including version-1 records.
 
-    Legacy v1 records have CS sizes for connected components but not for every
-    unmatched component. Unavailable legacy support is retained in the complete
-    component view, and is never guessed to be a localized signal.
+    Parameters
+    ----------
+    comparison : dict
+        Output of :func:`compare_fits`, or a saved record of either schema.
+    layer : {'signals', 'components'}, default 'signals'
+        'signals' returns relations involving a retained credible set;
+        'components' returns all relations between active effects.
+    baseline_only : bool, default True
+        Keep only relations to the baseline, oriented baseline first.
+
+    Returns
+    -------
+    list of dict
+
+    Notes
+    -----
+    Version-1 records store credible-set sizes only for connected effects.
+    For these records, unmatched effects without a recorded size are kept in
+    the component layer and are not treated as localized signals.
     """
     if layer not in ("signals", "components"):
         raise ValueError("layer must be signals or components")
@@ -225,9 +242,9 @@ def comparison_relations(comparison, *, layer="signals", baseline_only=True):
                 )
             for row in rows:
                 row["matching_layer"] = "signals"
-            # A legacy LD-only edge to an unretained component does establish
-            # the formal endpoint's existence, even though it does not establish
-            # a localized match. Keep that endpoint as explicitly unmatched.
+            # In a version-1 record, an LD-only edge to an effect without a CS
+            # still shows that the CS on the other side exists, but not that it
+            # is matched; keep that CS as an unmatched signal.
             for row in recorded:
                 for side in ("a", "b"):
                     if not row[f"cs_retained_{side}"]:
@@ -285,28 +302,52 @@ def compare_fits(
     mode="union",
     top_candidates=3,
 ):
-    """Compare existing fits, separating formal-CS signals from all components.
+    """Compare existing fits by variant PIPs and by relations between their effects.
 
-    ``signal_relations`` contains the formal-CS graph and posterior-overlap
-    relations to unresolved components. Its degrees use only CS-to-CS edges.
-    ``component_relations`` preserves every active-component relation, including
-    diffuse overlap. Relations describe posterior evidence, not confirmed causal
-    split/merge events. Representative LD alone cannot promote a component with
-    no retained CS into the user signal view. Missing variants remain None.
+    Parameters
+    ----------
+    fits : mapping of str to SusieResult
+        Named fits, aligned by variant ID.
+    baseline : str, optional
+        Name of the reference fit; defaults to the first.
+    R : array_like, optional
+        Signed LD correlation matrix in the variant order of ``ld_reference``,
+        used for LD between the representative variants of two effects.
+    ld_reference : str, optional
+        Fit whose variant order matches ``R``; defaults to ``baseline``.
+    pip_threshold : float, default 0.1
+        Variants with PIP ≥ pip_threshold in any fit are candidates.
+    overlap_threshold : float, default 0.5
+        Minimum posterior overlap for a relation between two effects.
+    ld_threshold : float, default 0.9
+        Minimum |r| between representative variants for an LD relation.
+    mode : {'union', 'common'}, default 'union'
+        Variant support of the comparison; see Notes.
+    top_candidates : int, default 3
+        Number of leading variants per retained credible set (or of leading
+        PIPs when a fit has no credible set) added to the candidates.
 
-    Candidate variants include all retained CS members, up to ``top_candidates``
-    posterior-ranked variants per retained component (top regional PIPs when no
-    CS was retained), and every variant crossing ``pip_threshold`` in any fit.
+    Returns
+    -------
+    dict
+        Per-variant PIPs, ranks and candidate sources; ``signal_relations``
+        between effects with retained credible sets; ``component_relations``
+        between all active effects; pairwise PIP summaries, allele
+        alignment, thresholds, definitions and limitations.
 
-    ``mode="common"`` uses the intersection across *all* supplied fits for
-    variant ranks, candidate selection, every pair's PIP metrics, posterior/CS
-    overlap and omitted posterior mass. Representative LD is available only
-    when both original representatives lie in that intersection. Component
-    records, formal CS definitions and resolution summaries retain the original
-    fit support; no posterior mass is renormalized. An empty intersection has
-    unavailable PIP metrics and no matching edges. ``mode="union"`` retains
-    the union variant table and pairwise-intersection PIP/overlap metrics;
-    representative LD uses the supplied reference's original representatives.
+    Notes
+    -----
+    Candidates comprise all credible-set members, the leading variants
+    described by ``top_candidates`` and every variant crossing
+    ``pip_threshold`` in any fit. In ``mode='union'``, all variants are
+    listed, and each pair of fits is compared on the variants they share. In
+    ``mode='common'``, every quantity uses the variants present in all fits,
+    and an LD relation requires both representatives to be among them.
+    Posterior mass is never renormalized to the shared variants, and missing
+    variants are reported as None rather than as zero PIP. Relations
+    describe overlap of posterior support; they are not evidence that
+    effects have split or merged, and LD alone does not promote an effect
+    without a credible set to a signal.
     """
     if not fits or any(not isinstance(name, str) or not name for name in fits):
         raise ValueError("fits must be a nonempty mapping with nonempty string names")
@@ -682,6 +723,7 @@ def compare_fits(
 
 
 def _hash_value(h, value):
+    """Feed a canonical, type-tagged encoding of a nested value to a hash."""
     if isinstance(value, np.ndarray):
         h.update(b"array" + str(value.shape).encode() + value.dtype.str.encode())
         if value.dtype.kind == "O":
@@ -689,7 +731,7 @@ def _hash_value(h, value):
         else:
             h.update(np.ascontiguousarray(value).tobytes())
     elif dataclasses.is_dataclass(value):
-        # No private retained data/cache fields; actual inputs are independently hashed.
+        # Private fields (retained data, caches) are excluded; inputs are hashed separately.
         _hash_value(
             h,
             {
@@ -716,7 +758,11 @@ def _hash_value(h, value):
 
 
 def sensitivity_key(inputs, settings, *, initialization="cold", software_version=None):
-    "Content key including order, allele metadata, settings and initialization."
+    """Cache key for a sensitivity fit.
+
+    The SHA-256 digest covers the inputs (including variant order and allele
+    metadata), the settings, the initialization and the software version.
+    """
     if software_version is None:
         try:
             software_version = version("prusie")
@@ -737,7 +783,7 @@ def sensitivity_key(inputs, settings, *, initialization="cold", software_version
 
 
 def _sensitivity_inputs(data, *, explicit_ids=False):
-    "Validate variant-indexed RSS inputs before any member of a plan fits."
+    """Validate RSS inputs of a sensitivity plan before any fit is run."""
     from .api import _matrix, _metadata, _scalar, _vector
 
     if not isinstance(data, dict):
@@ -765,7 +811,11 @@ def _sensitivity_inputs(data, *, explicit_ids=False):
 
 
 def _sensitivity_prior(weights, ids, null_weight, *, policy, source_ids=None):
-    "Keep raw weight scale: null is augmented BEFORE joint normalization."
+    """Resolve prior weights as in the fitting functions.
+
+    Raw weights are augmented with the null weight and normalized once,
+    without normalizing the variant weights first.
+    """
     from .api import _scalar, _vector
 
     null_weight = _scalar(null_weight, "null_weight")
@@ -776,7 +826,7 @@ def _sensitivity_prior(weights, ids, null_weight, *, policy, source_ids=None):
         if weights is None
         else _vector(weights, "prior_weights", len(ids)).copy()
     )
-    # Match the constructor's finite-positive-sum contract, including overflow.
+    # Same finite-positive-sum condition as the fitting functions, including overflow.
     with np.errstate(over="ignore", invalid="ignore"):
         total = raw.sum()
     if np.any(raw < 0) or not np.isfinite(total) or total <= 0:
@@ -801,15 +851,15 @@ def _sensitivity_prior(weights, ids, null_weight, *, policy, source_ids=None):
 
 
 def _alternative_sensitivity_inputs(alt, settings, baseline_ids, baseline_metadata):
-    "Resolve input-only changes without turning reindexing into a new factor."
+    """Resolve an alternative input set, mapping prior weights and metadata by variant ID."""
     if not isinstance(alt, dict):
         raise ValueError("alternative inputs must be a mapping")
     data = dict(alt)
     options = dict(settings)
     explicit_prior = "prior_weights" in data
     supplied_prior = data.pop("prior_weights", None)
-    # A full input mapping can restate the null setting, but changing it is not
-    # implicit permission to change a second model factor.
+    # An input mapping may restate null_weight but not change it, which would be
+    # a second factor in a single-factor plan.
     if "null_weight" in data and not np.array_equal(
         data.pop("null_weight"), settings.get("null_weight", 0.0)
     ):
@@ -886,29 +936,57 @@ def run_sensitivity(
     fit_function=None,
     software_version=None,
 ):
-    """Execute a finite, explicit baseline plus one-factor plan.
+    """Fit a baseline and a list of single-factor alternatives, then compare them.
 
-    Each plan item has ``name`` and one of: ``changes`` (L, prior_weights,
-    scaled_prior_variance/prior_variance, estimate_prior_variance, refine), ``inputs`` (a
-    complete explicit alternative LD/window/filter input mapping), ``report``
-    (coverage/purity; no fit), or ``continuation`` (max_iter/tol only). Fixed
-    effect variance requires estimate_prior_variance=False in the same change
-    or baseline. With estimation enabled, variance changes are labelled
-    computational initialization sensitivity. Cold starts are the default.
-    Caching is explicit caller-owned memory and content-addressed; cached fit
-    objects remain mutable and must not be edited while the cache is reused.
-    A supplied baseline is checked for IDs, allele coding and model settings;
-    raw-input identity is reported as unassessed without an original RSS hash.
+    Parameters
+    ----------
+    inputs : dict
+        Keyword arguments of the fitting function describing the data: ``z``
+        or ``bhat``/``shat``, ``R``, optionally ``n``, ``variant_ids``,
+        ``variant_metadata``, ``prior_weights`` and ``null_weight``.
+    plan : sequence of dict
+        Items with a unique ``name`` and exactly one of ``changes`` (one of L,
+        prior_weights, scaled_prior_variance or prior_variance, and
+        estimate_prior_variance, or refine), ``inputs`` (a complete
+        alternative set of summary statistics and LD, for example another
+        window or filter), ``report`` (coverage and/or min_abs_corr, applied
+        to the baseline posterior without refitting) or ``continuation``
+        (max_iter, tol, track_fit and/or convergence).
+    baseline : SusieResult, optional
+        Existing baseline fit; its variant IDs, alleles and recorded settings
+        are checked against ``inputs`` and ``baseline_settings``.
+    baseline_settings : dict, optional
+        Model settings shared by all fits.
+    cache : dict, optional
+        Caller-owned cache of fits keyed by :func:`sensitivity_key`.
+    fit_function : callable, default susie_rss
+        Fitting function.
+    software_version : str, optional
+        Version string included in cache keys; defaults to the installed one.
 
-    Alternative ``inputs`` may include complete ``prior_weights`` in their own
-    ID order (explicit None requests uniform). Otherwise weights and inherited
-    metadata columns are reindexed by ID. Subsets condition the original prior
-    on retained variants plus null: raw biological weights are NOT separately
-    normalized, preserving the constructor's null convention. New IDs under a
-    nonuniform prior require explicit complete weights; a uniform prior extends
-    its existing equal raw weight to each new ID. New metadata also needs explicit
-    columns. Records contain the mapping, raw and normalized weights, and null
-    probability; the cache hashes the resolved data and options.
+    Returns
+    -------
+    dict
+        ``fits`` (by name), ``summaries`` (for report items), per-fit
+        ``records`` (cache use, initialization and resolved priors), the
+        ``plan``, ``baseline_settings`` and the ``comparison`` of all fits
+        produced by :func:`compare_fits`.
+
+    Notes
+    -----
+    The complete plan is validated before any fit is run. Fits start from
+    the prior (cold start) unless the item is a continuation. Changing the
+    initial prior variance while it is estimated is recorded as sensitivity
+    to initialization; a fixed prior variance requires
+    ``estimate_prior_variance=False``. For alternative inputs, prior weights
+    and metadata are mapped by variant ID. A subset conditions the original
+    raw weights on the retained variants and the null column. New variants
+    require explicit weights unless the baseline prior is uniform, in which
+    case they receive the same raw weight, and explicit metadata when the
+    baseline has metadata columns. Cached fit objects are shared, so they
+    must not be modified while the cache is in use. When a baseline fit is
+    supplied, equality of its z-scores and LD with ``inputs`` cannot be
+    verified and is reported as not assessed.
     """
     from .api import susie_rss
     from .diagnostics import ConvergenceConfig, resolve_convergence
@@ -932,8 +1010,7 @@ def run_sensitivity(
     if "s_init" in inputs:
         raise ValueError("baseline sensitivity is cold-started; use an explicit continuation item")
     baseline_ids, baseline_metadata = _sensitivity_inputs(inputs)
-    # Public fits accept a config object; saved sensitivity settings use a
-    # stable dictionary. Restore that dictionary only at this API boundary.
+    # Fitting functions take a ConvergenceConfig; saved settings store a dict.
     override = settings.get("convergence")
     if isinstance(override, dict):
         override = ConvergenceConfig.from_dict(override)
@@ -963,8 +1040,8 @@ def run_sensitivity(
                 and not np.array_equal(given, baseline.params[key])
             ):
                 raise ValueError(f"baseline_settings {key} differs from supplied baseline")
-        # Reuse recorded model settings, so a one-factor change does not silently
-        # reset L or variance strategy to public defaults.
+        # Start from the settings recorded in the baseline, so that a
+        # single-factor change does not reset L or the variance options.
         allowed_settings = (
             set(inspect.signature(susie_rss).parameters)
             - set(inputs)
@@ -977,8 +1054,8 @@ def run_sensitivity(
             recorded["var_y"] = baseline.params["input_var_y"]
         if baseline.params.get("effect_scale") == "noncentrality":
             recorded["scaled_prior_variance"] = 0.2
-        # Reconstruct the original model's normalized prior, including the
-        # historical null augmentation-before-normalization convention.
+        # Recover the raw prior of the baseline from its normalized weights; the
+        # null weight was appended before normalization.
         prior = np.asarray(baseline.params["prior_weights"], dtype=float)
         null_weight = float(baseline.params.get("null_weight", 0.0))
         biological = _biological(baseline, prior)
@@ -1031,7 +1108,7 @@ def run_sensitivity(
         set(names)
     ) != len(names):
         raise ValueError("plan names must be distinct nonempty strings other than baseline")
-    # Validate the entire plan before doing any work.
+    # The whole plan is validated before any fit is run.
     allowed = {
         "L",
         "prior_weights",
@@ -1092,7 +1169,7 @@ def run_sensitivity(
             if isinstance(given, dict):
                 given = ConvergenceConfig.from_dict(given)
                 item["continuation"]["convergence"] = given
-            resolve_convergence(baseline, given)  # Validate before any fit runs.
+            resolve_convergence(baseline, given)  # Raises before any fit is run.
         if "inputs" in item:
             resolved[item["name"]] = _alternative_sensitivity_inputs(
                 item["inputs"], settings, baseline_ids, baseline_metadata
@@ -1156,9 +1233,8 @@ def run_sensitivity(
             if "R" not in inputs:
                 raise ValueError("posterior report changes need explicit R")
             summaries[name] = summarize(results["baseline"], inputs["R"], **item["report"])
-            # A new result view has identical posterior arrays and updated CS
-            # display selection. The supplied fit/its sets remain unchanged,
-            # and comparison sees the actual changed CS rather than stale sets.
+            # A shallow copy of the baseline with the re-extracted credible sets;
+            # the posterior arrays are shared and the baseline is not modified.
             view = copy.copy(results["baseline"])
             rows = summaries[name]["credible_sets"]
             actual = np.array([row["actual_coverage"] for row in rows])

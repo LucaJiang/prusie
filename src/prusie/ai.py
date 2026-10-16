@@ -1,8 +1,9 @@
-"""Optional evidence-only interpretation through the official Codex CLI.
+"""Optional, consent-based natural-language interpretation of an evidence bundle.
 
-No LLM SDK is imported. Statistical calculations remain in deterministic code.
-Authentication stays inside the official CLI: this module never opens, copies,
-prints or parses authentication files or API keys.
+The adapter calls the Codex command-line interface (CLI) as a subprocess; no
+language-model SDK is imported, and all statistical results are computed by
+deterministic code beforehand. Authentication remains within the CLI: this
+module does not open, copy, print or parse credential files or API keys.
 """
 
 from __future__ import annotations
@@ -62,7 +63,7 @@ class InterpretationError(ValueError):
 
 
 class InterpretationProvider(Protocol):
-    "Small provider boundary for future explicitly configured adapters."
+    """Interface of an interpretation adapter."""
 
     def interpret(self, bundle: dict, *, consent: bool = False, cancel=None) -> dict: ...
 
@@ -95,13 +96,18 @@ def _facts(bundle):
 
 
 def validate_interpretation(response, bundle):
-    """Validate citations and render every numeric fact from its data reference.
+    """Check a model response against its evidence bundle and render its numbers.
 
-    Prose is deliberately number-free: measurements, counts, identifiers with
-    digits and thresholds belong in referenced fact rows, never unchecked text.
-    This strict first version rejects numeric hallucinations instead of applying
-    rounding heuristics. It cannot prove that qualitative prose is scientifically
-    correct; the evidence remains available for human review.
+    Each claim must cite evidence IDs of the bundle, and all numbers are
+    rendered from cited facts. Prose containing digits or number words is
+    rejected, because numerical values are not accepted from generated text.
+    This check cannot establish that qualitative statements are correct; the
+    evidence remains available for review.
+
+    Raises
+    ------
+    InterpretationError
+        The response or bundle is malformed, or a claim is unsupported.
     """
     facts = _facts(bundle)
     if isinstance(response, str):
@@ -179,20 +185,36 @@ def validate_interpretation(response, bundle):
 
 
 class CodexCLI:
-    """Explicitly consented interpretation using an existing official login.
+    """Interpretation adapter for the Codex CLI, run only with explicit consent.
 
-    ``work_root`` is a local output directory. ``CODEX_HOME`` must already point
-    to the user's official login environment; it is passed through unchanged.
-    User config, rules, project instructions, MCP, apps, plugins, shell, browser,
-    computer and web-search features are disabled for the child invocation.
-    The model/provider are explicit; there is no provider or API-key fallback.
-    Supply ``model`` with an identifier available to your provider. An omitted
-    model returns a configuration requirement before starting the CLI; user
-    configuration is intentionally not inherited by this isolated adapter.
-    Actual availability is established only by a successful authorized response.
-    Custom provider IDs require an explicit non-secret ``provider_config``.
-    The distinct built-in ``openai``
-    identity is used only if the caller chooses it explicitly.
+    Parameters
+    ----------
+    work_root : str or Path
+        Local directory for the request, response and isolated configuration.
+    model : str, optional
+        Model identifier available to the chosen provider. Required for a
+        request; user configuration is not inherited.
+    provider : str, default 'OpenAI'
+        CLI provider identifier. The built-in 'openai' identity is used only
+        when chosen explicitly.
+    provider_config : dict, optional
+        Non-secret provider fields (``name``, ``base_url``, ``wire_api``,
+        ``requires_openai_auth``); required for custom provider identifiers.
+    executable : str, default 'codex'
+        CLI executable.
+    timeout : float, default 120
+        Time limit of one request in seconds.
+    max_attempts : {1, 2}, default 1
+        Number of attempts.
+
+    Notes
+    -----
+    ``CODEX_HOME`` must point to an existing CLI login and is passed on
+    unchanged. User configuration, rules, project instructions, MCP servers,
+    apps, plugins, shell, browser, computer-use and web-search features are
+    disabled for the subprocess. There is no fallback to another provider or
+    to an API key. Whether the model is available is known only after a
+    successful response.
     """
 
     def __init__(
@@ -254,7 +276,7 @@ class CodexCLI:
         self._popen = _popen or subprocess.Popen
 
     def preflight(self):
-        "Read only CLI version/help; no model request and no credential access."
+        """Report CLI availability from its version and help output, without a model request."""
         executable = shutil.which(self.executable)
         if executable is None:
             return {"status": "unavailable", "reason": "Official Codex CLI not found"}
@@ -379,11 +401,24 @@ class CodexCLI:
                 process.wait(timeout=2)
 
     def interpret(self, bundle, *, consent=False, cancel=None):
-        """Transmit the reviewed bundle only after explicit ``consent=True``.
+        """Send an evidence bundle for interpretation, only if ``consent=True``.
 
-        Returns an evidence-backed success or an honest failure record. No fit,
-        variant filtering, allele change, or arbitrary command is requested.
-        ``cancel`` may be a threading.Event; retry count is finite and recorded.
+        Parameters
+        ----------
+        bundle : dict
+            Output of :func:`prusie.report.evidence_bundle`.
+        consent : bool, default False
+            Nothing is transmitted unless this is True.
+        cancel : threading.Event, optional
+            Cancels the request when set.
+
+        Returns
+        -------
+        dict
+            A validated interpretation, or a record of why none was obtained
+            (not authorized, cancelled, unavailable or failed), with the number
+            of attempts. The request asks only for an interpretation; it never
+            requests a fit, variant filtering, allele changes or commands.
         """
         if consent is not True:
             return {
