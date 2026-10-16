@@ -9,13 +9,10 @@ Real association inputs are obtained separately from their source studies.
 From a checkout with Node.js and the [documentation tools](contributing.md#editing-and-building-documentation):
 
 ```sh
-python -m pip install -r tools/results-requirements.txt -r tools/docs-requirements.txt
-python tools/model_examples.py --check
+python -m pip install -r tools/docs-requirements.txt
+python tools/model_examples.py
 python tools/generate_results.py
-python tools/generate_results.py --check
 python tools/build_docs.py
-python tools/build_docs.py --check
-python tools/check_docs.py
 ```
 
 `docs/assets/benchmark/` contains the prusie 0.2.4.dev2 measurements.
@@ -63,17 +60,15 @@ use `python tools/generate_example.py --output-dir NEW_DIRECTORY` with NumPy 2.2
 
 ### Regeneration checks
 
-`--check` verifies the stored SHA-256 manifest and the input, metadata and
-license bytes. It then compares regenerated arrays by name, shape, dtype and
-value. True effects and coordinates must match exactly. Metadata retains the
+`--check` compares regenerated arrays by name, shape, dtype and value. True effects and coordinates must match exactly. Metadata retains the
 original NumPy version.
 
 With one thread, OpenBLAS 0.3.29 kernels SkylakeX, Haswell and Sandybridge produce
 maximum differences of 1.60e-14 for z, 1.12e-15 for R, 5.56e-16 for marginal
 effects and 2.09e-17 for their standard errors. Regeneration tolerances are
 8e-14, 5e-15, 3e-15 and 1e-16, respectively, with zero relative tolerance.
-Compressed archive bytes may differ after regeneration. The shipped files must
-still match their hashes. PIP comparisons with the R reference use absolute
+Compressed archive bytes may differ after regeneration; the original files
+and provenance remain frozen. PIP comparisons with the R reference use absolute
 tolerance 1e-5 and zero relative tolerance.
 
 ### R comparison

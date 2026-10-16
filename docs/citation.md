@@ -15,13 +15,9 @@ its source revision and environment in reproducible analyses.
 [CITATION.cff](https://github.com/LucaJiang/prusie/blob/main/CITATION.cff) contains
 machine-readable software metadata. No software-paper DOI is assigned here.
 
-Copyright © 2026 Wenxin Jiang. prusie is licensed under
-[GPL-3.0-or-later](https://github.com/LucaJiang/prusie/blob/main/LICENSE).
-The [license page](notices.html) links the component inventory and the complete
-third-party texts. susieR-derived portions retain BSD-3-Clause attribution;
-the R optimizer adaptation retains its GPL-2.0-or-later source notice.
+## License
 
-The independent synthetic toy example is GPL-3.0-or-later. The attributed
-regression and convergence fixtures preserve their own source declarations
-and checksummed notices. KaTeX's documentation assets retain the applicable
-MIT, Apache-2.0 and OFL-1.1 notices; they add no inference dependency.
+prusie is licensed under GPL-3.0-or-later.
+See the [project license](https://github.com/LucaJiang/prusie/blob/main/LICENSE)
+and [third-party notices](https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md).
+KaTeX and its fonts on this site use MIT and OFL-1.1; see [their license](assets/katex/LICENSE).

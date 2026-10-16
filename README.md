@@ -87,7 +87,5 @@ change with prior assumptions and refinement. Browse the
 Please cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
 [SuSiE-RSS, Zou et al. (2022)](https://doi.org/10.1371/journal.pgen.1010299),
 and identify the prusie version using [CITATION.cff](CITATION.cff).
-Author and maintainer: Wenxin Jiang. No DOI is assigned to the software.
-
-Copyright © 2026 Wenxin Jiang. Licensed under [GPL-3.0-or-later](LICENSE);
+Copyright © 2026 Wenxin Jiang; licensed under [GPL-3.0-or-later](LICENSE);
 see [third-party notices](THIRD_PARTY_NOTICES.md) for upstream attribution.

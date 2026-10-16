@@ -2,6 +2,7 @@
 
 ## 0.2.4.dev2 — stopping and prior validation (unreleased)
 
+- Simplified repository tooling, CI and license notices; no change to the package API or results.
 - Continue finite-ELBO fits through repeated alpha/PIP diagnostics until the
   ELBO criterion or iteration limit is reached. Respect minimum iterations
   and distinguish numerical failure from the initial iteration sentinel.
@@ -11,8 +12,7 @@
 - Removed the optional `prusie.ai` interpretation adapter.
 - Clarify installation, result interpretation and the worked examples;
   simplify documentation navigation and the performance report.
-- Include license texts and third-party notices in distributions and offline
-  documentation.
+- Include license texts and third-party notices in distributions.
 
 ## 0.2.4.dev1 — post-analysis (unreleased)
 

@@ -102,5 +102,5 @@ Please cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
 and identify the prusie version using [CITATION.cff](https://github.com/LucaJiang/prusie/blob/main/CITATION.cff).
 Author and maintainer: Wenxin Jiang. No DOI is assigned to the software.
 
-Copyright © 2026 Wenxin Jiang. Licensed under [GPL-3.0-or-later](licenses/LICENSE);
-see [third-party notices](third-party.html) for upstream attribution.
+Copyright © 2026 Wenxin Jiang. Licensed under [GPL-3.0-or-later](https://github.com/LucaJiang/prusie/blob/main/LICENSE);
+see [third-party notices](https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md) for upstream attribution.
