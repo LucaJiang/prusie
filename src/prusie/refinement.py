@@ -1,7 +1,8 @@
-"""Immutable prepared inputs, checked continuation, and two-step CS refinement.
+"""Retained inputs, continuation of IBSS and credible-set refinement.
 
-The likelihood uses the same working sufficient statistics in every candidate.
-Stage A's changed-prior objective is recorded, never used for model selection.
+Every candidate fit uses the same working sufficient statistics. The objective
+of the stage-A fit, which uses a modified prior, is recorded but never used to
+select a solution.
 """
 
 import copy
@@ -31,15 +32,14 @@ def _readonly(value):
     return a
 
 
-_HASH_BUFFER_ELEMENTS = 32768  # At most 256 KiB of canonical float64 data per chunk.
+_HASH_BUFFER_ELEMENTS = 32768  # At most 256 KiB of float64 data per chunk.
 
 
 def _hash_float64_c_order(h, value):
-    """Hash canonical native float64 C-order bytes with a bounded conversion buffer.
+    """Hash an array as float64 bytes in C order, using a bounded buffer.
 
-    The signature predates this iterator and canonicalizes numeric dtypes to
-    float64. Preserve that identity contract, including shape, without copying
-    an entire strided/F-order matrix or allocating its full bytes representation.
+    The digest equals that of ``np.asarray(value, float64).tobytes('C')``
+    preceded by the shape, without copying a strided or F-ordered matrix.
     """
     a = np.asarray(value)
     h.update(str(a.shape).encode())
@@ -57,6 +57,7 @@ def _hash_float64_c_order(h, value):
 
 
 def data_signature(matrix, response, yty, n, scales, multiplier, ids, metadata):
+    """SHA-256 digest of the working inputs, variant IDs and allele labels."""
     h = hashlib.sha256()
     for a in (matrix, response, np.asarray([yty, n, multiplier]), scales):
         _hash_float64_c_order(h, a)
@@ -73,7 +74,7 @@ def data_signature(matrix, response, yty, n, scales, multiplier, ids, metadata):
 
 @dataclass(frozen=True)
 class PreparedData:
-    """Owned read-only input/scale snapshots; reused by all candidate states."""
+    """Read-only working inputs and scales shared by all candidate fits."""
 
     matrix: np.ndarray
     response: np.ndarray
@@ -92,7 +93,7 @@ class PreparedData:
 
     @cached_property
     def _working_matrix(self):
-        """Materialize only for explicit objective evaluation (never a refit)."""
+        """Working crossproduct, materialized only for objective evaluation."""
         if "matrix_global_scale" in self.options:
             q = (
                 (self.matrix * self.options["matrix_global_scale"])
@@ -103,6 +104,7 @@ class PreparedData:
         return self.matrix
 
     def working_matrix(self):
+        """Return the working crossproduct D⁻¹ XtX D⁻¹ (cached, read-only)."""
         return self._working_matrix
 
 
@@ -122,13 +124,14 @@ def make_prepared(
     ids,
     metadata,
 ):
+    """Snapshot the prepared inputs of a fit as read-only arrays."""
     o = {
         k: (_readonly(v) if isinstance(v, np.ndarray) else copy.deepcopy(v))
         for k, v in options.items()
         if not k.startswith("init_")
     }
-    # One matrix copy if matrix is the transposed CS covariance view; preserve
-    # its layout for native borrowing. No candidate copies this p by p buffer.
+    # When the native matrix is the transposed CS matrix, store one read-only
+    # copy and keep the transposed view, so candidate fits share one p × p buffer.
     cs = _readonly(cs_matrix)
     native = cs.T if np.shares_memory(matrix, cs_matrix) else _readonly(matrix)
     return PreparedData(
@@ -166,7 +169,11 @@ def initial_options(
     reset_variances=False,
     prior_variance=0.2,
 ):
-    """Validate same-data/scale state, resize by retaining the first L components."""
+    """Validate an initial posterior for the same data and return native options.
+
+    The first min(L, L_init) effects are used; remaining rows start at the
+    prior weights with zero moments.
+    """
     if hasattr(s_init, "alpha"):
         state = dict(
             alpha=s_init.alpha,
@@ -255,12 +262,46 @@ def _validate_labels(fit, data):
 
 
 def evaluate_objective(fit, data=None, *, prior_weights=None, hard_exclusion=False):
-    """Recompute the Gaussian objective for the complete saved post-trim state.
+    """Recompute the ELBO of the complete posterior state after final trimming.
 
-    Ordinary SER uses log(pi + sqrt(eps)) without renormalizing; KL follows
-    that exact convention. Trimmed V=0 components contribute zero KL. Zero
-    diagonal columns contribute no conditional-Gaussian KL. Caller caches,
-    lbf and KL are ignored. This explicit audit allocates a working matrix.
+    Parameters
+    ----------
+    fit : SusieResult
+        Fitted result whose model settings match ``data``.
+    data : PreparedData, optional
+        Prepared inputs; defaults to those retained by ``fit``
+        (``retain_data=True``).
+    prior_weights : array_like, optional
+        Prior inclusion weights; defaults to those of the original model.
+    hard_exclusion : bool, default False
+        Give variants with zero prior weight a log prior of −∞ instead of
+        log(√ε).
+
+    Returns
+    -------
+    dict
+        ``elbo`` (the recomputed objective), ``logged_elbo`` (the last stored
+        value) and their difference, per-effect ``KL``, the expected residual
+        sum of squares and the fitted crossproduct ``XtXr``.
+
+    Raises
+    ------
+    ValueError
+        No retained data, inconsistent identifiers, scales, settings or
+        dimensions, or an invalid or nonfinite posterior state.
+
+    Notes
+    -----
+    The objective is
+
+        ELBO = -(n/2) log(2πσ²) - ER2/(2σ²) - ∑_ℓ KL_ℓ,
+
+    with the expected residual sum of squares ER2 and the KL terms computed
+    from alpha, mu, mu2, V and σ². As in the SER updates, log prior weights
+    are log(π_j + √ε) without renormalization. Effects with V_ℓ = 0 and
+    variants with zero working diagonal contribute no KL. Stored Bayes
+    factors, KL and fitted products are not used. This evaluation forms the
+    dense working matrix.
     """
     data = data or getattr(fit, "_prepared", None)
     if data is None:
@@ -355,6 +396,26 @@ def evaluate_objective(fit, data=None, *, prior_weights=None, hard_exclusion=Fal
 
 @dataclass(frozen=True)
 class RefinementConfig:
+    """Settings of the credible-set exclusion search of :func:`refine_fit`.
+
+    Parameters
+    ----------
+    max_rounds : int, default 10
+        Maximum number of search rounds.
+    absolute_tol : float, default 1e-3
+        A candidate is accepted only if it increases the objective by more
+        than this amount.
+    relative_tol : float, optional
+        If set, stop after an accepted round whose gain divided by
+        max(1, |incumbent objective|) is below this value.
+    max_iter : int, default 100
+        IBSS sweep limit of each candidate fit.
+    inner_tol : float, default 1e-4
+        ELBO tolerance of each candidate fit.
+    candidate_budget : int, optional
+        Maximum number of exclusion attempts in total; unlimited by default.
+    """
+
     max_rounds: int = 10
     absolute_tol: float = 1e-3
     relative_tol: float | None = None
@@ -363,6 +424,7 @@ class RefinementConfig:
     candidate_budget: int | None = None
 
     def validate(self):
+        """Raise ValueError if any setting is out of range."""
         for key in ("max_rounds", "max_iter"):
             v = getattr(self, key)
             if isinstance(v, bool) or int(v) != v or v < 1:
@@ -380,7 +442,7 @@ class RefinementConfig:
 
 
 def _copy_result(fit):
-    # The only large shared buffer is immutable prepared data.
+    # Deep-copy every field except the read-only prepared data, which is shared.
     new = copy.copy(fit)
     for key, value in vars(fit).items():
         if key != "_prepared":
@@ -476,10 +538,32 @@ def _run(
 
 
 def continue_fit(fit, *, max_iter=100, tol=None, track_fit=False, convergence=None):
-    """Continue the same data, inheriting requested controls and ELBO tolerance.
+    """Run further IBSS sweeps starting from the posterior of a fit.
 
-    An explicit ``tol`` changes ELBO tolerance; ``convergence`` separately
-    overrides the criterion and posterior thresholds. Caller state is unchanged.
+    Parameters
+    ----------
+    fit : SusieResult
+        Result fitted with ``retain_data=True`` (or with tracking,
+        initialization or refinement, which imply it).
+    max_iter : int, default 100
+        Maximum number of additional sweeps; ``niter`` of the result counts
+        only these sweeps.
+    tol : float, optional
+        ELBO tolerance; defaults to that of ``fit``.
+    track_fit : bool or {'compact', 'dense'}, default False
+        As in :func:`susie_suff_stat`.
+    convergence : ConvergenceConfig, optional
+        Stopping rule; defaults to the rule requested for ``fit``.
+
+    Returns
+    -------
+    SusieResult
+        A new result; ``fit`` is not modified.
+
+    Raises
+    ------
+    ValueError
+        ``fit`` has no retained data, or ``max_iter`` or ``tol`` is invalid.
     """
     data = getattr(fit, "_prepared", None)
     if data is None:
@@ -513,7 +597,41 @@ def _brief(fit, objective=None):
 
 
 def refine_fit(fit, config=None, *, convergence=None):
-    """Search CS exclusions, restoring the original prior before every comparison."""
+    """Search for a higher-objective solution by excluding credible sets.
+
+    Each round fixes the incumbent and its credible sets. For each set, stage
+    A refits from a cold start with the prior weights of its members set to
+    zero (hard exclusion). Stage B restores the original prior and refits
+    from the stage-A posterior, with V and σ² reset to their initial values.
+    Candidates whose two fits both converge are compared by the objective of
+    :func:`evaluate_objective` under the original prior, and the best one
+    replaces the incumbent if it improves the objective by more than
+    ``config.absolute_tol``.
+
+    Parameters
+    ----------
+    fit : SusieResult
+        Converged result fitted with ``retain_data=True``.
+    config : RefinementConfig, optional
+        Search settings; defaults to ``RefinementConfig()``.
+    convergence : ConvergenceConfig, optional
+        Stopping rule of the candidate fits; defaults to the rule requested
+        for ``fit``.
+
+    Returns
+    -------
+    SusieResult
+        The best solution found, which is a copy of ``fit`` if no candidate
+        is accepted. ``refinement`` records the status, stop reason, every
+        attempt and the objective before and after the search.
+
+    Notes
+    -----
+    An outcome without accepted candidates indicates that no improvement was
+    found by this search, not that the solution is a global optimum.
+    Unsupported inputs (no retained data, an unconverged or invalid baseline)
+    are reported in ``refinement['status']`` rather than raised.
+    """
     config = config or RefinementConfig()
     config.validate()
     control, resolution = resolve_convergence(fit, convergence)
@@ -569,7 +687,7 @@ def refine_fit(fit, config=None, *, convergence=None):
         failures = 0
         evaluated = 0
         budget_exhausted = False
-        # Freeze the complete incumbent and its CS list for this round.
+        # The incumbent and its credible sets are fixed for the whole round.
         for component, members in zip(
             incumbent.sets["cs_index"], incumbent.sets["cs"], strict=True
         ):
@@ -626,8 +744,8 @@ def refine_fit(fit, config=None, *, convergence=None):
                             track_fit=requested_tracking,
                             convergence=control,
                         )
-                    # Both stages use one resolved request; internal forwarding is
-                    # not a second user override. Keep its actual origin explicit.
+                    # Both stages share one resolved stopping rule; passing it on
+                    # internally is not a user override, so keep its recorded source.
                     candidate.params["convergence_resolution"] = copy.deepcopy(resolution)
                     candidate.convergence["config_resolution"] = copy.deepcopy(resolution)
                     stage = dict(

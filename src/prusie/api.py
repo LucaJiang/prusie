@@ -1,4 +1,9 @@
-"Validated RSS transformations and native sufficient-statistics inference."
+"""Public SuSiE fitting functions for summary and sufficient statistics.
+
+``susie_rss`` converts marginal association statistics and signed LD into
+working sufficient statistics; ``susie_suff_stat`` validates them, runs the
+native IBSS solver and assembles a :class:`~prusie.result.SusieResult`.
+"""
 
 from __future__ import annotations
 
@@ -47,13 +52,13 @@ def _matrix(
     if array.shape != (size, size):
         raise ValueError(f"{name} must have shape ({size}, {size})")
     array = native_array(array)
-    # Complete finite/symmetry/diagonal checks without matrix-sized temporaries.
+    # Finite, symmetry and diagonal checks run natively without p × p temporaries.
     if rss_scale is None:
         _native.validate_matrix(array, name, correlation, scale)
     else:
         _native.validate_rss_matrix(array, rss_scale)
-    # native_array already established alignment and compatible byte strides.
-    # The C copy, if needed, preserves the public preparation orientation.
+    # native_array has already ensured alignment and element-compatible strides;
+    # any copy made here is C-ordered, matching the public input orientation.
     return np.ascontiguousarray(array)
 
 
@@ -81,8 +86,8 @@ def _integer(value: int, name: str) -> int:
 
 def _metadata(variant_ids, variant_metadata, m):
     if variant_ids is None and m > 0:
-        # Positional labels are distinct and nonempty by construction. Match
-        # the minimal Unicode width of the explicit decimal strings exactly.
+        # Positional labels '0', ..., 'm-1', with the same minimal Unicode
+        # width as an explicitly supplied list of decimal strings.
         ids = np.arange(m).astype(f"<U{len(str(m - 1))}")
     else:
         ids = np.asarray(
@@ -222,97 +227,156 @@ def _susie_suff_stat(
     _rss_matrix_scale=1.0,
     _rss_matrix_validated=False,
 ) -> SusieResult:
-    """Fit SuSiE to centered sufficient statistics using sequential Rust IBSS.
+    """Fit SuSiE to centered sufficient statistics.
 
     Parameters
     ----------
     XtX : array_like, shape (p, p)
-        Centered predictor crossproduct, float64, symmetric and finite.
+        Centered predictor crossproduct XᵀX for p variants. Must be finite and
+        symmetric; converted to float64.
     Xty : array_like, shape (p,)
-        Centered predictor-response crossproduct in exactly the same order.
+        Centered predictor-response crossproduct Xᵀy, in the order of XtX.
     yty : float
-        Centered response sum of squares, strictly positive.
+        Centered response sum of squares yᵀy; must be positive.
     n : float
-        Sample size greater than one, never inferred from LD dimension.
+        Sample size; must exceed one. It is never inferred from the dimension
+        of XtX.
+    X_colmeans : array_like or float, optional
+        Predictor means, used only to compute ``intercept``.
+    y_mean : float, optional
+        Response mean, used only to compute ``intercept``. Without both means
+        the returned intercept is NaN.
     L : int, default 10
-        Maximum single effects, capped at the number of columns including null.
+        Maximum number of single effects. The number fitted is min(L, q), where
+        q counts the variants plus the optional null column.
     scaled_prior_variance : float, default 0.2
-        Initial V divided by yty/(n-1); at most one when standardized.
-    residual_variance : float or None
-        Initial or fixed sigma2; None uses yty/(n-1).
-    estimate_residual_variance, estimate_prior_variance : bool
-        Update sigma2 and V respectively. Both default True for this interface.
-    estimate_prior_method : {'optim', 'EM', 'simple'}
-        'optim' searches the SER marginal likelihood; 'EM' updates from the
-        posterior second moment; 'simple' only compares current V with zero.
-    prior_weights : array_like, optional
-        Nonnegative finite variant weights; normalized after optional null.
-    null_weight : float, default 0
-        Optional last, zero-crossproduct null column. Must be in [0, 1).
-    standardize : bool, default True
-        Scale predictors to unit sample variance before inference.
-    max_iter, tol : int, float
-        IBSS iteration limit (100 here; 50 for RSS) and finite nonnegative
-        ELBO improvement threshold (1e-4).
-    coverage, min_abs_corr : float or None
-        Requested CS posterior mass (0.95) and minimum absolute correlation
-        (0.5). Returned ``sets.coverage`` is each retained set's actual mass;
-        ``sets.requested_coverage`` records the target.
-        None disables CS construction; marginal PIP is still returned.
-    n_purity : int or None
-        Matrix-input purity is always complete, matching the pinned reference;
-        a finite n_purity does not subsample the matrix.
-    s_init : SusieResult or explicit state mapping, optional
-        Same-data posterior initialization; IDs, alleles, scale, null and state
-        validity are checked. Fitted caches are reconstructed.
-    refine : bool or RefinementConfig, default False
-        Explicit two-step CS-exclusion search after a converged baseline.
-    track_fit : bool or {'compact', 'dense'}, default False
-        Exact online metrics; dense posterior history is explicitly opt-in.
-    convergence : ConvergenceConfig, optional
-        Default ELBO or explicit alpha/PIP/joint stopping thresholds.
-    retain_data : bool, default False
-        Own immutable prepared inputs for later continuation/refinement.
-        Tracking, initialization and refine also retain inputs.
+        Initial prior effect variance V (σ₀²) divided by yᵀy/(n - 1). Must not
+        exceed one when ``standardize=True``.
+    residual_variance : float, optional
+        Initial residual variance σ², or its fixed value when it is not
+        estimated. Defaults to yᵀy/(n - 1).
+    estimate_residual_variance : bool, default True
+        Update σ² after each sweep that does not stop the iteration.
+    estimate_prior_variance : bool, default True
+        Estimate the prior variance V_ℓ of each single effect.
+    estimate_prior_method : {'optim', 'EM', 'simple'}, default 'optim'
+        'optim' maximizes the single-effect regression (SER) marginal
+        likelihood over log V; 'EM' sets V_ℓ to the posterior second moment
+        after each SER update; 'simple' only compares the current V_ℓ with
+        V_ℓ = 0.
+    check_null_threshold : float, default 0
+        With 'optim' or 'simple', V_ℓ is set to zero unless its log marginal
+        likelihood exceeds that of V_ℓ = 0 by more than this value.
     prior_tol : float, default 1e-9
-        V threshold for final null-component trim and PIP. The CS threshold
-        stays fixed at 1e-9. Trim also runs at the iteration cap.
-    check_input, r_tol : bool, float
-        Optional PSD/projection checks, eigenvalue tolerance 1e-8.
-    check_prior, check_null_threshold : bool, float
-        Large-V guard and log-BF threshold for setting V to zero.
-    X_colmeans, y_mean : array_like or float, optional
-        Means needed to recover intercept; without them intercept is NaN.
-    variant_ids, variant_metadata : sequence, mapping, optional
-        Ordered biological IDs and aligned chromosome/allele metadata.
-        Omitted IDs are positional labels, not inferred biological identifiers.
-    maf, maf_thresh, verbose
-        MAF filtering and verbose mode raise NotImplementedError when requested.
-        These options are never silently ignored.
+        After the final sweep, including at the iteration limit, components
+        with V_ℓ < prior_tol have V_ℓ, moments, Bayes factors and KL set to
+        zero and alpha reset to the prior weights. PIPs use components with
+        V_ℓ > prior_tol; credible sets use a fixed activity threshold of 1e-9.
+    r_tol : float, default 1e-8
+        Eigenvalue tolerance for ``check_input``.
+    prior_weights : array_like, shape (p,), optional
+        Nonnegative prior inclusion weights π with a finite positive sum.
+        Normalized after null-column augmentation. Defaults to uniform.
+    null_weight : float, default 0
+        Prior weight of an optional last null column with zero crossproducts.
+        Must lie in [0, 1); 0 omits the column.
+    standardize : bool, default True
+        Scale predictors to unit sample variance, d_j = (XᵀX_jj/(n - 1))^½.
+    max_iter : int, default 100
+        Maximum number of iterative Bayesian stepwise selection (IBSS) sweeps.
+    s_init : SusieResult or mapping, optional
+        Initial posterior state for the same data. Variant IDs, allele
+        metadata, working scales, null column and data signature must agree.
+        A mapping needs ``alpha``, ``mu``, ``mu2``, ``variant_ids``,
+        ``scales``, ``null_index`` and ``data_signature``; ``V`` and
+        ``sigma2`` are optional. The first min(L, L_init) components are
+        used and any further components start at the prior; fitted products
+        are recomputed from the state.
+    coverage : float or None, default 0.95
+        Requested posterior mass of each credible set (CS). None disables CS
+        construction; PIPs are still returned.
+    min_abs_corr : float or None, default 0.5
+        Minimum absolute pairwise correlation (purity) for a CS to be
+        retained. None disables CS construction.
+    tol : float, default 1e-4
+        ELBO tolerance; the default rule converges when 0 ≤ ΔELBO < tol.
+    verbose : bool, default False
+        Must be False.
+    track_fit : bool or {'compact', 'dense'}, default False
+        Record per-sweep convergence metrics. True or 'compact' stores exact
+        distances and a thresholded alpha display; 'dense' also stores full
+        posterior arrays and is intended for small problems.
+    check_input : bool, default False
+        Eigendecompose XtX, raise if its smallest eigenvalue is below -r_tol,
+        and warn if Xty lies outside the span of the eigenvectors whose
+        eigenvalues exceed machine epsilon.
+    refine : bool or RefinementConfig, default False
+        After a converged fit, run the credible-set exclusion search of
+        :func:`refine_fit`; True uses the default configuration.
+    convergence : ConvergenceConfig, optional
+        Stopping rule (ELBO, alpha/PIP or joint). Defaults to the ELBO rule,
+        or to the controls recorded in ``s_init`` when it is a fit.
+    retain_data : bool, default False
+        Retain read-only copies of the prepared inputs, as required by
+        :func:`continue_fit`, :func:`refine_fit` and
+        :func:`evaluate_objective`. Implied by ``track_fit``, ``s_init`` and
+        ``refine``.
+    check_prior : bool, default False
+        Raise an error if an estimated V_ℓ exceeds 100 max_j z_j², where z_j is
+        the marginal z-score at the current σ².
+    n_purity : int, optional
+        Accepted for compatibility with susieR. With matrix input, purity
+        always uses all pairs of CS members.
+    variant_ids : sequence of str, optional
+        Distinct nonempty variant identifiers in input order. Defaults to
+        positional labels '0', ..., 'p-1'.
+    variant_metadata : mapping of str to array_like, optional
+        Length-p columns, for example chromosome or alleles, copied into the
+        result.
+    maf, maf_thresh : optional
+        Minor-allele-frequency filtering is not implemented; values other than
+        None and 0 raise NotImplementedError.
 
     Returns
     -------
     SusieResult
-        Posterior arrays, BF, variance, ELBO, CS, PIP, and execution metadata.
+        Variational posterior (alpha, mu, mu2), Bayes factors, prior and
+        residual variances, ELBO trace, PIPs, credible sets and run metadata.
 
     Raises
     ------
     ValueError
-        Invalid shape, nonfinite input, invalid parameters or native failure.
+        Invalid shapes, nonfinite values, out-of-range parameters,
+        inconsistent initialization or a native numerical failure.
+    TypeError
+        ``s_init``, ``refine`` or ``convergence`` has an unsupported type.
     NotImplementedError
-        An explicitly unsupported option is requested.
+        ``verbose`` or MAF filtering is requested.
+
+    Warns
+    -----
+    RuntimeWarning
+        Nonconvergence and numerical diagnostics. Messages are also stored in
+        ``SusieResult.warnings``.
 
     Notes
     -----
-    Supported Gaussian updates follow pinned susieR 0.16.6. Matrix-input CS
-    purity uses the complete submatrix.
-    Asymmetric or missing inputs error rather than being silently repaired.
-    Component mu/mu2 remain on the fitted predictor scale; ``coef``
-    applies the stored inverse scale transformation.
+    The model is the Gaussian sum of single effects regression
+    y = Xb + ε, ε ~ N(0, σ²I), b = ∑_ℓ b_ℓ, in which each b_ℓ has one nonzero
+    entry with prior N(0, V_ℓ) at a location drawn from π. IBSS updates the L
+    single effects in sequence on the working statistics D⁻¹XᵀXD⁻¹ and
+    D⁻¹Xᵀy, where D = diag(d). The Gaussian updates follow susieR 0.16.6.
+    Nonfinite or asymmetric inputs raise an error; they are not repaired.
+    ``mu`` and ``mu2`` are on the working predictor scale; ``coef`` returns
+    posterior mean effects on the input scale. CS purity uses correlations
+    derived from the complete XtX submatrix of each set.
 
     References
     ----------
-    Wang et al. (2020), JRSS B 82, 1273-1300; susieR 0.16.6 R/sufficient_stats_methods.R.
+    Wang G, Sarkar A, Carbonetto P, Stephens M (2020). A simple new approach to
+    variable selection in regression, with application to genetic fine mapping.
+    J R Stat Soc B 82:1273-1300. Reference implementation: susieR 0.16.6,
+    R/sufficient_stats_methods.R.
 
     Examples
     --------
@@ -332,8 +396,8 @@ def _susie_suff_stat(
     Xty = _vector(Xty, "Xty")
     m = Xty.size
     if _rss_matrix_validated:
-        # Private RSS-only route: the caller checked every raw and scaled
-        # matrix entry together. Public suff-stat calls cannot set this flag.
+        # Only susie_rss sets this flag, after validating every raw and scaled
+        # matrix entry; direct susie_suff_stat calls always validate XtX here.
         assert isinstance(XtX, np.ndarray) and XtX.shape == (m, m) and XtX.dtype == np.float64
     else:
         XtX = _matrix(XtX, "XtX", m, scale=_rss_matrix_scale)
@@ -392,11 +456,11 @@ def _susie_suff_stat(
         raise ValueError("null_weight must be < 1")
     null_index = m if null_weight > 0 else None
     if null_index is not None:
-        # Preserve R's order: augment raw weights, then normalize the whole vector.
+        # As in susieR: augment the raw weights, then normalize the whole vector.
         weights = np.r_[weights * (1 - null_weight), null_weight]
         XtX = np.pad(XtX, ((0, 1), (0, 1)))
         Xty = np.r_[Xty, 0.0]
-    # The current reference normalizes default and explicit priors alike.
+    # susieR 0.16.6 normalizes default and supplied weights alike.
     weights /= math.fsum(weights)
     p = len(Xty)
     means = np.full(p, np.nan) if X_colmeans is None else np.asarray(X_colmeans, dtype=float)
@@ -412,9 +476,9 @@ def _susie_suff_stat(
         diagonal *= _rss_matrix_scale
     scales = np.sqrt(diagonal / (n - 1)) if standardize else np.ones(p)
     scales[scales == 0] = 1.0
-    # Centered crossproducts rescaled to predictor sample standard deviations.
-    # Preserve the transpose and the two floating operations, writing directly
-    # to the column-major layout consumed by the native column updates.
+    # Working crossproduct D⁻¹ XtX D⁻¹ in the column-major layout read by the
+    # native column updates. The transpose and the order of the multiplication
+    # and division determine the rounding of every entry; keep both.
     inverse_scales = 1.0 / scales
     matrix_operator = (
         getattr(_native, "MATRIX_OPERATOR_VERSION", 0) == 1
@@ -424,19 +488,19 @@ def _susie_suff_stat(
         and bool(np.all(np.isfinite(inverse_scales) & (inverse_scales > 0)))
     )
     if matrix_operator:
-        # The compatible native operator owns the exact diagonal/scalar factors
-        # and complete materialization fallback. Keep the original orientation.
+        # The native operator applies the scalar and diagonal scales itself and
+        # falls back to full materialization; pass the unscaled matrix.
         crossproduct = XtX.T
     else:
         crossproduct = _native.prepare_crossproduct(XtX, inverse_scales, scales, _rss_matrix_scale)
         if crossproduct is None:
-            # Portable NumPy fallback when runtime SIMD or contiguous input is absent.
+            # NumPy route when runtime SIMD support or contiguous input is absent.
             crossproduct = np.empty((p, p), dtype=np.float64, order="F")
             if _rss_matrix_scale == 1.0:
                 np.multiply(XtX.T, inverse_scales[None, :], out=crossproduct)
             else:
-                # Materialize the exact RSS multiplication directly into the sole
-                # native matrix allocation. Subsequent operations retain their order.
+                # Apply the RSS scalar in place in the single p × p allocation,
+                # keeping the order of the subsequent operations.
                 np.multiply(XtX.T, _rss_matrix_scale, out=crossproduct)
                 np.multiply(crossproduct, inverse_scales[None, :], out=crossproduct)
             np.divide(crossproduct, scales[:, None], out=crossproduct)
@@ -636,63 +700,93 @@ def susie_rss(
     variant_ids: Sequence[str] | None = None,
     variant_metadata: Mapping[str, ArrayLike] | None = None,
 ) -> SusieResult:
-    """Fit SuSiE-RSS using z + signed R + sample size, or bhat/shat + R.
+    """Fit SuSiE-RSS from marginal association statistics and signed LD.
 
     Parameters
     ----------
     z : array_like, shape (p,), optional
-        Signed association statistics; mutually exclusive with bhat/shat.
+        Marginal z-scores for p variants. Mutually exclusive with ``bhat`` and
+        ``shat``.
     R : array_like, shape (p, p)
-        Signed LD correlation r in the exact variant/effect-allele order.
-        Singular matrices are allowed; no ridge or PSD clipping is applied.
+        Signed LD correlation matrix in the variant and effect-allele order of
+        the summary statistics. Singular matrices are accepted; no ridge or
+        eigenvalue adjustment is applied.
     n : float, optional
-        Known sample size > 1. If absent, use the upstream large-n likelihood
-        (XtX=R, Xty=z, n_internal=2, yty=1), with a recorded warning.
+        Sample size of the association study; must exceed one. If omitted, the
+        large-sample likelihood of susieR is used (XᵀX = R, Xᵀy = z, yᵀy = 1,
+        internal n = 2) and a warning is issued.
     bhat, shat : array_like, optional
-        Effect estimates and positive standard errors, instead of z. shat may
-        be scalar. With var_y and n, reconstruct the original predictor scale.
+        Marginal effect estimates and positive standard errors, used instead
+        of z (z = bhat/shat). ``shat`` may be a scalar.
     var_y : float, optional
-        Sample phenotype variance for known n; sets the response variance.
-        With bhat/shat also reconstructs the original predictor scale.
-    estimate_residual_variance : bool, default False
-        Fixed residual variance is recommended for external reference LD.
-    prior_variance : float, default 50
-        Initial prior variance for missing-n mode only.
+        Sample variance of the phenotype; requires ``n``. Sets yᵀy =
+        (n - 1) var_y. With ``bhat`` and ``shat``, the predictor crossproducts
+        are also reconstructed so that effects are on the original scale.
     z_ld_weight : float, default 0
-        Nonzero legacy LD modification is explicitly unsupported.
-    L, scaled_prior_variance, residual_variance, estimate_prior_variance,
-    estimate_prior_method, check_null_threshold, prior_tol, r_tol,
-    prior_weights, null_weight, standardize, max_iter, s_init, coverage,
-    min_abs_corr, tol, verbose, track_fit, check_input, refine, check_prior,
+        Must be 0; the earlier susieR LD modification is not implemented.
+    estimate_residual_variance : bool, default False
+        Estimate σ². Appropriate only for in-sample LD consistent with the
+        summary statistics; requesting it issues a warning.
+    prior_variance : float, default 50
+        Initial prior variance V when ``n`` is omitted. Ignored otherwise.
+    check_prior : bool, default True
+        See :func:`susie_suff_stat`.
+    max_iter : int, default 50
+        Maximum number of IBSS sweeps.
+
+    Other Parameters
+    ----------------
+    L, scaled_prior_variance, residual_variance, estimate_prior_variance
+        As in :func:`susie_suff_stat`.
+    estimate_prior_method, check_null_threshold, prior_tol, r_tol
+        As in :func:`susie_suff_stat`.
+    prior_weights, null_weight, standardize, s_init, coverage, min_abs_corr
+        As in :func:`susie_suff_stat`.
+    tol, verbose, track_fit, check_input, refine, convergence, retain_data
+        As in :func:`susie_suff_stat`.
     n_purity, variant_ids, variant_metadata
-        See ``susie_suff_stat``. check_prior defaults True in this interface.
-        RSS defaults max_iter=50 and tol=1e-4; matrix purity is complete.
+        As in :func:`susie_suff_stat`. All apply to the working sufficient
+        statistics described in Notes.
 
     Returns
     -------
     SusieResult
-        Posterior fit with the working RSS transformation parameters recorded.
+        Posterior fit. ``params`` additionally records the input route
+        (``input_kind``), the supplied n and var_y, and the effect scale
+        (``effect_scale``: 'standardized', 'original' or 'noncentrality').
 
     Raises
     ------
     ValueError
-        Ambiguous input, invalid correlation or nonfinite values.
+        Ambiguous or incomplete input, an invalid correlation matrix,
+        nonfinite values, or z² + n - 2 ≤ 0 for known n.
     NotImplementedError
-        Unsupported nondefault option such as verbose output or legacy LD modification.
+        ``verbose`` or a nonzero ``z_ld_weight`` is requested.
+
+    Warns
+    -----
+    RuntimeWarning
+        Missing n, residual-variance estimation with RSS input, and the
+        fitting warnings of :func:`susie_suff_stat`.
 
     Notes
     -----
-    Known n applies z_tilde = z sqrt((n-1)/(z²+n-2)); this is not the
-    infinite-sample approximation. With z and no var_y the effects use standardized response units.
-    With z and var_y, yty changes to (n-1)*var_y but Xty is not rescaled.
-    Original-scale coefficients require bhat/shat/n/var_y. Missing-n mode
-    ignores a valid var_y in its working quantities and reports noncentrality
-    effects. External-LD misspecification remains the user's modeling
-    assumption; large prior and convergence warnings are retained.
+    For known n, each z-score is adjusted for the residual variance used in
+    its Wald statistic, z̃_j = z_j ((n - 1)/(z_j² + n - 2))^½, and the
+    working statistics are XᵀX = (n - 1)R, Xᵀy = (n - 1)^½ z̃ and
+    yᵀy = n - 1, which places effects on a standardized scale. With var_y,
+    yᵀy = (n - 1) var_y while XᵀX and Xᵀy are unchanged. Original-scale
+    coefficients therefore require ``bhat``, ``shat``, ``n`` and ``var_y``.
+    When n is omitted, a supplied var_y is validated and recorded but does
+    not enter the working statistics, and effects are on the noncentrality
+    scale. If R is an external reference panel, its agreement with the study
+    LD is a modeling assumption that this function does not test.
 
     References
     ----------
-    Zou et al. (2022), PLoS Genetics 18, e1010299; susieR 0.16.6 R/susie_constructors.R.
+    Zou Y, Carbonetto P, Wang G, Stephens M (2022). Fine-mapping from summary
+    data with the "Sum of Single Effects" model. PLoS Genet 18:e1010299.
+    Reference implementation: susieR 0.16.6, R/susie_constructors.R.
 
     Examples
     --------

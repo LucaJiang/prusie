@@ -1,12 +1,17 @@
-"""Normalize NumPy layouts before crossing the typed native boundary."""
+"""Array layout normalization before arrays are passed to the native extension."""
 
 import numpy as np
 
 
 def native_array(array):
-    """Preserve values; copy layouts the Rust NumPy view cannot represent."""
+    """Return ``array``, or a C-ordered copy if its layout cannot be viewed natively.
+
+    The values are unchanged. A copy is made for misaligned data, for strides
+    that are not whole multiples of the element size, and for the minimum
+    representable stride.
+    """
     item = array.dtype.itemsize
-    # NumPy alignment flags alone are insufficient for degenerate dimensions.
+    # Alignment flags do not cover every degenerate stride, so check directly.
     if array.ctypes.data % array.dtype.alignment or any(
         step % item or step == np.iinfo(np.intp).min for step in array.strides
     ):

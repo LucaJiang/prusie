@@ -1,4 +1,4 @@
-"""Posterior summaries mapped to pinned susieR 0.16.6 Gaussian scope."""
+"""Posterior inclusion probabilities and credible sets, following susieR 0.16.6."""
 
 import numpy as np
 
@@ -7,24 +7,24 @@ from ._array_layout import native_array
 
 
 def marginal_pip(alpha, V, *, null_index=None, prior_tol=1e-9):
-    """Compute marginal inclusion probabilities over active components.
+    """Compute posterior inclusion probabilities from the active single effects.
 
     Parameters
     ----------
     alpha : ndarray, shape (L, q)
-        Component probabilities, including any internal null column.
+        Single-effect inclusion probabilities α_ℓj, including any null column.
     V : array_like, shape (L,)
-        Component prior variances on the fitted effect scale.
-    null_index : int or None, default None
-        Zero-based null column to omit from returned probabilities.
+        Prior effect variances on the working scale.
+    null_index : int, optional
+        Zero-based null column to omit from the result.
     prior_tol : float, default 1e-9
-        Include only components whose V is strictly greater than this value.
+        Effects with V_ℓ > prior_tol are active.
 
     Returns
     -------
     ndarray, shape (p,)
-        One minus the product of one minus alpha over active components,
-        in original biological variant order. An empty active set gives zeros.
+        PIP_j = 1 - ∏_{ℓ active} (1 - α_ℓj), in input variant order. All
+        entries are zero when no effect is active.
     """
     keep = np.asarray(V) > prior_tol
     pip = 1 - np.prod(1 - alpha[keep], axis=0)
@@ -44,46 +44,51 @@ def credible_sets(
     covariance_multiplier=1.0,
     audit=None,
 ):
-    """Construct component credible sets with complete pairwise LD purity.
+    """Construct one credible set per single effect and filter by LD purity.
 
     Parameters
     ----------
     alpha : ndarray, shape (L, q)
-        Component probabilities, including any internal null column.
+        Single-effect inclusion probabilities, including any null column.
     V : array_like, shape (L,)
-        Component prior variances; CS activity requires V > 1e-9.
+        Prior effect variances; an effect is active if V_ℓ > 1e-9.
     correlation : array_like, shape (q, q)
-        Signed correlation matrix, or covariance with the scale options below.
+        Signed correlation matrix, or a covariance matrix together with
+        ``covariance_scales`` and ``covariance_multiplier``.
     coverage : float or None, default 0.95
-        Requested component posterior mass. None disables construction.
+        Requested posterior mass of each set. None disables construction.
     min_abs_corr : float or None, default 0.5
-        Minimum absolute pairwise correlation. None disables construction.
-    null_index : int or None, default None
-        Internal null column; a set containing it is rejected.
-    n_purity : int or None, default None
-        Accepted for matrix-input compatibility; all pairs are used.
+        Minimum absolute pairwise correlation (purity) of a retained set.
+        None disables construction.
+    null_index : int, optional
+        Null column; a candidate set containing it is rejected.
+    n_purity : int, optional
+        Accepted for compatibility; purity always uses all member pairs.
     covariance_scales : array_like, shape (q,), optional
-        Square roots of covariance diagonal entries, for correlation conversion.
+        Square roots of the covariance diagonal, used to convert covariance
+        entries to correlations.
     covariance_multiplier : float, default 1
-        Scalar applied to covariance entries before dividing by the scales.
+        Scalar applied to covariance entries before that conversion.
     audit : list, optional
-        Append the actual ordered construction decisions, including original
-        component IDs and rejected candidates. This does not change selection.
+        If given, one record per effect is appended describing each
+        construction decision. The selection itself is unaffected.
 
     Returns
     -------
     dict
-        Member arrays, original component IDs, selected posterior masses and
-        complete min/mean/median absolute-r purity. For nonempty results,
-        ``coverage`` and ``actual_coverage`` share the returned mass array;
-        ``requested_coverage`` records the target. Empty results retain these
-        keys with empty arrays/lists.
+        ``cs`` (member index arrays), ``cs_index`` (original effect indices),
+        ``coverage`` and its alias ``actual_coverage`` (the same array of
+        posterior masses), ``requested_coverage`` and ``purity`` (minimum,
+        mean and median absolute correlation). Empty results keep these keys
+        with empty arrays.
 
     Notes
     -----
-    Inputs normally come from the validated fitting API. Stable sorting and
-    first-membership deduplication precede activity and purity filtering.
-    NaN pair purity fails the ordered minimum-threshold comparison.
+    For each effect, variants are added in decreasing α_ℓj (stable ordering
+    of ties) until the cumulative mass reaches ``coverage``. A membership
+    identical to an earlier candidate is dropped before activity and purity
+    are checked, as in susieR. Retained sets are ordered by decreasing
+    minimum purity. A NaN purity fails the threshold comparison.
     """
     empty = dict(
         cs=[],
@@ -154,8 +159,8 @@ def credible_sets(
             if covariance_scales is not None:
                 scales = np.asarray(covariance_scales)[members]
                 inv = np.divide(1.0, scales, out=np.zeros_like(scales), where=scales != 0)
-                # Preserve the original reciprocal dtype/rounding, then satisfy
-                # the native f64 boundary (a no-op for ordinary fit outputs).
+                # Compute the reciprocal in the input dtype, then convert for the
+                # float64 native interface (a no-op for fitted results).
                 inv = np.asarray(inv, dtype=np.float64)
             if native_correlation is None:
                 native_correlation = native_array(np.asarray(correlation, dtype=np.float64))
@@ -168,8 +173,8 @@ def credible_sets(
                     record["purity_evaluation"] = "threshold_short_circuit"
                 continue
             minimum = float(values.min())
-            # Rejected sets have no returned purity row; avoid their unused
-            # mean and median while retaining the same minimum-r decision.
+            # Rejected sets report no purity, so their mean and median are not
+            # computed; the decision depends on the minimum alone.
             if not minimum >= min_abs_corr:
                 if record is not None:
                     record["reasons"].append(
@@ -190,7 +195,7 @@ def credible_sets(
         return empty
     order = np.argsort([-item[2][0] for item in retained], kind="stable")
     result = [retained[i] for i in order]
-    # Sum only after selection and sorting, using original component identities.
+    # Masses are summed after selection and ordering, by original effect index.
     mass = np.array([alpha[i, members].sum() for i, members, _ in result])
     return dict(
         cs=[x[1] for x in result],

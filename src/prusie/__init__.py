@@ -1,4 +1,9 @@
-"""Native SuSiE-RSS inference, referenced to pinned official susieR 0.16.6."""
+"""prusie: Sum of Single Effects (SuSiE) fine-mapping with a native IBSS solver.
+
+The fitting functions :func:`susie_rss` and :func:`susie_suff_stat` implement
+the Gaussian SuSiE and SuSiE-RSS models of susieR 0.16.6. The remaining
+functions summarize, diagnose and compare fitted results.
+"""
 
 from .analysis import summarize
 from .api import susie_rss, susie_suff_stat

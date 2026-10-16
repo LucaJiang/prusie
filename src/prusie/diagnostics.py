@@ -1,4 +1,4 @@
-"""Convergence controls and exact state summaries for Gaussian IBSS."""
+"""Stopping rules and convergence summaries for Gaussian IBSS."""
 
 import math
 from dataclasses import dataclass
@@ -6,21 +6,38 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ConvergenceConfig:
-    """Strict distance thresholds; the first eligible check is iteration two.
+    """Stopping rule for iterative Bayesian stepwise selection (IBSS).
 
-    ``elbo`` requires 0 ≤ ΔELBO < fit tol. ``alpha_pip`` requires both
-    maximum absolute distances below their tolerances. ``joint`` requires all
-    three. For finite objectives, lagged cycles are diagnostic only in ``elbo``
-    mode. In ``alpha_pip`` and ``joint`` modes they may stop a fit, retaining
-    the entire current state with ``converged=False``. Both successful and
-    cycle exits respect ``min_iter``; ``cycle_lag`` controls the diagnostic
-    history in every mode.
+    A rule is first evaluated after the second sweep; successful and cycle
+    stops also require at least ``min_iter`` sweeps.
 
-    A NaN objective permits an explicitly reported alpha/PIP fallback in
-    ``elbo`` mode after ``min_iter``. Joint mode cannot satisfy its objective
-    condition with NaN. Infinite objectives stop as numerical failures in
-    every mode, even before ``min_iter``. The first finite objective following
-    the initial −infinity sentinel is never a fallback or convergence check.
+    Parameters
+    ----------
+    criterion : {'elbo', 'alpha_pip', 'joint'}, default 'elbo'
+        'elbo' stops when 0 ≤ ΔELBO < tol, with tol the fitting tolerance;
+        a decrease does not satisfy the rule. 'alpha_pip' stops when both
+        max_ℓj |Δα_ℓj| < alpha_tol and max_j |ΔPIP_j| < pip_tol. 'joint'
+        requires both conditions.
+    alpha_tol : float, default 1e-4
+        Tolerance for the maximum absolute change in α between sweeps.
+    pip_tol : float, default 1e-4
+        Tolerance for the maximum absolute change in PIP between sweeps.
+    min_iter : int, default 2
+        Earliest sweep at which a successful or cycle stop may occur.
+    cycle_lag : int, default 5
+        Largest lag (1 to 5) at which repeated α/PIP states are recorded.
+
+    Notes
+    -----
+    In 'elbo' mode with a finite objective, repeated states at lags 2 to
+    ``cycle_lag`` are recorded as diagnostics only. In 'alpha_pip' and
+    'joint' modes they may stop the fit with ``converged=False``, returning
+    the current posterior. A NaN objective in 'elbo' mode switches, after
+    ``min_iter``, to the 'alpha_pip' rule, and the switch is recorded.
+    'joint' cannot be satisfied with a NaN objective. An infinite objective
+    stops the fit as a numerical failure in every mode, even before
+    ``min_iter``. The first finite objective, which follows the initial −∞
+    value, is never used for a convergence check.
     """
 
     criterion: str = "elbo"
@@ -30,6 +47,7 @@ class ConvergenceConfig:
     cycle_lag: int = 5
 
     def options(self):
+        """Validate the controls and return them as native fitting options."""
         if self.criterion not in ("elbo", "alpha_pip", "joint"):
             raise ValueError("criterion must be elbo, alpha_pip, or joint")
         if any(not math.isfinite(x) or x < 0 for x in (self.alpha_tol, self.pip_tol)):
@@ -56,18 +74,20 @@ class ConvergenceConfig:
 
     @classmethod
     def from_dict(cls, value):
-        """Restore the requested controls saved in result/cache metadata."""
+        """Restore and validate controls saved in a result or cache record."""
         config = cls(**value)
-        config.options()  # Validate persisted values before passing them to native code.
+        config.options()
         return config
 
 
 def resolve_convergence(fit=None, override=None):
-    """Resolve requested controls, never a runtime nonfinite fallback.
+    """Return the requested stopping controls and a record of their source.
 
-    Older results can recover the complete request from their diagnostic fields
-    or retained native options. If neither exists, defaults are an explicitly
-    recorded compatibility choice, not claimed inheritance.
+    Controls are taken from ``override``, else from ``fit.params``, else from
+    the convergence record or retained options of results that lack
+    ``params['convergence']``. If none is available, the defaults are used and
+    labelled as such. Only requested controls are resolved; a runtime NaN
+    fallback is never inherited.
     """
     previous = None
     source = "default" if fit is None else "legacy_default"
@@ -115,6 +135,7 @@ def resolve_convergence(fit=None, override=None):
 
 
 def nonconvergence_message(native):
+    """Warning text for a fit that did not satisfy its stopping rule."""
     return (
         f"IBSS did not converge after {native['niter']} iterations "
         f"(stop_reason={native['diagnostics']['stop_reason']}); "
@@ -123,6 +144,7 @@ def nonconvergence_message(native):
 
 
 def tracking_level(value):
+    """Map ``track_fit`` to the native level: 0 off, 1 compact, 2 dense."""
     if value is False or value is None:
         return 0
     if value is True or value == "compact":
@@ -133,6 +155,7 @@ def tracking_level(value):
 
 
 def convergence_summary(native, options, control):
+    """Combine native stopping diagnostics with the resolved controls."""
     d = dict(native["diagnostics"])
     trace = d.pop("trace")
     d.update(
@@ -165,7 +188,21 @@ def convergence_summary(native, options, control):
 
 
 def diagnose_convergence(fit):
-    """Return available evidence without reconstructing an unrecorded trace."""
+    """Return a copy of the convergence record of a fit.
+
+    Parameters
+    ----------
+    fit : SusieResult
+        A fitted result.
+
+    Returns
+    -------
+    dict
+        Requested and effective stopping rule, stop reason, last distances
+        and, when ``track_fit`` was used, per-sweep metrics. If no record
+        exists, ``stop_reason`` is 'not_available'; metrics are not
+        reconstructed after the fact.
+    """
     import copy
 
     if not getattr(fit, "convergence", None):

@@ -9,25 +9,34 @@ import numpy as np
 
 
 def load_example():
-    """Load an independent 500-variant synthetic toy example from package resources.
+    """Load the packaged 500-variant synthetic toy example.
 
     Returns
     -------
     dict
-        New mapping with ``inputs`` (z of shape (500,), signed R of shape
-        (500, 500), n=1000 and ordered variant IDs), ``parameters`` (explicit
-        fitting options), and ``metadata`` (generation method, seed, synthetic
-        coordinates and true effects). Arrays are owned by the caller.
+        A new mapping with ``inputs`` (z of shape (500,), signed R of shape
+        (500, 500), n = 1000 and variant IDs, suitable for :func:`susie_rss`),
+        ``parameters`` (the fitting options of the frozen reference) and
+        ``metadata`` (generation method, seed, synthetic coordinates and true
+        effects). Arrays are copies owned by the caller.
 
     Raises
     ------
     ValueError
-        A packaged input or metadata checksum differs from its frozen manifest.
+        A packaged input or metadata file does not match its recorded SHA-256
+        checksum.
 
     Notes
     -----
-    No working-directory, network or R dependency is required. The synthetic
-    response/predictor units are recorded in the metadata.
+    The data are simulated; no human study or genome build is implied. The
+    loader reads installed package resources and needs neither network access
+    nor R.
+
+    Examples
+    --------
+    >>> example = load_example()
+    >>> example["inputs"]["R"].shape
+    (500, 500)
     """
     directory = files("prusie").joinpath("data/teaching")
     hashes = json.loads(directory.joinpath("checksums.json").read_text())
@@ -49,12 +58,29 @@ def load_example():
 
 
 def load_convergence_example():
-    """Load the licensed official 200-SNP convergence toy sufficient statistics.
+    """Load the 200-variant sufficient statistics of the susieR convergence example.
 
-    The fixture contains no individual genotypes. Variant IDs are positional;
-    physical coordinates and allele labels are unavailable. Reference arrays
-    are frozen raw R fits; refinement deliberately fixes hard exclusion and
-    compares the uniformly recomputed post-trim objective.
+    Returns
+    -------
+    dict
+        ``inputs`` (XtX, Xty, yty and n for :func:`susie_suff_stat`),
+        ``parameters``, ``metadata`` (source and license) and ``reference``
+        (frozen arrays of the corresponding susieR fits).
+
+    Raises
+    ------
+    ValueError
+        A packaged file does not match its recorded SHA-256 checksum.
+
+    Notes
+    -----
+    The statistics derive from the ``FinemappingConvergence`` data of susieR
+    (BSD-3-Clause) and contain no individual genotypes. Variant IDs are
+    positional; physical coordinates and alleles are not available. The
+    reference arrays are unmodified susieR fits. prusie refinement differs
+    from that of susieR in two respects: excluded credible-set variants
+    receive exactly zero prior probability, and candidates are compared by
+    the objective recomputed after final trimming.
     """
     directory = files("prusie").joinpath("data/convergence")
     manifest = json.loads(directory.joinpath("checksums.json").read_text())
