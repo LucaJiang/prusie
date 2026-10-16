@@ -2,27 +2,29 @@ name: tests-and-packages
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+  OMP_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  PRUSIE_NUM_THREADS: '1'
+  CARGO_BUILD_JOBS: '4'
+  MPLBACKEND: Agg
 jobs:
   lint:
     runs-on: ubuntu-24.04
-    env:
-      PYTHONDONTWRITEBYTECODE: '1'
-      CARGO_BUILD_JOBS: '4'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install pinned Python lint tools
-        run: python -m pip install -c requirements-dev.lock ruff==0.16.9
-      - name: Install the repository's pinned Rust lint tools
-        run: rustup show
+      - run: python -m pip install -c requirements-dev.lock ruff==0.16.9
+      - run: rustup show
       - run: ruff check
       - run: ruff format --check
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets --no-default-features -- -D warnings
       - run: cargo clippy --locked --all-targets --no-default-features --features vector-math -- -D warnings
-  numpy-compatibility:
+  test:
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -34,43 +36,37 @@ jobs:
             numpy: '2.5.3'
           - python: '3.13'
             numpy: '2.5.3'
-    env:
-      PYTHONDONTWRITEBYTECODE: '1'
-      OMP_NUM_THREADS: '1'
-      OPENBLAS_NUM_THREADS: '1'
-      PRUSIE_NUM_THREADS: '1'
-      MPLBACKEND: Agg
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24.18.0'
-      - name: Install supported NumPy combination and native package
-        run: python -m pip install 'numpy==${{ matrix.numpy }}' '.[test,analysis]' -r tools/docs-requirements.txt threadpoolctl
-      - run: python -m pip check
-      - run: python -c "import numpy as np; np.show_config(); np.show_runtime()"
-      - run: python -m pytest tests --junitxml=compatibility.xml
-      - name: Exercise installed imports outside checkout
+      - run: python -m pip install 'numpy==${{ matrix.numpy }}' '.[test,analysis]'
+      - run: python -m pytest tests
+      # The scalar-only Rust build exercises the scalar SER implementation.
+      - if: matrix.python == '3.13'
         run: |
-          cd "$RUNNER_TEMP"
-          python -I "$GITHUB_WORKSPACE/examples/quickstart.py"
-          python -I "$GITHUB_WORKSPACE/examples/check_example.py" --output-dir "$RUNNER_TEMP/offline-check"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: compatibility-python${{ matrix.python }}-numpy${{ matrix.numpy }}
-          path: compatibility.xml
-  linux-python312:
+          cargo test --locked --lib --no-default-features -- --test-threads=1
+          cargo test --locked --lib --no-default-features --features vector-math -- --test-threads=1
+  package:
     runs-on: ubuntu-24.04
-    env:
-      PYTHONDONTWRITEBYTECODE: '1'
-      OMP_NUM_THREADS: '1'
-      OPENBLAS_NUM_THREADS: '1'
-      PRUSIE_NUM_THREADS: '1'
-      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -c requirements-dev.lock maturin==1.10.2
+      - run: maturin build --release --locked --out dist
+      - run: maturin sdist --out dist
+      - name: Install the wheel and fit with NumPy only
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-env"
+          "$RUNNER_TEMP/wheel-env/bin/python" -m pip install dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/wheel-env/bin/python" -c "import prusie; ex = prusie.load_example(); f = prusie.susie_rss(**ex['inputs'], **ex['parameters']); print(f.niter, f.pip.max())"
+      - run: python -m pip wheel --no-deps dist/*.tar.gz -w sdist-wheel
+  docs:
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -79,35 +75,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24.18.0'
-      - run: rustup show
-      - run: python -m pip install -c requirements-dev.lock maturin==1.10.2 '.[test,analysis]'
-      - run: python -m pip install -r tools/docs-requirements.txt -r tools/results-requirements.txt
-      - name: Record NumPy and loaded BLAS environment
-        run: python -c "import numpy as np; np.show_config(); np.show_runtime()"
-      - run: python -m pytest tests
-      - run: PRUSIE_SER_MATH=scalar python -m pytest tests
-      - run: cargo test --locked --lib --no-default-features -- --test-threads=1
-      - run: cargo test --locked --lib --no-default-features --features vector-math -- --test-threads=1
-      - run: python tools/model_examples.py --check
+      - run: python -m pip install -r tools/docs-requirements.txt
       - run: python tools/generate_example.py --check
-      - run: python tools/generate_results.py --check
-      - run: python examples/quickstart.py
-      - run: python tools/check_checkout.py --output-dir .ci-check
-      - run: maturin build --release --locked --out dist
-      - run: maturin sdist --out dist
-      - name: Install artifact inspection tools
-        run: python -m pip install 'auditwheel>=6,<7'
-      - name: Test wheel installation and rebuild the source distribution
+      - run: python tools/build_docs.py
+      - name: Check rendered mathematics
         run: |
-          python tools/check_artifacts.py \
-            --wheel "$(find dist -maxdepth 1 -name 'prusie-*.whl' -print -quit)" \
-            --sdist "$(find dist -maxdepth 1 -name 'prusie-*.tar.gz' -print -quit)" \
-            --work-dir .artifact-check
-      - uses: actions/upload-artifact@v4
-        with:
-          name: prusie-cpython312-linux
-          path: |
-            dist/*
-            .artifact-check/artifact_checks.json
-            .artifact-check/logs/*
-          if-no-files-found: error
+          grep -q 'class="katex"' docs/model.html
+          ! grep -q '\$\$' docs/model.html

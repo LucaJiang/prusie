@@ -2,4 +2,5 @@ Markdown==3.7
 Pygments==2.19.2
 pymdown-extensions==10.16.1
 PyYAML==6.0.2
-tomli==2.2.1; python_version < "3.11"
+numpy==2.2.6
+matplotlib==3.10.1

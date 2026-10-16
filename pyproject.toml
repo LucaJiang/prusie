@@ -12,7 +12,7 @@ requires-python = ">=3.10,<3.14"
 dependencies = ["numpy>=1.26,<3"]
 readme = "README.md"
 license = "GPL-3.0-or-later"
-license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/*.txt"]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 
 [project.urls]
 Repository = "https://github.com/LucaJiang/prusie"
@@ -27,22 +27,19 @@ analysis = ["scipy>=1.11", "matplotlib>=3.7"]
 python-source = "src"
 module-name = "prusie._native"
 features = ["extension-module", "vector-math"]
-# Large rendered example reports are available in the Git checkout.
+# Runtime Python files/data and Cargo sources are included by maturin.
+# The source distribution also includes the tests and their frozen references.
 exclude = [
     "dist/**", "target/**", "**/*.orig", "**/*.rej", "**/__pycache__/**",
-    ".pytest_cache/**", "docs/examples/**",
+    ".pytest_cache/**", ".ruff_cache/**", "docs/**", ".github/**", "tools/**",
+    "dev/**", "examples/quickstart.py", "examples/post_analysis.py",
+    "examples/check_example.py", "examples/README.md", "requirements-dev.lock",
 ]
-# Runtime Python files/data and Cargo build sources are included by maturin.
-# Keep development tests, frozen offline examples and their supporting tools in sdist.
 include = [
+    {path = "rust-toolchain.toml", format = "sdist"},
     {path = "rustfmt.toml", format = "sdist"},
-    {path = "dev/references/**", format = "sdist"},
     {path = "tests/**", format = "sdist"},
-    {path = "examples/**", format = "sdist"},
-    {path = "tools/**", format = "sdist"},
-    {path = "docs/**", format = "sdist"},
-    {path = ".github/**", format = "sdist"},
-    {path = "requirements-dev.lock", format = "sdist"},
+    {path = "examples/data/**", format = "sdist"},
     {path = "CITATION.cff", format = "sdist"},
     {path = "CHANGELOG.md", format = "sdist"},
 ]
@@ -63,7 +60,7 @@ allowed-confusables = ["α", "γ", "σ", "ℓ", "×", "−"]
 
 [tool.ruff.lint.per-file-ignores]
 # Mathematical signs and Greek labels are intentional output, not identifiers.
-"examples/check_example.py" = ["RUF001"]
+"tests/reference_coloc.py" = ["RUF001"]
 "src/prusie/_style.py" = ["RUF001"]
 "src/prusie/plots.py" = ["RUF001"]
 # Preserve the mathematical minus sign in the convergence criterion documentation.
