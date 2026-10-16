@@ -13,7 +13,7 @@ alternatives. Component IDs identify model rows, not ranks or known causal effec
 | Component alpha | Where does this one single-effect component place its probability? | Read within a component; its rows can exchange roles across fits |
 | Credible set (CS) | Which variants together reach the requested component posterior mass? | Read the actual mass, membership and original component ID |
 | Purity | Are the CS members strongly correlated with one another? | Minimum, mean and median absolute LD correlation; a singleton has purity 1 by definition |
-| Effective candidates | How concentrated is the biological component posterior? | Entropy-based resolution, distinct from CS size and causal count |
+| Effective number of variants | How concentrated is the component posterior? | Entropy-based resolution, distinct from CS size and causal count |
 
 For active components, marginal PIP is
 
@@ -39,13 +39,13 @@ print(prusie.summary_text(summary).splitlines()[0])
 ```
 
 For the [packaged example](example.md), `syn0100` has PIP about 0.9697 and
-`syn0350` about 0.99994. Each has a singleton CS. Their effective candidate counts
+`syn0350` about 0.99994. Each has a singleton CS. Their effective numbers of variants
 are approximately 1.146 and 1.001: most mass is concentrated, although neighboring
 variants can still carry small probabilities. See the
 [worked examples](worked_examples.md) for a retained two-variant CS whose members
 remain difficult to resolve.
 
-## Read the complete posterior context
+## Posterior summaries
 
 `summarize` provides variant, component and CS tables, the recorded CS pipeline
 audit, direct LD proxies and conditional prior/BF information. CS audit reasons
@@ -53,9 +53,11 @@ include inactive, duplicate, contains-null, low-purity, disabled and unavailable
 several reasons may apply. Changing summary coverage or purity re-extracts sets
 from the same posterior without running IBSS.
 
-The effective number of candidates is
-$\exp(-\sum_j a_j\log a_j)$, where biological component alpha is normalized by its
-biological mass. Null mass is reported separately. This is a continuous resolution
+The effective number of variants is $\exp(H_\ell)$, where
+$H_\ell=-\sum_j a_j\log a_j$ is the entropy of component $\ell$ and
+$a_j=\alpha_{\ell j}/\sum_{k\ne\mathrm{null}}\alpha_{\ell k}$ over non-null
+variants. The result field is `effective_candidates`; null mass is reported
+separately. This is a continuous resolution
 summary, with no automatic cutoff declaring a component to be a causal signal.
 
 Direct proxies require pairwise $|r|$ above the chosen threshold (default 0.99).

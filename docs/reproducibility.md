@@ -1,14 +1,12 @@
 # Reproducibility
 
-There are two complementary entrances: reproduce the published summaries from
-retained records, or rerun fitting from numerical inputs. The independent
-synthetic toy example supports both entirely offline after software installation.
-The real-data panel has public result records and separately obtained inputs.
+The repository includes measurement records for regenerating the published
+tables and figures, and toy inputs for running the examples offline.
+Real association inputs are obtained separately from their source studies.
 
-## Regenerate tables and figures
+## Tables and figures
 
-From the source checkout with Node.js available for math rendering
-(see [Contributing](contributing.md#editing-and-building-documentation)):
+From a checkout with Node.js and the [documentation tools](contributing.md#editing-and-building-documentation):
 
 ```sh
 python -m pip install -r tools/results-requirements.txt -r tools/docs-requirements.txt
@@ -20,26 +18,28 @@ python tools/build_docs.py --check
 python tools/check_docs.py
 ```
 
-The normalized source is `docs/assets/benchmark_records.json`. It contains only
-complete fine-mapping stage C, with explicit study groups, case/backend statuses,
-retained repeats, numerical diagnostics and measured identities. The generator
-recomputes case medians before paired group statistics, and creates README
-highlights, document tables, SVG/PDF figures and downloadable records. Fixed
-plot seeds make jitter reproducible. The accompanying toy example result record
-has a separately identified execution and input/reference checksums.
+`docs/assets/benchmark/` contains the prusie 0.2.4.dev2 measurements.
+`docs/assets/benchmark_records.json` contains the earlier 0.2.3rc4 records.
+The generator reads these records to produce displayed tables and the earlier
+comparison figures. It leaves the dev2 source records unchanged. To redraw the
+dev2 figures:
 
-Anonymized real-panel records include source hashes and positional error traces;
-they do not contain association vectors or LD matrices. Regenerating these
-figures is result-level reproducibility, not a rerun of the private input archive.
-The old measured native SHA256 remains identified in the protocol; new local
-builds do not acquire the old timing identity.
+```sh
+python tools/benchmark/plot_current.py \
+  --real docs/assets/benchmark/real_summary.json \
+  --scaling docs/assets/benchmark/scaling_summary.json \
+  --output output/benchmark-figures
+```
 
-## Rerun the independent example
+Records contain case/backend statuses, repeats, numerical comparisons and
+software identities. Anonymous locus labels and aggregate results are public;
+association vectors and LD matrices are not included. The
+[performance page](performance.md#reproducibility) links the measured binary hashes.
 
-The wheel includes `prusie/data/toy`: input arrays, generation metadata,
-checksums, the R reference arrays and reference metadata. `load_example()` uses
-`importlib.resources`, so no repository path is required. To inspect the
-resources:
+## Toy example
+
+The wheel includes `prusie/data/toy`: arrays, metadata, checksums and the R
+reference. `load_example()` reads these installed resources:
 
 ```python
 from importlib.resources import files
@@ -50,7 +50,7 @@ reference = json.loads(resources.joinpath("reference.json").read_text())
 print(reference["susieR_version"], reference["susieR_commit"])
 ```
 
-From a checkout with the package installed:
+From a checkout with prusie installed:
 
 ```sh
 python examples/quickstart.py
@@ -58,70 +58,56 @@ python -m pytest tests/test_packaged_example.py
 python tools/generate_example.py --check
 ```
 
-The frozen-reference check needs no R. To generate inputs again, use
-`python tools/generate_example.py --output-dir NEW_DIRECTORY` with NumPy 2.2.6.
-This is one deterministic toy example, rather than a simulation study.
+The check needs no R installation. To regenerate the inputs in a new directory,
+use `python tools/generate_example.py --output-dir NEW_DIRECTORY` with NumPy 2.2.6.
 
-### Toy data regeneration
+### Regeneration checks
 
-`--check` independently verifies the original SHA256 manifest and the exact
-frozen input, metadata and license bytes. It then regenerates the data with
-NumPy 2.2.6 and compares array names, shapes, dtypes and finite values. Metadata,
-true effects and coordinates must match exactly. The recorded NumPy version
-describes the original generation environment and is never replaced during a check.
+`--check` verifies the stored SHA-256 manifest and the input, metadata and
+license bytes. It then compares regenerated arrays by name, shape, dtype and
+value. True effects and coordinates must match exactly. Metadata retains the
+original NumPy version.
 
-Single-threaded OpenBLAS 0.3.29 kernels (SkylakeX, Haswell and Sandybridge)
-produced maximum absolute differences of 1.60e-14 for z, 1.12e-15 for R,
-5.56e-16 for marginal effects and 2.09e-17 for their standard errors.
-The respective regeneration bounds are 8e-14, 5e-15, 3e-15 and 1e-16,
-with zero relative tolerance. ZIP encoding is not compared for regenerated
-arrays. Re-encoding or editing the committed frozen files still fails their
-exact integrity checks. These generation checks do not change the independent
-R-reference PIP criterion (absolute error at most 1e-5, zero relative tolerance),
-credible-set checks or fitting options.
+With one thread, OpenBLAS 0.3.29 kernels SkylakeX, Haswell and Sandybridge produce
+maximum differences of 1.60e-14 for z, 1.12e-15 for R, 5.56e-16 for marginal
+effects and 2.09e-17 for their standard errors. Regeneration tolerances are
+8e-14, 5e-15, 3e-15 and 1e-16, respectively, with zero relative tolerance.
+Compressed archive bytes may differ after regeneration. The shipped files must
+still match their hashes. PIP comparisons with the R reference use absolute
+tolerance 1e-5 and zero relative tolerance.
 
-For a live comparison, install susieR 0.16.6 at the recorded commit and jsonlite
-in your chosen R library. Check the R installation:
+### R comparison
 
-```r
-library(susieR)
-packageVersion("susieR")
-```
-
-Then use:
+Install susieR 0.16.6 at the recorded commit and jsonlite in your R library.
+Verify the package version, then run:
 
 ```sh
 python tools/benchmark/compare_r.py --rscript Rscript \
   --validation-only --output-dir new-reference-comparison
 ```
 
-The [benchmark guide](https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md)
-describes the high-resolution clock, seven-repeat timing, fresh-process memory
-measurement and portable case format. Generated references go to a new output
-directory; the shipped reference is unchanged.
+The [comparison guide](https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md)
+describes the timing protocol, process memory measurements and portable input
+format. Write new references to a new output directory.
 
 ## Real GWAS and eQTL inputs
 
-The [real-data recipes](real_data.md) identify distinct GWAS and eQTL sources,
-access conditions and preprocessing requirements. The evaluated panel consists
-of one FinnGen R10 study and one BLUEPRINT monocyte eQTL dataset across 100
-windows (83 distinct genes). Its manifest was fixed before the original
-comparison. It uses external FIN/EUR reference LD and shares participants across
-analyses.
+The [data recipes](real_data.md) identify the GWAS and eQTL source pages,
+access conditions and preprocessing. The measurements use one FinnGen R10
+study and one BLUEPRINT monocyte eQTL dataset across 100 windows, representing
+83 genes. They use external FIN/EUR reference LD and share study participants
+across loci.
 
-An exact input-level rerun needs the original aligned summaries, LD, variant
-order and frozen options. A newly downloaded dataset or a newly constructed LD
-panel is a separately identified analysis, even when it concerns the same locus.
-Use the portable case drivers to record the new hashes and full parameters.
+Reproducing a fit requires the same aligned summaries, LD, variant order and
+settings. Downloaded revisions or newly constructed LD panels define new
+inputs; record their hashes and parameters with the portable case drivers.
 
-## Software and reference identities
+## Software and references
 
-The retained real-panel records identify prusie 0.2.3rc4, its measured native
-hash, Python/NumPy versions and loaded numerical libraries, plus susieR 0.16.6
-commit `8e56a8e038e989856d106d9ca5175cc664fea9d2`, R and BLAS versions.
-The toy example reference uses the same pinned R source and records its own
-raw-record hash. The original attributed regression inputs and R outputs remain
-separate in `examples/data` with their existing license and checksums.
-
-See [numerical accuracy](numerical_accuracy.md),
-[performance](performance.md) and [contributing](contributing.md).
+Measurement records identify prusie 0.2.4.dev2 or 0.2.3rc4, the native extension,
+Python/NumPy versions and loaded numerical libraries. The statistical reference
+is susieR 0.16.6 at commit `8e56a8e038e989856d106d9ca5175cc664fea9d2`.
+The toy reference records the same R source and its own output hash.
+The attributed regression inputs in `examples/data` retain their source,
+reference outputs and licenses. [Worked examples](worked_examples.md#sources-and-reproducibility)
+provide saved posterior states and report rendering commands.

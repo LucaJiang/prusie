@@ -1,4 +1,4 @@
-"""Supplemental analytical acceptance-bound cases requested by independent D."""
+"""Analytical cases at floating-point input validation boundaries."""
 
 import numpy as np
 import pytest

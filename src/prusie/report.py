@@ -364,7 +364,8 @@ def export_tables(summary: Mapping, directory: str | Path) -> list[str]:
 
 _METHODS = """PIP is marginal inclusion probability across active components; alpha is a
 component probability. Credible sets use the recorded posterior coverage and LD purity
-filters. Effective candidate counts summarize posterior concentration, not causal counts.
+filters. The effective number of variants is exp(entropy of component alpha),
+normalized over non-null variants; it describes concentration, not a causal count.
 ELBO stopping, posterior stability and refinement improvement answer different questions.
 Refinement compares restored-prior candidates against the same original model objective.
 An unsuccessful attempted search does not establish global optimality. LD diagnostics assess
@@ -752,7 +753,7 @@ def summary_text(summary: Mapping, *, ld=None, comparison=None) -> str:
             f"; "
             f"coverage {_display(row.get('actual_coverage'), probability=True)}"
             f"; "
-            f"effective candidates {_display(row.get('effective_candidates'))}"
+            f"effective variants {_display(row.get('effective_candidates'))}"
             f"."
         )
     candidates = results["candidates"][:5]
@@ -782,7 +783,7 @@ def summary_text(summary: Mapping, *, ld=None, comparison=None) -> str:
             f"Refinement: {search['accepted_attempts']}"
             f"/{search['attempts']}"
             f" attempts accepted; "
-            f"post-trim original-model objective "
+            f"full-model ELBO "
             f"change {_display(search['improvement'])}"
             f"."
         )
@@ -1001,13 +1002,13 @@ def write_report(
         "component_id": "Component ID",
         "actual_coverage": "Posterior mass",
         "requested_coverage": "CS target",
-        "effective_candidates": "Effective candidates",
+        "effective_candidates": "Effective number of variants",
         "min_abs_corr": "Minimum |r|",
         "cs_components": "CS components",
         "selection_sources": "Display selection",
         "max_abs_delta_pip": "Maximum |ΔPIP|",
-        "before_objective": "Before objective",
-        "after_objective": "After objective",
+        "before_objective": "ELBO before refinement",
+        "after_objective": "ELBO after refinement",
     }
 
     def cell(value, key):
@@ -1183,9 +1184,9 @@ def write_report(
             [_select(search, ("stop_reason", "before_objective", "after_objective", "improvement"))]
         )
         sections.append(
-            '<p class="caption">Improvement uses the common '
-            "original-prior objective recomputed from the complete "
-            "post-trim state. A negative rejected candidate does "
+            '<p class="caption">Improvement compares full-model ELBO under the '
+            "original prior, evaluated after zeroing components with "
+            "V &lt; prior_tol (the post-trim state). A negative rejected candidate does "
             "not mean the accepted solution regressed. Logged "
             "pre-finalization ELBO remains separate in the full "
             "search record.</p>"
@@ -1320,8 +1321,8 @@ def write_report(
             "fit": (
                 "The inner stopping condition and improvement after "
                 "search answer different questions. Refinement "
-                "improvements use the common original-prior post-trim "
-                "objective; logged ELBO remains separate."
+                "improvements use the full-model ELBO defined above; "
+                "the iteration log records ELBO before finalization."
             ),
             "variance": (
                 "Prior-variance and residual-variance paths describe "

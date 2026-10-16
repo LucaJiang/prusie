@@ -55,8 +55,8 @@ sensitivity_view = plot_sensitivity(
 The two leading CS, `{syn0100}` and `{syn0350}`, persist in the saved comparison.
 L=6 and the coverage-only change leave all PIPs unchanged. Fixing
 `scaled_prior_variance=0.05` with `estimate_prior_variance=False` changes the
-background: `syn0143` rises from about 5.318×10⁻¹¹ to 0.2544, and `syn0145` from
-about 2.066×10⁻¹¹ to 0.1430.
+background: `syn0143` rises from about 5.318e-11 to 0.2544, and `syn0145` from
+about 2.066e-11 to 0.1430.
 
 The fixed positive variance keeps all five components active, including three
 without retained CS. With estimation disabled, those components cannot shrink

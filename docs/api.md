@@ -187,7 +187,7 @@ needed to interpret the view. Existing Matplotlib axes can be passed with
 | --- | --- |
 | `plot_locus(summary, *, R=None, layout="full", ...)` | Association, PIP, CS and reference r² on the same coordinates; optional annotated gene track |
 | `plot_convergence(fit_or_summary, *, after=None, layout="full", ...)` | `compact`: ELBO, signed ΔELBO, Δalpha, ΔPIP; `variance`: V and sigma²; `full`: all six metrics |
-| `plot_refinement(before, after, *, layout="full", ...)` | Candidate PIPs, stage-B gains and accepted objective path; `compact` moves long evidence out of the figure |
+| `plot_refinement(before, after, *, layout="full", ...)` | Candidate PIPs, refit ELBO gains and accepted ELBO path; `compact` moves long evidence out of the figure |
 | `plot_sensitivity(comparison, *, layout="full", candidates_only=True, layer="signals", ...)` | Baseline-first candidate heatmap and main signal relations; `components` retains all active-component relations |
 | `plot_signal(summary, component_id=None, *, variant_id=None, layout="full", ld_measure="r", ...)` | Component posterior, cumulative mass, CS, resolution and LD; `ld_measure="r2"` selects an explicitly labelled r² view |
 | `plot_prior_influence(summary, component_id=None, *, variant_id=None, variant_ids=None, layout="full", ...)` | Supplied/effective prior, conditional log BF and alpha in aligned variant order |

@@ -10,24 +10,24 @@ condition, then finds a better solution through refinement.
 | Stable | Packaged 500-variant synthetic toy data | [Offline report](examples/post_analysis/stable/index.html), [figure index](examples/post_analysis/stable/figure_index.json) |
 | Problem | Official susieR 200-SNP `FinemappingConvergence` sufficient statistics | [Offline report](examples/post_analysis/problem/index.html), [figure index](examples/post_analysis/problem/figure_index.json) |
 
-These are saved numerical examples from the source revisions identified under
-[Sources and reproducibility](#sources-and-reproducibility). Their values are
-rounded for reading; the linked tables retain complete values, variant IDs and
-comparison support. Rendering these records with a newer package does not
-remeasure its fits.
+The baseline and refined fits use prusie 0.2.3rc6; additional sensitivity fits
+use 0.2.4.dev1. Values are rounded for display; linked tables retain full
+precision and variant IDs. See [reproducibility](#sources-and-reproducibility)
+for the input and software identities.
 
 ## Stable signals with a prior-sensitive background
 
 The baseline stops after three sweeps with the requested and effective ELBO rule,
 at tolerance 0.001. It has two active components and two singleton CS,
 `{syn0100}` and `{syn0350}`. Their posterior masses are approximately 0.9697 and
-0.99994, and their effective candidate counts are 1.146 and 1.001. Singleton
+0.99994, and their effective numbers of variants are 1.146 and 1.001. Singleton
 purity is 1 by definition; it does not describe LD to surrounding variants.
 
 Refinement tests two exclusions in one round, using four inner fits. Neither
-stage-B candidate improves the common objective by more than 0.001, so no
-candidate is accepted. Before and after have the same post-trim original-model
-objective, approximately −1363.854754, and identical PIPs. This supports stability
+refit started from an excluded-variant solution improves the ELBO by more than
+0.001, so no candidate is accepted. Before and after have the same ELBO,
+approximately −1363.854754, and identical PIPs. The [refinement guide](post_analysis.md)
+defines the ELBO used in this comparison. This supports stability
 under the executed search, without establishing global optimality.
 
 ![The stable example's candidate PIP heatmap across baseline, larger L, fixed scaled prior variance and changed CS coverage.](examples/post_analysis/stable/figure_5.png)
@@ -37,8 +37,8 @@ under the executed search, without establishing global optimality.
 | syn0350 | 0.99994 | 0.99995 |
 | syn0100 | 0.9697 | 0.9777 |
 | syn0101 | 0.03028 | 0.02701 |
-| syn0143 | 5.318×10⁻¹¹ | 0.2544 |
-| syn0145 | 2.066×10⁻¹¹ | 0.1430 |
+| syn0143 | 5.318e-11 | 0.2544 |
+| syn0145 | 2.066e-11 | 0.1430 |
 
 Increasing L from 5 to 6 leaves all PIPs unchanged. Changing reported CS coverage
 from 0.95 to 0.90 also leaves them unchanged, because that operation reuses the
@@ -73,7 +73,7 @@ candidate satisfies its inner stopping rule after three sweeps.
 
 ![Initial ten-sweep and returned three-sweep convergence trajectories with independent iteration axes.](examples/post_analysis/problem/figure_2.png){.figure-complex}
 
-The comparable **post-trim original-model objective** changes from
+The **ELBO** changes from
 −70832.271605 to −70814.813295, a gain of **17.4583**. The final logged sweep ELBO
 has a slightly different value and is not substituted in this comparison.
 Different starting solutions have different outcomes even though both satisfy
@@ -99,7 +99,7 @@ unchanged CS.
 ### What remains unresolved
 
 The refined `{86,90}` CS has mass greater than 0.9999, approximately 1.595 effective
-candidates, and |r| = 0.9989. Its roughly 0.177/0.823 probability allocation leaves
+variants, and |r| = 0.9989. Its roughly 0.177/0.823 probability allocation leaves
 LD-limited resolution. The LD panel displays r² (approximately 0.9978 off the
 diagonal) on a fixed 0–1 scale. The report shows this pair separately from the concentrated
 singleton `{33}`.
@@ -133,9 +133,7 @@ input identity when assessing this result.
 
 Read the [full comparison](examples/post_analysis/problem/comparison.json),
 [posterior and search summary](examples/post_analysis/problem/posterior_summary.json)
-and [LD diagnostics](examples/post_analysis/problem/ld_diagnostics.json). Exact
-paired R flip-flag agreement was not established for either full example; the
-separate small-fixture numerical checks do not supply that missing comparison.
+and [LD diagnostics](examples/post_analysis/problem/ld_diagnostics.json). Paired R flip-flag agreement has not been established for these two examples.
 
 ## Choose a signal detail
 

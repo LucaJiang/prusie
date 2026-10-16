@@ -175,7 +175,7 @@ trim components below prior_tol and construct summaries
 
 With a finite ELBO and the default rule, convergence can first be declared
 after `min_iter` sweeps (two by default); repeated posterior states are only
-recorded as diagnostics. [Convergence and refinement](post_analysis.md#read-the-stopping-evidence)
+recorded as diagnostics. [Convergence and refinement](post_analysis.md#convergence-diagnostics)
 gives the exact objective condition and the exceptional stops.
 
 With `estimate_prior_method="optim"`, each update maximizes the SER log marginal

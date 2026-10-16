@@ -1,4 +1,4 @@
-"""Deterministic analytical cases for new layout, full validation and ownership."""
+"""Analytical cases for array layout, validation and ownership."""
 
 import numpy as np
 import pytest

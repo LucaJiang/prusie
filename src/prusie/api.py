@@ -110,6 +110,7 @@ def _warn(message: str, collected: list[str]) -> None:
     warning_module.warn(message, RuntimeWarning, stacklevel=3)
 
 
+# The public wrapper hides the private keyword arguments of _susie_suff_stat.
 def susie_suff_stat(
     XtX: ArrayLike,
     Xty: ArrayLike,

@@ -75,12 +75,17 @@ baseline's **requested** convergence configuration unless explicitly overridden;
 alpha/PIP fallback after a NaN ELBO is recorded as the effective rule and
 does not replace the original request for later calls.
 
-Each exclusion attempt has two stages: A temporarily excludes one retained CS
-and fits from a cold start; B restores the original prior and model and starts
-from A's posterior moments. Only valid, finite, converged B candidates compete
-under the common original-prior **post-trim objective**. The best candidate must
-improve it by more than `absolute_tol`. No accepted attempt means stability under
-this executed search, not a global-optimum certificate.
+Each refinement attempt first excludes one retained credible set by setting its
+prior weights to zero and fits from a cold start. It then restores the original
+prior and refits, starting from the excluded-variant solution. The saved search
+records call these steps A and B, respectively.
+
+Candidates are compared using the **ELBO of the full model with the original
+prior**, evaluated after zeroing components with $V_\ell < \mathtt{prior\_tol}$.
+Below, “ELBO” refers to this value; the iteration log stores the value before
+that finalization step. A candidate must be valid, finite and converged, and
+improve the ELBO by more than `absolute_tol`. An unsuccessful search does not
+establish global optimality.
 
 ## Refinement compared with susieR
 
@@ -91,9 +96,9 @@ standard-fit R agreement alone does not validate refinement equivalence.
 
 | Step or control | prusie | Pinned susieR |
 | --- | --- | --- |
-| Stage A | Cold fit; CS weights are zero with log weight −∞, enforcing hard exclusion | Cold fit; zero CS weights enter the ordinary `log(pi + sqrt(eps))` convention, retaining small prior support |
-| Stage B | Restore original prior and model; initialize alpha/mu/mu2 from A, reset V and sigma² to original initialization | Restore original prior; initialize alpha/mu/mu2 from A with ordinary variance initialization |
-| Objective used to select B | Recomputed complete post-trim state under the original prior; A's objective is diagnostic only | Last logged ELBO returned by `susie_get_objective`; A's objective is not compared with the baseline |
+| Excluded-variant fit (A) | Cold fit; CS weights are zero with log weight −∞, enforcing hard exclusion | Cold fit; zero CS weights enter the ordinary `log(pi + sqrt(eps))` convention, retaining small prior support |
+| Refit under the original prior (B) | Restore original prior and model; initialize alpha/mu/mu2 from A, reset V and sigma² to original initialization | Restore original prior; initialize alpha/mu/mu2 from A with ordinary variance initialization |
+| Candidate ELBO | Full model after zeroing low-variance components; A's objective is diagnostic only | Last logged ELBO returned by `susie_get_objective`; A's objective is not compared with the baseline |
 | Required absolute gain | Strictly greater than `absolute_tol=1e-3` | Strictly greater than fit `tol`, default `1e-4` |
 | Relative round stop | Disabled (`relative_tol=None`); if set, accepted gain divided by `max(1, abs(incumbent objective))` is compared with it | Absolute logged gain divided by `max(1, abs(new objective))` is compared with fit `tol` |
 | Convergence eligibility | Baseline and both A/B fits must be converged; returned `converged` describes IBSS separately from search status | No explicit baseline/A/B convergence eligibility test; the outer search overwrites `converged` with its own status |
@@ -123,17 +128,16 @@ print("Same PIPs:", bool((fit_for_search.pip == refined.pip).all()))
 
 This example prints `Same PIPs: True`; the returned trajectory is labelled
 **After search (unchanged)**. Before and after have independent iteration axes.
-The refinement figure compares candidate PIPs, B-stage gains relative to each
-round's incumbent, and the accepted objective path. Full records distinguish
+The refinement figure compares candidate PIPs, ELBO gains relative to the best
+fit at the start of each round, and the ELBO of accepted solutions. Full records distinguish
 failed, unconverged, below-threshold, valid but unselected, and accepted candidates.
 
 The [problem example](worked_examples.md#a-stopped-fit-improved-by-refinement)
 illustrates a different outcome: its initial fit satisfies the stopping rule,
-yet refinement improves the comparable objective by 17.4583. The final logged
-sweep ELBO precedes finalization and can differ from the post-trim objective;
-use the latter for candidate comparisons.
+yet refinement improves the ELBO by 17.4583. The final logged
+sweep ELBO precedes finalization; use the finalized ELBO for candidate comparisons.
 
-## Read the stopping evidence
+## Convergence diagnostics
 
 `fit.convergence` contains requested/effective criterion, thresholds, iteration
 count, stop reason, last distances and recorded events. `fit.converged` and
@@ -214,7 +218,7 @@ change is $\Delta\mathrm{ELBO}/\max(1,|\mathrm{ELBO}_{t-1}|)$.
 
 After a non-stopping sweep, residual variance may be updated. Final trimming
 zeros components with $V_l<\mathrm{prior\_tol}$, including at the iteration
-limit. Historical `elbo` and `XtXr` retain their established phases;
+limit. Stored `elbo` and `XtXr` retain their pre-finalization values;
 `evaluate_objective(fit)` explicitly recomputes likelihood, KL and fitted
 products from the complete saved state. `convergence['finalization']` separates
 trim changes from iterations. The CS activity threshold remains $10^{-9}$;
@@ -249,7 +253,7 @@ Requested controls are read from `params['convergence']`, with labelled recovery
 from diagnostics or retained options for older results. If no original controls
 were recorded, compatibility defaults are identified rather than presented as
 inheritance. Per-stage `solver_settings` and `convergence` record the resolved
-controls for new refinement runs; historical files may not contain these fields.
+controls for refinement runs; older saved files may lack these fields.
 
 </details>
 

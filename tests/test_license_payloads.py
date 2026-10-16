@@ -1,4 +1,4 @@
-"""Exercise missing terms, review drift and the actual archive-reader interface."""
+"""Check license terms, dependency changes and distribution archives."""
 
 import re
 import shutil

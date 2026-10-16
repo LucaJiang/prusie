@@ -197,7 +197,7 @@ predictors, nonzero coefficients 0.35 and −0.30 at zero-based indices 99 and
 synthetic positions at intervals of 1000 units. `tools/generate_example.py --check`
 verifies the exact SHA-256 hashes of the frozen files and compares regenerated
 values within bounds on floating-point rounding error; see the
-[regeneration criteria](reproducibility.md#toy-data-regeneration).
+[regeneration criteria](reproducibility.md#regeneration-checks).
 
 The packaged reference was fitted separately with susieR 0.16.6 using the same
 inputs and options. The hashes of inputs and reference, the parameters, the

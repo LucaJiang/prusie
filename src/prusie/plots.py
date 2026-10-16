@@ -1276,8 +1276,8 @@ def plot_refinement(
     figure : matplotlib Figure
     axes : ndarray of Axes
     plotted_data : dict
-        PIPs of both fits, stage-B objective gains relative to each round's
-        incumbent, the accepted objective path and the credible sets.
+        PIPs of both fits, ELBO gains from refits started at excluded-variant
+        solutions, the accepted ELBO path and the credible sets.
     """
     compact = _layout(layout)
     from .comparison import comparison_relations
@@ -1446,8 +1446,8 @@ def plot_refinement(
             ls="--",
             label="Accept above " + format_number(threshold),
         )
-    axs[1].set_xlabel("B-stage attempt (round shown below)")
-    axs[1].set_ylabel("B objective − round incumbent")
+    axs[1].set_xlabel("Refit attempt (round shown below)")
+    axs[1].set_ylabel("ELBO gain over current best")
     if history:
         axs[1].legend(fontsize=9, ncol=2 if len(set(candidate_states)) > 2 else 1)
         axs[1].set_xticks(
@@ -1489,13 +1489,17 @@ def plot_refinement(
         )
         axs[2].set_xticks(
             range(len(incumbent_path)),
-            [f"Round {row['round']}\n{row['stage']}" for row in incumbent_path],
+            [
+                f"Round {row['round']}\n"
+                + ("Accepted refit" if row["stage"] == "accepted B candidate" else "Current best")
+                for row in incumbent_path
+            ],
             fontsize=9,
         )
     elif not legacy_three:
         _missing(axs[2], "Accepted incumbent trajectory not recorded")
     if not legacy_three:
-        axs[2].set_ylabel("Post-trim original-model ELBO")
+        axs[2].set_ylabel("Full-model ELBO")
     best = refinement.get("best_objective")
     axs[1 if legacy_three else 2].set_title(
         "Final best: "
