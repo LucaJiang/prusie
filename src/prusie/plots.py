@@ -3,8 +3,8 @@
 Matplotlib is imported only when a function is called. Each plotting
 function returns ``(figure, axes, plotted_data)`` and accepts existing axes;
 ``plotted_data`` records the plotted values and selection rules. Inputs and
-the global Matplotlib configuration are not modified. Axis labels may be
-thinned, but every observation is drawn. Compact layouts show a stated
+the global Matplotlib configuration are not modified. Regional axis labels
+may be thinned without removing observations. Compact layouts show a stated
 subset of candidates and return the complete records; full layouts can
 paginate their tables.
 """
@@ -232,7 +232,7 @@ def read_gene_track(
 
     Notes
     -----
-    Gene records are used only when the file contains no transcript records;
+    Gene records are used only when no transcript records pass the filters;
     no transcript is selected implicitly. A table of the same form can be
     passed to :func:`plot_locus` directly.
     """
@@ -647,8 +647,9 @@ def plot_signal(
     summary : dict
         Output of :func:`prusie.summarize`.
     component_id : int, optional
-        Effect to plot. Alternatively, ``variant_id`` selects the effect that
-        contains that variant.
+        Effect to plot. If omitted, selection prefers effects with a credible
+        set; ``variant_id`` then selects the effect with the highest alpha
+        for that variant among those candidates.
     variant_id : str, optional
         Variant used to select the effect; it is always shown.
     R : array_like, optional
@@ -1836,8 +1837,9 @@ def plot_sensitivity(
     axes : sequence of matplotlib Axes, optional
         Existing axes.
     layer : {'signals', 'components'}, default 'signals'
-        Relations shown: between retained credible sets, or between all
-        active effects.
+        'signals' shows retained credible sets and posterior-overlap
+        relations to unresolved effects; 'components' includes all active
+        or CS-retained effects.
     baseline_only : bool, default True
         Show only relations to the baseline.
     table_page, table_page_size : int, optional

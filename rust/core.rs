@@ -2112,7 +2112,7 @@ pub fn fit_controlled(
             snapshot.events.push("numerical_failure".into());
         }
         if control.track > 0 {
-            // In compact mode the binding thresholds α for display; only dense
+            // Compact mode thresholds α below for display; only dense
             // mode records the moments. Distances never use these records.
             snapshot.pip = current_pip.clone();
             if control.track == 2 {

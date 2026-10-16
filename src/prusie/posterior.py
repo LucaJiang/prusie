@@ -77,10 +77,11 @@ def credible_sets(
     -------
     dict
         ``cs`` (member index arrays), ``cs_index`` (original effect indices),
-        ``coverage`` and its alias ``actual_coverage`` (the same array of
-        posterior masses), ``requested_coverage`` and ``purity`` (minimum,
-        mean and median absolute correlation). Empty results keep these keys
-        with empty arrays.
+        ``coverage`` and ``actual_coverage`` (posterior masses, sharing one
+        array for nonempty results), ``requested_coverage`` and ``purity``
+        (minimum, mean and median absolute correlation). Empty results keep
+        an empty ``cs`` list and empty arrays; ``requested_coverage`` retains
+        the supplied target.
 
     Notes
     -----

@@ -58,7 +58,7 @@ def load_example():
 
 
 def load_convergence_example():
-    """Load the 200-variant sufficient statistics of the susieR convergence example.
+    """Load the 200-variant sufficient statistics of the susieR convergence toy example.
 
     Returns
     -------
@@ -77,10 +77,10 @@ def load_convergence_example():
     The statistics derive from the ``FinemappingConvergence`` data of susieR
     (BSD-3-Clause) and contain no individual genotypes. Variant IDs are
     positional; physical coordinates and alleles are not available. The
-    reference arrays are unmodified susieR fits. prusie refinement differs
-    from that of susieR in two respects: excluded credible-set variants
-    receive exactly zero prior probability, and candidates are compared by
-    the objective recomputed after final trimming.
+    reference arrays are unmodified susieR fits. The prusie refinement search
+    uses hard exclusion of credible-set variants and compares candidates by
+    the objective recomputed after final trimming; it does not reproduce the
+    reference refinement procedure exactly.
     """
     directory = files("prusie").joinpath("data/convergence")
     manifest = json.loads(directory.joinpath("checksums.json").read_text())

@@ -199,9 +199,9 @@ def diagnose_convergence(fit):
     -------
     dict
         Requested and effective stopping rule, stop reason, last distances
-        and, when ``track_fit`` was used, per-sweep metrics. If no record
-        exists, ``stop_reason`` is 'not_available'; metrics are not
-        reconstructed after the fact.
+        and whether a trace is available. Per-sweep metrics are stored
+        separately in ``fit.trace``. If no convergence record exists,
+        ``stop_reason`` is 'not_available'; metrics are not reconstructed.
     """
     import copy
 

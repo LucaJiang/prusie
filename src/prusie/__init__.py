@@ -1,8 +1,9 @@
 """prusie: Sum of Single Effects (SuSiE) fine-mapping with a native IBSS solver.
 
 The fitting functions :func:`susie_rss` and :func:`susie_suff_stat` implement
-the Gaussian SuSiE and SuSiE-RSS models of susieR 0.16.6. The remaining
-functions summarize, diagnose and compare fitted results.
+the Gaussian SuSiE and SuSiE-RSS models of susieR 0.16.6. Additional functions
+summarize and compare results, diagnose LD consistency, continue or refine
+fits, and run explicit sensitivity analyses.
 """
 
 from .analysis import summarize

@@ -102,8 +102,8 @@ pub enum StopDecision {
 /// Stopping decision after a sweep. With a finite objective the requested rule
 /// is applied; in 'elbo' mode it requires 0 ≤ ΔELBO < tol. A NaN objective in
 /// 'elbo' mode switches to the α/PIP rule (the second return value). An
-/// infinite objective, or NaN in 'joint' mode, is a numerical failure, as in the
-/// susieR objective evaluation. Cycles at lag > 1 stop only the 'alpha_pip' and
+/// infinite objective is a numerical failure; NaN also fails 'joint' mode,
+/// which requires a finite objective. Cycles at lag > 1 stop only the 'alpha_pip' and
 /// 'joint' modes or the NaN fallback, and do not count as convergence.
 pub fn stopping_decision(
     control: &FitControl,

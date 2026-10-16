@@ -331,9 +331,10 @@ def compare_fits(
     -------
     dict
         Per-variant PIPs, ranks and candidate sources; ``signal_relations``
-        between effects with retained credible sets; ``component_relations``
-        between all active effects; pairwise PIP summaries, allele
-        alignment, thresholds, definitions and limitations.
+        between retained credible sets and their posterior-overlap relations
+        to unresolved effects; ``component_relations`` for all active or
+        CS-retained effects; pairwise PIP summaries, allele alignment,
+        thresholds, definitions and limitations.
 
     Notes
     -----
@@ -341,8 +342,11 @@ def compare_fits(
     described by ``top_candidates`` and every variant crossing
     ``pip_threshold`` in any fit. In ``mode='union'``, all variants are
     listed, and each pair of fits is compared on the variants they share. In
-    ``mode='common'``, every quantity uses the variants present in all fits,
-    and an LD relation requires both representatives to be among them.
+    ``mode='common'``, ranks, candidate selection, PIP comparisons and
+    posterior/CS overlap use the variants present in all fits, and an LD
+    relation requires both representatives to be among them. Component
+    records, formal credible sets and resolution summaries retain the
+    original fit support.
     Posterior mass is never renormalized to the shared variants, and missing
     variants are reported as None rather than as zero PIP. Relations
     describe overlap of posterior support; they are not evidence that

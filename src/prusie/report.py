@@ -855,10 +855,11 @@ def write_report(
     Returns
     -------
     dict
-        Absolute paths of the written files under the keys ``html``,
-        ``persistence`` (``analysis.json`` and ``arrays.npz``), ``tables``,
-        ``figures``, ``figure_index``, ``text_summary``, ``analysis_summary``
-        and ``evidence``, and the ``evidence_sha256`` digest.
+        Absolute paths under ``html``, ``tables``, ``figures``,
+        ``figure_index``, ``text_summary``, ``analysis_summary`` and
+        ``evidence``; ``persistence`` holds path/checksum records for
+        ``analysis.json`` and ``arrays.npz``. ``evidence_sha256`` is the
+        evidence bundle digest.
 
     Notes
     -----

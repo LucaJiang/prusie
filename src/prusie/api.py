@@ -719,9 +719,10 @@ def susie_rss(
         Marginal effect estimates and positive standard errors, used instead
         of z (z = bhat/shat). ``shat`` may be a scalar.
     var_y : float, optional
-        Sample variance of the phenotype; requires ``n``. Sets yᵀy =
-        (n - 1) var_y. With ``bhat`` and ``shat``, the predictor crossproducts
-        are also reconstructed so that effects are on the original scale.
+        Positive sample variance of the phenotype. With known ``n``, sets
+        yᵀy = (n - 1) var_y; with ``bhat`` and ``shat`` it also reconstructs
+        the predictor crossproducts for original-scale effects. Without
+        ``n``, it is validated and recorded but does not affect the fit.
     z_ld_weight : float, default 0
         Must be 0; the earlier susieR LD modification is not implemented.
     estimate_residual_variance : bool, default False
@@ -774,9 +775,10 @@ def susie_rss(
     For known n, each z-score is adjusted for the residual variance used in
     its Wald statistic, z̃_j = z_j ((n - 1)/(z_j² + n - 2))^½, and the
     working statistics are XᵀX = (n - 1)R, Xᵀy = (n - 1)^½ z̃ and
-    yᵀy = n - 1, which places effects on a standardized scale. With var_y,
-    yᵀy = (n - 1) var_y while XᵀX and Xᵀy are unchanged. Original-scale
-    coefficients therefore require ``bhat``, ``shat``, ``n`` and ``var_y``.
+    yᵀy = n - 1, which places effects on a standardized scale. With z input
+    and var_y, yᵀy = (n - 1) var_y while XᵀX and Xᵀy are unchanged.
+    Original-scale coefficients therefore require ``bhat``, ``shat``, ``n``
+    and ``var_y``.
     When n is omitted, a supplied var_y is validated and recorded but does
     not enter the working statistics, and effects are on the noncentrality
     scale. If R is an external reference panel, its agreement with the study
