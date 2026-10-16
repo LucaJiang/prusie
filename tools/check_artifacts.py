@@ -292,7 +292,7 @@ from prusie import _native
 prefix=pathlib.Path(sys.prefix).resolve()
 assert pathlib.Path(prusie.__file__).resolve().is_relative_to(prefix)
 assert pathlib.Path(_native.__file__).resolve().is_relative_to(prefix)
-assert not any(shutil.which(x) for x in ('rustc','cargo','maturin','R','Rscript','codex'))
+assert not any(shutil.which(x) for x in ('rustc','cargo','maturin','R','Rscript'))
 assert importlib.util.find_spec('scipy') is None
 assert importlib.util.find_spec('matplotlib') is None
 assert prusie.__version__ == sys.argv[1] == importlib.metadata.version('prusie')

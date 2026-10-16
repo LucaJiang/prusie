@@ -7,9 +7,8 @@
   distinguish numerical failure from the first iteration's sentinel.
 - Evaluate the prior-variance guard using the residual variance at the current
   checking phase, including continued fits.
-- Add a compact result representation and require an explicit model for the
-  isolated optional AI adapter. Save offline statistical outputs before any
-  opt-in explanation request.
+- Add a compact result representation.
+- Removed the optional `prusie.ai` interpretation adapter.
 - Clarify convergence and refinement documentation, retain independent reference
   regressions, and exclude historical review snapshots from source distributions.
 - Clarify development-source installation and keep R comparisons distinct from

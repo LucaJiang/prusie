@@ -81,42 +81,7 @@ def make_figures(fit, refined, summary, R, ld, comparison):
     return figures
 
 
-def interpret_saved_report(output, model):
-    "Save optional AI output separately, citing the already written evidence."
-    from prusie.ai import CodexCLI
-
-    bundle = json.loads((output / "evidence.json").read_text(encoding="utf-8"))
-    sources = {
-        name: hashlib.sha256((output / name).read_bytes()).hexdigest()
-        for name in ("evidence.json", "analysis_summary.json", "summary.txt")
-    }
-    try:
-        interpretation = CodexCLI(
-            output / "ai", model=model, provider="openai", max_attempts=1
-        ).interpret(bundle, consent=True)
-    except Exception as exc:
-        # Optional service failures must not discard the completed analysis.
-        interpretation = {
-            "status": "failed",
-            "reason": str(exc),
-            "error_type": type(exc).__name__,
-            "transmitted": None,
-            "model_requested": model,
-        }
-    interpretation["evidence_sha256"] = bundle["sha256"]
-    interpretation["source_files_sha256"] = sources
-    (output / "ai_interpretation.json").write_text(
-        json.dumps(interpretation, ensure_ascii=False, allow_nan=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return interpretation
-
-
-def execute(case, output, interpret=False, model=None):
-    if interpret and case != "stable":
-        raise ValueError("Optional interpretation requires the synthetic stable example")
-    if interpret and (not isinstance(model, str) or not model.strip()):
-        raise ValueError("Optional interpretation requires an explicit model")
+def execute(case, output):
     started = time.perf_counter()
     if case == "stable":
         e = prusie.load_example()
@@ -194,7 +159,6 @@ def execute(case, output, interpret=False, model=None):
         random_seed=e["metadata"].get("seed", "frozen upstream fixture; no new random generation"),
         elapsed_seconds=time.perf_counter() - started,
         skipped=[
-            "AI explanation is separate from the statistical report",
             "gene track: no physical coordinate metadata",
         ],
     )
@@ -229,8 +193,42 @@ def execute(case, output, interpret=False, model=None):
     import matplotlib.pyplot as plt
 
     plt.close("all")
-    if interpret:
-        interpret_saved_report(output, model)
+    return receipt
+
+
+def render_saved(case, source, output):
+    """Render a saved summary, diagnostics and posterior without fitting again."""
+    import shutil
+
+    record = load_analysis(source)
+    fits = load_analysis(source / "fits")
+    example = prusie.load_example() if case == "stable" else prusie.load_convergence_example()
+    inputs = example["inputs"]
+    if case == "stable":
+        R = inputs["R"]
+    else:
+        diagonal = np.sqrt(np.diag(inputs["XtX"]))
+        R = inputs["XtX"] / diagonal[:, None] / diagonal[None, :]
+    figures = make_figures(
+        fits["baseline"],
+        fits["refined"],
+        record["summary"],
+        R,
+        record["ld"],
+        record["comparison"],
+    )
+    if source.resolve() != output.resolve():
+        shutil.copytree(source, output, dirs_exist_ok=True)
+    receipt = write_report(
+        record["summary"],
+        output,
+        figures=figures,
+        **{key: record[key] for key in ("ld", "comparison", "provenance", "annotations")},
+        title=f"prusie {case}: fine-mapping results",
+    )
+    import matplotlib.pyplot as plt
+
+    plt.close("all")
     return receipt
 
 
@@ -239,24 +237,16 @@ def main():
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--case", choices=("stable", "problem", "both"), default="both")
     parser.add_argument(
-        "--interpret",
-        action="store_true",
-        help=(
-            "Consent to send the synthetic stable evidence bundle "
-            "to the official Codex CLI. No LD/genotypes are sent."
-        ),
-    )
-    parser.add_argument(
-        "--model",
-        help=("Explicit provider model identifier for --interpret; no default is assumed."),
+        "--saved-dir",
+        type=Path,
+        help="Render saved case directories, using their recorded summaries and fits.",
     )
     args = parser.parse_args()
-    if args.interpret and args.case != "stable":
-        parser.error("--interpret requires --case stable (synthetic evidence only)")
-    if args.interpret and not args.model:
-        parser.error("--interpret requires --model with an available provider model identifier")
     for case in ("stable", "problem") if args.case == "both" else (args.case,):
-        receipt = execute(case, args.output_dir / case, interpret=args.interpret, model=args.model)
+        if args.saved_dir is None:
+            receipt = execute(case, args.output_dir / case)
+        else:
+            receipt = render_saved(case, args.saved_dir / case, args.output_dir / case)
         print(json.dumps(receipt))
 
 

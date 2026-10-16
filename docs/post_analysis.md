@@ -294,4 +294,4 @@ separate outcomes from IBSS stopping.
 Continue with [sensitivity and LD diagnostics](sensitivity.md#compare-explicit-settings)
 to compare modeling or input choices. The [quick start](example.md#write-an-offline-report)
 and [plotting API](api.md#figures-and-local-style) cover reports, persistence and
-local styles. Optional AI interpretation is separate from deterministic analysis.
+local styles.

@@ -210,11 +210,4 @@ does not. Each report includes PNG/SVG, complete CSV tables, lossless JSON/NPZ,
 provenance and a figure index. The compact main figures are supplemented by a
 separate variance-details figure and full search tables.
 
-The interpretation follows the saved posterior and diagnostic records. The
-example command above runs offline statistical analysis and does not request
-AI interpretation. An optional AI request requires explicit `--interpret`,
-`--case stable` and `--model` settings; deterministic results are saved separately
-before the request. See [examples](https://github.com/LucaJiang/prusie/blob/main/examples/README.md)
-for that opt-in interface.
-
 </details>

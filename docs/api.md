@@ -174,8 +174,7 @@ The first five functions are exported at the package top level. `write_report`,
 `save_analysis`, `load_analysis` and `analysis_summary` live in `prusie.report`.
 The [quick start](example.md#write-an-offline-report) gives a minimal report call;
 [sensitivity and LD](sensitivity.md) specifies prior remapping, alternative inputs,
-common/union support and missing-assessment states. Optional AI adapters live in
-`prusie.ai`; ordinary summaries and reports are independent of them.
+common/union support and missing-assessment states.
 
 ## Figures and local style
 

@@ -1,9 +1,7 @@
 """Offline reports and lossless, pickle-free storage of analysis results.
 
 JSON stores the structure and type tags, and NPZ stores the exact NumPy
-array bytes. CSV files are a readable export, not the lossless format. No
-function in this module fits a model, loads a remote resource or calls an
-AI provider.
+array bytes. CSV files provide a readable tabular export.
 """
 
 from __future__ import annotations
@@ -825,7 +823,6 @@ def write_report(
     comparison=None,
     provenance=None,
     annotations=None,
-    ai=None,
     title="prusie analysis",
 ) -> dict:
     """Write an offline HTML report with full-precision exports.
@@ -846,9 +843,6 @@ def write_report(
         Fields not supplied are recorded as 'not_assessed'.
     annotations : mapping, optional
         Additional caller-supplied facts for the evidence export.
-    ai : optional
-        Interpretation returned by :mod:`prusie.ai`, shown separately from the
-        deterministic results.
     title : str, default 'prusie analysis'
         Report title.
 
@@ -863,8 +857,8 @@ def write_report(
 
     Notes
     -----
-    Copy the whole directory to keep the report links valid. No model is
-    fitted, LD is not diagnosed, and no network or AI service is accessed.
+    Copy the whole directory to keep the report links valid. Reports use the
+    supplied fit summaries and diagnostics.
     The full provenance is written to the evidence export; the page shows
     only a short description of the sources.
     """
@@ -905,7 +899,6 @@ def write_report(
             "comparison": comparison,
             "provenance": recorded,
             "annotations": annotations,
-            "ai": ai,
         },
         directory,
     )
@@ -1604,8 +1597,6 @@ def write_report(
         + escape(_METHODS)
         + "</p></details>"
     )
-    if ai is not None:
-        details(("Optional AI interpretation — separate from computed evidence"), ai)
     sections.append(
         (
             '</section><section aria-labelledby="exports"><h2 '
