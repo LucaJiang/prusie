@@ -27,10 +27,10 @@ analysis = ["scipy>=1.11", "matplotlib>=3.7"]
 python-source = "src"
 module-name = "prusie._native"
 features = ["extension-module", "vector-math"]
-# Website histories and their renderer require the Git checkout, not a source build.
+# Large rendered example reports are available in the Git checkout.
 exclude = [
     "dist/**", "target/**", "**/*.orig", "**/*.rej", "**/__pycache__/**",
-    ".pytest_cache/**", "docs/review/**", "docs/examples/**", "examples/render_review.py",
+    ".pytest_cache/**", "docs/examples/**",
 ]
 # Runtime Python files/data and Cargo build sources are included by maturin.
 # Keep development tests, frozen offline examples and their supporting tools in sdist.

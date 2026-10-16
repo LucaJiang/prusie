@@ -59,9 +59,8 @@ processes; component updates within one fit remain sequential.
 ## Editing and building documentation
 
 Use a Git checkout for website regeneration and `tools/check_checkout.py`.
-The source distribution contains the full test suite and offline examples,
-but excludes large website example reports, historical review output and
-their checkout-only `examples/render_review.py` renderer.
+The source distribution includes the tests, reference data and example scripts.
+Large rendered reports are available in the checkout.
 
 Markdown is the body source; generated HTML is committed alongside it. The
 build uses Python-Markdown 3.7, Pygments 2.19.2, Arithmatex 10.16.1 and vendored
@@ -115,10 +114,10 @@ Substitute the wheel and sdist just produced. The artifact checker inspects
 license and data payloads, installs wheels in clean environments without Rust
 on PATH, runs examples from an independent directory, rebuilds the sdist and
 checks its wheel, then runs the full tests from the extracted source distribution.
-Two optional LD-oracle tests use external paths described in the
-[reference guide](https://github.com/LucaJiang/prusie/blob/main/docs/review/post_analysis/REPRODUCE.md);
-they skip when those paths are not supplied. Their frozen public references remain
-in the Git checkout. Linux checks also report auditwheel compatibility. Use a new
+Two optional LD tests compare with the saved R references in
+[`dev/references/ld`](https://github.com/LucaJiang/prusie/tree/main/dev/references/ld).
+The [reference instructions](https://github.com/LucaJiang/prusie/blob/main/dev/references/ld/README.md)
+show how to supply these records; the tests skip when paths are not set. Linux checks also report auditwheel compatibility. Use a new
 output directory so earlier results are retained. CI runs the test, docs and
 package checks; its observed status is separate from a local run.
 

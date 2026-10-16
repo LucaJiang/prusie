@@ -72,9 +72,7 @@ def inspect_wheel(path):
         # Validate the terms read from the artifact itself, not just from the checkout.
         license_check = check_license_texts(lambda name: payload[name].decode())
         assert "License-Expression: GPL-3.0-or-later" in metadata
-        assert not any(
-            "/docs/review/" in n or n.startswith(("docs/", "tests/", "dev/")) for n in names
-        )
+        assert not any(n.startswith(("docs/", "tests/", "dev/")) for n in names)
         return dict(
             filename=path.name,
             sha256=sha(path),
@@ -187,13 +185,9 @@ def main():
 
     try:
         with tarfile.open(sdist) as archive:
-            assert not any("/docs/review/" in n for n in archive.getnames()), (
-                "Historical review payload must remain outside sdist"
-            )
             record["sdist"].update(
                 compressed_bytes=sdist.stat().st_size,
                 unpacked_bytes=sum(x.size for x in archive.getmembers() if x.isfile()),
-                historical_review_excluded=True,
             )
             archive.extractall(work / "unpacked", filter="data")
         sources = list((work / "unpacked").glob("*/pyproject.toml"))
@@ -253,9 +247,6 @@ def main():
                     f"Source payload mismatch: {name}"
                 )
         assert not (source / "docs/examples").exists(), "Website examples belong in the checkout"
-        assert not (source / "examples/render_review.py").exists(), (
-            "Website renderer needs checkout inputs"
-        )
         record["sdist"]["required_source_payload"] = {n: sha(source / n) for n in sorted(required)}
         record["sdist"]["license_content_verified"] = check_licenses(source)
         math_assets = json.loads((source / "tools/math-assets.lock.json").read_text())

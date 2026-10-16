@@ -173,30 +173,21 @@ real-genotype-derived sufficient statistics, without individual genotypes;
 records the pinned upstream input and BSD-3-Clause license, with
 [upstream attribution](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/convergence/LICENSE.txt).
 
-The reports reuse recorded fits and diagnostics. Their provenance separates
-the numerical producer from the current plotting and reporting source; updating
-the presentation does not create a new numerical result. The linked JSON and
-CSV retain full precision, identifiers and comparison support. No biological
-mechanism or gene annotation accompanies these inputs.
+The baseline and refined fits were produced with prusie 0.2.3rc6, and the
+additional sensitivity fits with 0.2.4.dev1. The
+[stable provenance](examples/post_analysis/stable/provenance.json) and
+[problem provenance](examples/post_analysis/problem/provenance.json) identify
+the inputs, source revisions and software versions. JSON and CSV downloads
+retain full precision. These inputs have no gene annotations.
 
-To regenerate presentation from the saved fits and diagnostics, use the source
-revision recorded as `render_source_sha` in the
-[stable provenance](examples/post_analysis/stable/provenance.json) or
-[problem provenance](examples/post_analysis/problem/provenance.json). Set
-`RENDER_SOURCE_SHA` to that full 40-character revision:
+To regenerate the figures and reports from the saved posterior and diagnostics:
 
 ```sh
-python examples/render_review.py --output-dir output/rendered-examples \
-  --sensitivity-dir docs/review/post_analysis_fixes/examples \
-  --render-source-sha "$RENDER_SOURCE_SHA"
+python examples/post_analysis.py --saved-dir docs/examples/post_analysis \
+  --output-dir output/rendered-examples --case both
 ```
 
-This command reuses saved baseline, refined and alternative fits and LD records;
-it recomputes posterior summaries, comparisons and presentation without new fits.
-The original fit producer is `e45914e512e04feef37cf7310bc0b309582d6058` and the
-three additional sensitivity fits were produced at
-`1f2b246ebd7970929711b2a51bb08f6a76ddad56`. Per-case provenance records the exact
-inputs and saved source files.
+The saved result directories include baseline, refined and alternative fits.
 
 To fit both examples anew from the source checkout with the analysis extra installed:
 
