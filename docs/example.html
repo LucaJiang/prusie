@@ -33,10 +33,10 @@
 </ul>
 </div>
 </details><h1 id="quick-start-fit-read-and-report">Quick start: fit, read and report</h1>
-<p>Load the packaged synthetic example, fit once, then reuse that posterior for
-PIPs, credible sets, figures and an offline report. The example contains 500
-correlated predictors and two nonzero effects; its inputs work offline after
-<a href="install.html">installation</a>.</p>
+<p>This tutorial loads the packaged synthetic toy example, fits the model once and
+uses that posterior for PIPs, credible sets, figures and an offline report. The
+example has 500 correlated predictors, two of which have nonzero effects, and
+can be used offline after <a href="install.html">installation</a>.</p>
 <h2 id="load-inputs-and-fit">Load inputs and fit</h2>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
@@ -54,14 +54,16 @@ correlated predictors and two nonzero effects; its inputs work offline after
 Converged: True Iterations: 3
 </code></pre></div>
 
-<p>This call performs the fit. <code>track_fit</code> retains iteration history, and
-<code>retain_data</code> keeps the validated inputs needed for explicit continuation or
-refinement. The example uses L=5, ELBO tolerance 0.001, requested CS mass 0.95,
-minimum absolute correlation 0.5, estimated prior variance and fixed residual
-variance 1. These example settings are distinct from the <a href="api.html">API defaults</a>.</p>
-<p>For your own data, provide effect-aligned signed z, signed LD correlation R and
-sample size in the same variant order. Read <a href="inputs.html">inputs</a> before replacing
-these arrays; r² is a display quantity and cannot replace signed r in the model.</p>
+<p>This call fits the model. <code>track_fit</code> records the per-sweep convergence
+metrics, and <code>retain_data</code> keeps the validated inputs needed for continuation or
+refinement. The example uses L = 5 single effects, ELBO tolerance 0.001, requested
+credible-set coverage 0.95, minimum absolute correlation 0.5, an estimated prior
+variance and a fixed residual variance of 1. These settings differ from the
+<a href="api.html">API defaults</a>.</p>
+<p>For your own data, supply signed z-scores aligned to the effect allele, the
+signed LD correlation matrix R and the sample size, in the same variant order.
+Read <a href="inputs.html">inputs</a> before replacing these arrays; r² is a display
+quantity and cannot replace signed r in the model.</p>
 <h2 id="read-pips-and-credible-sets">Read PIPs and credible sets</h2>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">lead</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Lead: </span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">[</span><span class="n">lead</span><span class="p">]</span><span class="si">}</span><span class="s2">, PIP=</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">[</span><span class="n">lead</span><span class="p">]</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -78,10 +80,11 @@ Component 0: syn0100; mass=0.969674; minimum |r|=1
 Component 1: syn0350; mass=0.999937; minimum |r|=1
 </code></pre></div>
 
-<p>Each retained CS is a singleton here. PIP combines inclusion across active
-components; CS mass describes one component. Singleton purity is 1 by definition
-and says nothing about LD to surrounding variants. <a href="results.html">Reading results</a>
-explains these quantities and the original component IDs.</p>
+<p>Here each credible set contains a single variant. A PIP combines inclusion over
+all active single effects, whereas the mass of a credible set refers to one
+single effect. The purity of a single-variant set is 1 by definition and says
+nothing about LD with neighboring variants. <a href="results.html">Reading results</a>
+explains these quantities and the effect indices.</p>
 <h2 id="summarize-the-fitted-posterior">Summarize the fitted posterior</h2>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;R&quot;</span><span class="p">],</span> <span class="n">z</span><span class="o">=</span><span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">prusie</span><span class="o">.</span><span class="n">summary_text</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
@@ -93,13 +96,13 @@ explains these quantities and the original component IDs.</p>
 Stop: criterion_satisfied
 </code></pre></div>
 
-<p><code>summarize</code> reuses the fit to build variant, component, CS and resolution tables.
-Print the complete <code>prusie.summary_text(summary)</code> to include candidate PIPs and
-analysis status. This fit has no refinement search or LD diagnostic yet, so those
-operations are shown as not requested or not assessed.</p>
+<p><code>summarize</code> builds variant, single-effect, credible-set and resolution tables
+from the fit. Print the complete <code>prusie.summary_text(summary)</code> to include the
+leading PIPs and the status of the analysis. This fit has no refinement search
+or LD diagnostic, so these are reported as not requested and not assessed.</p>
 <h2 id="write-an-offline-report">Write an offline report</h2>
-<p>With the <a href="install.html#optional-analysis-tools">analysis extra</a> installed, make
-figures and a report from the same <code>fit</code> and <code>summary</code>:</p>
+<p>With the <a href="install.html#optional-analysis-tools">analysis extra</a> installed, figures
+and a report can be produced from the same <code>fit</code> and <code>summary</code>:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.plots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_locus</span><span class="p">,</span> <span class="n">plot_convergence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_report</span>
 
@@ -111,11 +114,12 @@ figures and a report from the same <code>fit</code> and <code>summary</code>:</p
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Open output/analysis/index.html&quot;</span><span class="p">)</span>
 </code></pre></div>
 
-<p>Open <code>output/analysis/index.html</code> locally. Candidates and resolution come first,
-followed by stopping status and the supplied figures. These calls reuse the
-posterior; <a href="post_analysis.html">continuation, refinement</a> and
-<a href="sensitivity.html#diagnose-consistency-of-z-and-ld">LD diagnostics</a> are separate,
-explicit calculations.</p>
+<p>Open <code>output/analysis/index.html</code> locally. The report lists the candidate
+variants and their resolution first, followed by the stopping status and the
+supplied figures. These calls use the existing posterior;
+<a href="post_analysis.html">continuation, refinement</a> and
+<a href="sensitivity.html#diagnose-consistency-of-z-and-ld">LD diagnostics</a> are separate
+computations.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -146,10 +150,10 @@ explicit calculations.</p>
 </tr>
 </tbody>
 </table></div>
-<p>Copy the whole report directory to retain its local links. GitHub's file viewer
-shows the HTML source; download the directory to open the offline report.</p>
+<p>Copy the whole report directory to keep its links valid. The GitHub file viewer
+shows the HTML source; download the directory to open the report.</p>
 <h2 id="save-and-reload-a-result">Save and reload a result</h2>
-<p>Use the lossless result interface to retain array dtypes, identifiers and metadata:</p>
+<p>The lossless storage functions keep array dtypes, identifiers and metadata:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_analysis</span><span class="p">,</span> <span class="n">load_analysis</span>
 
 <span class="n">saved</span> <span class="o">=</span> <span class="n">save_analysis</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="s2">&quot;output/fit&quot;</span><span class="p">)</span>
@@ -157,18 +161,18 @@ shows the HTML source; download the directory to open the offline report.</p>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PIPs identical:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">pip</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">))</span>
 </code></pre></div>
 
-<p>Expected output is <code>PIPs identical: True</code>. The same interface reads a report
-directory into its saved analysis mapping. Saved fits omit the optimization
-context; to warm-start a new call, supply the original inputs with
-<code>s_init=restored</code>. <a href="post_analysis.html#technical-details">Warm-start details</a>
-explain the identity checks.</p>
+<p>The expected output is <code>PIPs identical: True</code>. The same function reads a report
+directory into its saved analysis mapping. Saved fits do not include the
+retained inputs; to start a new fit from a reloaded result, supply the original
+inputs together with <code>s_init=restored</code>. The <a href="post_analysis.html#technical-details">warm-start details</a>
+describe the checks applied.</p>
 <p>Continue with <a href="results.html">reading results</a>, <a href="post_analysis.html">convergence and refinement</a>,
-<a href="sensitivity.html">sensitivity and LD</a>, or the <a href="worked_examples.html">two worked examples</a>.</p>
+<a href="sensitivity.html">sensitivity and LD</a> or the <a href="worked_examples.html">two worked examples</a>.</p>
 <h2 id="advanced-export-and-example-provenance">Advanced export and example provenance</h2>
 <details>
 <summary>Manual arrays and metadata export</summary>
-<p>The high-level persistence interface above is sufficient for ordinary use. For
-interchange with other tools, write selected arrays and metadata explicitly:</p>
+<p>The storage functions above suffice for ordinary use. For exchange with other
+tools, selected arrays and metadata can be written explicitly:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
@@ -189,10 +193,10 @@ interchange with other tools, write selected arrays and metadata explicitly:</p>
 </details>
 <details>
 <summary>Generation, frozen reference and numerical agreement</summary>
-<p>The example has 1000 simulated observations and 500 Gaussian predictors.
-Signed z is beta/SE from marginal regression; R is the sample Pearson
-correlation of the same standardized predictors. It is synthetic, with no human
-study or genome build implied.</p>
+<p>The example has 1000 simulated observations of 500 Gaussian predictors. The
+z-scores are the marginal regression estimates divided by their standard
+errors, and R is the sample Pearson correlation of the same standardized
+predictors. The data are synthetic; no human study or genome build is implied.</p>
 <!-- generated:teaching:start -->
 <p>The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
 <!-- generated:teaching:end -->
@@ -223,19 +227,21 @@ study or genome build implied.</p>
 </table></div>
 <!-- generated:teaching-cs:end -->
 <figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Signed z and fitted PIPs, with the two synthetic true effects marked." class="figure-complex" src="assets/teaching_fit.svg" /></div><figcaption><a href="assets/teaching_fit.svg">Open original figure</a></figcaption></figure>
-<p><code>tools/generate_example.py</code> uses NumPy PCG64 seed 20261007, stationary AR(1)
-correlation 0.85, sample-standardized predictors, nonzero coefficients 0.35 and
-−0.30 at zero-based indices 99 and 349, and independent unit-variance Gaussian
-noise. Coordinates in the generator are arbitrary synthetic positions at
-1000-unit intervals. <code>tools/generate_example.py --check</code> verifies the exact
-frozen-file SHA256 hashes and checks regenerated values within tight
-floating-point roundoff bounds; see the
+<p><code>tools/generate_example.py</code> uses NumPy PCG64 with seed 20261007, a stationary
+AR(1) correlation of 0.85 between adjacent predictors, sample-standardized
+predictors, nonzero coefficients 0.35 and −0.30 at zero-based indices 99 and
+349, and independent standard Gaussian noise. The coordinates are arbitrary
+synthetic positions at intervals of 1000 units. <code>tools/generate_example.py --check</code>
+verifies the exact SHA-256 hashes of the frozen files and compares regenerated
+values within bounds on floating-point rounding error; see the
 <a href="reproducibility.html#toy-data-regeneration">regeneration criteria</a>.</p>
-<p>The packaged reference was separately fitted with susieR 0.16.6 using the same
-inputs and options. Input and reference hashes, parameters, convergence and CS
-accompany the resources. The dataset and generation script are GPL-3.0-or-later.
-<a href="reproducibility.html">Reproducibility</a> provides offline and live-R commands;
-<a href="numerical_accuracy.html">numerical accuracy</a> gives measured errors.</p>
+<p>The packaged reference was fitted separately with susieR 0.16.6 using the same
+inputs and options. The hashes of inputs and reference, the parameters, the
+convergence status and the credible sets are distributed with the data. The
+dataset and generation script are licensed under GPL-3.0-or-later.
+<a href="reproducibility.html">Reproducibility</a> gives commands for offline checks and for
+refitting with R; <a href="numerical_accuracy.html">numerical accuracy</a> reports the
+measured differences.</p>
 </details></article>
 <footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>

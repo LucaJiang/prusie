@@ -64,6 +64,8 @@ offline script, start with <a href="example.html">the toy example</a>.</p>
 <a href="inputs.html#supported-model-and-input-routes">Inputs</a>. The
 <a href="model.html#from-summaries-to-working-sufficient-statistics">model page</a> gives
 separate working-scale formulas for each route.</p>
+<p>A supplied <code>var_y</code> must be positive and finite. When <code>n</code> is omitted, it is
+validated and recorded but does not enter the working likelihood.</p>
 <h2 id="susie_suff_stat">susie_suff_stat</h2>
 <p>Fit from centered sufficient statistics:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_suff_stat</span><span class="p">(</span>

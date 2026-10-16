@@ -102,7 +102,7 @@ mutable; callers own any copies they need.
 
 `mu` is conditional on a variant being selected within one component, whereas
 `alpha * mu` is the component's marginal coefficient mean. See the
-[model explanation](model.md#component-posteriors-and-effect-means) for their
+[model explanation](model.md#single-effect-posteriors-and-effect-means) for their
 relationship and the separate [RSS coefficient scales](model.md#from-summaries-to-working-sufficient-statistics).
 
 ## Credible-set fields

@@ -31,18 +31,19 @@
 </ul>
 </div>
 </details><h1 id="installation">Installation</h1>
-<p>Install prusie from source with CPython 3.10–3.13. NumPy ≥1.26,&lt;3 is the only Python
-runtime dependency; fitting does not invoke R.</p>
-<p>Repository <code>main</code> provides the <strong>0.2.4.dev2 development snapshot</strong> described here.
-It is not a stable release. Record the installed version and source revision
-with every analysis; the older prerelease assets below contain different code.</p>
+<p>prusie is installed from source for CPython 3.10–3.13. Its only Python run-time
+dependency is NumPy (≥1.26, &lt;3); fitting does not call R.</p>
+<p>The <code>main</code> branch contains the <strong>0.2.4.dev2 development version</strong> described
+here; it is not a release. Record the installed version and the source
+revision with every analysis. The earlier prerelease files described below
+contain different code.</p>
 <h2 id="build-from-source">Build from source</h2>
-<p>Source builds need the Rust toolchain pinned in <code>rust-toolchain.toml</code> (1.98.1),
-a C linker and Python development headers. The build uses maturin 1.9.6 and
-locked Cargo dependencies.</p>
-<p>The pinned PyO3 0.23.5 build supports CPython through 3.13. Package metadata
-therefore requires Python ≥3.10,&lt;3.14; supporting newer interpreters needs a
-separate binding update and validation.</p>
+<p>Building requires the Rust toolchain pinned in <code>rust-toolchain.toml</code> (1.98.1),
+a C linker and the Python development headers. The build uses maturin 1.9.6
+and the locked Cargo dependencies.</p>
+<p>The pinned PyO3 0.23.5 supports CPython up to 3.13, and the package metadata
+therefore requires Python ≥3.10, &lt;3.14. Support for newer interpreters would
+require an updated binding and its validation.</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>main<span class="w"> </span>https://github.com/LucaJiang/prusie.git
 <span class="nb">cd</span><span class="w"> </span>prusie
 python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
@@ -50,45 +51,45 @@ python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </s
 python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>.
 </code></pre></div>
 
-<p>pip and Cargo need network access or cached build dependencies. Install the
-pinned Rust toolchain using your usual Rust installation before building.
-No BLAS development library is required by the extension. Runtime CPU checks
-select optional system vector math where available, with a scalar fallback.</p>
+<p>pip and Cargo need network access or locally cached build dependencies. Install
+the pinned Rust toolchain with your usual Rust installer before building. The
+extension does not require a BLAS development library. At run time, the CPU is
+checked and the system vector math library is used where available, otherwise
+scalar code.</p>
 <h2 id="use-a-prebuilt-wheel">Use a prebuilt wheel</h2>
 <p>The <a href="https://github.com/LucaJiang/prusie/releases/tag/v0.2.3rc6">v0.2.3rc6 prerelease</a>
-contains a CPython 3.12 Linux x86-64 wheel tagged <code>manylinux_2_34</code> (glibc ≥2.34),
-a source distribution and <code>SHA256SUMS</code>. These assets belong to that older version;
-they do not contain the development snapshot described here. The release asset
-list, checked on 12 October 2026, contains no macOS, Windows or other Python-ABI
-wheels.</p>
-<p>Download the matching asset and verify it against the release's <code>SHA256SUMS</code>.
-For that specific wheel:</p>
+provides a CPython 3.12 wheel for Linux x86-64, tagged <code>manylinux_2_34</code>
+(glibc ≥2.34), a source distribution and <code>SHA256SUMS</code>. These files belong to
+that earlier version and do not contain the development version described here.
+On 12 October 2026 the release contained no wheels for macOS, Windows or other
+Python ABIs.</p>
+<p>Download the matching file and verify it against <code>SHA256SUMS</code>. For that wheel:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./prusie-0.2.3rc6-cp312-cp312-manylinux_2_34_x86_64.whl
 </code></pre></div>
 
-<p>Installing a compatible wheel requires neither Cargo nor a compiler. A source
-distribution still requires the build toolchain above. Build from <code>main</code> for
-the documented development API. A wheel's version and platform tags identify
-the code and environment it supports; local validation builds are not published
-download assets.</p>
-<p>The published rc6 package checks cover CPython 3.12 on GNU Linux x86-64 with
-NumPy 2.2.6. These checks do not establish support for unbuilt platform wheels.
-See <a href="contributing.html">contributing</a> for reproducible builds and payload checks.</p>
-<p>The 0.2.4.dev2 development checks also exercised installed Linux x86-64 wheels
-on Python 3.10.12, 3.12.2 and 3.13.5. Valid NumPy combinations included 1.26.4,
-2.2.6 and 2.5.3. These local build checks do not imply that corresponding
-development wheels have been published or that other operating systems were
-tested.</p>
+<p>Installing a compatible wheel requires neither Cargo nor a compiler; a source
+distribution requires the build toolchain above. The API documented here
+requires a build from <code>main</code>. The version and platform tags of a wheel identify
+its code and supported environment; wheels built for local validation are not
+published.</p>
+<p>The package checks of the published rc6 release covered CPython 3.12 on GNU
+Linux x86-64 with NumPy 2.2.6; they do not establish support on platforms for
+which no wheel was built. See <a href="contributing.html">contributing</a> for reproducible
+builds and checks of the package contents.</p>
+<p>For 0.2.4.dev2, installed Linux x86-64 wheels were also tested locally with
+Python 3.10.12, 3.12.2 and 3.13.5 and NumPy 1.26.4, 2.2.6 and 2.5.3 in
+supported combinations. These local tests do not imply that development wheels
+have been published, nor that other operating systems were tested.</p>
 <h2 id="optional-analysis-tools">Optional analysis tools</h2>
-<p>From the same checkout, install plotting and LD-diagnostic dependencies:</p>
+<p>To install the plotting and LD-diagnostic dependencies from the same checkout:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span>
 </code></pre></div>
 
-<p>The analysis extra adds Matplotlib and SciPy. Core fitting and deterministic
-posterior summaries remain available with NumPy alone. Reports work offline;
-plots and diagnostic computation run only when requested.</p>
+<p>The analysis extra adds Matplotlib and SciPy. Fitting and posterior summaries
+require only NumPy. Reports are written for offline reading, and figures and
+diagnostics are computed only when requested.</p>
 <h2 id="run-the-installed-example">Run the installed example</h2>
-<p>This works from any directory after installation:</p>
+<p>The following works from any directory after installation:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 
 <span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_example</span><span class="p">()</span>
@@ -96,9 +97,9 @@ plots and diagnostic computation run only when requested.</p>
 <span class="nb">print</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">converged</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
 </code></pre></div>
 
-<p>The package contains the inputs, metadata and frozen reference for this example.
-No source checkout, R installation or network is needed to load and fit it.
-Continue with the <a href="example.html">toy example tutorial</a>.</p></article>
+<p>The package contains the inputs, metadata and frozen reference fit of this
+example, so neither a source checkout, R nor network access is needed to load
+and fit it. Continue with the <a href="example.html">toy example tutorial</a>.</p></article>
 <footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>

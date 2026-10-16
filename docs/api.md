@@ -30,6 +30,9 @@ Input routes, shapes and alignment requirements are centralized in
 [model page](model.md#from-summaries-to-working-sufficient-statistics) gives
 separate working-scale formulas for each route.
 
+A supplied `var_y` must be positive and finite. When `n` is omitted, it is
+validated and recorded but does not enter the working likelihood.
+
 ## susie_suff_stat
 
 Fit from centered sufficient statistics:

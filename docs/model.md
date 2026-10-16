@@ -1,11 +1,11 @@
 # Statistical model
 
-Fine-mapping asks which variants in a region contribute to a trait when nearby
-variants are correlated. Several variants can therefore explain much the same
-association signal. SuSiE represents multiple effects while retaining uncertainty
-about the variant responsible for each one. prusie fits the Gaussian SuSiE model
-from association summary statistics and signed LD, or from centered sufficient
-statistics.
+Fine-mapping aims to identify the variants in a region that affect a trait
+when nearby variants are correlated, so that several variants can explain much
+the same association signal. SuSiE represents multiple effects and quantifies,
+for each effect, the uncertainty about which variant carries it. prusie fits
+the Gaussian SuSiE model to association summary statistics and signed LD, or to
+centered sufficient statistics.
 
 ## Data, notation and scale
 
@@ -20,20 +20,21 @@ $$
 $$
 
 The LD correlation matrix $\mathbf R$ refers to the same variant order and
-counted effect alleles. The residual variance is $\sigma^2$; component $\ell$
-has nonzero-effect prior variance $V_\ell$, and $\pi_j$ is its prior probability
-of choosing variant $j$. prusie uses the same variant weights for all components.
+effect alleles. The residual variance is $\sigma^2$; single effect $\ell$ has
+prior effect variance $V_\ell$ (written $\sigma_0^2$ in some references), and
+$\pi_j$ is the prior probability that it is located at variant $j$. prusie uses
+the same prior weights for all single effects.
 
-By default, predictors are standardized using their sample standard deviations
+By default, predictors are standardized by their sample standard deviations
 $d_j=\sqrt{Q_{jj}/(n-1)}$. Inference then uses
 $\mathbf D^{-1}\mathbf Q\mathbf D^{-1}$ and $\mathbf D^{-1}\mathbf g$, where
-$\mathbf D=\operatorname{diag}(d_1,\ldots,d_p)$, while the response scale stays
-fixed. A zero predictor scale is replaced by one for this transformation.
-Below, $\mathbf Q$ and $\mathbf g$ in the updates denote these **working**
-sufficient statistics. Setting `standardize=False` retains the supplied
-predictor scale. `coef` converts the posterior mean back by dividing by the
-stored predictor scales. Centering and any covariate adjustment must already
-be consistent across the caller's summaries; this API does not fit covariates.
+$\mathbf D=\operatorname{diag}(d_1,\ldots,d_p)$; the response scale is not
+changed. A zero predictor scale is replaced by one. In the updates below,
+$\mathbf Q$ and $\mathbf g$ denote these **working** sufficient statistics.
+With `standardize=False` the supplied predictor scale is used. `coef` returns
+the posterior mean on the input scale by dividing by the stored predictor
+scales. Centering and any covariate adjustment must already be consistent
+across the supplied summaries; covariates are not fitted.
 
 ## A sum of single effects
 
@@ -47,7 +48,7 @@ $$
 \end{aligned}
 $$
 
-Each component chooses one variant and gives it a Gaussian effect:
+Each single effect is located at one variant and has a Gaussian effect size:
 
 $$
 \begin{aligned}
@@ -57,28 +58,28 @@ a_\ell&\sim N(0,V_\ell),
 \end{aligned}
 $$
 
-Here $\mathbf e_j$ is the vector with a one at position $j$ and zeros elsewhere.
-The location $\gamma_\ell$ describes *which* variant carries the component;
-$a_\ell$ describes its effect size. Uniform weights, $\pi_j=1/p$, are the default.
-`prior_weights` changes these probabilities. `scaled_prior_variance` initializes
-$V_\ell$ relative to $s_y/(n-1)$.
+Here $\mathbf e_j$ is the $j$th standard basis vector. The location
+$\gamma_\ell$ indicates *which* variant carries the effect and $a_\ell$ its
+size. The default prior is uniform, $\pi_j=1/p$; `prior_weights` sets other
+values. `scaled_prior_variance` gives the initial $V_\ell$ relative to
+$s_y/(n-1)$.
 
-$L$ bounds the number of component effects. Multiple components can select the
-same variant, and an estimated $V_\ell=0$ removes that component's nonzero
-effect. The number of returned credible sets additionally depends on posterior
-mass, LD purity and deduplication. Thus $L$, the number of distinct causal
-variants, and the number of reported sets describe different quantities.
+$L$ is an upper bound on the number of effects. Several single effects can be
+located at the same variant, and an estimated $V_\ell=0$ removes an effect. The
+number of reported credible sets depends in addition on posterior mass, LD
+purity and the removal of duplicate sets. $L$, the number of causal variants
+and the number of credible sets are therefore different quantities.
 
-## Component posteriors and effect means
+## Single-effect posteriors and effect means
 
-SuSiE fits a variational approximation that factorizes between components:
+SuSiE uses a variational approximation that factorizes over the single effects:
 
 $$
 q(\mathbf b_1,\ldots,\mathbf b_L)=\prod_{\ell=1}^{L}q_\ell(\mathbf b_\ell).
 $$
 
-Within a component, uncertainty about the chosen variant and its effect remains
-coupled. The returned arrays represent
+Within a single effect, the uncertainty about its location and about its size
+remain coupled. The returned arrays represent
 
 $$
 \begin{aligned}
@@ -89,19 +90,21 @@ M^{(2)}_{\ell j}&=\mathbb E_q[a_\ell^2\mid\gamma_\ell=j]
 \end{aligned}
 $$
 
-`alpha`, `mu` and `mu2` correspond to $\alpha$, $\mu$ and $M^{(2)}$.
-In particular, `mu2` includes the conditional posterior variance
-$\tau_{\ell j}^2$; it is neither the square of `mu` alone nor a variance array.
-The component's marginal mean is
+`alpha`, `mu` and `mu2` correspond to $\alpha$, $\mu$ and $M^{(2)}$; in the
+API and results, single effects are also called components and are indexed by
+`component_id`. `mu2` includes the conditional posterior variance
+$\tau_{\ell j}^2$; it is neither the square of `mu` nor a variance. The
+posterior mean of effect $\ell$ is
 $\mathbf m_\ell=\boldsymbol\alpha_\ell\odot\boldsymbol\mu_\ell$ and the total
-mean is $\mathbf m=\sum_\ell\mathbf m_\ell$. A large conditional mean need not
-imply a large marginal mean if that variant has little component probability.
-`coef` reports $m_j/d_j$ on the input predictor scale. The precise response and
-coefficient units for each RSS input route are described below.
+posterior mean is $\mathbf m=\sum_\ell\mathbf m_\ell$. A large conditional mean
+does not imply a large posterior mean when the variant has a small inclusion
+probability. `coef` reports $m_j/d_j$ on the input predictor scale. The
+response and coefficient units of each RSS input route are given below.
 
 ## One single-effect regression
 
-To update component $\ell$, hold the other component means fixed and form
+To update effect $\ell$, the posterior means of the other effects are held
+fixed and
 
 $$
 \begin{aligned}
@@ -111,10 +114,11 @@ $$
 \end{aligned}
 $$
 
-$\mathbf r_\ell$ is a **length-$p$ crossproduct residual**. It is the
-crossproduct of $\mathbf X$ with an individual-level residual, rather than the
-length-$n$ residual itself. For $Q_{jj}>0$, a Gaussian single-effect regression
-(SER) compares the effect prior with a zero effect at each candidate variant:
+$\mathbf r_\ell$ is a **crossproduct residual** of length $p$: the
+crossproduct of $\mathbf X$ with the individual-level residual, not the
+residual of length $n$ itself. For $Q_{jj}>0$, the Gaussian single-effect
+regression (SER) gives, for each variant, the Bayes factor of a nonzero effect
+with prior $N(0,V_\ell)$ against no effect:
 
 $$
 \log\mathrm{BF}_{\ell j}
@@ -134,21 +138,24 @@ $$
 \end{aligned}
 $$
 
-The posterior mean shrinks the marginal estimate toward zero, most strongly
-when its sampling variance is large relative to the prior variance. Prior
-weights affect the probability of a location; uncertainty can remain spread
-across correlated variants with similar evidence. The formulas give the
-ordinary positive-variance model. The implementation's weight smoothing and
-zero-information conventions are collected in [Inputs](inputs.md#priors-and-zero-information-columns).
-`lbf_variable` stores the variant log Bayes factors, before variant prior
-weights are added; `lbf` stores the component's log weighted evidence.
+The posterior mean shrinks the marginal estimate towards zero, the more so the
+larger its sampling variance relative to the prior variance. For fixed prior
+and residual variances, the prior weights affect the probability of each
+location; posterior probability can remain spread over correlated variants
+with similar evidence. These formulas describe
+the case of a positive prior variance; the smoothing of the prior weights and
+the treatment of columns without information are described under
+[Inputs](inputs.md#priors-and-zero-information-columns). `lbf_variable` stores
+the log Bayes factors of the variants before prior weighting; `lbf` stores the
+log of the prior-weighted average Bayes factor of each effect.
 
 ## Sequential IBSS and variance estimation
 
-Iterative Bayesian stepwise selection (IBSS) repeatedly applies SER. At
-initialization, the component means are zero, each alpha row is uniform, and
-the variances use the supplied initial values. Within a sweep, later components
-use the newly updated means of earlier components:
+Iterative Bayesian stepwise selection (IBSS) applies the SER to each effect in
+turn. At a cold start, all posterior means are zero, each alpha row is uniform
+and the variances take their initial values. Within a sweep, each effect is updated
+using the current means of all other effects, including those already updated
+in the same sweep:
 
 ```text
 initialize component means, variances and their matrix products
@@ -166,56 +173,54 @@ for each sweep, up to max_iter:
 trim components below prior_tol and construct summaries
 ```
 
-For finite ELBO with the default rule, the first successful check can occur at
-`min_iter` (two sweeps by default); lagged posterior repetition is diagnostic
-only. [Convergence and refinement](post_analysis.md#read-the-stopping-evidence)
-specifies the signed objective condition and exceptional stops.
+With a finite ELBO and the default rule, convergence can first be declared
+after `min_iter` sweeps (two by default); repeated posterior states are only
+recorded as diagnostics. [Convergence and refinement](post_analysis.md#read-the-stopping-evidence)
+gives the exact objective condition and the exceptional stops.
 
-For `estimate_prior_method="optim"`, the component update maximizes the SER
-log marginal likelihood $\log\sum_j\pi_j\mathrm{BF}_{\ell j}(V)$ using a Brent
-search over log variance, with the implementation's smoothed weights. The
-candidate is compared with the previous variance, then with $V=0$.
-`check_null_threshold` requires the selected variance to improve on the null
-log likelihood by more than that threshold. `simple` performs this null
-comparison at the existing $V$ without the continuous search.
+With `estimate_prior_method="optim"`, each update maximizes the SER log marginal
+likelihood $\log\sum_j\pi_j\mathrm{BF}_{\ell j}(V)$ over $\log V$ by Brent's
+method, using the smoothed prior weights. The maximizer is compared first with
+the current variance and then with $V=0$: $V$ is set to zero unless its log
+marginal likelihood exceeds that at $V=0$ by more than `check_null_threshold`.
+`simple` makes only this comparison with zero, at the current $V$.
 
-`EM` first computes the posterior at the current $V_\ell$, then sets
-$V_\ell\leftarrow\sum_j\alpha_{\ell j}M^{(2)}_{\ell j}$ for the next update.
-It does not apply the optim/simple null Bayes-factor comparison. The stored
-component evidence and KL come from that just-computed posterior. With
-`estimate_prior_variance=False`, SER uses fixed initialized $V$ and bypasses
-both estimation and the null comparison; final low-variance trimming still
-applies.
+`EM` first computes the posterior at the current $V_\ell$ and then sets
+$V_\ell\leftarrow\sum_j\alpha_{\ell j}M^{(2)}_{\ell j}$ for the next update,
+without the comparison with zero. The stored Bayes factors and KL refer to
+that posterior. With `estimate_prior_variance=False`, the initial $V$ is kept
+and neither estimation nor the comparison with zero is applied; the final
+trimming of small variances still applies.
 
-The variational objective balances expected data fit against departure from
-the prior:
+The variational objective (evidence lower bound, ELBO) is the expected log
+likelihood minus the divergence of the approximation from the prior:
 
 $$
 \mathcal L(q)=\mathbb E_q[\log p(\mathbf y\mid\mathbf b,\sigma^2)]
 -\sum_{\ell=1}^{L}\operatorname{KL}\{q_\ell(\mathbf b_\ell)\|p_\ell(\mathbf b_\ell)\}.
 $$
 
-The Gaussian likelihood needs the expected residual sum of squares, including
-posterior effect uncertainty. [Implementation](implementation.md#expected-residual-sum-of-squares)
-derives this from `mu2` and the retained component products. The objective is
-stored at the current $\sigma^2$ **before** a possible residual-variance update.
-If stopping has not occurred and estimation is enabled, the update is
-$\sigma^2\leftarrow\mathrm{ER2}/n$, including after the last allowed sweep.
-Consequently a fit that stops at the iteration limit can return a newer
-`sigma2` than the value used for its last stored ELBO. A converged fit skips
-that update. Final trimming does not recompute the ELBO or fitted crossproduct.
-[Results](results.md#iterations-and-finalization) defines the stopping rule,
-exceptional fallback and returned states in one place.
+The Gaussian expected log likelihood requires the expected residual sum of
+squares (ER2), which accounts for posterior uncertainty in the effects;
+[Implementation](implementation.md#expected-residual-sum-of-squares) derives it
+from `mu2` and the stored matrix products. The ELBO is recorded at the current
+$\sigma^2$, **before** any residual-variance update. If the fit has not stopped
+and $\sigma^2$ is estimated, it is updated as $\sigma^2\leftarrow\mathrm{ER2}/n$,
+also after the last permitted sweep. A fit that reaches the iteration limit can
+therefore return a `sigma2` that differs from the value used for its last ELBO;
+a converged fit omits this update. The final trimming recomputes neither the
+ELBO nor the fitted crossproduct. [Results](results.md#iterations-and-finalization)
+summarizes the stopping rule, the NaN fallback and the returned quantities.
 
 ## From summaries to working sufficient statistics
 
-With actual centered sufficient statistics, the Gaussian likelihood depends
-on the data through $\mathbf Q$, $\mathbf g$, $s_y$ and $n$; an individual-level
-matrix need not be retained. `susie_suff_stat` uses these quantities directly.
-RSS constructs working crossproducts from marginal associations and LD.
-When the LD and summaries describe the same data and preprocessing, this can
-recover the regression quantities. External LD instead supplies an approximation
-to the study's correlation structure.
+Given centered sufficient statistics, the Gaussian likelihood depends on the
+data only through $\mathbf Q$, $\mathbf g$, $s_y$ and $n$, so individual-level
+data are not needed; `susie_suff_stat` uses these quantities directly. SuSiE-RSS
+constructs working sufficient statistics from marginal association statistics
+and LD. When the LD and the summary statistics come from the same samples and
+preprocessing, this can recover the regression quantities; an external LD
+reference provides only an approximation to the correlation in the study.
 
 ### Known sample size and Wald z statistics
 
@@ -267,7 +272,7 @@ diagonals. `coef` reverses that standardization and has the original predictor
 and phenotype units under the supplied marginal-regression assumptions. `mu`
 and `mu2` remain on the fitted predictor scale.
 
-With **z and `var_y` alone**, the current interface keeps
+With **z, `var_y` and known n**, the current interface keeps
 $\mathbf Q=(n-1)\mathbf R$ and
 $\mathbf g=\sqrt{n-1}\,\widetilde{\mathbf z}$, but sets
 $s_y=(n-1)v_y$. This matches the pinned constructor: it changes response

@@ -1,7 +1,11 @@
 # prusie — SuSiE fine-mapping in Python
 
-Fit association summary statistics with a Rust-powered SuSiE implementation,
-then inspect credible sets, convergence and sensitivity in one workflow.
+prusie fits the Sum of Single Effects (SuSiE) regression model to association
+summary statistics and LD (SuSiE-RSS), or to sufficient statistics, and returns
+posterior inclusion probabilities (PIPs) and credible sets. The iterative
+Bayesian stepwise selection (IBSS) algorithm is implemented in Rust and follows
+susieR 0.16.6. Further functions report convergence, refinement, LD
+diagnostics and sensitivity to model settings.
 
 ## Recorded numerical accuracy and performance
 
@@ -33,17 +37,18 @@ Runtime is the geometric mean of per-case susieR/prusie ratios of seven-repeat m
 </details>
 
 See [numerical accuracy](docs/numerical_accuracy.md) and
-[performance](docs/performance.md) for methods and complete results. The Python
-workflow combines PIPs and credible sets with explicit continuation, refinement,
-LD diagnostics, sensitivity comparisons and offline reports.
+[performance](docs/performance.md) for the methods and complete results.
+Agreement with susieR is a check of the implementation; it does not by itself
+establish that the model assumptions hold for a given dataset.
 
 [Install](docs/install.md) · [Quick start](docs/example.md) · [Worked examples](docs/worked_examples.md)
 
-## Install the development preview
+## Install the development version
 
-Repository `main` provides the **0.2.4.dev2 development snapshot** described here.
-It is not a stable release. Source installation needs CPython 3.10–3.13, the
-pinned Rust toolchain, a C linker and Python headers:
+The `main` branch contains the **0.2.4.dev2 development version** described
+here; it is not a release. Building from source requires CPython 3.10–3.13,
+the Rust toolchain pinned in `rust-toolchain.toml`, a C linker and the Python
+development headers:
 
 ```sh
 git clone --branch main https://github.com/LucaJiang/prusie.git
@@ -53,14 +58,14 @@ python -m venv .venv
 python -m pip install '.[analysis]'
 ```
 
-Core fitting needs NumPy at runtime; the optional `analysis` extra adds Matplotlib
-and SciPy. Neither R nor Rust is required to run an installed package. The
-[installation guide](docs/install.md) distinguishes source builds from the
-available older prerelease wheel for CPython 3.12 on Linux x86-64.
+Fitting requires only NumPy at run time; the optional `analysis` extra adds
+Matplotlib and SciPy for figures and LD diagnostics. An installed package
+requires neither R nor Rust. The [installation guide](docs/install.md) also
+describes the earlier prerelease wheel for CPython 3.12 on Linux x86-64.
 
 ## One fit, a readable result
 
-The installed 500-variant synthetic toy example works offline:
+The packaged synthetic toy example with 500 variants can be fitted offline:
 
 ```python
 import prusie
@@ -85,37 +90,32 @@ CS 0: syn0100
 CS 1: syn0350
 ```
 
-The [quick-start tutorial](docs/example.md) explains the candidate PIPs and CS,
-then adds figures and an offline report from the fitted posterior.
+The [quick-start tutorial](docs/example.md) explains these PIPs and credible
+sets (CS) and then produces figures and an offline report from the same fit.
 
-## Inspect what changes across settings
+## Sensitivity to model settings
 
-![Stable-example candidate PIPs: the leading credible sets persist while a fixed scaled prior variance raises background probabilities.](docs/examples/post_analysis/stable/figure_5.png)
+![Candidate PIPs of the toy example under four settings: the two leading credible sets persist, while a fixed scaled prior variance raises the PIPs of other variants.](docs/examples/post_analysis/stable/figure_5.png)
 
-The same two leading CS persist under a fixed positive scaled prior variance,
-while `syn0143` rises from PIP about 5.3×10⁻¹¹ to 0.2544. With variance estimation
-disabled, all five components retain positive variance, including three without
-retained CS. Those components can spread probability beyond the leading candidates.
-This separate sensitivity analysis is explained in the
-[worked examples](docs/worked_examples.md); the minimal code above only fits and
-summarizes its baseline.
+The two leading credible sets persist when the scaled prior variance is fixed
+at a positive value, whereas the PIP of `syn0143` increases from about
+5.3×10⁻¹¹ to 0.2544. Without prior-variance estimation, all five single effects
+keep a positive prior variance, including three without a credible set, and
+these effects place posterior probability on further variants. The
+[worked examples](docs/worked_examples.md) describe this separate sensitivity
+analysis; the code above fits and summarizes only the baseline.
 
-Read [results](docs/results.md), [convergence and refinement](docs/post_analysis.md),
-and [sensitivity and LD](docs/sensitivity.md), then consult the [API](docs/api.md)
-and [model](docs/model.md). The [documentation site](https://lucajiang.github.io/prusie/)
-shows its latest deployment; source changes on this branch require a new deployment
-to appear there.
+See [reading results](docs/results.md), [convergence and refinement](docs/post_analysis.md)
+and [sensitivity and LD](docs/sensitivity.md), and for reference the [API](docs/api.md)
+and the [statistical model](docs/model.md). The [documentation site](https://lucajiang.github.io/prusie/)
+shows the most recently deployed version, which can lag behind this branch.
 
 ## Citation and license
 
-Cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
+Please cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
 [SuSiE-RSS, Zou et al. (2022)](https://doi.org/10.1371/journal.pgen.1010299),
-and identify this prusie 0.2.4.dev2 development snapshot with [CITATION.cff](CITATION.cff).
-Author and maintainer: Wenxin Jiang.
+and identify the prusie version (here 0.2.4.dev2, a development version) as
+given in [CITATION.cff](CITATION.cff). Author and maintainer: Wenxin Jiang.
 
-GPL-3.0-or-later. [LICENSE](LICENSE) and
-[third-party notices](THIRD_PARTY_NOTICES.md) retain upstream attribution.
-
-For historical development evidence, the [original review snapshot](docs/review/post_analysis/README.md),
-[review-fixes snapshot](docs/review/post_analysis_fixes/README.md) and
-[sensitivity follow-up](docs/review/sensitivity_followup.md) remain preserved.
+prusie is distributed under GPL-3.0-or-later. [LICENSE](LICENSE) and the
+[third-party notices](THIRD_PARTY_NOTICES.md) retain the upstream attributions.

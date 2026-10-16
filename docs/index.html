@@ -23,8 +23,12 @@
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="index.md">Markdown source</a></div>
 <article><h1 id="susie-fine-mapping-in-python">SuSiE fine-mapping in Python</h1>
-<p>Fit association summary statistics with a Rust-powered SuSiE implementation,
-then inspect credible sets, convergence and sensitivity in one workflow.</p>
+<p>prusie fits the Sum of Single Effects (SuSiE) regression model to association
+summary statistics and LD (SuSiE-RSS), or to sufficient statistics, and returns
+posterior inclusion probabilities (PIPs) and credible sets. The iterative
+Bayesian stepwise selection (IBSS) algorithm is implemented in Rust and follows
+susieR 0.16.6. Further functions report convergence, refinement, LD
+diagnostics and sensitivity to model settings.</p>
 <h2 id="recorded-numerical-accuracy-and-performance">Recorded numerical accuracy and performance</h2>
 <!-- current:highlights:start -->
 <p>Measured <strong>0.2.4.dev2</strong> against susieR 0.16.6.</p>
@@ -88,16 +92,16 @@ then inspect credible sets, convergence and sensitivity in one workflow.</p>
 <p>100 GWAS locus analyses and 100 eQTL analyses, each with 103–4162 variants, compared with susieR 0.16.6. ¹ Geometric mean of per-case ratios of median runtimes (susieR/prusie). ² Median per-case ratio of full-process peak memory (susieR/prusie). Results reanalyze measurements of prusie 0.2.3rc4 made on 6 October 2026; these values identify that measured version.</p>
 <!-- generated:highlights:end -->
 </details>
-<p>Use <a href="numerical_accuracy.html">numerical accuracy</a> and <a href="performance.html">performance</a>
-for the full comparison and measurement methods. The Python workflow adds
-explicit continuation and refinement, LD diagnostics, comparisons across settings,
-and offline reports alongside variant PIPs and credible sets.</p>
+<p>See <a href="numerical_accuracy.html">numerical accuracy</a> and <a href="performance.html">performance</a>
+for the methods and complete results. Agreement with susieR is a check of the
+implementation; it does not by itself establish that the model assumptions hold
+for a given dataset.</p>
 <div class="start-links">
 <p><a href="install.html">Install</a> <a href="example.html">Quick start</a> <a href="worked_examples.html">Worked examples</a></p>
 </div>
 <h2 id="one-fit-a-readable-result">One fit, a readable result</h2>
-<p>The packaged 500-variant synthetic toy example runs offline after installation.
-This code fits once and summarizes that posterior:</p>
+<p>The packaged synthetic toy example with 500 variants can be fitted offline
+after installation. This code fits the model once and summarizes the posterior:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 
 <span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_example</span><span class="p">()</span>
@@ -117,27 +121,28 @@ CS 0: syn0100
 CS 1: syn0350
 </code></pre></div>
 
-<p>The two singleton credible sets identify concentrated candidates in this toy fit.
-The <a href="example.html">quick start</a> explains their PIPs and posterior mass, then adds
-plots and an offline report. Refinement, LD and sensitivity are separate explicit
-steps; they have not been run by the code above.</p>
-<h2 id="from-candidates-to-interpretation">From candidates to interpretation</h2>
-<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Candidate PIPs across settings: leading credible sets persist while fixing scaled prior variance changes the background." src="examples/post_analysis/stable/figure_5.png" /></div><figcaption><a href="examples/post_analysis/stable/figure_5.png">Open original figure</a></figcaption></figure>
-<p>The stable example retains its two main CS across these settings, while a fixed
-positive scaled prior variance raises background probabilities. The
-<a href="worked_examples.html">worked examples</a> explain this distinction and a second fit
-where refinement improves the solution but an LD-correlated pair remains unresolved.</p>
-<h2 id="read-the-result-in-context">Read the result in context</h2>
+<p>Each of the two credible sets contains a single variant in this toy example.
+The <a href="example.html">quick start</a> explains their PIPs and posterior mass and then
+produces figures and an offline report. Refinement, LD diagnostics and
+sensitivity analyses are separate steps that the code above does not run.</p>
+<h2 id="sensitivity-and-refinement">Sensitivity and refinement</h2>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Candidate PIPs of the toy example under four settings: the two leading credible sets persist, while a fixed scaled prior variance changes the PIPs of other variants." src="examples/post_analysis/stable/figure_5.png" /></div><figcaption><a href="examples/post_analysis/stable/figure_5.png">Open original figure</a></figcaption></figure>
+<p>In the toy example the two leading credible sets persist across these
+settings, whereas a fixed positive scaled prior variance increases the PIPs of
+other variants. The <a href="worked_examples.html">worked examples</a> discuss this
+distinction and a second example in which refinement finds a solution with a
+higher objective, while a pair of variants in strong LD remains unresolved.</p>
+<h2 id="reading-a-result">Reading a result</h2>
 <ul>
-<li><a href="results.html">Reading results</a>: which candidates carry support, and how concentrated is each signal?</li>
-<li><a href="post_analysis.html">Convergence and refinement</a>: did IBSS stop, and can search improve the solution?</li>
-<li><a href="sensitivity.html">Sensitivity and LD</a>: which conclusions change with settings or input assumptions?</li>
-<li><a href="worked_examples.html">Worked examples</a>: how do these observations fit into a complete interpretation?</li>
+<li><a href="results.html">Reading results</a>: which variants have posterior support, and how concentrated is each single effect?</li>
+<li><a href="post_analysis.html">Convergence and refinement</a>: did IBSS satisfy its stopping rule, and does refinement find a solution with a higher objective?</li>
+<li><a href="sensitivity.html">Sensitivity and LD</a>: which conclusions change with model settings or input assumptions?</li>
+<li><a href="worked_examples.html">Worked examples</a>: how do these results combine in an interpretation?</li>
 </ul>
-<p>For precise inputs and return values, use the <a href="api.html">API</a>, <a href="inputs.html">input guide</a>
-and <a href="model.html">statistical model</a>. <a href="reproducibility.html">Reproducibility</a> separates
-regenerating figures from rerunning fits. <a href="citation.html">Citation and license</a>
-identifies the statistical methods and software revision.</p></article>
+<p>The <a href="api.html">API</a>, <a href="inputs.html">input guide</a> and <a href="model.html">statistical model</a>
+give the precise inputs, outputs and definitions. <a href="reproducibility.html">Reproducibility</a>
+distinguishes regenerating figures from refitting models, and
+<a href="citation.html">citation and license</a> identifies the methods and the software version.</p></article>
 <footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
 </div>
