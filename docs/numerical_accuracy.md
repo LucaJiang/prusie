@@ -1,32 +1,32 @@
 # Numerical accuracy
 
-## Current development version: 0.2.4.dev2
+## Version 0.2.4.dev2
 
-New comparisons against susieR 0.16.6 at commit `8e56a8e038e989856d106d9ca5175cc664fea9d2`
-use compute commit `ff379ada284a63a3cf1770d43faacc6b929dc923`. All 200 frozen real
-trait analyses pass maximum absolute PIP error ≤10⁻⁵ with zero relative tolerance,
+Comparisons against susieR 0.16.6 at commit `8e56a8e038e989856d106d9ca5175cc664fea9d2`
+use compute commit `ff379ada284a63a3cf1770d43faacc6b929dc923`. All 100 GWAS and 100 eQTL
+locus analyses have maximum absolute PIP difference ≤1e-5 with zero relative tolerance,
 plus input, model and probability validity checks. Iteration counts, convergence
 flags and credible-set component/member identities agree in all 200 cases.
 CS order is immaterial; sets are matched by their original component IDs.
 
 | Quantity | GWAS maximum absolute difference | eQTL maximum absolute difference |
 | --- | --- | --- |
-| PIP | 9.139611×10⁻⁹ | 1.220497×10⁻⁸ |
-| alpha | 9.140027×10⁻⁹ | 1.220497×10⁻⁸ |
-| mu | 5.260663×10⁻¹⁰ | 2.340635×10⁻⁸ |
-| mu2 | 1.394811×10⁻¹⁰ | 3.704008×10⁻⁹ |
-| V | 4.078631×10⁻⁶ | 1.486289×10⁻⁷ |
+| PIP | 9.14e-09 | 1.22e-08 |
+| alpha | 9.140027e-9 | 1.22e-08 |
+| mu | 5.260663e-10 | 2.340635e-8 |
+| mu2 | 1.394811e-10 | 3.704008e-9 |
+| V | 4.078631e-6 | 1.486289e-7 |
 | sigma2 | 0 | 0 |
-| ELBO | 1.000124×10⁻⁵ | 3.917756×10⁻⁸ |
-| KL | 7.010086×10⁻⁸ | 1.171606×10⁻⁷ |
-| lbf | 2.821602×10⁻⁵ | 2.743060×10⁻⁷ |
-| lbf_variable | 2.821542×10⁻⁵ | 3.389438×10⁻⁷ |
+| ELBO | 1.000124e-5 | 3.917756e-8 |
+| KL | 7.010086e-8 | 1.171606e-7 |
+| lbf | 2.821602e-5 | 2.743060e-7 |
+| lbf_variable | 2.821542e-5 | 3.389438e-7 |
 
 Intermediate fields are retained as diagnostics using absolute and relative
 tolerances of 10⁻⁶. Region25/GWAS exceeds that diagnostic rule for V and
 lbf_variable; its PIP passes the stated PIP criterion. Maximum credible-set
-coverage differences are 2.14×10⁻⁹ (GWAS) and 2.59×10⁻⁹ (eQTL); maximum purity
-difference is 8.88×10⁻¹⁶ in both groups. These results describe standard fits with
+coverage differences are 2.14e-9 (GWAS) and 2.59e-9 (eQTL); maximum purity
+difference is 8.88e-16 in both groups. These results describe standard fits with
 the [fixed real-panel settings](performance.md#methods).
 
 A separate parameter panel executes the same pinned R reference for 58 outcomes:
@@ -40,12 +40,12 @@ The preserved cycling example converges in 49 sweeps in both implementations,
 with zero maximum PIP difference. Refinement is tested separately and retains
 the [documented search differences](post_analysis.md#refinement-compared-with-susier).
 
-## Historical comparison: 0.2.3rc4
+## Earlier measurements: 0.2.3rc4
 
-The historical real-data comparison uses prusie 0.2.3rc4 and susieR 0.16.6 at commit
+The earlier comparison uses prusie 0.2.3rc4 and susieR 0.16.6 at commit
 `8e56a8e038e989856d106d9ca5175cc664fea9d2`. It reanalyzes saved full fits from
 6 October 2026 using the matched inputs and parameters described in
-[performance methods](performance.md#methods). These records identify the measured rc4 source and binary; they are not timings or full-panel measurements of later checkouts.
+[performance methods](performance.md#methods). The records identify the measured source and binary.
 
 The panel covers ordinary RSS fits with fixed residual variance and optimized
 prior variance, as specified in those methods. It does not test refinement,
@@ -61,7 +61,7 @@ and estimated-residual-variance checks.
 | GWAS | 100 | 103–4162 | 9.14e-09 | region16/gwas / 49 |
 | eQTL | 100 | 103–4162 | 1.22e-08 | region31/eqtl / 238 |
 
-Across the evaluated GWAS analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 9.1396109e-09. Across the evaluated eQTL analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 1.2204966e-08.
+Across the evaluated GWAS analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 9.14e-09. Across the evaluated eQTL analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 1.22e-08.
 <!-- generated:maxima:end -->
 
 The numerical criterion is absolute PIP difference ≤10⁻⁵ with zero relative

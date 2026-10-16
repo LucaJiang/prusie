@@ -1,8 +1,8 @@
 {
   "package": "prusie",
   "mark": "Su",
-  "tagline": "SuSiE fine-mapping",
-  "description": "Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.",
+  "tagline": "SuSiE fine-mapping from summary statistics",
+  "description": "Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python",
   "section": "Fine-mapping \u00b7 Python + Rust",
   "navigation": [
     [

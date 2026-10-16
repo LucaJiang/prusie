@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.">
-
+<meta name="description" content="Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python">
 <title>Installation · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -15,7 +14,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping from summary statistics</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html" aria-current="page">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
@@ -33,13 +32,11 @@
 </details><h1 id="installation">Installation</h1>
 <p>prusie is installed from source for CPython 3.10–3.13. Its only Python run-time
 dependency is NumPy (≥1.26, &lt;3); fitting does not call R.</p>
-<p>The <code>main</code> branch contains the <strong>0.2.4.dev2 development version</strong> described
-here; it is not a release. Record the installed version and the source
-revision with every analysis. The earlier prerelease files described below
-contain different code.</p>
+<p>This checkout contains <strong>0.2.4.dev2</strong> (development version). Record the package
+version and source revision with each analysis.</p>
 <h2 id="build-from-source">Build from source</h2>
 <p>Building requires the Rust toolchain pinned in <code>rust-toolchain.toml</code> (1.98.1),
-a C linker and the Python development headers. The build uses maturin 1.9.6
+a C linker and the Python development headers. The build uses maturin 1.10.2
 and the locked Cargo dependencies.</p>
 <p>The pinned PyO3 0.23.5 supports CPython up to 3.13, and the package metadata
 therefore requires Python ≥3.10, &lt;3.14. Support for newer interpreters would
@@ -60,9 +57,7 @@ scalar code.</p>
 <p>The <a href="https://github.com/LucaJiang/prusie/releases/tag/v0.2.3rc6">v0.2.3rc6 prerelease</a>
 provides a CPython 3.12 wheel for Linux x86-64, tagged <code>manylinux_2_34</code>
 (glibc ≥2.34), a source distribution and <code>SHA256SUMS</code>. These files belong to
-that earlier version and do not contain the development version described here.
-On 12 October 2026 the release contained no wheels for macOS, Windows or other
-Python ABIs.</p>
+that earlier version and do not contain the development version described here.</p>
 <p>Download the matching file and verify it against <code>SHA256SUMS</code>. For that wheel:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./prusie-0.2.3rc6-cp312-cp312-manylinux_2_34_x86_64.whl
 </code></pre></div>
@@ -70,16 +65,11 @@ Python ABIs.</p>
 <p>Installing a compatible wheel requires neither Cargo nor a compiler; a source
 distribution requires the build toolchain above. The API documented here
 requires a build from <code>main</code>. The version and platform tags of a wheel identify
-its code and supported environment; wheels built for local validation are not
-published.</p>
-<p>The package checks of the published rc6 release covered CPython 3.12 on GNU
-Linux x86-64 with NumPy 2.2.6; they do not establish support on platforms for
-which no wheel was built. See <a href="contributing.html">contributing</a> for reproducible
-builds and checks of the package contents.</p>
-<p>For 0.2.4.dev2, installed Linux x86-64 wheels were also tested locally with
-Python 3.10.12, 3.12.2 and 3.13.5 and NumPy 1.26.4, 2.2.6 and 2.5.3 in
-supported combinations. These local tests do not imply that development wheels
-have been published, nor that other operating systems were tested.</p>
+its code and supported environment.</p>
+<p>The documented development version has local installation checks on Linux
+x86-64 with Python 3.10.12, 3.12.2 and 3.13.5 and compatible combinations of
+NumPy 1.26.4, 2.2.6 and 2.5.3. Other operating systems have not been tested.
+See <a href="contributing.html">contributing</a> for package validation commands.</p>
 <h2 id="optional-analysis-tools">Optional analysis tools</h2>
 <p>To install the plotting and LD-diagnostic dependencies from the same checkout:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span>

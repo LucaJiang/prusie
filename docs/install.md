@@ -3,15 +3,13 @@
 prusie is installed from source for CPython 3.10–3.13. Its only Python run-time
 dependency is NumPy (≥1.26, <3); fitting does not call R.
 
-The `main` branch contains the **0.2.4.dev2 development version** described
-here; it is not a release. Record the installed version and the source
-revision with every analysis. The earlier prerelease files described below
-contain different code.
+This checkout contains **0.2.4.dev2** (development version). Record the package
+version and source revision with each analysis.
 
 ## Build from source
 
 Building requires the Rust toolchain pinned in `rust-toolchain.toml` (1.98.1),
-a C linker and the Python development headers. The build uses maturin 1.9.6
+a C linker and the Python development headers. The build uses maturin 1.10.2
 and the locked Cargo dependencies.
 
 The pinned PyO3 0.23.5 supports CPython up to 3.13, and the package metadata
@@ -38,8 +36,6 @@ The [v0.2.3rc6 prerelease](https://github.com/LucaJiang/prusie/releases/tag/v0.2
 provides a CPython 3.12 wheel for Linux x86-64, tagged `manylinux_2_34`
 (glibc ≥2.34), a source distribution and `SHA256SUMS`. These files belong to
 that earlier version and do not contain the development version described here.
-On 12 October 2026 the release contained no wheels for macOS, Windows or other
-Python ABIs.
 
 Download the matching file and verify it against `SHA256SUMS`. For that wheel:
 
@@ -50,18 +46,12 @@ python -m pip install ./prusie-0.2.3rc6-cp312-cp312-manylinux_2_34_x86_64.whl
 Installing a compatible wheel requires neither Cargo nor a compiler; a source
 distribution requires the build toolchain above. The API documented here
 requires a build from `main`. The version and platform tags of a wheel identify
-its code and supported environment; wheels built for local validation are not
-published.
+its code and supported environment.
 
-The package checks of the published rc6 release covered CPython 3.12 on GNU
-Linux x86-64 with NumPy 2.2.6; they do not establish support on platforms for
-which no wheel was built. See [contributing](contributing.md) for reproducible
-builds and checks of the package contents.
-
-For 0.2.4.dev2, installed Linux x86-64 wheels were also tested locally with
-Python 3.10.12, 3.12.2 and 3.13.5 and NumPy 1.26.4, 2.2.6 and 2.5.3 in
-supported combinations. These local tests do not imply that development wheels
-have been published, nor that other operating systems were tested.
+The documented development version has local installation checks on Linux
+x86-64 with Python 3.10.12, 3.12.2 and 3.13.5 and compatible combinations of
+NumPy 1.26.4, 2.2.6 and 2.5.3. Other operating systems have not been tested.
+See [contributing](contributing.md) for package validation commands.
 
 ## Optional analysis tools
 

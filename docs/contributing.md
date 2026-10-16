@@ -16,7 +16,7 @@ tools:
 ```sh
 python -m venv .venv
 . .venv/bin/activate
-python -m pip install -c requirements-dev.lock '.[test]' maturin==1.9.6
+python -m pip install -c requirements-dev.lock '.[test,analysis]' maturin==1.10.2
 python -m pip install -r tools/docs-requirements.txt -r tools/results-requirements.txt
 ```
 
@@ -123,11 +123,10 @@ package checks; its observed status is separate from a local run.
 
 Preserve frozen numerical inputs, raw reference records and attribution. If a
 new reference is needed, generate it separately and identify its source and
-parameters. Runtime optimizations should compare complete calls on an
-outcome-independent case panel with retained repeats, reporting wins, ties,
-regressions and variability. An optimization enters the main implementation
-only when more than half of applicable cases have lower median runtime;
-correctness or allocation savings alone do not establish that result.
+parameters. Measure each runtime optimization against its parent on cases
+chosen before inspecting outcomes. Report wins, ties, regressions and repeat
+variability for the end-to-end fitting call. Merge it only if more than half
+of those cases have lower median runtime; otherwise retain it as experimental.
 
 Retain GPL package terms, susieR's BSD notices, the R optimizer's attribution
 and the frozen data notices. `LICENSE` is the primary project license;

@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "Please cite the original statistical methods and identify this software version. No DOI is assigned."
-title: "prusie: Native summary-statistics SuSiE"
+title: "prusie: SuSiE fine-mapping from summary statistics"
 type: software
 version: "0.2.4.dev2"
 license: GPL-3.0-or-later
@@ -9,3 +9,40 @@ authors:
     given-names: Wenxin
 repository-code: "https://github.com/LucaJiang/prusie"
 url: "https://github.com/LucaJiang/prusie"
+abstract: "Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python"
+references:
+  - type: article
+    title: "A simple new approach to variable selection in regression, with application to genetic fine mapping"
+    authors:
+      - family-names: Wang
+        given-names: Gao
+      - family-names: Sarkar
+        given-names: Abhishek
+      - family-names: Carbonetto
+        given-names: Peter
+      - family-names: Stephens
+        given-names: Matthew
+    year: 2020
+    journal: "Journal of the Royal Statistical Society: Series B (Statistical Methodology)"
+    volume: 82
+    issue: 5
+    start: 1273
+    end: 1300
+    doi: "10.1111/rssb.12388"
+  - type: article
+    title: "Fine-mapping from summary data with the Sum of Single Effects model"
+    authors:
+      - family-names: Zou
+        given-names: Yuxin
+      - family-names: Carbonetto
+        given-names: Peter
+      - family-names: Wang
+        given-names: Gao
+      - family-names: Stephens
+        given-names: Matthew
+    year: 2022
+    journal: "PLOS Genetics"
+    volume: 18
+    issue: 7
+    start: e1010299
+    doi: "10.1371/journal.pgen.1010299"

@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.">
-
+<meta name="description" content="Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python">
 <title>Quick start: fit, read and report · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -15,7 +14,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping from summary statistics</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html" aria-current="page">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
@@ -197,10 +196,10 @@ tools, selected arrays and metadata can be written explicitly:</p>
 z-scores are the marginal regression estimates divided by their standard
 errors, and R is the sample Pearson correlation of the same standardized
 predictors. The data are synthetic; no human study or genome build is implied.</p>
-<!-- generated:teaching:start -->
+<!-- generated:toy:start -->
 <p>The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
-<!-- generated:teaching:end -->
-<!-- generated:teaching-cs:start -->
+<!-- generated:toy:end -->
+<!-- generated:toy-cs:start -->
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -225,8 +224,8 @@ predictors. The data are synthetic; no human study or genome build is implied.</
 </tr>
 </tbody>
 </table></div>
-<!-- generated:teaching-cs:end -->
-<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Signed z and fitted PIPs, with the two synthetic true effects marked." class="figure-complex" src="assets/teaching_fit.svg" /></div><figcaption><a href="assets/teaching_fit.svg">Open original figure</a></figcaption></figure>
+<!-- generated:toy-cs:end -->
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Signed z and fitted PIPs, with the two synthetic true effects marked." class="figure-complex" src="assets/toy_fit.svg" /></div><figcaption><a href="assets/toy_fit.svg">Open original figure</a></figcaption></figure>
 <p><code>tools/generate_example.py</code> uses NumPy PCG64 with seed 20261007, a stationary
 AR(1) correlation of 0.85 between adjacent predictors, sample-standardized
 predictors, nonzero coefficients 0.35 and −0.30 at zero-based indices 99 and
@@ -234,7 +233,7 @@ predictors, nonzero coefficients 0.35 and −0.30 at zero-based indices 99 and
 synthetic positions at intervals of 1000 units. <code>tools/generate_example.py --check</code>
 verifies the exact SHA-256 hashes of the frozen files and compares regenerated
 values within bounds on floating-point rounding error; see the
-<a href="reproducibility.html#toy-data-regeneration">regeneration criteria</a>.</p>
+<a href="reproducibility.html#regeneration-checks">regeneration criteria</a>.</p>
 <p>The packaged reference was fitted separately with susieR 0.16.6 using the same
 inputs and options. The hashes of inputs and reference, the parameters, the
 convergence status and the credible sets are distributed with the data. The

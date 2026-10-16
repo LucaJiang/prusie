@@ -2,72 +2,55 @@
 
 ## 0.2.4.dev2 — stopping and prior validation (unreleased)
 
-- Keep finite-ELBO fits running through repeated alpha/PIP diagnostics until the
-  ELBO criterion or iteration limit is reached; respect minimum iterations and
-  distinguish numerical failure from the first iteration's sentinel.
-- Evaluate the prior-variance guard using the residual variance at the current
-  checking phase, including continued fits.
-- Add a compact result representation.
+- Continue finite-ELBO fits through repeated alpha/PIP diagnostics until the
+  ELBO criterion or iteration limit is reached. Respect minimum iterations
+  and distinguish numerical failure from the initial iteration sentinel.
+- Check prior variance against the residual variance at the current fitting
+  step, including when continuing a saved fit.
+- Add a compact text representation of fitted results.
 - Removed the optional `prusie.ai` interpretation adapter.
-- Clarify convergence and refinement documentation, retain independent reference
-  regressions, and exclude historical review snapshots from source distributions.
-- Clarify development-source installation and keep R comparisons distinct from
-  evidence for an individual optimization.
-- Remove unused imports and obsolete development constraints; centralize
-  license texts and dependency notices at the repository root, with verified
-  copies in built distributions and the offline documentation.
+- Clarify installation, result interpretation and the worked examples;
+  simplify documentation navigation and the performance report.
+- Include license texts and third-party notices in distributions and offline
+  documentation.
 
 ## 0.2.4.dev1 — post-analysis (unreleased)
 
 - Preserve requested convergence controls across continuation, refinement and
-  sensitivity fits; record inner solver settings and explicit overrides.
-- Hash matrix identity in bounded buffers without changing signatures or default
-  posterior calculations. Distinguish this development build in sensitivity caches.
-- Separate CS-supported signal comparisons from complete component evidence;
-  distinguish incomplete LD assessment from evaluated, unflagged variants.
-- Show before/after fitting and all retained CS in offline reports, with compact
-  deterministic summaries and complete external machine evidence.
-- Install analysis dependencies explicitly in full CI while testing NumPy-only
-  wheel installations separately.
+  sensitivity fits; report inner solver settings and explicit overrides.
+- Bound temporary memory when hashing input matrices for fit identity checks.
+- Separate credible-set signal comparisons from component comparisons, and
+  distinguish missing LD assessment from evaluated, unflagged variants.
+- Add before/after fitting views and all retained credible sets to offline
+  reports, with text summaries and downloadable numerical results.
 - Align sensitivity priors and metadata by variant ID, including subsets and
-  null augmentation; use one global intersection for common-mode comparisons.
-- Share local figure/report styling, add compact and variance-detail layouts,
-  and provide `summary_text` without implicit fitting or plotting.
-- Organize user documentation around result interpretation, convergence,
-  sensitivity and two saved worked examples; retain the original version and
-  date attribution of performance measurements.
-- Use separate linear PIP and LD heatmap palettes, compact cells and
-  contrast-aware annotations while retaining full-precision plotted values.
-  Improve mobile navigation, figure viewing and the fit-to-report tutorials.
+  null columns; compare all fits on one common variant intersection when requested.
+- Add compact and variance-detail plot layouts, local styling and `summary_text`.
+- Use distinct PIP and LD heatmap palettes with legible cell annotations.
+- Improve mobile navigation and figure viewing.
 
 ## 0.2.3rc6 — portable toy example validation
 
-- Verify frozen toy example file hashes separately from numerical regeneration,
-  allowing only measured BLAS roundoff instead of requiring compressed bytes
-  to match across CPU kernels.
-- Preserve all frozen inputs, reference outputs and statistical tolerances;
-  test corruption detection, metadata changes and alternate BLAS kernels.
+- Validate the shipped toy example hashes separately from numerical regeneration,
+  allowing small BLAS roundoff differences between CPU kernels while detecting
+  altered inputs and metadata.
 
 ## 0.2.3rc5 — documentation and packaged example
 
-- Add an independent, deterministic 500-variant synthetic toy example,
-  installed-resource loader and separately executed susieR reference.
-- Organize the documentation around the statistical model, numerical accuracy,
-  fine-mapping performance, implementation and reproducibility.
-- Separate retained GWAS and eQTL evidence and include completed iteration-limit
-  and empty-credible-set analyses in the paired timing summaries.
-- Generate tables and vector figures from normalized records; add static syntax
-  highlighting and package-data installation checks.
-
-These changes preserve the public fitting functions and statistical behavior.
+- Add an offline 500-variant synthetic toy example, installed-data loader and
+  separately executed susieR reference.
+- Document the statistical model, numerical accuracy, performance and implementation.
+- Report GWAS and eQTL timing results separately, including iteration-limit
+  fits and fits without credible sets.
+- Add static syntax highlighting and figures generated from measurement records.
 
 ## Gaussian inference implementation
 
-- Implement susieR 0.16.6 convergence and final low-variance trimming semantics.
-- Return actual credible-set posterior mass with original component identities.
-- Reuse fit-local SER workspaces and component matrix products.
-- Use guarded matrix scaling, verified exact signed redundancy, optional vector
-  math and complete retained-set purity calculations.
+- Match susieR 0.16.6 convergence and final low-variance trimming semantics.
+- Return credible-set posterior mass with original component identities.
+- Reuse single-effect regression workspaces and component matrix products within a fit.
+- Support matrix scaling checks, exact signed redundancy, optional vector math
+  and purity calculations using every pair of variants in a credible set.
 
 See [model support](docs/inputs.md#supported-model-and-input-routes),
 [implementation](docs/implementation.md) and [performance](docs/performance.md).

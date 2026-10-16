@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.">
-
+<meta name="description" content="Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python">
 <title>Sensitivity and LD diagnostics · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -15,7 +14,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping from summary statistics</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html" aria-current="page">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
@@ -77,8 +76,8 @@ Changing coverage or purity is a report filter; it keeps the posterior.</p>
 <p>The two leading CS, <code>{syn0100}</code> and <code>{syn0350}</code>, persist in the saved comparison.
 L=6 and the coverage-only change leave all PIPs unchanged. Fixing
 <code>scaled_prior_variance=0.05</code> with <code>estimate_prior_variance=False</code> changes the
-background: <code>syn0143</code> rises from about 5.318×10⁻¹¹ to 0.2544, and <code>syn0145</code> from
-about 2.066×10⁻¹¹ to 0.1430.</p>
+background: <code>syn0143</code> rises from about 5.318e-11 to 0.2544, and <code>syn0145</code> from
+about 2.066e-11 to 0.1430.</p>
 <p>The fixed positive variance keeps all five components active, including three
 without retained CS. With estimation disabled, those components cannot shrink
 to V=0 through that estimation step and can distribute additional posterior mass.

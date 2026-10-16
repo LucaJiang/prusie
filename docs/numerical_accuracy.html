@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.">
-
+<meta name="description" content="Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python">
 <title>Numerical accuracy · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -15,7 +14,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping from summary statistics</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html" aria-current="page">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
@@ -24,8 +23,8 @@
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="numerical_accuracy.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#current-development-version-024dev2">Current development version: 0.2.4.dev2</a></li>
-<li><a href="#historical-comparison-023rc4">Historical comparison: 0.2.3rc4</a></li>
+<li><a href="#version-024dev2">Version 0.2.4.dev2</a></li>
+<li><a href="#earlier-measurements-023rc4">Earlier measurements: 0.2.3rc4</a></li>
 <li><a href="#variant-inclusion-probabilities">Variant inclusion probabilities</a></li>
 <li><a href="#posterior-arrays-bayes-factors-and-objective">Posterior arrays, Bayes factors and objective</a></li>
 <li><a href="#credible-sets">Credible sets</a></li>
@@ -34,10 +33,10 @@
 </ul>
 </div>
 </details><h1 id="numerical-accuracy">Numerical accuracy</h1>
-<h2 id="current-development-version-024dev2">Current development version: 0.2.4.dev2</h2>
-<p>New comparisons against susieR 0.16.6 at commit <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>
-use compute commit <code>ff379ada284a63a3cf1770d43faacc6b929dc923</code>. All 200 frozen real
-trait analyses pass maximum absolute PIP error ≤10⁻⁵ with zero relative tolerance,
+<h2 id="version-024dev2">Version 0.2.4.dev2</h2>
+<p>Comparisons against susieR 0.16.6 at commit <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>
+use compute commit <code>ff379ada284a63a3cf1770d43faacc6b929dc923</code>. All 100 GWAS and 100 eQTL
+locus analyses have maximum absolute PIP difference ≤1e-5 with zero relative tolerance,
 plus input, model and probability validity checks. Iteration counts, convergence
 flags and credible-set component/member identities agree in all 200 cases.
 CS order is immaterial; sets are matched by their original component IDs.</p>
@@ -52,28 +51,28 @@ CS order is immaterial; sets are matched by their original component IDs.</p>
 <tbody>
 <tr>
 <td>PIP</td>
-<td>9.139611×10⁻⁹</td>
-<td>1.220497×10⁻⁸</td>
+<td>9.14e-09</td>
+<td>1.22e-08</td>
 </tr>
 <tr>
 <td>alpha</td>
-<td>9.140027×10⁻⁹</td>
-<td>1.220497×10⁻⁸</td>
+<td>9.140027e-9</td>
+<td>1.22e-08</td>
 </tr>
 <tr>
 <td>mu</td>
-<td>5.260663×10⁻¹⁰</td>
-<td>2.340635×10⁻⁸</td>
+<td>5.260663e-10</td>
+<td>2.340635e-8</td>
 </tr>
 <tr>
 <td>mu2</td>
-<td>1.394811×10⁻¹⁰</td>
-<td>3.704008×10⁻⁹</td>
+<td>1.394811e-10</td>
+<td>3.704008e-9</td>
 </tr>
 <tr>
 <td>V</td>
-<td>4.078631×10⁻⁶</td>
-<td>1.486289×10⁻⁷</td>
+<td>4.078631e-6</td>
+<td>1.486289e-7</td>
 </tr>
 <tr>
 <td>sigma2</td>
@@ -82,31 +81,31 @@ CS order is immaterial; sets are matched by their original component IDs.</p>
 </tr>
 <tr>
 <td>ELBO</td>
-<td>1.000124×10⁻⁵</td>
-<td>3.917756×10⁻⁸</td>
+<td>1.000124e-5</td>
+<td>3.917756e-8</td>
 </tr>
 <tr>
 <td>KL</td>
-<td>7.010086×10⁻⁸</td>
-<td>1.171606×10⁻⁷</td>
+<td>7.010086e-8</td>
+<td>1.171606e-7</td>
 </tr>
 <tr>
 <td>lbf</td>
-<td>2.821602×10⁻⁵</td>
-<td>2.743060×10⁻⁷</td>
+<td>2.821602e-5</td>
+<td>2.743060e-7</td>
 </tr>
 <tr>
 <td>lbf_variable</td>
-<td>2.821542×10⁻⁵</td>
-<td>3.389438×10⁻⁷</td>
+<td>2.821542e-5</td>
+<td>3.389438e-7</td>
 </tr>
 </tbody>
 </table></div>
 <p>Intermediate fields are retained as diagnostics using absolute and relative
 tolerances of 10⁻⁶. Region25/GWAS exceeds that diagnostic rule for V and
 lbf_variable; its PIP passes the stated PIP criterion. Maximum credible-set
-coverage differences are 2.14×10⁻⁹ (GWAS) and 2.59×10⁻⁹ (eQTL); maximum purity
-difference is 8.88×10⁻¹⁶ in both groups. These results describe standard fits with
+coverage differences are 2.14e-9 (GWAS) and 2.59e-9 (eQTL); maximum purity
+difference is 8.88e-16 in both groups. These results describe standard fits with
 the <a href="performance.html#methods">fixed real-panel settings</a>.</p>
 <p>A separate parameter panel executes the same pinned R reference for 58 outcomes:
 54 returned fits and four expected prior-guard errors. It covers RSS and sufficient
@@ -118,11 +117,11 @@ expected prior-guard rejection in both implementations. A restricted independent
 The preserved cycling example converges in 49 sweeps in both implementations,
 with zero maximum PIP difference. Refinement is tested separately and retains
 the <a href="post_analysis.html#refinement-compared-with-susier">documented search differences</a>.</p>
-<h2 id="historical-comparison-023rc4">Historical comparison: 0.2.3rc4</h2>
-<p>The historical real-data comparison uses prusie 0.2.3rc4 and susieR 0.16.6 at commit
+<h2 id="earlier-measurements-023rc4">Earlier measurements: 0.2.3rc4</h2>
+<p>The earlier comparison uses prusie 0.2.3rc4 and susieR 0.16.6 at commit
 <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>. It reanalyzes saved full fits from
 6 October 2026 using the matched inputs and parameters described in
-<a href="performance.html#methods">performance methods</a>. These records identify the measured rc4 source and binary; they are not timings or full-panel measurements of later checkouts.</p>
+<a href="performance.html#methods">performance methods</a>. The records identify the measured source and binary.</p>
 <p>The panel covers ordinary RSS fits with fixed residual variance and optimized
 prior variance, as specified in those methods. It does not test refinement,
 alternate convergence criteria or the current development snapshot's stopping
@@ -157,7 +156,7 @@ and estimated-residual-variance checks.</p>
 </tr>
 </tbody>
 </table></div>
-<p>Across the evaluated GWAS analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 9.1396109e-09. Across the evaluated eQTL analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 1.2204966e-08.</p>
+<p>Across the evaluated GWAS analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 9.14e-09. Across the evaluated eQTL analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 1.22e-08.</p>
 <!-- generated:maxima:end -->
 
 <p>The numerical criterion is absolute PIP difference ≤10⁻⁵ with zero relative
@@ -293,14 +292,14 @@ correlation. The retained numerical records include independent checks of PIP
 identity, alpha normalization, actual set mass and purity, including empty sets.
 Convergence and the presence of a credible set are different properties.</p>
 <h2 id="independent-toy-example">Independent toy example</h2>
-<!-- generated:teaching:start -->
+<!-- generated:toy:start -->
 <p>The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
-<!-- generated:teaching:end -->
+<!-- generated:toy:end -->
 
-<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Signed association statistics and fitted PIPs for the independent synthetic toy example, with its two true effect positions marked." src="assets/teaching_fit.svg" /></div><figcaption><a href="assets/teaching_fit.svg">Open original figure</a></figcaption></figure>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Signed association statistics and fitted PIPs for the independent synthetic toy example, with its two true effect positions marked." src="assets/toy_fit.svg" /></div><figcaption><a href="assets/toy_fit.svg">Open original figure</a></figcaption></figure>
 <p>The dashed lines mark the two simulated nonzero effects. This single toy
 example has its own newly executed reference, generation script and packaged
-inputs. See the <a href="example.html">toy example tutorial</a> and <a href="assets/teaching_fit.pdf">vector PDF</a>.</p>
+inputs. See the <a href="example.html">toy example tutorial</a> and <a href="assets/toy_fit.pdf">vector PDF</a>.</p>
 <h2 id="reproduce-the-comparisons">Reproduce the comparisons</h2>
 <p><a href="assets/r_comparison_numerical.json">Retained records</a> include the real panel
 and a separately identified older synthetic regression panel. The older fixture

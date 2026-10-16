@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.">
-
+<meta name="description" content="Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python">
 <title>Two worked fine-mapping examples · prusie</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -15,7 +14,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping</small></span></a>
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Su</span><span>prusie<small>SuSiE fine-mapping from summary statistics</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html" aria-current="page">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
@@ -60,21 +59,21 @@ condition, then finds a better solution through refinement.</p>
 </tr>
 </tbody>
 </table></div>
-<p>These are saved numerical examples from the source revisions identified under
-<a href="#sources-and-reproducibility">Sources and reproducibility</a>. Their values are
-rounded for reading; the linked tables retain complete values, variant IDs and
-comparison support. Rendering these records with a newer package does not
-remeasure its fits.</p>
+<p>The baseline and refined fits use prusie 0.2.3rc6; additional sensitivity fits
+use 0.2.4.dev1. Values are rounded for display; linked tables retain full
+precision and variant IDs. See <a href="#sources-and-reproducibility">reproducibility</a>
+for the input and software identities.</p>
 <h2 id="stable-signals-with-a-prior-sensitive-background">Stable signals with a prior-sensitive background</h2>
 <p>The baseline stops after three sweeps with the requested and effective ELBO rule,
 at tolerance 0.001. It has two active components and two singleton CS,
 <code>{syn0100}</code> and <code>{syn0350}</code>. Their posterior masses are approximately 0.9697 and
-0.99994, and their effective candidate counts are 1.146 and 1.001. Singleton
+0.99994, and their effective numbers of variants are 1.146 and 1.001. Singleton
 purity is 1 by definition; it does not describe LD to surrounding variants.</p>
 <p>Refinement tests two exclusions in one round, using four inner fits. Neither
-stage-B candidate improves the common objective by more than 0.001, so no
-candidate is accepted. Before and after have the same post-trim original-model
-objective, approximately −1363.854754, and identical PIPs. This supports stability
+refit started from an excluded-variant solution improves the ELBO by more than
+0.001, so no candidate is accepted. Before and after have the same ELBO,
+approximately −1363.854754, and identical PIPs. The <a href="post_analysis.html">refinement guide</a>
+defines the ELBO used in this comparison. This supports stability
 under the executed search, without establishing global optimality.</p>
 <figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="The stable example's candidate PIP heatmap across baseline, larger L, fixed scaled prior variance and changed CS coverage." src="examples/post_analysis/stable/figure_5.png" /></div><figcaption><a href="examples/post_analysis/stable/figure_5.png">Open original figure</a></figcaption></figure>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
@@ -103,12 +102,12 @@ under the executed search, without establishing global optimality.</p>
 </tr>
 <tr>
 <td>syn0143</td>
-<td style="text-align: right;">5.318×10⁻¹¹</td>
+<td style="text-align: right;">5.318e-11</td>
 <td style="text-align: right;">0.2544</td>
 </tr>
 <tr>
 <td>syn0145</td>
-<td style="text-align: right;">2.066×10⁻¹¹</td>
+<td style="text-align: right;">2.066e-11</td>
 <td style="text-align: right;">0.1430</td>
 </tr>
 </tbody>
@@ -139,7 +138,7 @@ is evidence about one trajectory. Refinement evaluates five exclusion attempts
 in two rounds, using ten inner fits, and accepts one candidate. The returned
 candidate satisfies its inner stopping rule after three sweeps.</p>
 <figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Initial ten-sweep and returned three-sweep convergence trajectories with independent iteration axes." class="figure-complex" src="examples/post_analysis/problem/figure_2.png" /></div><figcaption><a href="examples/post_analysis/problem/figure_2.png">Open original figure</a></figcaption></figure>
-<p>The comparable <strong>post-trim original-model objective</strong> changes from
+<p>The <strong>ELBO</strong> changes from
 −70832.271605 to −70814.813295, a gain of <strong>17.4583</strong>. The final logged sweep ELBO
 has a slightly different value and is not substituted in this comparison.
 Different starting solutions have different outcomes even though both satisfy
@@ -195,7 +194,7 @@ singleton support is substantial, rather than a redistribution within one
 unchanged CS.</p>
 <h3 id="what-remains-unresolved">What remains unresolved</h3>
 <p>The refined <code>{86,90}</code> CS has mass greater than 0.9999, approximately 1.595 effective
-candidates, and |r| = 0.9989. Its roughly 0.177/0.823 probability allocation leaves
+variants, and |r| = 0.9989. Its roughly 0.177/0.823 probability allocation leaves
 LD-limited resolution. The LD panel displays r² (approximately 0.9978 off the
 diagonal) on a fixed 0–1 scale. The report shows this pair separately from the concentrated
 singleton <code>{33}</code>.</p>
@@ -222,9 +221,7 @@ claim. The LD matrix is close to singular; use the saved diagnostic warnings and
 input identity when assessing this result.</p>
 <p>Read the <a href="examples/post_analysis/problem/comparison.json">full comparison</a>,
 <a href="examples/post_analysis/problem/posterior_summary.json">posterior and search summary</a>
-and <a href="examples/post_analysis/problem/ld_diagnostics.json">LD diagnostics</a>. Exact
-paired R flip-flag agreement was not established for either full example; the
-separate small-fixture numerical checks do not supply that missing comparison.</p>
+and <a href="examples/post_analysis/problem/ld_diagnostics.json">LD diagnostics</a>. Paired R flip-flag agreement has not been established for these two examples.</p>
 <h2 id="choose-a-signal-detail">Choose a signal detail</h2>
 <p>Select a component according to the question it answers. This illustrative
 fragment requires the problem fit's posterior <code>summary</code> and aligned LD matrix
@@ -247,34 +244,25 @@ full layouts and exported plotting data, and the
 <details>
 <summary>Inputs, licenses, numerical provenance and rendering commands</summary>
 <p>The stable inputs are independently generated synthetic data; their
-<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/teaching/metadata.json">generation metadata</a>
-and <a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/teaching/LICENSE.txt">GPL-3.0-or-later notice</a>
+<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/toy/metadata.json">generation metadata</a>
+and <a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/toy/LICENSE.txt">GPL-3.0-or-later notice</a>
 ship with the package. The problem fixture uses a simulated response with
 real-genotype-derived sufficient statistics, without individual genotypes;
 <a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/convergence/metadata.json">source metadata</a>
 records the pinned upstream input and BSD-3-Clause license, with
 <a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/convergence/LICENSE.txt">upstream attribution</a>.</p>
-<p>The reports reuse recorded fits and diagnostics. Their provenance separates
-the numerical producer from the current plotting and reporting source; updating
-the presentation does not create a new numerical result. The linked JSON and
-CSV retain full precision, identifiers and comparison support. No biological
-mechanism or gene annotation accompanies these inputs.</p>
-<p>To regenerate presentation from the saved fits and diagnostics, use the source
-revision recorded as <code>render_source_sha</code> in the
-<a href="examples/post_analysis/stable/provenance.json">stable provenance</a> or
-<a href="examples/post_analysis/problem/provenance.json">problem provenance</a>. Set
-<code>RENDER_SOURCE_SHA</code> to that full 40-character revision:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>examples/render_review.py<span class="w"> </span>--output-dir<span class="w"> </span>output/rendered-examples<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--sensitivity-dir<span class="w"> </span>docs/review/post_analysis_fixes/examples<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--render-source-sha<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RENDER_SOURCE_SHA</span><span class="s2">&quot;</span>
+<p>The baseline and refined fits were produced with prusie 0.2.3rc6, and the
+additional sensitivity fits with 0.2.4.dev1. The
+<a href="examples/post_analysis/stable/provenance.json">stable provenance</a> and
+<a href="examples/post_analysis/problem/provenance.json">problem provenance</a> identify
+the inputs, source revisions and software versions. JSON and CSV downloads
+retain full precision. These inputs have no gene annotations.</p>
+<p>To regenerate the figures and reports from the saved posterior and diagnostics:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>examples/post_analysis.py<span class="w"> </span>--saved-dir<span class="w"> </span>docs/examples/post_analysis<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output-dir<span class="w"> </span>output/rendered-examples<span class="w"> </span>--case<span class="w"> </span>both
 </code></pre></div>
 
-<p>This command reuses saved baseline, refined and alternative fits and LD records;
-it recomputes posterior summaries, comparisons and presentation without new fits.
-The original fit producer is <code>e45914e512e04feef37cf7310bc0b309582d6058</code> and the
-three additional sensitivity fits were produced at
-<code>1f2b246ebd7970929711b2a51bb08f6a76ddad56</code>. Per-case provenance records the exact
-inputs and saved source files.</p>
+<p>The saved result directories include baseline, refined and alternative fits.</p>
 <p>To fit both examples anew from the source checkout with the analysis extra installed:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="nv">PRUSIE_SER_MATH</span><span class="o">=</span>scalar<span class="w"> </span>python<span class="w"> </span>examples/post_analysis.py<span class="w"> </span>--output-dir<span class="w"> </span>output/post-analysis<span class="w"> </span>--case<span class="w"> </span>both
 </code></pre></div>
@@ -284,12 +272,6 @@ setting recorded for the saved numerical examples. Opening the saved reports abo
 does not. Each report includes PNG/SVG, complete CSV tables, lossless JSON/NPZ,
 provenance and a figure index. The compact main figures are supplemented by a
 separate variance-details figure and full search tables.</p>
-<p>The interpretation follows the saved posterior and diagnostic records. The
-example command above runs offline statistical analysis and does not request
-AI interpretation. An optional AI request requires explicit <code>--interpret</code>,
-<code>--case stable</code> and <code>--model</code> settings; deterministic results are saved separately
-before the request. See <a href="https://github.com/LucaJiang/prusie/blob/main/examples/README.md">examples</a>
-for that opt-in interface.</p>
 </details></article>
 <footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>
