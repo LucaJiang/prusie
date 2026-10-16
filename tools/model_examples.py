@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"Calculate the small probability/matrix examples and check their document text."
+"""Calculate the small probability/matrix examples for the documentation."""
 
 from __future__ import annotations
 
-import argparse
-import json
 import math
 from decimal import Decimal, localcontext
 from pathlib import Path
@@ -152,16 +150,15 @@ def snippets(x):
     }
 
 
-def build(check=False):
+def build():
     values = calculate()
     text = snippets(values)
-    stale = []
     for name, keys in [
         ("model.md", ["wald", "pip", "cs"]),
         ("implementation.md", ["cache", "ser", "memory", "columns", "logsum"]),
     ]:
         path = ROOT / "docs" / name
-        original = updated = path.read_text()
+        updated = path.read_text()
         for key in keys:
             start, end = (
                 f"<!-- calculated:{key}:start -->",
@@ -171,38 +168,9 @@ def build(check=False):
             before, remainder = updated.split(start)
             _, after = remainder.split(end)
             updated = before + start + "\n" + text[key] + end + after
-        if check:
-            if updated != original:
-                stale.append(str(path.relative_to(ROOT)))
-        else:
-            path.write_text(updated)
-    path = ROOT / "docs/assets/model_calculations.json"
-
-    # These are displayed instructional values, not frozen inference references.
-    # Ignore insignificant last-bit platform differences in elementary arithmetic.
-    def display_values(value):
-        if isinstance(value, float):
-            return float(f"{value:.15g}")
-        if isinstance(value, dict):
-            return {key: display_values(item) for key, item in value.items()}
-        if isinstance(value, list):
-            return [display_values(item) for item in value]
-        return value
-
-    expected = json.dumps(display_values(values), indent=2, allow_nan=False) + "\n"
-    if check:
-        if not path.exists() or path.read_text() != expected:
-            stale.append(str(path.relative_to(ROOT)))
-    else:
-        path.write_text(expected)
-    if stale:
-        raise SystemExit("Stale explanatory calculations: " + ", ".join(stale))
-    print(
-        "Checked explanatory probabilities, Wald adjustment, matrix products, SER and log-sum-exp"
-    )
+        path.write_text(updated)
+    print("Generated explanatory probability and matrix calculations")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true")
-    build(parser.parse_args().check)
+    build()

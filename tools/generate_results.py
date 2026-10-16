@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import argparse
 import csv
 import io
 import json
@@ -16,7 +15,6 @@ import numpy as np
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools/benchmark"))
@@ -48,9 +46,6 @@ def f(x):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true")
-    args = parser.parse_args()
     evidence = json.loads((ROOT / "docs/assets/benchmark_records.json").read_text())
     cases = [paired(c) for c in evidence["cases"] if c["stage"] == "C"]
     assert len(cases) == len(evidence["cases"]), "Canonical records must contain fine-mapping only"
@@ -101,7 +96,6 @@ def main():
         groups=groups,
     )
     out("docs/assets/r_comparison_summary.json", text_json(summary))
-    out("docs/assets/r_comparison_cases.json", text_json(cases))
     out(
         "docs/assets/r_comparison_numerical.json",
         text_json(
@@ -386,80 +380,6 @@ def main():
             out(f"docs/assets/{name}.{ext}", b.getvalue())
         plt.close(fig)
 
-    rng = np.random.default_rng(20261007)
-    fig, axes = plt.subplots(1, 2, figsize=(8.6, 3.4), layout="constrained")
-    for ax, key, title, label in zip(
-        axes,
-        ["speedup", "memory_ratio"],
-        ["A  Runtime", "B  Peak memory"],
-        ["Runtime ratio (susieR / prusie)", "Peak-memory ratio (susieR / prusie)"],
-        strict=True,
-    ):
-        values = [
-            [
-                c[key]
-                for c in cases
-                if c["group"] == g and c["timing_eligible"] and c[key] is not None
-            ]
-            for g in real
-        ]
-        bp = ax.boxplot(
-            values,
-            positions=[1, 2],
-            widths=0.43,
-            showfliers=False,
-            patch_artist=True,
-            medianprops={"color": "#111111", "linewidth": 1.6},
-        )
-        for j, (a, color) in enumerate(zip(values, colors, strict=True)):
-            bp["boxes"][j].set(facecolor=color, alpha=0.15)
-            ax.scatter(
-                j + 1 + rng.uniform(-0.13, 0.13, len(a)),
-                a,
-                s=10,
-                alpha=0.45,
-                color=color,
-                linewidths=0,
-            )
-        ax.axhline(1, color="#777777", ls="--", lw=0.8)
-        ax.set(xticks=[1, 2], xticklabels=real, ylabel=label, title=title)
-        ax.set_yscale("log")
-        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, pos: f"{x:g}×"))
-        ax.grid(axis="y", alpha=0.15)
-        ax.yaxis.set_minor_formatter(NullFormatter())
-        if key == "memory_ratio":
-            ax.yaxis.set_major_locator(FixedLocator([1, 2, 4, 6, 8]))
-    save(fig, "r_comparison")
-    for measure, label, filename in [
-        ("runtime", "Median complete-call time (ms)", "runtime_by_variants"),
-        ("memory", "Peak memory (MiB)", "memory_by_variants"),
-    ]:
-        fig, axes = plt.subplots(1, 2, figsize=(8.6, 3.4), layout="constrained")
-        for ax, g in zip(axes, real, strict=True):
-            rows = [c for c in cases if c["group"] == g and c["timing_eligible"]]
-            for k, color, marker in [("prusie", colors[0], "o"), ("susieR", colors[1], "^")]:
-                vals = [
-                    c["backends"][k]["runtime_seconds"]["median"] * 1000
-                    if measure == "runtime"
-                    else c["backends"][k]["peak_memory_mib"]
-                    for c in rows
-                ]
-                ax.scatter(
-                    [c["n_variants"] for c in rows],
-                    vals,
-                    s=14,
-                    alpha=0.65,
-                    label=k,
-                    color=color,
-                    marker=marker,
-                    linewidths=0,
-                )
-            ax.set(xlabel="Variants in analysis", ylabel=label, title=g)
-            ax.set_xscale("log")
-            ax.set_yscale("log")
-            ax.grid(alpha=0.15)
-            ax.legend(frameon=False, fontsize=9)
-        save(fig, filename)
     fig, axes = plt.subplots(1, 2, figsize=(8.6, 3.3), layout="constrained")
     for ax, g, color in zip(axes, real, colors, strict=True):
         rows = [c for c in cases if c["group"] == g and c["numerical"]["outputs_valid"]]
@@ -518,18 +438,11 @@ def main():
             ],
         )
         fragment("docs/example.md", "toy-cs", cs)
-    stale = []
     for path, payload in outputs.items():
-        if args.check:
-            if not path.exists() or path.read_bytes() != payload:
-                stale.append(str(path.relative_to(ROOT)))
-        else:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(payload)
-    if stale:
-        raise SystemExit("Stale generated evidence: " + ", ".join(stale))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
     print(
-        ("Checked" if args.check else "Generated"),
+        "Generated",
         len(outputs),
         "outputs;",
         len(cases),

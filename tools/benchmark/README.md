@@ -116,3 +116,5 @@ plots fitting runtime, iteration counts,
 process RSS and the separately labeled sampled incremental memory.
 See [reproducibility](../../docs/reproducibility.md) for the distinction between
 record regeneration and input-level reruns.
+
+The independent pinned-R validation panel is in `dev/references`; its NumPy oracle lives in `tests/reference_numpy.py` so source distributions can run the numerical tests.

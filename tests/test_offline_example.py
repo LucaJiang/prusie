@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNNER = ROOT / "examples/check_example.py"
+RUNNER = ROOT / "tests/reference_coloc.py"
 DATA = ROOT / "examples/data"
 
 

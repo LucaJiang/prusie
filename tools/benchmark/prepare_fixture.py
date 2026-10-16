@@ -14,8 +14,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def prepare(data, output):
     # Reuse checksum/order checks only; no fit, goldens update or simulation.
-    sys.path.insert(0, str(ROOT / "examples"))
-    from check_example import validate_checksums, validate_order
+    sys.path.insert(0, str(ROOT / "tests"))
+    from reference_coloc import validate_checksums, validate_order
 
     manifest = validate_checksums(data)
     metadata = json.loads((data / "metadata.json").read_text())

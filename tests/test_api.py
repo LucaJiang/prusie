@@ -7,6 +7,7 @@ import sys
 import numpy as np
 import pytest
 
+import prusie
 from prusie import _native, susie_rss, susie_suff_stat
 from prusie.posterior import credible_sets, marginal_pip
 
@@ -157,3 +158,54 @@ def test_no_r_executable_required():
         "f.converged"
     )
     subprocess.run([sys.executable, "-c", code], env=environment, check=True)
+
+
+def test_import_needs_no_optional_provider_or_process():
+    script = """
+import subprocess, socket, sys
+def forbidden(*args, **kwargs):
+    raise AssertionError('Import must not start a process or network request')
+subprocess.Popen = forbidden
+socket.create_connection = forbidden
+import prusie
+assert 'matplotlib' not in sys.modules
+assert 'scipy' not in sys.modules
+print(prusie.__file__)
+"""
+    result = subprocess.run(
+        [sys.executable, "-B", "-c", script], text=True, capture_output=True, check=False
+    )
+    assert result.returncode == 0, result.stderr
+    assert "prusie" in result.stdout
+
+
+def test_result_repr_only_reads_stored_shape_and_status():
+    fit = prusie.susie_rss(z=np.array([4.0, 0.2, -0.3]), R=np.eye(3), n=200, L=2)
+    original = fit.as_dict()
+    text = repr(fit)
+    assert text.startswith("SusieResult(variables=3, components=2, credible_sets=")
+    assert f"niter={fit.niter}" in text
+    assert f"converged={fit.converged}" in text
+    assert fit.convergence["stop_reason"] in text
+    assert "array(" not in text and len(text) < 200
+    assert all(fit.as_dict()[key] is value for key, value in original.items())
+
+    class ShapeOnly:
+        shape = (2, 3)
+
+        def __array__(self, *args, **kwargs):
+            raise AssertionError("repr must not materialize or reduce arrays")
+
+        def __repr__(self):
+            raise AssertionError("repr must not format arrays")
+
+    fit.alpha = ShapeOnly()
+    fit.sets = {"cs": {"L0": [0], "L7": [1]}}
+    fit.convergence = {"stop_reason": "max_iter"}
+    fit.converged = False
+    assert "credible_sets=2" in repr(fit)
+    assert "stop_reason='max_iter'" in repr(fit)
+    fit.sets = {"cs": None}
+    fit.convergence = {}
+    assert "credible_sets=0" in repr(fit)
+    assert "stop_reason='not_available'" in repr(fit)

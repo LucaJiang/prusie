@@ -35,7 +35,7 @@ use the same installed artifact so its identity remains accurate.
 
 ## Restricted NumPy reference
 
-`restricted_numpy_susie.py` adapts the supplied independent reference. The original
+[`tests/reference_numpy.py`](../../tests/reference_numpy.py) adapts the supplied independent reference. The original
 file remains preserved with SHA256
 `d036e2b48046386df848386a5eb292d672dc6aaf4a3378d6bf123d5a17fb26e0`.
 Its zero-column `r/d` and `sigma2/d` divisions are undefined, and its likelihood

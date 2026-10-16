@@ -9,7 +9,7 @@ from scipy.special import logsumexp
 
 import prusie
 
-_path = Path(__file__).resolve().parents[1] / "dev/references/restricted_numpy_susie.py"
+_path = Path(__file__).with_name("reference_numpy.py")
 _spec = spec_from_file_location("restricted_numpy_susie", _path)
 ref = module_from_spec(_spec)
 _spec.loader.exec_module(ref)

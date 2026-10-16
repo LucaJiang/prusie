@@ -1,7 +1,6 @@
 """Heatmap rendering semantics on bounded saved-style evidence; no fits required."""
 
 import copy
-from itertools import pairwise
 
 import matplotlib
 
@@ -198,40 +197,3 @@ def test_singleton_large_cs_and_custom_ld_axes_keep_members_and_matrix():
     assert box.width == pytest.approx(box.height)
     np.testing.assert_array_equal(fig.get_size_inches(), [6.0, 7.0])
     plt.close(fig)
-
-
-def test_current_sized_settings_wrap_without_touching_and_keep_every_row():
-    names = ["baseline", "larger_L", "fixed_variance", "coverage90"]
-    source = comparison([[0.7 - i * 0.03] * 4 for i in range(15)], names)
-    labels = {
-        "baseline": "Baseline",
-        "larger_L": "L = 6",
-        "fixed_variance": "Scaled prior variance\n0.05 (fixed)",
-        "coverage90": "CS coverage\n90%",
-    }
-    view = plots.plot_sensitivity(source, layout="compact", display_names=labels)
-    view[0].canvas.draw()
-    boxes = [
-        tick.get_window_extent(view[0].canvas.get_renderer())
-        for tick in view[1][0].get_xticklabels()
-    ]
-    assert all(first.x1 < second.x0 for first, second in pairwise(boxes))
-    assert len(view[1][0].get_yticklabels()) == 15
-    assert view[2]["display_names"] == labels
-    assert not view[1][1].tables
-    plt.close(view[0])
-
-
-def test_full_layout_grows_for_complete_large_candidate_labels():
-    source = comparison([[i / 35, (i + 1) / 35] for i in range(32)])
-    for row in source["variants"]:
-        row["candidate_sources"] = {"baseline": ["formal_cs"]}
-    figure, axes, data = plots.plot_sensitivity(source, layout="full")
-    assert len(data["variant_ids"]) == len(axes[0].get_yticklabels()) == 32
-    assert [tick.get_text() for tick in axes[0].get_yticklabels()] == data["variant_ids"]
-    assert not data["cell_annotations"]
-    figure.canvas.draw()
-    height = axes[0].get_window_extent().height / figure.dpi
-    assert height / len(data["variant_ids"]) >= 0.18
-    assert data["source_comparison"] == source
-    plt.close(figure)

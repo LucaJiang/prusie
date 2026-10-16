@@ -16,10 +16,12 @@ from pathlib import Path
 
 import numpy as np
 import scipy
-from restricted_numpy_susie import credible_sets_ref, susie_rss_ref, susie_ss_ref
 from validation_panel import cases
 
 import prusie
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tests"))
+from reference_numpy import credible_sets_ref, susie_rss_ref, susie_ss_ref
 
 FIELDS = ("pip", "alpha", "mu", "mu2", "V", "sigma2", "elbo", "KL", "lbf", "lbf_variable")
 

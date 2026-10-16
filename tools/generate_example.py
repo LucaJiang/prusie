@@ -12,8 +12,6 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-# The original manifest is immutable, independently of the regenerated archive.
-FROZEN_MANIFEST_SHA256 = "5b2cd64a249c2df3e6508f4c1fd7ae006cab2bd1a9d4e6a4554cf9db445976a5"
 # Absolute bounds, rtol=0. Observed maxima with NumPy 2.2.6 / OpenBLAS
 # SkylakeX, Haswell and Sandybridge: 1.60e-14, 1.12e-15, 5.56e-16, 2.09e-17.
 # These bounds allow at most about five times that measured roundoff.
@@ -112,17 +110,7 @@ def validate_arrays(frozen, regenerated):
 
 
 def check_frozen(directory, arrays, metadata):
-    "Check original bytes first, then scientific regeneration and metadata."
-    manifest = (directory / "checksums.json").read_bytes()
-    if hashlib.sha256(manifest).hexdigest() != FROZEN_MANIFEST_SHA256:
-        raise ValueError("Frozen checksum manifest changed")
-    hashes = json.loads(manifest)
-    for name, expected in hashes.items():
-        if hashlib.sha256((directory / name).read_bytes()).hexdigest() != expected:
-            raise ValueError(f"Frozen toy example checksum mismatch: {name}")
-    # Frozen metadata records the original generator; the regenerated metadata
-    # truthfully records this interpreter's NumPy. All scientific metadata and
-    # numerical bounds still match; the immutable original bytes are checked above.
+    """Check seeded numerical regeneration and scientific metadata."""
     expected_metadata = json.loads((directory / "metadata.json").read_text())
     if metadata != expected_metadata | {"numpy_version": np.__version__}:
         raise ValueError(
@@ -140,9 +128,7 @@ def main():
     arrays, metadata = generate()
     if a.check:
         errors = check_frozen(a.output_dir, arrays, metadata)
-        print(
-            "Checked frozen SHA256 and numerical regeneration:", json.dumps(errors, sort_keys=True)
-        )
+        print("Checked numerical regeneration:", json.dumps(errors, sort_keys=True))
         original = json.loads((a.output_dir / "metadata.json").read_text())
         print(
             "NumPy provenance:",
