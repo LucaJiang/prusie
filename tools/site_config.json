@@ -3,7 +3,7 @@
   "mark": "Su",
   "tagline": "SuSiE fine-mapping",
   "description": "Fine-map association signals with SuSiE, read credible sets and posterior probabilities, and inspect convergence, sensitivity and LD diagnostics.",
-  "section": "Fine-mapping · Python + Rust",
+  "section": "Fine-mapping \u00b7 Python + Rust",
   "navigation": [
     [
       "Start here",
@@ -93,10 +93,5 @@
         ]
       ]
     ]
-  ],
-  "redirects": {
-    "compatibility.html": "inputs.html#supported-model-and-input-routes",
-    "reference_mapping.html": "implementation.html#reference-source-mapping",
-    "r_agreement.html": "numerical_accuracy.html"
-  }
+  ]
 }

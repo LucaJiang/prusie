@@ -69,5 +69,5 @@ These changes preserve the public fitting functions and statistical behavior.
 - Use guarded matrix scaling, verified exact signed redundancy, optional vector
   math and complete retained-set purity calculations.
 
-See [model support](docs/compatibility.md),
+See [model support](docs/inputs.md#supported-model-and-input-routes),
 [implementation](docs/implementation.md) and [performance](docs/performance.md).

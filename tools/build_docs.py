@@ -174,25 +174,12 @@ def build(check: bool = False) -> None:
                 f"</div>"
             )
         toc = page_toc(path.name, md)
-        target = config.get("redirects", {}).get(path.with_suffix(".html").name)
-        redirect = (
-            (
-                f'<meta http-equiv="refresh" content="0; '
-                f"url={html.escape(target)}"
-                f'">\n'
-                f'<link rel="canonical" href="{html.escape(target)}'
-                f'">'
-            )
-            if target
-            else ""
-        )
         output = f'''<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="{html.escape(config["description"])}">
-{redirect}
 <title>{html.escape(title)} · {html.escape(config["package"])}</title>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
