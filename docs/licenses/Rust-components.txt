@@ -1,0 +1,96 @@
+Rust dependencies: selected MIT terms and original copyright notices
+
+The entries below use the complete common grant in MIT.txt. Their original
+permission, condition and disclaimer wording is identical apart from whitespace.
+No copyright holder is inferred where the upstream MIT file states none.
+Source packages and roles are listed in THIRD_PARTY_NOTICES.md.
+
+autocfg 1.5.1
+Copyright (c) 2018 Josh Stone
+
+cfg-if 1.0.5
+Copyright (c) 2014 Alex Crichton
+
+heck 0.5.0
+Copyright (c) 2015 The Rust Project Developers
+
+indoc 2.0.7, once_cell 1.21.4, portable-atomic 1.15.0, portable-atomic-util 0.2.8, proc-macro2 1.0.107, quote 1.0.47, rustc-hash 2.1.3, rustversion 1.0.23, syn 2.0.119, unicode-ident 1.0.26, unindent 0.2.4
+The upstream MIT text does not state a separate copyright line.
+
+libc 0.2.189
+Copyright (c) The Rust Project Developers
+
+matrixmultiply 0.3.11
+Copyright (c) 2016 - 2023 Ulrik Sverdrup "bluss"
+Copyirhgt (c) 2018 R. Janis Goldschmidt
+Copyright (c) 2021 DutchGhost [constparse.rs]
+
+memoffset 0.9.1
+Copyright (c) 2017 Gilad Naaman
+
+ndarray 0.16.1
+Copyright (c) 2015 - 2021 Ulrik Sverdrup "bluss",
+			  Jim Turner,
+			  and ndarray developers
+
+num-complex 0.4.6, num-integer 0.1.47, num-traits 0.2.19
+Copyright (c) 2014 The Rust Project Developers
+
+pyo3 0.23.5, pyo3-build-config 0.23.5, pyo3-ffi 0.23.5, pyo3-macros 0.23.5, pyo3-macros-backend 0.23.5
+Copyright (c) 2023-present PyO3 Project and Contributors.  https://github.com/PyO3
+
+rawpointer 0.2.1
+Copyright (c) 2015
+
+Additional original PyO3 copyright, retained from its Apache alternative:
+Copyright (c) 2017-present PyO3 Project and Contributors.  https://github.com/PyO3
+
+Additional source-file copyrights under the same selected MIT grant:
+
+matrixmultiply:
+Copyright 2016 - 2021 Ulrik Sverdrup "bluss"
+Copyright 2016 - 2018 Ulrik Sverdrup "bluss"
+Copyright 2021-2023 Ulrik Sverdrup "bluss"
+Copyright 2026 Ulrik Sverdrup "bluss"
+Copyright (c) 2021 matrixmultiply authors
+Copyright 2016 - 2023 Ulrik Sverdrup "bluss"
+Copyright 2020, 2022 Ulrik Sverdrup "bluss"
+
+memoffset:
+Copyright (c) 2020 Gilad Naaman, Ralf Jung
+
+ndarray:
+Copyright 2014-2016 bluss and ndarray developers.
+Copyright 2016 bluss and ndarray developers.
+Copyright 2019 bluss and ndarray developers.
+Copyright 2019 ndarray developers.
+Copyright 2018 bluss and ndarray developers.
+Copyright 2021 bluss and ndarray developers.
+Copyright 2020 bluss and ndarray developers.
+Copyright 2020-2021 bluss and ndarray developers.
+Copyright 2014-2019 bluss and ndarray developers
+Copyright 2017 bluss and ndarray developers.
+Copyright 2014-2020 bluss and ndarray developers.
+Copyright 2014-2024 bluss and ndarray developers.
+
+num-complex:
+Copyright 2013 The Rust Project Developers. See the COPYRIGHT
+file at the top-level directory of this distribution and at
+http://rust-lang.org/COPYRIGHT.
+
+num-integer:
+Copyright 2013-2014 The Rust Project Developers. See the COPYRIGHT
+file at the top-level directory of this distribution and at
+http://rust-lang.org/COPYRIGHT.
+
+pyo3:
+Copyright (c) 2017 Daniel Grunwald
+
+rawpointer:
+Copyright 2016-2019 bluss and rawpointer developers.
+
+portable-atomic-util's Arc and Wake implementations are adapted from Rust:
+https://github.com/rust-lang/rust/blob/1.93.0/library/alloc/src/sync.rs
+https://github.com/rust-lang/rust/blob/1.84.0/library/alloc/src/task.rs
+Their original MIT terms are the same common grant in MIT.txt. The original
+Rust Project Contributors/Developers attribution is retained in Rust-runtime.txt.

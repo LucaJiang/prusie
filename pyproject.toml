@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin==1.9.6"]
+requires = ["maturin==1.10.2"]
 build-backend = "maturin"
 
 [project]
@@ -12,7 +12,7 @@ requires-python = ">=3.10,<3.14"
 dependencies = ["numpy>=1.26,<3"]
 readme = "README.md"
 license = "GPL-3.0-or-later"
-license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/*.txt"]
 
 [project.urls]
 Repository = "https://github.com/LucaJiang/prusie"
@@ -27,8 +27,25 @@ analysis = ["scipy>=1.11", "matplotlib>=3.7"]
 python-source = "src"
 module-name = "prusie._native"
 features = ["extension-module", "vector-math"]
-exclude = ["dist/**", "target/**", "**/*.orig", "**/*.rej", "**/__pycache__/**", ".pytest_cache/**", "docs/review/**"]
-include = [{path = "rustfmt.toml", format = "sdist"}, {path = "dev/references/**", format = "sdist"}, {path = "src/prusie/data/**", format = ["wheel", "sdist"]}, {path = "docs/**", format = "sdist"}, {path = "docs/.nojekyll", format = "sdist"}, {path = "tests/**", format = "sdist"}, {path = "examples/**", format = "sdist"}, {path = "tools/**", format = "sdist"}, {path = ".github/**", format = "sdist"}, {path = ".github/workflows/ci.yml", format = "sdist"}, {path = "requirements-dev.lock", format = "sdist"}, {path = "CITATION.cff", format = "sdist"}, {path = "CHANGELOG.md", format = "sdist"}, {path = "THIRD_PARTY_NOTICES.md", format = "sdist"}]
+# Website histories and their renderer require the Git checkout, not a source build.
+exclude = [
+    "dist/**", "target/**", "**/*.orig", "**/*.rej", "**/__pycache__/**",
+    ".pytest_cache/**", "docs/review/**", "docs/examples/**", "examples/render_review.py",
+]
+# Runtime Python files/data and Cargo build sources are included by maturin.
+# Keep development tests, frozen offline examples and their supporting tools in sdist.
+include = [
+    {path = "rustfmt.toml", format = "sdist"},
+    {path = "dev/references/**", format = "sdist"},
+    {path = "tests/**", format = "sdist"},
+    {path = "examples/**", format = "sdist"},
+    {path = "tools/**", format = "sdist"},
+    {path = "docs/**", format = "sdist"},
+    {path = ".github/**", format = "sdist"},
+    {path = "requirements-dev.lock", format = "sdist"},
+    {path = "CITATION.cff", format = "sdist"},
+    {path = "CHANGELOG.md", format = "sdist"},
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

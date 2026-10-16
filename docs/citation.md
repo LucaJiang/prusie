@@ -15,15 +15,13 @@ its source revision and environment in reproducible analyses.
 [CITATION.cff](https://github.com/LucaJiang/prusie/blob/main/CITATION.cff) contains
 machine-readable software metadata. No software-paper DOI is assigned here.
 
-prusie is GPL-3.0-or-later. The susieR-derived portions retain BSD-3-Clause
-attribution; the R optimizer adaptation retains GPL-2.0-or-later terms. Full
-notices and texts are in [LICENSE](https://github.com/LucaJiang/prusie/blob/main/LICENSE)
-and [THIRD_PARTY_NOTICES.md](https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md).
-They are included in package artifacts and on the [offline license page](notices.html).
-The independent toy example has
-GPL-3.0-or-later terms. The older attributed regression fixture retains its
-original data notices separately.
+Copyright © 2026 Wenxin Jiang. prusie is licensed under
+[GPL-3.0-or-later](https://github.com/LucaJiang/prusie/blob/main/LICENSE).
+The [license page](notices.html) links the component inventory and the complete
+third-party texts. susieR-derived portions retain BSD-3-Clause attribution;
+the R optimizer adaptation retains its GPL-2.0-or-later source notice.
 
-The static documentation includes KaTeX 0.16.22 styles and fonts under its
-MIT license in the [third-party notices](notices.html). The documentation build ships the matching
-renderer and records its hashes; it adds no inference dependency.
+The independent synthetic toy example is GPL-3.0-or-later. The attributed
+regression and convergence fixtures preserve their own source declarations
+and checksummed notices. KaTeX's documentation assets retain the applicable
+MIT, Apache-2.0 and OFL-1.1 notices; they add no inference dependency.

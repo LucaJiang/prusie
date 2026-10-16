@@ -58,6 +58,11 @@ processes; component updates within one fit remain sequential.
 
 ## Editing and building documentation
 
+Use a Git checkout for website regeneration and `tools/check_checkout.py`.
+The source distribution contains the full test suite and offline examples,
+but excludes large website example reports, historical review output and
+their checkout-only `examples/render_review.py` renderer.
+
 Markdown is the body source; generated HTML is committed alongside it. The
 build uses Python-Markdown 3.7, Pygments 2.19.2, Arithmatex 10.16.1 and vendored
 KaTeX 0.16.22. Node.js is needed only at build time (tested with Node.js 24.18.0).
@@ -109,7 +114,11 @@ python tools/check_artifacts.py --wheel PATH_TO_WHEEL \
 Substitute the wheel and sdist just produced. The artifact checker inspects
 license and data payloads, installs wheels in clean environments without Rust
 on PATH, runs examples from an independent directory, rebuilds the sdist and
-checks its wheel. Linux checks also report auditwheel compatibility. Use a new
+checks its wheel, then runs the full tests from the extracted source distribution.
+Two optional LD-oracle tests use external paths described in the
+[reference guide](https://github.com/LucaJiang/prusie/blob/main/docs/review/post_analysis/REPRODUCE.md);
+they skip when those paths are not supplied. Their frozen public references remain
+in the Git checkout. Linux checks also report auditwheel compatibility. Use a new
 output directory so earlier results are retained. CI runs the test, docs and
 package checks; its observed status is separate from a local run.
 
@@ -122,12 +131,16 @@ only when more than half of applicable cases have lower median runtime;
 correctness or allocation savings alone do not establish that result.
 
 Retain GPL package terms, susieR's BSD notices, the R optimizer's attribution
-and data licenses. KaTeX's local documentation resources carry their own MIT
-notice. Maintain `LICENSE` and `THIRD_PARTY_NOTICES.md` at the repository root;
-the build includes them in distribution metadata and renders `docs/notices.html`
-for offline use. `tools/license_check.py` verifies complete upstream text hashes
-and coverage of the locked Cargo dependencies. Keep that mapping current when
-updating a dependency. Preserve the small checksummed raw data notices.
+and the frozen data notices. `LICENSE` is the primary project license;
+`THIRD_PARTY_NOTICES.md` is the component inventory, and `licenses/` holds the
+applicable third-party terms. Documentation builds generate a short license page,
+the inventory and separate legal-text copies for offline reading.
+
+`tools/license_check.py` checks required copyrights and license provisions,
+metadata consistency and dependency review coverage. Update the inventory after
+reviewing changes to dependencies or vendored components. The artifact checker
+verifies the actual wheel and sdist license payloads. Asset byte pins remain in
+`tools/math-assets.lock.json`; preserve the small checksummed data notices.
 Cite the methods and identify the source revision as described in
 [Citation](citation.md). Focused changes and their tests can be proposed through
 the repository's issue and pull-request workflow.

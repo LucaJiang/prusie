@@ -1,8 +1,11 @@
 # KaTeX documentation renderer
 
 `katex.js` is the unmodified CommonJS distribution from KaTeX 0.16.22.
-The matching stylesheet and fonts are in `docs/assets/katex`; both copies
-retain the upstream MIT license. `tools/math-assets.lock.json` records the npm
+The matching stylesheet and fonts are in `docs/assets/katex`. The renderer
+and stylesheet retain KaTeX's MIT terms, with the embedded Apache-2.0
+attribution; fonts and adapted mathematical glyph material retain OFL-1.1
+notices and reserved font names. See the root third-party inventory and
+`licenses/` for the complete applicable terms. `tools/math-assets.lock.json` records the npm
 archive integrity and every vendored file's SHA256. These files are documentation
 build resources, not Python inference dependencies.
 

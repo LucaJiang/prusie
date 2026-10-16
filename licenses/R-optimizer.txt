@@ -1,0 +1,32 @@
+R 4.4 Brent_fmin source notice
+
+Source: https://svn.r-project.org/R/branches/R-4-4-branch/src/library/stats/src/optimize.c
+Source SHA256: 02e6b415a1364d61750dd6411e72f5984f5872829d856e0337315db84b4c023d
+The adaptation is rust/optimizer.rs. Its original source-level notice remains.
+The method derives from Richard Brent, Algorithms for Minimization without
+Derivatives (1973).
+
+The original GPL-2.0-or-later permission below permits this combined package to
+be conveyed under GPL-3.0-or-later. The complete GPLv3 is the root LICENSE.
+The original file-level permission is not replaced or narrowed.
+
+/*
+ *  R : A Computer Language for Statistical Data Analysis
+ *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
+ *  Copyright (C) 2003-2004  The R Foundation
+ *  Copyright (C) 1998--2023  The R Core Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, a copy is available at
+ *  https://www.R-project.org/Licenses/
+ */

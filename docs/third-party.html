@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Third-party notices · prusie</title><style>body{max-width:90ch;margin:2em auto;padding:0 1em;font:16px/1.6 sans-serif}table{border-collapse:collapse;font-size:.9em}td,th{padding:.4em;text-align:left;border-bottom:1px solid #ddd}a{overflow-wrap:anywhere}.table-wrap{overflow-x:auto}code{overflow-wrap:anywhere}</style></head><body><main><p><a href="citation.html">Citation and license</a></p><h1 id="third-party-sources-and-notices">Third-party sources and notices</h1>
+<p>prusie is Copyright (c) 2026 Wenxin Jiang and is distributed under
+<strong>GPL-3.0-or-later</strong>. The complete primary license is <a href="licenses/LICENSE">LICENSE</a>.
+The components below retain their original terms. The linked texts accompany
+the wheel and source distribution; the inventory also covers website assets,
+which are not installed as Python runtime code.</p>
+<h2 id="scientific-sources-and-data">Scientific sources and data</h2>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Use and distribution</th>
+<th>Copyright and terms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/stephenslab/susieR/tree/8e56a8e038e989856d106d9ca5175cc664fea9d2">susieR 0.16.6</a></td>
+<td>Gaussian SuSiE/SuSiE-RSS algorithms and adapted implementation in source and native wheels</td>
+<td>Gao Wang, Peter Carbonetto, Yuxin Zou, Kaiqian Zhang, Matthew Stephens, 2017–2022; <a href="licenses/susieR-BSD-3-Clause.txt">BSD-3-Clause</a></td>
+</tr>
+<tr>
+<td><a href="https://svn.r-project.org/R/branches/R-4-4-branch/src/library/stats/src/optimize.c">R 4.4 Brent_fmin</a></td>
+<td>Adaptation in <code>rust/optimizer.rs</code>, also compiled into wheels</td>
+<td>Robert Gentleman, Ross Ihaka, R Foundation and R Core Team; <a href="licenses/R-optimizer.txt">original GPL-2.0-or-later notice</a>; combined package under GPL-3.0-or-later</td>
+</tr>
+<tr>
+<td><a href="https://github.com/chr1swallace/coloc/tree/8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45">coloc 6.0.3 teaching fixture</a></td>
+<td>Frozen format conversions and independent R references in <code>examples/data</code>, source distribution only</td>
+<td>Chris Wallace and coloc contributors; upstream declares <strong>GPL</strong>, without a version</td>
+</tr>
+<tr>
+<td><a href="https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData">susieR FinemappingConvergence</a></td>
+<td>Toy sufficient statistics in <code>src/prusie/data/convergence</code>, source and wheel</td>
+<td>Same susieR holders; <a href="licenses/susieR-BSD-3-Clause.txt">BSD-3-Clause</a></td>
+</tr>
+<tr>
+<td>prusie teaching data</td>
+<td>Independently generated example in <code>src/prusie/data/teaching</code>, source and wheel</td>
+<td>Wenxin Jiang, 2026; GPL-3.0-or-later</td>
+</tr>
+</tbody>
+</table></div>
+<p>The susieR source commit is <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>.
+Its source archive SHA256 is
+<code>c88c6324da061c83ac9fbac23972cd1e501210c916596ea7678c3115b33f6971</code>.
+The earlier susieR 0.14.2 reference is retained: its
+<a href="https://cran.r-project.org/src/contrib/Archive/susieR/susieR_0.14.2.tar.gz">CRAN archive</a>
+has SHA256 <code>ba02322eb1f7a7cc024c9278aa7903a34d8ad5d6f3b12c168374bc6214ed2c6e</code>
+and the same copyright holders and BSD terms.</p>
+<p>The frozen data directories retain their original provenance and checksum files.
+<code>examples/data/LICENSE.GPL-3</code> is a supplied GPLv3 text, not evidence that coloc
+specified version 3. The unversioned upstream declaration remains unchanged.
+The convergence example has a simulated response and real-genotype-derived
+sufficient statistics; it contains no individual genotypes.</p>
+<h2 id="documentation-assets">Documentation assets</h2>
+<p><a href="https://registry.npmjs.org/katex/-/katex-0.16.22.tgz">KaTeX 0.16.22</a> supplies
+<code>tools/vendor/katex/katex.js</code> and <code>docs/assets/katex</code>. Its JavaScript/CSS use
+<a href="licenses/MIT.txt">MIT</a>, with Khan Academy and contributor attribution.
+The unchanged font files and SVG glyph material carry <strong>OFL-1.1</strong>, including
+Design Science and Khan Academy copyrights and the original reserved font names.
+React-derived utilities retain Facebook's Apache-2.0 attribution.
+See the <a href="licenses/KaTeX.txt">specific notices</a>, <a href="licenses/OFL-1.1.txt">OFL-1.1</a>
+and <a href="licenses/Apache-2.0.txt">Apache-2.0</a>. Asset hashes remain pinned in
+<code>tools/math-assets.lock.json</code>.</p>
+<h2 id="locked-rust-dependencies">Locked Rust dependencies</h2>
+<p>The table records every registry component in <code>Cargo.lock</code>. Official source
+archives are available from <code>https://static.crates.io/crates/NAME/NAME-VERSION.crate</code>;
+their registry checksums are in the lockfile. No dependency source tree is vendored
+into the sdist. Runtime crates contribute code to the native extension; build
+and procedural-macro crates run during compilation. Their notices are retained
+conservatively for generated or embedded code. The project has no direct
+development-only Cargo dependencies.</p>
+<p>For components offering MIT OR Apache-2.0, this distribution selects MIT.
+All original MIT copyrights, including notices that supply no named holder,
+are recorded in <a href="licenses/Rust-components.txt">Rust-components.txt</a>, with one
+identical common <a href="licenses/MIT.txt">MIT grant</a>. NumPy's <strong>Rust crate</strong> is
+<a href="licenses/numpy-rust-BSD-2-Clause.txt">BSD-2-Clause</a>, separately from the Python
+NumPy dependency. <code>unicode-ident</code> additionally requires
+<a href="licenses/Unicode-3.0.txt">Unicode-3.0</a>. <code>target-lexicon</code> uses
+<a href="licenses/Apache-2.0.txt">Apache-2.0</a> with the <a href="licenses/LLVM-exception.txt">LLVM exception</a>.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Version</th>
+<th>Scope</th>
+<th>Selected terms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>autocfg</code></td>
+<td>1.5.1</td>
+<td>build/code generation</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>cfg-if</code></td>
+<td>1.0.5</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>heck</code></td>
+<td>0.5.0</td>
+<td>build/code generation</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>indoc</code></td>
+<td>2.0.7</td>
+<td>build/code generation</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>libc</code></td>
+<td>0.2.189</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>matrixmultiply</code></td>
+<td>0.3.11</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>memoffset</code></td>
+<td>0.9.1</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>ndarray</code></td>
+<td>0.16.1</td>
+<td>direct/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>num-complex</code></td>
+<td>0.4.6</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>num-integer</code></td>
+<td>0.1.47</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>num-traits</code></td>
+<td>0.2.19</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>numpy</code></td>
+<td>0.23.0</td>
+<td>direct/runtime</td>
+<td>BSD-2-Clause</td>
+</tr>
+<tr>
+<td><code>once_cell</code></td>
+<td>1.21.4</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>portable-atomic</code></td>
+<td>1.15.0</td>
+<td>target-dependent/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>portable-atomic-util</code></td>
+<td>0.2.8</td>
+<td>target-dependent/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>proc-macro2</code></td>
+<td>1.0.107</td>
+<td>build/code generation</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>pyo3</code></td>
+<td>0.23.5</td>
+<td>direct/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>pyo3-build-config</code></td>
+<td>0.23.5</td>
+<td>build/code generation</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>pyo3-ffi</code></td>
+<td>0.23.5</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>pyo3-macros</code></td>
+<td>0.23.5</td>
+<td>build/code generation</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>pyo3-macros-backend</code></td>
+<td>0.23.5</td>
+<td>build/code generation</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>quote</code></td>
+<td>1.0.47</td>
+<td>build/code generation</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>rawpointer</code></td>
+<td>0.2.1</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>rustc-hash</code></td>
+<td>2.1.3</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>rustversion</code></td>
+<td>1.0.23</td>
+<td>build/code generation</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>syn</code></td>
+<td>2.0.119</td>
+<td>build/code generation</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>target-lexicon</code></td>
+<td>0.12.16</td>
+<td>build/code generation</td>
+<td>Apache-2.0 WITH LLVM-exception</td>
+</tr>
+<tr>
+<td><code>unicode-ident</code></td>
+<td>1.0.26</td>
+<td>build/code generation</td>
+<td>MIT AND Unicode-3.0</td>
+</tr>
+<tr>
+<td><code>unindent</code></td>
+<td>0.2.4</td>
+<td>transitive/runtime</td>
+<td>MIT</td>
+</tr>
+</tbody>
+</table></div>
+<p>Reviewed feature configuration: Cargo has no default feature; <code>extension-module</code>
+enables <code>pyo3/extension-module</code>, and <code>vector-math</code> adds the project's C helper on
+native Linux x86-64 GNU builds. PyO3's default features remain enabled.
+<code>portable-atomic</code> and <code>portable-atomic-util</code> cover target-specific atomic support;
+their presence in the lockfile does not imply inclusion in every wheel.</p>
+<h2 id="rust-standard-library-and-system-libraries">Rust standard library and system libraries</h2>
+<p>Rust toolchain: <code>1.98.1</code>. The standard library is statically linked into the native
+extension. Its <a href="licenses/Rust-runtime.txt">runtime notices</a> retain Rust, backtrace,
+channel, Unicode, compiler-builtins and libm attribution, and the notices for
+addr2line 0.25.1, adler2 2.0.1, cfg-if 1.0.4, gimli 0.32.3, hashbrown 0.17.1,
+libc 0.2.185, memchr 2.7.6, miniz_oxide 0.8.9, object 0.37.3 and
+rustc-demangle 0.1.27. These are separate from versions in the project's lockfile.
+Common terms are <a href="licenses/MIT.txt">MIT</a>, <a href="licenses/Apache-2.0.txt">Apache-2.0</a>,
+<a href="licenses/LLVM-exception.txt">LLVM exception</a> and <a href="licenses/Unicode-3.0.txt">Unicode-3.0</a>.
+Compiler-builtins requires MIT <strong>and</strong> Apache-2.0 WITH LLVM-exception.
+Its <a href="licenses/Rust-libm.txt">original libm file notices</a> additionally preserve
+Sun/fdlibm permission, David Schultz's BSD terms and CORE-MATH attribution.</p>
+<p>The compiler executable and its development dependencies are not redistributed.
+Python, Python NumPy, and dynamically linked operating-system libraries are
+separately supplied dependencies; their full packages are not bundled in prusie.
+Building with another toolchain or for another platform requires reviewing its
+runtime notices before distributing the resulting wheel.</p></main></body></html>

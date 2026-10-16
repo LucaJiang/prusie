@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 import markdown
-from license_check import check_licenses
+from license_check import check_licenses, license_paths
 from math_render import StaticMath, check_assets
 from pygments.formatters import HtmlFormatter
 
@@ -101,6 +101,56 @@ def page_toc(filename: str, markdown_document) -> str:
     )
 
 
+def license_site_files(root: Path) -> dict[str, str]:
+    """Publish a short landing page, component inventory and separate legal texts."""
+
+    def page(title, body):
+        return (
+            '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            f"<title>{title} · prusie</title>"
+            "<style>body{max-width:90ch;margin:2em auto;padding:0 1em;font:16px/1.6 sans-serif}"
+            "table{border-collapse:collapse;font-size:.9em}td,th{padding:.4em;text-align:left;"
+            "border-bottom:1px solid #ddd}a{overflow-wrap:anywhere}"
+            ".table-wrap{overflow-x:auto}code{overflow-wrap:anywhere}</style></head>"
+            '<body><main><p><a href="citation.html">Citation and license</a></p>'
+            f"{body}</main></body></html>\n"
+        )
+
+    landing = (
+        "<h1>License</h1><p>Copyright © 2026 Wenxin Jiang. "
+        "prusie is licensed under <strong>GPL-3.0-or-later</strong>.</p>"
+        '<p>Read the <a href="https://github.com/LucaJiang/prusie/blob/main/LICENSE">'
+        'project LICENSE on GitHub</a> or its <a href="licenses/LICENSE">offline copy</a>.</p>'
+        '<p>The <a href="third-party.html">third-party component inventory</a> identifies '
+        "upstream sources, versions, copyrights and links to their applicable license texts.</p>"
+    )
+    inventory, _ = render_markdown(
+        (root / "THIRD_PARTY_NOTICES.md").read_text(), "THIRD_PARTY_NOTICES.md"
+    )
+
+    # Inventory links to legal texts work in the standalone Pages tree. Other
+    # repository files keep a public source link rather than escaping the site root.
+    def source_link(match):
+        target = html.unescape(match[1])
+        if target == "LICENSE":
+            target = "licenses/LICENSE"
+        elif not target.startswith(("licenses/", "#", "https://", "http://", "mailto:")):
+            target = "https://github.com/LucaJiang/prusie/blob/main/" + target
+        return f'href="{html.escape(target, quote=True)}"'
+
+    inventory = re.sub(r'href="([^"]+)"', source_link, inventory)
+    outputs = {
+        "notices.html": page("License", landing),
+        "third-party.html": page("Third-party notices", decorate_body(inventory)),
+    }
+    for path in license_paths(root):
+        if path != "THIRD_PARTY_NOTICES.md":
+            target = "licenses/LICENSE" if path == "LICENSE" else path
+            outputs[target] = (root / path).read_text()
+    return outputs
+
+
 def build(check: bool = False) -> None:
     check_assets()
     check_licenses(ROOT)
@@ -180,29 +230,16 @@ def build(check: bool = False) -> None:
             stale.append("docs/assets/highlight.css")
     else:
         css_path.write_text(css)
-    # Pages is distributed independently of the source root. Render the two
-    # authoritative root files so attribution also remains available offline.
-    notices = (
-        '<!doctype html>\n<html lang="en"><head><meta '
-        'charset="utf-8"><meta name="viewport" '
-        'content="width=device-width, '
-        'initial-scale=1"><title>License and third-party '
-        "notices · "
-        "prusie</title><style>body{max-width:80ch;margin:2em "
-        "auto;padding:0 1em;font:16px/1.6 "
-        "sans-serif}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style></head><body><p>"
-        '<a href="citation.html">Citation and license</a></p><h1>License and third-party notices'
-        "</h1><p>Generated from the authoritative repository root files.</p>"
-    )
-    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
-        notices += f"<h2>{name}</h2><pre>{html.escape((ROOT / name).read_text())}</pre>"
-    notices += "</body></html>\n"
-    notice_path = DOCS / "notices.html"
-    if check:
-        if not notice_path.exists() or notice_path.read_text() != notices:
-            stale.append("docs/notices.html")
-    else:
-        notice_path.write_text(notices)
+    # GitHub Pages serves docs/ independently; legal text copies are generated
+    # from the authoritative root files, without embedding them in the landing page.
+    for name, content in license_site_files(ROOT).items():
+        target = DOCS / name
+        if check:
+            if not target.is_file() or target.read_text() != content:
+                stale.append(f"docs/{name}")
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content)
     if stale:
         raise SystemExit("Stale rendered documentation: " + ", ".join(stale))
     if not check:

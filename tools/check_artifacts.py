@@ -9,6 +9,7 @@ No package, tag or Release is published.
 from __future__ import annotations
 
 import argparse
+import datetime
 import hashlib
 import json
 import os
@@ -20,7 +21,7 @@ import zipfile
 from pathlib import Path
 
 import tomllib
-from license_check import check_licenses, notice_text
+from license_check import check_license_texts, check_licenses, license_paths
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -28,6 +29,10 @@ ROOT = Path(__file__).resolve().parents[1]
 def sha(path):
     with Path(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def ignored(path):
+    return "__pycache__" in path.parts or path.suffix in (".pyc", ".so", ".pyd")
 
 
 def inspect_wheel(path):
@@ -45,38 +50,28 @@ def inspect_wheel(path):
             )
         )
         wheel = archive.read(dist + "/WHEEL").decode()
-        required = [
-            "prusie/datasets.py",
-            "prusie/data/teaching/inputs.npz",
-            "prusie/data/teaching/metadata.json",
-            "prusie/data/teaching/reference.npz",
-            "prusie/data/teaching/reference.json",
-            "prusie/data/teaching/checksums.json",
-            "prusie/data/teaching/LICENSE.txt",
-            "prusie/__init__.py",
-            "prusie/api.py",
-            "prusie/result.py",
-            "prusie/data/convergence/LICENSE.txt",
-            "prusie/data/convergence/LICENSE-BSD-3-Clause.txt",
-        ]
-        assert all(n in names for n in required), "Missing wheel code/license payload"
+        # The installed package must carry every Python source and frozen data file.
+        runtime = ROOT / "src/prusie"
+        required = [p for p in runtime.rglob("*") if p.is_file() and not ignored(p)]
+        for source in required:
+            member = "prusie/" + source.relative_to(runtime).as_posix()
+            assert member in names, f"Missing wheel runtime file: {member}"
+            assert archive.read(member) == source.read_bytes(), f"Altered runtime file: {member}"
         native = [
             n for n in names if n.startswith("prusie/_native.") and n.endswith((".so", ".pyd"))
         ]
         assert len(native) == 1, "Wheel must include one native extension"
-        license_check = check_licenses(ROOT)
-        for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
-            members = [
-                n for n in names if n.startswith(dist + "/licenses/") and n.endswith("/" + name)
-            ]
-            assert len(members) == 1, f"Missing or duplicated distribution notice: {name}"
-            assert archive.read(members[0]) == (ROOT / name).read_bytes(), (
-                f"Altered distribution notice: {name}"
-            )
+        check_licenses(ROOT)
+        payload = {}
+        for name in license_paths(ROOT):
+            member = f"{dist}/licenses/{name}"
+            assert names.count(member) == 1, f"Missing or duplicated distribution notice: {name}"
+            payload[name] = archive.read(member)
+            assert payload[name] == (ROOT / name).read_bytes(), f"Altered notice: {name}"
+            assert f"License-File: {name}" in metadata, f"Undeclared license payload: {name}"
+        # Validate the terms read from the artifact itself, not just from the checkout.
+        license_check = check_license_texts(lambda name: payload[name].decode())
         assert "License-Expression: GPL-3.0-or-later" in metadata
-        assert not any(n.startswith("prusie/_licenses/") for n in names), (
-            "Obsolete duplicated notice directory"
-        )
         assert not any(
             "/docs/review/" in n or n.startswith(("docs/", "tests/", "dev/")) for n in names
         )
@@ -85,6 +80,7 @@ def inspect_wheel(path):
             sha256=sha(path),
             compressed_bytes=path.stat().st_size,
             unpacked_bytes=sum(x.file_size for x in archive.infolist()),
+            member_count=sum(not x.is_dir() for x in archive.infolist()),
             WHEEL=wheel,
             METADATA=metadata,
             runtime_requirements=requirements,
@@ -112,7 +108,7 @@ def main():
     env.update(
         PYTHONDONTWRITEBYTECODE="1",
         TMPDIR=str(work / "tmp"),
-        PIP_CACHE_DIR=str(work / "cache"),
+        PIP_CACHE_DIR=os.environ.get("PIP_CACHE_DIR", str(work / "cache")),
         CARGO_TARGET_DIR=str(work / "target"),
     )
     for name in (
@@ -143,6 +139,7 @@ def main():
     def run(label, argv, cwd=work, overrides=None):
         active_env = env | (overrides or {})
         log = work / "logs" / (label + ".log")
+        start = datetime.datetime.now(datetime.timezone.utc).isoformat()
         with log.open("w") as output:
             process = subprocess.run(
                 list(map(str, argv)),
@@ -158,7 +155,30 @@ def main():
                 argv=list(map(str, argv)),
                 cwd=str(cwd),
                 exit_code=process.returncode,
+                environment={
+                    key: active_env[key]
+                    for key in (
+                        "PATH",
+                        "TMPDIR",
+                        "PIP_CACHE_DIR",
+                        "CARGO_HOME",
+                        "CARGO_TARGET_DIR",
+                        "RUSTUP_TOOLCHAIN",
+                        "RUSTFLAGS",
+                        "PYTHONDONTWRITEBYTECODE",
+                        "OMP_NUM_THREADS",
+                        "OPENBLAS_NUM_THREADS",
+                        "MKL_NUM_THREADS",
+                        "PRUSIE_NUM_THREADS",
+                        "PRUSIE_LD_ORACLE",
+                        "PRUSIE_LD_CERTIFIED_ORACLE",
+                        "PYTEST_ADDOPTS",
+                    )
+                    if key in active_env
+                },
                 log=str(log),
+                start=start,
+                end=datetime.datetime.now(datetime.timezone.utc).isoformat(),
             )
         )
         save()
@@ -181,60 +201,67 @@ def main():
         source = sources[0].parent
         config = tomllib.loads(sources[0].read_text())
         version = config["project"]["version"]
-        required = [
-            "src/prusie/data/teaching/inputs.npz",
-            "src/prusie/data/teaching/reference.npz",
-            "src/prusie/data/teaching/metadata.json",
-            "src/prusie/data/teaching/LICENSE.txt",
-            "tools/generate_example.py",
-            "tools/generate_results.py",
+        # Directory contracts follow the source responsibilities; individual files
+        # are discovered instead of maintained in a second packaging manifest.
+        required = set(license_paths(ROOT)) | {
+            "pyproject.toml",
             "Cargo.toml",
             "Cargo.lock",
             "build.rs",
+            "README.md",
             "rust-toolchain.toml",
             "rustfmt.toml",
-            "bindings/lib.rs",
-            "rust/core.rs",
-            "rust/optimizer.rs",
-            "rust/vector_math.c",
-            "LICENSE",
-            "THIRD_PARTY_NOTICES.md",
-            "tools/license_check.py",
-            "tools/notice_manifest.json",
-            "tests/test_reference.py",
-            "tests/test_offline_example.py",
-            "dev/references/restricted_numpy_susie.py",
-            "tests/data/cycle_seed312.npz",
-            "examples/data/inputs.npz",
-            "examples/data/r_fits.npz",
-            "examples/data/LICENSE.GPL-3",
+            "requirements-dev.lock",
             "examples/check_example.py",
-            "tools/math_render.py",
-            "tools/render_math.cjs",
-            "tools/model_examples.py",
-            "tools/math-assets.lock.json",
-            "tools/vendor/katex/katex.js",
-            "docs/notices.html",
-            "docs/assets/katex/katex.min.css",
-            "tests/test_math_docs.py",
-        ]
-        assert all((source / name).is_file() for name in required), "Incomplete buildable sdist"
-        record["sdist"]["required_source_payload"] = {n: sha(source / n) for n in required}
-        record["sdist"]["license_content_verified"] = check_licenses(source)
-        for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
-            assert (source / name).read_bytes() == (ROOT / name).read_bytes(), (
-                f"Source notice mismatch: {name}"
+            "examples/quickstart.py",
+            "examples/post_analysis.py",
+        }
+        for directory in (
+            "src/prusie",
+            "rust",
+            "bindings",
+            "tests",
+            "dev/references",
+            "examples/data",
+            "tools",
+            "docs/assets",
+            "docs/licenses",
+        ):
+            required.update(
+                p.relative_to(ROOT).as_posix()
+                for p in (ROOT / directory).rglob("*")
+                if p.is_file() and not ignored(p)
             )
-        assert not (source / "src/prusie/_licenses").exists(), (
-            "Obsolete duplicated notice directory"
+        required.update(
+            p.relative_to(ROOT).as_posix()
+            for pattern in ("*.md", "*.html")
+            for p in (ROOT / "docs").glob(pattern)
         )
+        for name in sorted(required):
+            assert (source / name).is_file(), f"Incomplete buildable/testable sdist: {name}"
+            if name == "Cargo.toml":
+                # Maturin copies the Python readme into Cargo's package metadata.
+                # Permit only that documented packaging addition, not dependency,
+                # feature, license or build-source changes.
+                expected = tomllib.loads((ROOT / name).read_text())
+                expected["package"].setdefault("readme", config["project"]["readme"])
+                assert tomllib.loads((source / name).read_text()) == expected, (
+                    "Unexpected source Cargo manifest change"
+                )
+            else:
+                assert (source / name).read_bytes() == (ROOT / name).read_bytes(), (
+                    f"Source payload mismatch: {name}"
+                )
+        assert not (source / "docs/examples").exists(), "Website examples belong in the checkout"
+        assert not (source / "examples/render_review.py").exists(), (
+            "Website renderer needs checkout inputs"
+        )
+        record["sdist"]["required_source_payload"] = {n: sha(source / n) for n in sorted(required)}
+        record["sdist"]["license_content_verified"] = check_licenses(source)
         math_assets = json.loads((source / "tools/math-assets.lock.json").read_text())
         assert all(
             sha(source / name) == expected for name, expected in math_assets["files"].items()
         )
-        math_notice = math_assets["notice"]
-        text = notice_text((source / math_notice["source"]).read_text(), math_notice["id"])
-        assert hashlib.sha256(text.encode()).hexdigest() == math_notice["sha256"]
         record["sdist"]["math_assets_verified"] = len(math_assets["files"])
         record["sdist"]["math_license"] = math_assets["license"]
 
@@ -246,7 +273,16 @@ def main():
             # Explicit wheel and binary-only dependencies: pip cannot compile source.
             run(
                 label + "-install",
-                [python, "-m", "pip", "install", "--only-binary=:all:", "numpy==2.2.6", artifact],
+                [
+                    python,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-compile",
+                    "--only-binary=:all:",
+                    "numpy==2.2.6",
+                    artifact,
+                ],
                 overrides={"PATH": path},
             )
             probe = """import hashlib, importlib.metadata, json, pathlib, shutil, sys
@@ -303,6 +339,34 @@ print(json.dumps(dict(version=prusie.__version__,module=prusie.__file__,native=_
         assert len(rebuilt) == 1
         record["rebuilt_wheel"] = inspect_wheel(rebuilt[0])
         install_and_check("rebuilt", rebuilt[0])
+        # Run the complete existing suite from the extracted source distribution.
+        # The runtime-only installations above remain separate and minimal.
+        test_env = work / "sdist-test-env"
+        run("sdist-test-venv", [sys.executable, "-m", "venv", test_env])
+        test_python = test_env / "bin/python"
+        run(
+            "sdist-test-dependencies",
+            [
+                test_python,
+                "-m",
+                "pip",
+                "install",
+                "--no-compile",
+                rebuilt[0],
+                "-r",
+                source / "requirements-dev.lock",
+                "-r",
+                source / "tools/docs-requirements.txt",
+                "-r",
+                source / "tools/results-requirements.txt",
+            ],
+        )
+        run(
+            "sdist-pytest",
+            [test_python, "-m", "pytest", "tests", "tools/benchmark/test_helpers.py"],
+            cwd=source,
+        )
+        run("sdist-pip-check", [test_python, "-m", "pip", "check"])
         if sys.platform.startswith("linux"):
             run("auditwheel", [sys.executable, "-m", "auditwheel", "show", wheel])
             run("auditwheel-rebuilt", [sys.executable, "-m", "auditwheel", "show", rebuilt[0]])

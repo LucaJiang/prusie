@@ -7,7 +7,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from license_check import notice_text
+from license_check import check_license_texts
 from markdown.extensions import Extension
 from markdown.treeprocessors import Treeprocessor
 from markdown.util import AtomicString
@@ -22,10 +22,9 @@ def check_assets():
         path = ROOT / name
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
             raise ValueError(f"Math asset differs from tools/math-assets.lock.json: {name}")
-    notice = lock["notice"]
-    text = notice_text((ROOT / notice["source"]).read_text(), notice["id"])
-    if hashlib.sha256(text.encode()).hexdigest() != notice["sha256"]:
-        raise ValueError("KaTeX's complete MIT notice must accompany the math assets")
+    if lock["notice"] != "licenses/KaTeX.txt":
+        raise ValueError("KaTeX license inventory locator requires review")
+    check_license_texts(lambda name: (ROOT / name).read_text())
 
 
 class MathTreeprocessor(Treeprocessor):

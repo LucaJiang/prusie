@@ -7,7 +7,7 @@ fonttools==4.66.1
 iniconfig==2.3.0
 kiwisolver==1.5.1
 matplotlib==3.10.1
-maturin==1.9.6
+maturin==1.10.2
 numpy==2.2.6
 packaging==26.3
 pillow==12.3.0

@@ -117,5 +117,6 @@ Please cite [SuSiE, Wang et al. (2020)](https://doi.org/10.1111/rssb.12388) and
 and identify the prusie version (here 0.2.4.dev2, a development version) as
 given in [CITATION.cff](CITATION.cff). Author and maintainer: Wenxin Jiang.
 
-prusie is distributed under GPL-3.0-or-later. [LICENSE](LICENSE) and the
-[third-party notices](THIRD_PARTY_NOTICES.md) retain the upstream attributions.
+Copyright © 2026 Wenxin Jiang. prusie is licensed under
+[GPL-3.0-or-later](LICENSE). The [third-party inventory](THIRD_PARTY_NOTICES.md)
+identifies upstream components and links their copyright and license texts.

@@ -79,6 +79,10 @@ independent expected result. Keep scalar fallbacks useful on CPUs without the
 optional vector instructions. Independent regions may run in separate
 processes; component updates within one fit remain sequential.</p>
 <h2 id="editing-and-building-documentation">Editing and building documentation</h2>
+<p>Use a Git checkout for website regeneration and <code>tools/check_checkout.py</code>.
+The source distribution contains the full test suite and offline examples,
+but excludes large website example reports, historical review output and
+their checkout-only <code>examples/render_review.py</code> renderer.</p>
 <p>Markdown is the body source; generated HTML is committed alongside it. The
 build uses Python-Markdown 3.7, Pygments 2.19.2, Arithmatex 10.16.1 and vendored
 KaTeX 0.16.22. Node.js is needed only at build time (tested with Node.js 24.18.0).
@@ -123,7 +127,11 @@ python<span class="w"> </span>tools/check_artifacts.py<span class="w"> </span>--
 <p>Substitute the wheel and sdist just produced. The artifact checker inspects
 license and data payloads, installs wheels in clean environments without Rust
 on PATH, runs examples from an independent directory, rebuilds the sdist and
-checks its wheel. Linux checks also report auditwheel compatibility. Use a new
+checks its wheel, then runs the full tests from the extracted source distribution.
+Two optional LD-oracle tests use external paths described in the
+<a href="https://github.com/LucaJiang/prusie/blob/main/docs/review/post_analysis/REPRODUCE.md">reference guide</a>;
+they skip when those paths are not supplied. Their frozen public references remain
+in the Git checkout. Linux checks also report auditwheel compatibility. Use a new
 output directory so earlier results are retained. CI runs the test, docs and
 package checks; its observed status is separate from a local run.</p>
 <p>Preserve frozen numerical inputs, raw reference records and attribution. If a
@@ -134,12 +142,15 @@ regressions and variability. An optimization enters the main implementation
 only when more than half of applicable cases have lower median runtime;
 correctness or allocation savings alone do not establish that result.</p>
 <p>Retain GPL package terms, susieR's BSD notices, the R optimizer's attribution
-and data licenses. KaTeX's local documentation resources carry their own MIT
-notice. Maintain <code>LICENSE</code> and <code>THIRD_PARTY_NOTICES.md</code> at the repository root;
-the build includes them in distribution metadata and renders <code>docs/notices.html</code>
-for offline use. <code>tools/license_check.py</code> verifies complete upstream text hashes
-and coverage of the locked Cargo dependencies. Keep that mapping current when
-updating a dependency. Preserve the small checksummed raw data notices.
+and the frozen data notices. <code>LICENSE</code> is the primary project license;
+<code>THIRD_PARTY_NOTICES.md</code> is the component inventory, and <code>licenses/</code> holds the
+applicable third-party terms. Documentation builds generate a short license page,
+the inventory and separate legal-text copies for offline reading.</p>
+<p><code>tools/license_check.py</code> checks required copyrights and license provisions,
+metadata consistency and dependency review coverage. Update the inventory after
+reviewing changes to dependencies or vendored components. The artifact checker
+verifies the actual wheel and sdist license payloads. Asset byte pins remain in
+<code>tools/math-assets.lock.json</code>; preserve the small checksummed data notices.
 Cite the methods and identify the source revision as described in
 <a href="citation.html">Citation</a>. Focused changes and their tests can be proposed through
 the repository's issue and pull-request workflow.</p></article>

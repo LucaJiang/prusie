@@ -1,7 +1,6 @@
 """Website structure uses the real Markdown/template pipeline without fitting."""
 
 import sys
-from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -45,9 +44,16 @@ def test_homepage_and_tutorial_use_distinct_navigation_chrome(tmp_path, monkeypa
     docs = tmp_path / "docs"
     (docs / "assets").mkdir(parents=True)
     (tmp_path / "tools/site_config.json").write_text((ROOT / "tools/site_config.json").read_text())
-    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md", "Cargo.lock", "tools/notice_manifest.json"):
-        (tmp_path / name).write_bytes((ROOT / name).read_bytes())
-    (tmp_path / "pyproject.toml").write_text('version = "0.2.4.dev1"\n')
+    for name in [
+        *build_docs.license_paths(ROOT),
+        "Cargo.lock",
+        "Cargo.toml",
+        "rust-toolchain.toml",
+        "pyproject.toml",
+    ]:
+        target = tmp_path / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((ROOT / name).read_bytes())
     (docs / "index.md").write_text((ROOT / "docs/index.md").read_text())
     (docs / "example.md").write_text("# Example\n\n## Fit\n\nRead [results](results.md).\n")
     monkeypatch.setattr(build_docs, "ROOT", tmp_path)
@@ -55,8 +61,26 @@ def test_homepage_and_tutorial_use_distinct_navigation_chrome(tmp_path, monkeypa
     build_docs.build()
     build_docs.build(check=True)
     notices = (docs / "notices.html").read_text()
-    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
-        assert escape((ROOT / name).read_text()) in notices
+    assert "GPL-3.0-or-later" in notices
+    assert "Copyright © 2026 Wenxin Jiang" in notices
+    assert 'href="https://github.com/LucaJiang/prusie/blob/main/LICENSE"' in notices
+    assert 'href="third-party.html"' in notices
+    assert len(notices) < 5000
+    inventory = (docs / "third-party.html").read_text()
+    for name in build_docs.license_paths(ROOT):
+        if name == "THIRD_PARTY_NOTICES.md":
+            continue
+        target = "licenses/LICENSE" if name == "LICENSE" else name
+        assert (docs / target).read_bytes() == (ROOT / name).read_bytes()
+        assert f'href="{target}"' in inventory or f'href="{target}"' in notices
+    # Missing or changed published text must fail the generated-page check.
+    published = docs / "licenses/MIT.txt"
+    published.write_text("incomplete")
+    import pytest
+
+    with pytest.raises(SystemExit, match="Stale rendered documentation"):
+        build_docs.build(check=True)
+    build_docs.build()
     homepage = (docs / "index.html").read_text()
     guide = (docs / "example.html").read_text()
     assert 'class="on-this-page"' not in homepage

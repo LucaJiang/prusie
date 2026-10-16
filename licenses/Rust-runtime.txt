@@ -1,0 +1,184 @@
+Rust 1.98.1 standard library and runtime
+
+Source: https://github.com/rust-lang/rust/tree/1.98.1/library
+Compiler commit: 48a229ceaefd4985c50990b14116b6d856af0985
+For the supported Linux x86-64 native build, the standard library is statically
+linked. The following MIT notices share MIT.txt; its complete permission,
+condition and disclaimer wording was compared with each original.
+
+Rust core, alloc, std, unwind and std_detect:
+Copyright (c) The Rust Project Contributors
+The Rust Project Developers (see https://thanks.rust-lang.org)
+
+Rust backtrace module:
+Copyright (c) 2014 Alex Crichton
+The Rust Project Developers (see https://thanks.rust-lang.org)
+
+Rust std sync/mpmc:
+Copyright (c) 2019 The Crossbeam Project Developers
+The Rust Project Developers (see https://thanks.rust-lang.org)
+
+
+addr2line 0.25.1:
+Copyright (c) 2016-2018 The gimli Developers
+
+
+adler2 2.0.1:
+The upstream MIT text does not state a separate copyright line.
+
+
+cfg-if 1.0.4:
+Copyright (c) 2014 Alex Crichton
+
+
+gimli 0.32.3:
+Copyright (c) 2015 The Rust Project Developers
+
+
+hashbrown 0.17.1:
+Copyright (c) 2016 Amanieu d'Antras
+
+
+libc 0.2.185:
+Copyright (c) The Rust Project Developers
+
+
+memchr 2.7.6:
+The MIT License (MIT)
+
+Copyright (c) 2015 Andrew Gallant
+
+
+miniz_oxide 0.8.9:
+MIT License
+
+Copyright 2013-2014 RAD Game Tools and Valve Software
+Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
+Copyright (c) 2017 Frommi
+Copyright (c) 2017-2024 oyvindln
+
+
+object 0.37.3:
+Copyright (c) 2015 The Gimli Developers
+
+
+rustc-demangle 0.1.27:
+Copyright (c) 2014 Alex Crichton
+
+
+
+Unicode tables in Rust core use Unicode-3.0.txt, with the original copyright:
+Copyright (c) 1991-2024 Unicode, Inc.
+
+compiler_builtins 0.1.160 is MIT AND Apache-2.0 WITH LLVM-exception; this is
+not a choice of just one license. MIT.txt, Apache-2.0.txt and LLVM-exception.txt
+together retain those grants. The original scope and attribution statements
+follow, with repeated common license bodies stored in those separate files.
+
+
+The compiler-builtins crate is available for use under both the MIT license
+and the Apache-2.0 license with the LLVM exception (MIT AND Apache-2.0 WITH
+LLVM-exception).
+
+The libm crate is available for use under the MIT license.
+
+As a contributor, you agree that your code may be used under any of the
+following: the MIT license, the Apache-2.0 license, or the Apache-2.0 license
+with the LLVM exception. In other words, original (non-derivative) work is
+licensed under MIT OR Apache-2.0 OR Apache-2.0 WITH LLVM-exception. This is
+the default license for all other source in this repository.
+
+Portions of this software are derived from third-party works licensed under
+terms compatible with the above Apache-2.0 WITH LLVM-exception AND MIT
+license:
+
+* compiler-builtins is derived from LLVM's compiler-rt (https://llvm.org/).
+  Work derived from compiler-rt prior to 2019-01-19 is usable under the MIT
+  license, with the following copyright:
+
+      Copyright (c) 2009-2016 by the contributors listed in CREDITS.TXT
+
+  The relevant CREDITS.TXT is located at
+  https://github.com/llvm/llvm-project/blob/main/compiler-rt/CREDITS.TXT.
+
+* Work derived from compiler-rt after 2019-01-19 is usable under the
+  Apache-2.0 license with the LLVM exception.
+
+* The bundled `math` module is from the libm crate, usable under the MIT
+  license. For further details and copyrights, see see libm/LICENSE.txt at
+  https://github.com/rust-lang/compiler-builtins.
+
+Additionally, some source files may contain comments with specific copyrights
+or licenses.
+
+
+
+The compiler-builtins math module retains this libm attribution; its MIT grant is MIT.txt.
+
+
+This Rust library contains the following copyrights:
+
+    Copyright (c) 2018 Jorge Aparicio
+
+Portions of this software are derived from third-party works licensed under
+terms compatible with the above MIT license:
+
+* musl libc https://www.musl-libc.org/. This library contains the following
+  copyright:
+
+      Copyright © 2005-2020 Rich Felker, et al.
+
+* The CORE-MATH project https://core-math.gitlabpages.inria.fr/. CORE-MATH
+  routines are available under the MIT license on a per-file basis.
+
+The musl libc COPYRIGHT file also includes the following notice relevant to
+math portions of the library:
+
+------------------------------------------------------------------------------
+Much of the math library code (src/math/* and src/complex/*) is
+Copyright © 1993,2004 Sun Microsystems or
+Copyright © 2003-2011 David Schultz or
+Copyright © 2003-2009 Steven G. Kargl or
+Copyright © 2003-2009 Bruce D. Evans or
+Copyright © 2008 Stephen L. Moshier or
+Copyright © 2017-2018 Arm Limited
+and labelled as such in comments in the individual source files. All
+have been licensed under extremely permissive terms.
+------------------------------------------------------------------------------
+
+Copyright notices are retained in src/* files where relevant.
+
+
+The original compiler-builtins stack-probe source notice follows; MIT is selected.
+
+Copyright 2017 The Rust Project Developers. See the COPYRIGHT
+file at the top-level directory of this distribution and at
+http://rust-lang.org/COPYRIGHT.
+
+Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+<LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+option. This file may not be copied, modified, or distributed
+except according to those terms.
+
+
+The distinct per-file libm permissions, conditions and disclaimers are in Rust-libm.txt.
+
+The gimli constants retain this original rust-dwarf notice (MIT selected):
+
+This file originally from https://github.com/philipc/rust-dwarf/ and
+distributed under either MIT or Apache 2.0 licenses.
+
+Copyright 2016 The rust-dwarf Developers
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.

@@ -6,16 +6,18 @@ The implementation reviewed here is **`e45914e512e04feef37cf7310bc0b309582d6058`
 
 ## Read the two examples
 
-| Example | Interpretation | Key views | Complete offline report |
+| Example | Interpretation | Key views | Complete evidence |
 |---|---|---|---|
-| Stable, 500 synthetic variants | [Scientific interpretation](examples/stable/interpretation.md) | [Convergence](examples/stable/figure_3.png), [sensitivity](examples/stable/figure_6.png) | [Download HTML](examples/stable/index.html) |
-| Local optimum, 200 variants | [Scientific interpretation](examples/problem/interpretation.md) | [Refinement](examples/problem/figure_4.png), [sensitivity](examples/problem/figure_6.png) | [Download HTML](examples/problem/index.html) |
+| Stable, 500 synthetic variants | [Scientific interpretation](examples/stable/interpretation.md) | [Convergence](examples/stable/figure_3.png), [sensitivity](examples/stable/figure_6.png) | [Evidence JSON](examples/stable/evidence.json) |
+| Local optimum, 200 variants | [Scientific interpretation](examples/problem/interpretation.md) | [Refinement](examples/problem/figure_4.png), [sensitivity](examples/problem/figure_6.png) | [Evidence JSON](examples/problem/evidence.json) |
 
 ![Stable: recorded convergence](examples/stable/figure_3.png)
 
 ![Problem: accepted refinement and changes in PIP](examples/problem/figure_4.png)
 
-Each example directory contains all seven PNG/SVG views, complete CSV tables, `evidence.json` with original evidence IDs, structured convergence/refinement/LD/comparison files, and exact baseline/refined fit persistence. The HTML is the previously generated self-contained report, copied without rerendering. **GitHub's file page does not execute HTML**: download the repository or the HTML and open it locally. PNG previews are directly readable on GitHub. See [REPRODUCE.md](REPRODUCE.md) for inspection and optional reproduction commands.
+Each example directory retains all seven PNG/SVG views, complete CSV tables, `evidence.json` with original evidence IDs, structured convergence/refinement/LD/comparison files, and exact baseline/refined fit persistence. The two old HTML renderings duplicated these figures and evidence facts and are omitted from the current tree. Their original hashes remain in [artifact_manifest.json](artifact_manifest.json); [REPRODUCE.md](REPRODUCE.md) explains how to recover the exact HTML from Git history. All other files indexed by that manifest remain here.
+
+For the maintained offline presentation, see the [worked examples](../../worked_examples.md). Those reports identify their later presentation and comparison source revisions separately from the retained numerical producers. PNGs and numerical exports in this snapshot remain directly readable without fitting.
 
 The stable fixture is the existing independently generated synthetic toy example (seed 20261007), under GPL-3.0-or-later. The problem fixture is the official BSD-licensed susieR `FinemappingConvergence` sufficient-statistics example: a simulated response based on real genotypes, without individual genotypes in this distribution. Input files, metadata and notices are linked in the interpretations. Neither report supplies real physical coordinates or biological annotations.
 
