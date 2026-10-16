@@ -1,4 +1,4 @@
-# Compare complete fine-mapping calls
+# Fine-mapping comparisons
 
 These scripts compare installed prusie with susieR **0.16.6**, commit
 `8e56a8e038e989856d106d9ca5175cc664fea9d2`. Use R with the pinned package and
@@ -24,7 +24,7 @@ measurement and needs no BLAS probe. `--fixture regression` instead uses the
 older attributed fixture, whose existing inputs/references are unchanged.
 
 The script freezes inputs and order before fitting, runs backends sequentially
-with one numerical thread and retains seven complete-call timings after one
+with one numerical thread and retains seven timings of the fitting call after one
 warmup. Imports, reads, explicit GC and export are outside each clock. Run
 without competing builds or numerical tests. Peak memory is a separate fresh
 process per case/backend and includes interpreter, imports, inputs and result.
@@ -34,7 +34,7 @@ Linux high-water KiB is converted to MiB.
 loading and GC, then samples through the returned fit before export. The target
 interval is 2 ms; actual sample count and largest gap are recorded. Sampled peak
 minus this current baseline is an incremental **lower bound**: short allocation
-spikes may fall between samples. The full-process high-water mark is retained as
+spikes may fall between samples. The process high-water mark is retained as
 a separate metric. No historical high-water marks are subtracted. The readiness
 handshake is used only in fresh memory processes, never timed calls.
 
@@ -95,7 +95,7 @@ its complete uncompressed SHA256 against the frozen `R.bin` before use. Both
 drivers materialize the full dense matrix before fitting; no sparse or
 approximate LD operation is introduced. Python decompresses in bounded buffers
 into a writable contiguous array; R reads into its dense column-major vector.
-Record this transport choice because input loading affects full-process RSS,
+Record this transport choice because input loading affects process RSS,
 although it is outside the fitting clock. Use the ordinary separate row/column
 files for matrices that are not bitwise symmetric.
 
@@ -106,13 +106,13 @@ rtol=0, plus input/model/probability validity, and retains all other diagnostics
 
 ## Retained-record analysis
 
-`summary.py` defines stage-C selection, grouping, inclusion and paired summaries;
+`summary.py` defines case selection, grouping and paired summaries;
 its unit tests cover empty CSs, both-max-iteration fits, failures and true error
 maxima. `import_records.py` can import the original controlled evidence archive
 using `--evidence-root`, `--output` and a run-local `--private-receipt`.
 The public `tools/generate_results.py` needs only retained normalized records.
 `plot_current.py --real REAL.json --scaling SCALING.json --output FIGURES`
-plots current summaries with complete-call timing, actual iteration counts,
-full-process RSS and the separately labeled sampled incremental memory.
+plots fitting runtime, iteration counts,
+process RSS and the separately labeled sampled incremental memory.
 See [reproducibility](../../docs/reproducibility.md) for the distinction between
 record regeneration and input-level reruns.

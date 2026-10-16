@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plot complete-call real-panel and controlled-scaling summaries.
+"""Plot fitting runtime and memory for genomic loci and matrix sizes.
 
 Uses the same runtime/memory definitions and scientific figure style as
 tools/generate_results.py. Each input is a data-safe summary containing records
@@ -53,8 +53,8 @@ def main():
         }
     )
     for key, ylabel, filename in [
-        ("runtime", "Median complete-call time (ms)", "runtime_by_variants"),
-        ("memory", "Full-process peak RSS (MiB)", "memory_by_variants"),
+        ("runtime", "Median fitting runtime (ms)", "runtime_by_variants"),
+        ("memory", "Peak resident memory (MiB)", "memory_by_variants"),
     ]:
         fig, axes = plt.subplots(1, 2, figsize=(8.6, 3.5), layout="constrained")
         for ax, group, title in zip(axes, ("gwas", "eqtl"), ("GWAS", "eQTL"), strict=True):
@@ -146,10 +146,10 @@ def main():
     for ax, title, ylabel in zip(
         axes.flat,
         [
-            "A  Complete call: median and IQR",
-            "B  Fresh-process peak",
+            "A  Fitting runtime: median and IQR",
+            "B  Peak resident memory",
             "C  Completed IBSS sweeps",
-            "D  Current-RSS sampling",
+            "D  Sampled resident memory",
         ],
         ["Seconds", "GiB", "Iterations", "GiB"],
         strict=True,
