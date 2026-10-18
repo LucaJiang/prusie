@@ -140,6 +140,7 @@ def build() -> None:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="{html.escape(config["description"])}">
 <title>{html.escape(title)} · {html.escape(config["package"])}</title>
+<link rel="icon" href="{html.escape(config["favicon"])}" sizes="16x16 32x32 48x48" type="image/x-icon">
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
 <link rel="stylesheet" href="assets/katex/katex.min.css">
@@ -149,7 +150,7 @@ def build() -> None:
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">{config["mark"]}</span><span>{config["package"]}<small>{html.escape(config["tagline"])}</small></span></a>
+<a class="brand" href="index.html" aria-label="{html.escape(config["package"])} documentation home"><img class="brand-mark" src="{html.escape(config["logo"])}" alt="" width="96" height="96"><span>{config["package"]}<small>{html.escape(config["tagline"])}</small></span></a>
 <div class="version"><span class="version-number">{version}</span><span class="version-badge">{"Development" if ".dev" in version else "Release candidate"}</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation">{"".join(nav)}</nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>

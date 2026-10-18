@@ -19,7 +19,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible,
 .sidebar { min-width: 0; padding: 32px 22px 24px; border-right: 1px solid var(--line); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
 .brand { display: flex; align-items: center; gap: 12px; font-size: 1.45rem; font-weight: 750; text-decoration: none; color: var(--ink); letter-spacing: -.035em; }
 .brand small { display: block; font-size: .75rem; font-weight: 500; letter-spacing: 0; color: var(--muted); }
-.brand-mark { width: 38px; height: 38px; display: grid; place-items: center; background: var(--accent); color: white; border-radius: 6px; font: 700 1.25rem ui-monospace, monospace; flex-shrink: 0; }
+.brand-mark { width: 44px; height: 44px; flex-shrink: 0; }
 .version { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 17px 0 25px; color: var(--muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
 .version-number { white-space: nowrap; }
 .version-badge { display: inline-flex; white-space: nowrap; border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px; background: white; }
@@ -63,6 +63,10 @@ tbody tr:last-child td { border-bottom: 0; }
 blockquote { border-left: 3px solid var(--accent); margin: 24px 0; padding: 4px 20px; background: var(--accent-soft); }
 blockquote p { margin: .7em 0; }
 img, svg { max-width: 100%; height: auto; }
+.logo-banner { margin: 0 0 26px; }
+.logo-banner img { display: block; width: 100%; height: auto; }
+.logo-signature { width: 128px; max-width: 100%; margin: 24px 0 0 auto; }
+.logo-signature img { display: block; width: 100%; height: auto; }
 .doc-figure { margin: 26px 0; }
 .figure-wrap { max-width: 100%; overflow-x: auto; }
 .figure-wrap img { display: block; margin: auto; }

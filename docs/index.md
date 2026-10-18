@@ -1,5 +1,9 @@
 # prusie: SuSiE fine-mapping from summary statistics
 
+<div class="logo-banner">
+  <a href="assets/logos/logo_title.jpeg"><img src="assets/logos/prusie-banner-1792.jpg" alt="prusie — Python and Rust software for SuSiE fine-mapping" width="1792" height="592"></a>
+</div>
+
 prusie is a fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for
 Python. It fits association summary statistics and linkage disequilibrium (LD),
 or sufficient statistics, and returns posterior inclusion probabilities (PIPs)
@@ -104,3 +108,7 @@ Author and maintainer: Wenxin Jiang. No DOI is assigned to the software.
 
 Copyright © 2026 Wenxin Jiang. Licensed under [GPL-3.0-or-later](https://github.com/LucaJiang/prusie/blob/main/LICENSE);
 see [third-party notices](https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md) for upstream attribution.
+
+<div class="logo-signature">
+  <a href="assets/logos/logo.jpeg"><img src="assets/logos/prusie-logo-384.jpg" alt="prusie logo: a Python snake, DNA helix, association dots and a gear" width="384" height="384" loading="lazy"></a>
+</div>

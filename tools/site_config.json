@@ -1,6 +1,7 @@
 {
   "package": "prusie",
-  "mark": "Su",
+  "logo": "assets/logos/prusie-mark-96.png",
+  "favicon": "assets/logos/favicon.ico",
   "tagline": "SuSiE fine-mapping from summary statistics",
   "description": "Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python",
   "section": "Fine-mapping \u00b7 Python + Rust",

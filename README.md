@@ -1,5 +1,9 @@
 # prusie: SuSiE fine-mapping from summary statistics
 
+<p align="center">
+  <a href="docs/assets/logos/logo_title.jpeg"><img src="docs/assets/logos/prusie-banner-1792.jpg" alt="prusie — Python and Rust software for SuSiE fine-mapping" width="960"></a>
+</p>
+
 prusie is a fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for
 Python. It fits association summary statistics and linkage disequilibrium (LD),
 or sufficient statistics, and returns posterior inclusion probabilities (PIPs)
