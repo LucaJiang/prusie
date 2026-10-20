@@ -1,4 +1,5 @@
 //! Matrix-free individual-level regression with dense or canonical CSC designs.
+//! Includes susieR's trend-filtering operator (BSD-3-Clause; see THIRD_PARTY_NOTICES.md).
 //!
 //! Centering and scaling are applied as linear operators. A null column is
 //! represented virtually, so neither sparse input nor XᵀX is ever densified.

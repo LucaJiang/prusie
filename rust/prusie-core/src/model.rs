@@ -1,4 +1,5 @@
 //! Model extensions of the Gaussian single-effect prior.
+//! susieR BSD-3-Clause; see THIRD_PARTY_NOTICES.md for the upstream attribution.
 use crate::options::ResidualMethod;
 
 /// A fixed mixture of positive Gaussian slab variances.

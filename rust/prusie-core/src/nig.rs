@@ -23,6 +23,82 @@ pub(crate) fn null_loglik(n: f64, yy: f64, alpha0: f64, beta0: f64) -> f64 {
     -n / 2. * (2. * PI).ln() + a0 * b0.ln() - libm::lgamma(a0) - a1 * b1.ln() + libm::lgamma(a1)
 }
 
+/// KL of the single-IG projection used by susieR's NIG dispatch. Gaussian
+/// mixture moments also enter this expression when that SER path takes priority.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn kl_from_posterior(
+    xtr: &[f64],
+    diagonal: &[f64],
+    inflation: Option<&[f64]>,
+    yy: f64,
+    n: f64,
+    v: f64,
+    alpha0: f64,
+    beta0: f64,
+    prior_weights: &[f64],
+    alpha: &[f64],
+    means: &[f64],
+) -> f64 {
+    let reduction = sum((0..alpha.len()).filter(|&j| diagonal[j] > 0.).map(|j| {
+        let tau = inflation.map_or(1., |t| t[j]);
+        let shrink = v / (v + tau / diagonal[j]);
+        let correlation = (xtr[j] / (diagonal[j] * yy).sqrt()).clamp(-1., 1.);
+        alpha[j] * shrink * correlation.powi(2)
+    }));
+    projected_kl(
+        alpha,
+        means,
+        prior_weights,
+        v,
+        alpha0,
+        beta0,
+        (alpha0 + n) / 2.,
+        (beta0 + yy * (1. - reduction)) / 2.,
+        |j| {
+            if diagonal[j] > 0. {
+                let sampling = inflation.map_or(1., |t| t[j]) / diagonal[j];
+                v / (v + sampling) * sampling
+            } else {
+                0.
+            }
+        },
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn projected_kl(
+    alpha: &[f64],
+    means: &[f64],
+    prior_weights: &[f64],
+    v: f64,
+    alpha0: f64,
+    beta0: f64,
+    apost: f64,
+    bpost: f64,
+    posterior_variance: impl Fn(usize) -> f64,
+) -> f64 {
+    let kg = sum(alpha
+        .iter()
+        .zip(prior_weights)
+        .map(|(&a, &prior)| a * (a.max(f64::EPSILON).ln() - prior.max(f64::EPSILON).ln())));
+    let kb = 0.5
+        * sum((0..alpha.len()).map(|j| {
+            let sj = posterior_variance(j);
+            alpha[j]
+                * (v.ln() - sj.max(f64::EPSILON).ln()
+                    + sj / v
+                    + means[j].powi(2) * apost / bpost / v
+                    - 1.)
+        }));
+    let a0 = alpha0 / 2.;
+    let b0 = beta0 / 2.;
+    kg + kb + libm::lgamma(a0) - libm::lgamma(apost)
+        + a0 * (bpost / b0).ln()
+        + (apost - a0) * digamma(apost)
+        - apost
+        + apost * b0 / bpost
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn single_effect_nig<'a>(
     xtr: &[f64],
@@ -94,31 +170,23 @@ pub(crate) fn single_effect_nig<'a>(
     let kl = if v > 0. {
         let apost = a1 / 2.;
         let bpost = (beta0 + sum(posterior.alpha.iter().zip(&rss).map(|(a, r)| a * r))) / 2.;
-        let kg = sum(posterior
-            .alpha
-            .iter()
-            .zip(prior_weights)
-            .map(|(&a, &prior)| a * (a.max(f64::EPSILON).ln() - prior.max(f64::EPSILON).ln())));
-        let kb = 0.5
-            * sum((0..p).map(|j| {
-                let sj = if diagonal[j] > 0. {
+        projected_kl(
+            posterior.alpha,
+            posterior.mu,
+            prior_weights,
+            v,
+            alpha0,
+            beta0,
+            apost,
+            bpost,
+            |j| {
+                if diagonal[j] > 0. {
                     r0[j] * inflation.map_or(1., |t| t[j]) / diagonal[j]
                 } else {
                     0.
-                };
-                posterior.alpha[j]
-                    * (v.ln() - sj.max(f64::EPSILON).ln()
-                        + sj / v
-                        + posterior.mu[j].powi(2) * apost / bpost / v
-                        - 1.)
-            }));
-        let a0 = alpha0 / 2.;
-        let b0 = beta0 / 2.;
-        kg + kb + libm::lgamma(a0) - libm::lgamma(apost)
-            + a0 * (bpost / b0).ln()
-            + (apost - a0) * digamma(apost)
-            - apost
-            + apost * b0 / bpost
+                }
+            },
+        )
     } else {
         0.
     };

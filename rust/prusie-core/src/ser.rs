@@ -436,6 +436,29 @@ pub fn ser_update(
     };
     result.lbf = posterior.model_lbf;
     result.v = posterior.v;
+    if nig && model.mixture.is_some() {
+        // Fixed-mixture SER precedes NIG conjugacy in susieR's dispatch and
+        // retains these initialized NIG fields for the outer algorithm.
+        result.rv = Some(1.);
+        result.marginal_loglik = Some(f64::NAN);
+        result.kl = Some(if options.l > 1 {
+            0.
+        } else {
+            crate::nig::kl_from_posterior(
+                xtr,
+                diagonal,
+                inflation,
+                yy,
+                n,
+                options.prior_variance,
+                model.alpha0.unwrap_or(1. / n.sqrt()),
+                model.beta0.unwrap_or(1. / n.sqrt()),
+                &options.prior_weights,
+                &result.alpha,
+                &result.mu,
+            )
+        });
+    }
     Ok(result)
 }
 

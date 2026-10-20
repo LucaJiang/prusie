@@ -377,13 +377,14 @@ pub(crate) fn fit_operator(
             } else {
                 0.
             };
+            let prior_v = output.v[effect];
             let posterior_row = SingleEffect {
                 alpha: &mut output.alpha[offset..offset + p],
                 mu: &mut output.mu[offset..offset + p],
                 mu2: &mut output.mu2[offset..offset + p],
                 lbf: &mut output.lbf_variable[offset..offset + p],
                 model_lbf: f64::NAN,
-                v: output.v[effect],
+                v: prior_v,
             };
             let posterior = if let Some(mixture) = &control.model.mixture {
                 let grid_size = p * mixture.variances.len();
@@ -451,6 +452,26 @@ pub(crate) fn fit_operator(
                 }));
             if !use_nig {
                 output.kl[effect] = -posterior.model_lbf + expected_loglik;
+            } else if control.model.mixture.is_some() {
+                // Mixture Gaussian moments enter NIG's KL dispatch before V
+                // is replaced by the mixture's effective slab variance.
+                output.kl[effect] = if options.l == 1 {
+                    crate::nig::kl_from_posterior(
+                        &residual,
+                        &diagonal,
+                        None,
+                        nig_yy,
+                        n,
+                        prior_v,
+                        alpha0,
+                        beta0,
+                        &options.prior_weights,
+                        posterior.alpha,
+                        posterior.mu,
+                    )
+                } else {
+                    0.
+                };
             }
             gram.apply(&component, &mut product);
             component_products[offset..offset + p].copy_from_slice(&product);
@@ -863,6 +884,59 @@ mod tests {
             prior_tol: 1e-9,
             null_index: None,
         }
+    }
+
+    #[test]
+    fn fixed_mixture_nig_preserves_initialized_nig_fields() {
+        let mut settings = options(2);
+        settings.l = 2;
+        let control = FitControl {
+            model: crate::model::ModelOptions {
+                mixture: Some(crate::model::MixturePrior {
+                    variances: vec![0.02, 0.2, 1.],
+                    weights: vec![0.2, 0.5, 0.3],
+                }),
+                residual_method: ResidualMethod::Nig,
+                alpha0: Some(0.2),
+                beta0: Some(0.3),
+                ..crate::model::ModelOptions::default()
+            },
+            ..FitControl::default()
+        };
+        let result = fit_controlled(
+            &[19., 2., 2., 19.],
+            &[5., -3.],
+            19.,
+            20.,
+            &settings,
+            true,
+            None,
+            &control,
+        )
+        .unwrap();
+        assert!(result.alpha.iter().all(|x| x.is_finite()));
+        assert!(result.elbo.iter().all(|x| x.is_finite()));
+        assert_eq!(result.kl, [0., 0.]);
+        assert_eq!(result.rv.unwrap(), [1., 1.]);
+        assert!(result.marginal_loglik.unwrap().iter().all(|x| x.is_nan()));
+        for v in result.v {
+            assert!((v - 0.404).abs() <= 1e-15);
+        }
+        settings.l = 1;
+        let result = fit_controlled(
+            &[19., 2., 2., 19.],
+            &[5., -3.],
+            19.,
+            20.,
+            &settings,
+            true,
+            None,
+            &control,
+        )
+        .unwrap();
+        assert!(result.alpha.iter().all(|x| x.is_finite()));
+        assert!(result.elbo.iter().all(|x| x.is_nan()));
+        assert!(result.kl[0].is_finite());
     }
 
     #[test]
