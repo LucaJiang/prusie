@@ -17,12 +17,25 @@ The implementation uses mathematically equivalent float64 arithmetic rather
 than reproducing R rounding. No thresholds or stopping tolerances are relaxed
 for validation.
 
-After the solver workspace refactor, all 284 existing alpha cases passed:
-200 real analyses (maximum error `2.06e-8`), six dense scaling fixtures
-(`8.66e-14`), 54 parameter cases (`6.06e-9`), seven bundled cases (`4.44e-16`)
-and 17 targeted cases (`8.77e-9`). Four expected invalid-model errors also
-matched. These results identify the tested refactor; the historical tables
-below retain their original source and acceptance criteria.
+The current ordinary build passes all 415 fitted configurations with identical
+arguments and verified variant order:
+
+| Panel | Fitted configurations | Maximum absolute alpha difference |
+| --- | --- | --- |
+| Bundled examples | 7 | 3.55e-09 |
+| Parameter cases | 54 | 4.6e-09 |
+| Core feature cases | 69 | 7.02e-06 |
+| NIG interactions | 2 | 5.5e-13 |
+| Real analyses | 200 | 1.22e-08 |
+| Real RSS model options | 60 | 1.2e-08 |
+| Dense scaling fixtures | 6 | 2.6e-11 |
+| Targeted regressions | 17 | 7.78e-09 |
+
+Six expected invalid-model errors also match. Auxiliary-function boundaries
+are checked separately. This finite panel does not establish agreement for
+every combination of model options or identical stochastic draws across
+languages. The historical tables below retain their original source and
+acceptance criteria.
 
 ## Recorded earlier 0.2.4.dev2 snapshot
 

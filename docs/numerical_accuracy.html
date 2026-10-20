@@ -49,12 +49,64 @@ near activity thresholds can change these summaries even when alpha agrees.
 The implementation uses mathematically equivalent float64 arithmetic rather
 than reproducing R rounding. No thresholds or stopping tolerances are relaxed
 for validation.</p>
-<p>After the solver workspace refactor, all 284 existing alpha cases passed:
-200 real analyses (maximum error <code>2.06e-8</code>), six dense scaling fixtures
-(<code>8.66e-14</code>), 54 parameter cases (<code>6.06e-9</code>), seven bundled cases (<code>4.44e-16</code>)
-and 17 targeted cases (<code>8.77e-9</code>). Four expected invalid-model errors also
-matched. These results identify the tested refactor; the historical tables
-below retain their original source and acceptance criteria.</p>
+<p>The current ordinary build passes all 415 fitted configurations with identical
+arguments and verified variant order:</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Panel</th>
+<th>Fitted configurations</th>
+<th>Maximum absolute alpha difference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bundled examples</td>
+<td>7</td>
+<td>3.55e-09</td>
+</tr>
+<tr>
+<td>Parameter cases</td>
+<td>54</td>
+<td>4.6e-09</td>
+</tr>
+<tr>
+<td>Core feature cases</td>
+<td>69</td>
+<td>7.02e-06</td>
+</tr>
+<tr>
+<td>NIG interactions</td>
+<td>2</td>
+<td>5.5e-13</td>
+</tr>
+<tr>
+<td>Real analyses</td>
+<td>200</td>
+<td>1.22e-08</td>
+</tr>
+<tr>
+<td>Real RSS model options</td>
+<td>60</td>
+<td>1.2e-08</td>
+</tr>
+<tr>
+<td>Dense scaling fixtures</td>
+<td>6</td>
+<td>2.6e-11</td>
+</tr>
+<tr>
+<td>Targeted regressions</td>
+<td>17</td>
+<td>7.78e-09</td>
+</tr>
+</tbody>
+</table></div>
+<p>Six expected invalid-model errors also match. Auxiliary-function boundaries
+are checked separately. This finite panel does not establish agreement for
+every combination of model options or identical stochastic draws across
+languages. The historical tables below retain their original source and
+acceptance criteria.</p>
 <h2 id="recorded-earlier-024dev2-snapshot">Recorded earlier 0.2.4.dev2 snapshot</h2>
 <p>Comparisons against susieR 0.16.6 at commit <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>
 use compute commit <code>ff379ada284a63a3cf1770d43faacc6b929dc923</code>. All 100 GWAS and 100 eQTL
