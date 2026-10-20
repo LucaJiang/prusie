@@ -27,7 +27,7 @@ Z = np.array([2.1, 0.5, 0.1])
 def call_fitter(kind, **extra):
     options = dict(L=2, coverage=None, max_iter=20, check_prior=False)
     if kind == "mixture":
-        options.update(prior_variance_grid=[0.0, 0.1, 0.5], mixture_weights=[0.2, 0.4, 0.4])
+        options.update(prior_variance_grid=[0.01, 0.1, 0.5], mixture_weights=[0.2, 0.4, 0.4])
     elif kind == "NIG":
         options["estimate_residual_method"] = "NIG"
     elif kind == "slot":
