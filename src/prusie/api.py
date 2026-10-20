@@ -404,8 +404,10 @@ def susie_suff_stat(
     single effects in sequence on the working statistics D⁻¹XᵀXD⁻¹ and
     D⁻¹Xᵀy, where D = diag(d). The Gaussian updates follow susieR 0.16.6.
     As in the dense numeric susieR path, exact off-diagonal inequality triggers
-    a warning and internal replacement by (XtX + XtXᵀ)/2. Nonfinite inputs or
-    averaging overflow raise an error. Caller arrays are never modified.
+    a warning and internal replacement by (XtX + XtXᵀ)/2. With check_input=False,
+    NaNs in Xty are replaced with zero with a warning; check_input=True rejects
+    them. Nonfinite XtX, infinite Xty and averaging overflow raise an error.
+    Caller arrays are never modified.
     ``mu`` and ``mu2`` are on the working predictor scale; ``coef`` returns
     posterior mean effects on the input scale. CS purity uses correlations
     derived from the complete XtX submatrix of each set.
