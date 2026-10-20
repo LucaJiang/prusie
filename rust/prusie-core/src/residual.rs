@@ -31,13 +31,17 @@ pub(crate) fn expected_residual_sum_squares(
     component_quadratics.clear();
     for effect in 0..fit.v.len() {
         let offset = effect * p;
-        component_quadratics.push(sum((0..p).map(|j| {
-            fit.alpha[offset + j] * fit.mu[offset + j] * component_products[offset + j]
-        })));
+        let weight = fit.slot_weights.as_ref().map_or(1., |w| w[effect]);
+        component_quadratics.push(
+            weight.powi(2)
+                * sum((0..p).map(|j| {
+                    fit.alpha[offset + j] * fit.mu[offset + j] * component_products[offset + j]
+                })),
+        );
         for j in 0..p {
             let idx = offset + j;
-            mean[j] += fit.alpha[idx] * fit.mu[idx];
-            fitted[j] += component_products[idx];
+            mean[j] += weight * fit.alpha[idx] * fit.mu[idx];
+            fitted[j] += weight * component_products[idx];
         }
     }
     // Compensated summation reduces cancellation without an L × p temporary. By linearity, ∑_ℓ Q m_ℓ = Q b̄; every product
@@ -45,6 +49,8 @@ pub(crate) fn expected_residual_sum_squares(
     yty - 2.0 * dot(mean, xty) + dot(mean, fitted) - sum(component_quadratics.iter().copied())
         + sum((0..fit.v.len()).flat_map(|effect| {
             let offset = effect * p;
-            (0..p).map(move |j| diagonal[j] * (fit.alpha[offset + j] * fit.mu2[offset + j]))
+            let weight = fit.slot_weights.as_ref().map_or(1., |w| w[effect]);
+            (0..p)
+                .map(move |j| weight * diagonal[j] * (fit.alpha[offset + j] * fit.mu2[offset + j]))
         }))
 }

@@ -30,15 +30,6 @@ fn log_probabilities_into(
     }
 }
 
-#[cfg(test)]
-fn log_probabilities(v: f64, beta: &[f64], shat2: &[f64], prior: &[f64]) -> (Vec<f64>, Vec<f64>) {
-    let mut bf = vec![0.0; beta.len()];
-    let mut po = vec![0.0; beta.len()];
-    log_probabilities_into(v, beta, shat2, prior, &mut bf, &mut po);
-    (bf, po)
-}
-
-
 fn log_sum_exp(x: &mut [f64]) -> f64 {
     log_sum_exp_at(x, None)
 }
@@ -207,6 +198,255 @@ pub(crate) fn single_effect<'a>(
     Ok(posterior)
 }
 
+/// Fixed-mixture SER; the grid is expressed in working coefficient units.
+/// The p × K grid matrix is stored by variant then mixture component.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn single_effect_mixture<'a>(
+    xtr: &[f64],
+    diagonal: &[f64],
+    sigma2: f64,
+    log_prior: &[f64],
+    mixture: &crate::model::MixturePrior,
+    grid_lbf: &mut [f64],
+    mut posterior: SingleEffect<'a>,
+) -> Result<SingleEffect<'a>, String> {
+    let k_count = mixture.variances.len();
+    let mut responsibilities = vec![0.; k_count];
+    for j in 0..xtr.len() {
+        let beta = xtr[j] / diagonal[j];
+        let sampling = sigma2 / diagonal[j];
+        let safe = sampling.max(f64::EPSILON);
+        let informative = beta.is_finite() && sampling.is_finite();
+        for (k, (&variance, &weight)) in mixture.variances.iter().zip(&mixture.weights).enumerate()
+        {
+            let bf = if informative {
+                -0.5 * (1. + variance / safe).ln()
+                    + 0.5 * beta.powi(2) * variance / (safe * (variance + safe))
+            } else {
+                0.
+            };
+            grid_lbf[j * k_count + k] = bf;
+            responsibilities[k] = if weight == 0. {
+                f64::NEG_INFINITY
+            } else {
+                weight.ln() + bf
+            };
+        }
+        let bf = if k_count == 1 {
+            grid_lbf[j * k_count]
+        } else {
+            log_sum_exp(&mut responsibilities)
+        };
+        posterior.lbf[j] = bf;
+        posterior.alpha[j] = bf + log_prior[j];
+        // Responsibilities use the same epsilon stabilization as the pinned
+        // mixture moment calculation. It is numerical stabilization, not a
+        // change to the fitted mixture weights.
+        for k in 0..k_count {
+            responsibilities[k] =
+                grid_lbf[j * k_count + k] + (mixture.weights[k] + f64::EPSILON).ln();
+        }
+        let maximum = responsibilities
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max);
+        for value in &mut responsibilities {
+            *value = (*value - maximum).exp();
+        }
+        let total = sum(responsibilities.iter().copied());
+        let mut mean = 0.;
+        let mut second = 0.;
+        if informative {
+            for (k, &variance) in mixture.variances.iter().enumerate() {
+                let post_var = variance * safe / (variance + safe);
+                let post_mean = post_var / safe * beta;
+                mean += responsibilities[k] / total * post_mean;
+                second += responsibilities[k] / total * (post_var + post_mean.powi(2));
+            }
+        }
+        posterior.mu[j] = mean;
+        posterior.mu2[j] = second;
+    }
+    let maximum = posterior
+        .alpha
+        .iter()
+        .copied()
+        .fold(f64::NEG_INFINITY, f64::max);
+    for a in posterior.alpha.iter_mut() {
+        *a = (*a - maximum).exp();
+    }
+    let total = sum(posterior.alpha.iter().copied());
+    for a in posterior.alpha.iter_mut() {
+        *a /= total;
+    }
+    posterior.model_lbf = maximum + total.ln();
+    posterior.v = dot(&mixture.weights, &mixture.variances);
+    if !posterior.model_lbf.is_finite() {
+        return Err("Non-finite mixture posterior".into());
+    }
+    Ok(posterior)
+}
+
+/// Perform one untrimmed SER update for model-specific outer algorithms.
+///
+/// `inflation[j]` multiplies the sampling variance of variant j; centering,
+/// fitting residuals and changes to an LD operator belong to the outer model.
+/// `yy` is the residual sum of squares excluding this effect, used only by NIG.
+#[allow(clippy::too_many_arguments)]
+pub fn ser_update(
+    xtr: &[f64],
+    diagonal: &[f64],
+    inflation: Option<&[f64]>,
+    yy: f64,
+    n: f64,
+    options: &crate::FitOptions,
+    model: &crate::model::ModelOptions,
+    hard_exclusion: bool,
+) -> Result<crate::SerOutput, String> {
+    let p = xtr.len();
+    if p == 0
+        || diagonal.len() != p
+        || options.prior_weights.len() != p
+        || xtr.iter().any(|x| !x.is_finite())
+        || diagonal.iter().any(|&x| !x.is_finite() || x < 0.)
+        || options
+            .prior_weights
+            .iter()
+            .any(|&x| !x.is_finite() || x < 0.)
+        || sum(options.prior_weights.iter().copied()) <= 0.
+        || !options.prior_variance.is_finite()
+        || options.prior_variance < 0.
+        || !options.residual_variance.is_finite()
+        || options.residual_variance <= 0.
+        || inflation.is_some_and(|v| v.len() != p || v.iter().any(|&x| !x.is_finite() || x <= 0.))
+    {
+        return Err("Invalid single-effect statistics, priors, variance, or inflation".into());
+    }
+    crate::ibss::validate_model(model, n, 1)?;
+    let log_prior: Vec<f64> = options
+        .prior_weights
+        .iter()
+        .map(|&w| {
+            if hard_exclusion && w == 0. {
+                f64::NEG_INFINITY
+            } else {
+                (w + f64::EPSILON.sqrt()).ln()
+            }
+        })
+        .collect();
+    let mut result = crate::SerOutput {
+        alpha: vec![0.; p],
+        mu: vec![0.; p],
+        mu2: vec![0.; p],
+        lbf_variable: vec![0.; p],
+        lbf: 0.,
+        v: options.prior_variance,
+        lbf_grid: model
+            .mixture
+            .as_ref()
+            .map(|m| vec![0.; p * m.variances.len()]),
+        rv: None,
+        marginal_loglik: None,
+        kl: None,
+    };
+    let posterior = SingleEffect {
+        alpha: &mut result.alpha,
+        mu: &mut result.mu,
+        mu2: &mut result.mu2,
+        lbf: &mut result.lbf_variable,
+        model_lbf: 0.,
+        v: options.prior_variance,
+    };
+    let nig = model.residual_method == crate::options::ResidualMethod::Nig;
+    let method = if options.estimate_prior_variance {
+        if nig {
+            PriorMethod::Em
+        } else {
+            options.estimate_prior_method
+        }
+    } else {
+        PriorMethod::None
+    };
+    let adjusted_diagonal;
+    let adjusted_xtr;
+    let (working_diagonal, working_xtr) = if let Some(tau) = inflation {
+        adjusted_diagonal = diagonal
+            .iter()
+            .zip(tau)
+            .map(|(d, t)| d / t)
+            .collect::<Vec<f64>>();
+        adjusted_xtr = xtr
+            .iter()
+            .zip(tau)
+            .map(|(r, t)| r / t)
+            .collect::<Vec<f64>>();
+        (adjusted_diagonal.as_slice(), adjusted_xtr.as_slice())
+    } else {
+        (diagonal, xtr)
+    };
+    let posterior = if let Some(mixture) = &model.mixture {
+        single_effect_mixture(
+            working_xtr,
+            working_diagonal,
+            options.residual_variance,
+            &log_prior,
+            mixture,
+            result.lbf_grid.as_mut().expect("mixture grid"),
+            posterior,
+        )?
+    } else if nig {
+        if !n.is_finite() || n <= 1. || !yy.is_finite() || yy <= 0. {
+            return Err("NIG SER requires n > 1 and positive residual sum of squares".into());
+        }
+        let updated = crate::nig::single_effect_nig(
+            xtr,
+            diagonal,
+            inflation,
+            yy,
+            n,
+            options.prior_variance,
+            model.alpha0.unwrap_or(1. / n.sqrt()),
+            model.beta0.unwrap_or(1. / n.sqrt()),
+            &log_prior,
+            &options.prior_weights,
+            method,
+            posterior,
+        )?;
+        result.rv = Some(updated.residual_mean);
+        result.marginal_loglik = Some(updated.marginal_loglik);
+        result.kl = Some(updated.kl);
+        updated.posterior
+    } else {
+        let mut scratch = vec![0.; p];
+        let mut sampling = None;
+        let mut beta = vec![0.; p];
+        single_effect(
+            working_xtr,
+            working_diagonal,
+            options.prior_variance,
+            options.residual_variance,
+            &log_prior,
+            method,
+            options.check_null_threshold,
+            &mut scratch,
+            &mut sampling,
+            &mut beta,
+            posterior,
+        )?
+    };
+    result.lbf = posterior.model_lbf;
+    result.v = posterior.v;
+    Ok(result)
+}
+
+#[cfg(test)]
+fn log_probabilities(v: f64, beta: &[f64], shat2: &[f64], prior: &[f64]) -> (Vec<f64>, Vec<f64>) {
+    let mut bf = vec![0.0; beta.len()];
+    let mut po = vec![0.0; beta.len()];
+    log_probabilities_into(v, beta, shat2, prior, &mut bf, &mut po);
+    (bf, po)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,3 +465,51 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+mod mixture_tests {
+    use super::*;
+    use crate::model::MixturePrior;
+    #[test]
+    fn one_point_mixture_reduces_to_gaussian_oracle() {
+        let xtr = [2., -3., 0.];
+        let diagonal = [4., 5., 2.];
+        let log_prior = [0.2_f64.ln(), 0.3_f64.ln(), 0.5_f64.ln()];
+        let (mut a, mut mu, mut mu2, mut lbf) = ([0.; 3], [0.; 3], [0.; 3], [0.; 3]);
+        let mut grid = [0.; 3];
+        let posterior = single_effect_mixture(
+            &xtr,
+            &diagonal,
+            0.8,
+            &log_prior,
+            &MixturePrior {
+                variances: vec![0.7],
+                weights: vec![1.],
+            },
+            &mut grid,
+            SingleEffect {
+                alpha: &mut a,
+                mu: &mut mu,
+                mu2: &mut mu2,
+                lbf: &mut lbf,
+                model_lbf: 0.,
+                v: 0.,
+            },
+        )
+        .unwrap();
+        let raw: Vec<f64> = (0..3)
+            .map(|j| {
+                let s2 = 0.8 / diagonal[j];
+                let beta = xtr[j] / diagonal[j];
+                let bf =
+                    0.5 * (s2 / (s2 + 0.7)).ln() + beta.powi(2) / 2. * (1. / s2 - 1. / (s2 + 0.7));
+                (bf + log_prior[j]).exp()
+            })
+            .collect();
+        let total: f64 = raw.iter().sum();
+        for j in 0..3 {
+            assert!((posterior.alpha[j] - raw[j] / total).abs() < 2e-14);
+            assert!((posterior.mu[j] - 0.7 * xtr[j] / (0.8 + 0.7 * diagonal[j])).abs() < 2e-14);
+            assert_eq!(posterior.lbf[j], grid[j]);
+        }
+    }
+}

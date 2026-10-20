@@ -12,7 +12,7 @@ requires-python = ">=3.10,<3.14"
 dependencies = ["numpy>=1.26,<3"]
 readme = "README.md"
 license = "GPL-3.0-or-later"
-license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/**"]
 
 [project.urls]
 Repository = "https://github.com/LucaJiang/prusie"

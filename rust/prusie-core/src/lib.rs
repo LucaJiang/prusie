@@ -1,18 +1,24 @@
 //! Gaussian SuSiE solver, independent of Python and its memory model.
+mod design;
 pub mod diagnostics;
 mod ibss;
 pub mod input_validation;
+pub mod model;
+mod nig;
 mod numerical;
 mod operator;
 mod optimizer;
 pub mod options;
 mod residual;
 mod ser;
+mod slot;
 mod types;
 
+pub use design::{fit_design_csc, fit_design_dense};
 pub use ibss::fit_controlled;
 pub use operator::MatrixScaling;
-pub use types::{FitOptions, FitOutput};
+pub use ser::ser_update;
+pub use types::{FitOptions, FitOutput, SerOutput};
 
 /// Requested native thread count, sampled once for the process.
 pub fn num_threads() -> usize {

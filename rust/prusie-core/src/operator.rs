@@ -153,6 +153,32 @@ pub(crate) fn scaled_multiply(
     true
 }
 
+/// Matrix-free positive-semidefinite Gram operator used by IBSS.
+pub(crate) trait GramOperator {
+    fn diagonal(&self) -> &[f64];
+    fn apply(&mut self, vector: &[f64], output: &mut [f64]);
+}
+
+pub(crate) struct DenseGram<'a> {
+    pub matrix: ArrayView2<'a, f64>,
+    pub scaling: Option<&'a MatrixScaling<'a>>,
+    pub diagonal: Vec<f64>,
+    pub scratch: Vec<f64>,
+}
+
+impl GramOperator for DenseGram<'_> {
+    fn diagonal(&self) -> &[f64] {
+        &self.diagonal
+    }
+    fn apply(&mut self, vector: &[f64], output: &mut [f64]) {
+        if let Some(scaling) = self.scaling {
+            scaled_multiply(self.matrix, vector, output, scaling, &mut self.scratch);
+        } else {
+            multiply(self.matrix, vector, output);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

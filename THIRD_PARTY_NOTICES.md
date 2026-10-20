@@ -206,3 +206,7 @@ authorization of the copyright holder.
 included only in the repository and documentation site, not the wheel or sdist.
 The MIT notice, font copyrights and full OFL-1.1 terms are in
 [`docs/assets/katex/LICENSE`](https://github.com/LucaJiang/prusie/blob/main/docs/assets/katex/LICENSE).
+
+### libm 0.2.15
+
+The native solver uses rust-lang/libm for special functions in inverse-gamma and slot priors. Its MIT-compatible terms and retained upstream notices are included in `licenses/libm-0.2.15-LICENSE.txt`. The package license remains GPL-3.0-or-later.

@@ -56,6 +56,27 @@ impl FromStr for ConvergenceMethod {
     }
 }
 
+/// Residual-variance method. MoM and MLE coincide for the Gaussian model
+/// without unmappable effects; NIG integrates a proper inverse-gamma prior.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ResidualMethod {
+    Mom,
+    Mle,
+    Nig,
+}
+
+impl FromStr for ResidualMethod {
+    type Err = String;
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "MoM" => Ok(Self::Mom),
+            "MLE" => Ok(Self::Mle),
+            "NIG" => Ok(Self::Nig),
+            _ => Err(format!("Unsupported residual variance method: {value}")),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

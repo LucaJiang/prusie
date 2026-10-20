@@ -2,7 +2,7 @@
 //! the residual-variance update.
 use crate::{options::ConvergenceMethod, FitOutput};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct InitialState {
     pub alpha: Vec<f64>,
     pub mu: Vec<f64>,
@@ -10,8 +10,10 @@ pub struct InitialState {
     pub v: Option<Vec<f64>>,
     pub sigma2: Option<f64>,
 }
+#[derive(Clone)]
 pub struct FitControl {
     pub initial: Option<InitialState>,
+    pub model: crate::model::ModelOptions,
     pub component_prior_variance: Option<Vec<f64>>,
     pub track: u8,
     pub criterion: ConvergenceMethod,
@@ -25,6 +27,7 @@ impl Default for FitControl {
     fn default() -> Self {
         Self {
             initial: None,
+            model: crate::model::ModelOptions::default(),
             component_prior_variance: None,
             track: 0,
             criterion: ConvergenceMethod::Elbo,
@@ -128,7 +131,10 @@ pub fn stopping_decision(
     let converged = match control.criterion {
         ConvergenceMethod::AlphaPip => posterior_stable,
         ConvergenceMethod::Joint => objective_stable && posterior_stable,
-        ConvergenceMethod::Pip => snapshot.delta_pip.is_some_and(|d| d < tol),
+        ConvergenceMethod::Pip => {
+            snapshot.delta_pip.is_some_and(|d| d < tol)
+                && snapshot.delta_alpha.is_some_and(|d| d < tol)
+        }
         _ if fallback => posterior_stable,
         _ => objective_stable,
     };
@@ -139,7 +145,14 @@ pub fn stopping_decision(
     if (control.criterion != ConvergenceMethod::Elbo || fallback)
         && snapshot.cycle_lag.is_some_and(|lag| lag > 1)
     {
-        return (StopDecision::Cycle, fallback);
+        return (
+            if control.criterion == ConvergenceMethod::Pip {
+                StopDecision::Converged
+            } else {
+                StopDecision::Cycle
+            },
+            fallback,
+        );
     }
     (StopDecision::Continue, fallback)
 }

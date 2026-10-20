@@ -2,11 +2,11 @@
 use crate::{
     diagnostics::{self, Diagnostics, FitControl, Snapshot, StopDecision},
     input_validation,
-    numerical::sum,
-    operator::{materialize_scaled, multiply, operator_entries_bounded, scaled_multiply},
-    options::PriorMethod,
+    numerical::{digamma, dot, sum},
+    operator::{materialize_scaled, operator_entries_bounded, DenseGram, GramOperator},
+    options::{ConvergenceMethod, PriorMethod, ResidualMethod},
     residual::{expected_residual_sum_squares, ResidualScratch},
-    ser::{single_effect, SingleEffect},
+    ser::{single_effect, single_effect_mixture, SingleEffect},
     FitOptions, FitOutput, MatrixScaling,
 };
 use ndarray::{ArrayView2, ShapeBuilder};
@@ -118,30 +118,8 @@ pub fn fit_controlled(
             return Err("Matrix factors must have p finite positive entries and a finite positive global multiplier".into());
         }
     }
-    if options.max_iter == 0
-        || !options.tol.is_finite()
-        || options.tol < 0.0
-        || options.prior_tol.is_nan()
-        || options.prior_tol < 0.0
-        || !options.prior_variance.is_finite()
-        || options.prior_variance < 0.0
-        || !options.residual_variance.is_finite()
-        || options.residual_variance <= 0.0
-        || !options.check_null_threshold.is_finite()
-    {
-        return Err("Invalid variance, convergence, or null-threshold parameter".into());
-    }
-    if options.prior_weights.len() != p
-        || options
-            .prior_weights
-            .iter()
-            .any(|w| !w.is_finite() || *w < 0.0)
-        || sum(options.prior_weights.iter().copied()) <= 0.0
-    {
-        return Err("Prior weights must be finite, nonnegative, and nonzero".into());
-    }
     // Either contiguous layout is accepted; column-major input is used in place,
-    // avoiding a dense copy, while the borrowed memory is protected by the GIL.
+    // avoiding a dense copy. The caller owns the borrowed matrix lifetime.
     let columns;
     let matrix = if column_major {
         ArrayView2::from_shape((p, p).f(), xtx).map_err(|error| error.to_string())?
@@ -174,6 +152,43 @@ pub fn fit_controlled(
     if diagonal.iter().any(|&d| d < 0.0) {
         return Err("XtX diagonal cannot be negative".into());
     }
+    let mut gram = DenseGram {
+        matrix,
+        scaling: operator,
+        diagonal,
+        scratch: vec![0.; p],
+    };
+    fit_operator(&mut gram, xty, yty, n, options, control)
+}
+
+/// Shared IBSS implementation; individual-level designs never form XᵀX.
+pub(crate) fn fit_operator(
+    gram: &mut impl GramOperator,
+    xty: &[f64],
+    yty: f64,
+    n: f64,
+    options: &FitOptions,
+    control: &FitControl,
+) -> Result<FitOutput, String> {
+    let p = xty.len();
+    let model_pip = control.model.slot_prior.is_some()
+        || (control.model.residual_method == ResidualMethod::Nig && options.l > 1);
+    let mut effective_control;
+    let control = if model_pip || control.criterion == ConvergenceMethod::Pip {
+        effective_control = control.clone();
+        effective_control.criterion = ConvergenceMethod::Pip;
+        effective_control.alpha_tol = options.tol;
+        effective_control.pip_tol = options.tol;
+        &effective_control
+    } else {
+        control
+    };
+    let diagonal = gram.diagonal().to_vec();
+    if diagonal.len() != p || diagonal.iter().any(|&d| !d.is_finite() || d < 0.) {
+        return Err("Gram diagonal must have p finite nonnegative entries".into());
+    }
+    validate_fit_options(p, xty, yty, n, options)?;
+    validate_model(&control.model, n, options.l)?;
     let log_prior: Vec<f64> = options
         .prior_weights
         .iter()
@@ -185,7 +200,12 @@ pub fn fit_controlled(
             }
         })
         .collect();
-    let method = if options.estimate_prior_variance {
+    let use_nig = control.model.residual_method == ResidualMethod::Nig;
+    let alpha0 = control.model.alpha0.unwrap_or(1. / n.sqrt());
+    let beta0 = control.model.beta0.unwrap_or(1. / n.sqrt());
+    let method = if use_nig && options.estimate_prior_variance {
+        PriorMethod::Em
+    } else if options.estimate_prior_variance {
         options.estimate_prior_method
     } else {
         PriorMethod::None
@@ -216,12 +236,25 @@ pub fn fit_controlled(
         converged: false,
         xtxr: vec![0.0; p],
         warnings: Vec::new(),
+        lbf_grid: control
+            .model
+            .mixture
+            .as_ref()
+            .map(|m| vec![0.; size * m.variances.len()]),
+        slot_weights: None,
+        rv: use_nig.then(|| vec![1.; options.l]),
+        marginal_loglik: use_nig.then(|| vec![f64::NAN; options.l]),
         diagnostics: Diagnostics {
             stop_reason: "iteration_limit".into(),
             effective_criterion: control.criterion.as_str().into(),
             ..Diagnostics::default()
         },
     };
+    let mut slot_state = control.model.slot_prior.as_ref().map(|prior| {
+        let (state, weights) = crate::slot::SlotState::new(prior, options.l);
+        output.slot_weights = Some(weights);
+        state
+    });
     if control.min_iter < 2
         || control.cycle_lag > 5
         || !control.alpha_tol.is_finite()
@@ -283,11 +316,6 @@ pub fn fit_controlled(
     }
     let mut component = vec![0.0; p];
     let mut product = vec![0.0; p];
-    let mut scaled_component = if operator.is_some() {
-        vec![0.; p]
-    } else {
-        Vec::new()
-    };
     let mut residual = vec![0.0; p];
     let mut component_products = vec![0.0; size];
     let mut likelihood_scratch = vec![0.0; p];
@@ -307,21 +335,11 @@ pub fn fit_controlled(
             for j in 0..p {
                 component[j] = output.alpha[l * p + j] * output.mu[l * p + j];
             }
-            if let Some(scale) = operator {
-                scaled_multiply(
-                    matrix,
-                    &component,
-                    &mut product,
-                    scale,
-                    &mut scaled_component,
-                );
-            } else {
-                multiply(matrix, &component, &mut product);
-            }
+            gram.apply(&component, &mut product);
             component_products[l * p..(l + 1) * p].copy_from_slice(&product);
             #[allow(clippy::needless_range_loop)]
             for j in 0..p {
-                output.xtxr[j] += product[j];
+                output.xtxr[j] += output.slot_weights.as_ref().map_or(1., |w| w[l]) * product[j];
             }
         }
     }
@@ -334,33 +352,88 @@ pub fn fit_controlled(
     let mut history: Vec<(Vec<f64>, Vec<f64>)> = Vec::new();
     for iteration in 0..options.max_iter {
         for effect in 0..options.l {
+            if slot_state.as_ref().is_some_and(|state| {
+                output.slot_weights.as_ref().expect("slot weights")[effect] < state.threshold
+            }) {
+                continue;
+            }
             let offset = effect * p;
             // component_products holds Q m_ℓ for each effect. Subtracting this
             // effect's product leaves the fitted crossproduct of the others.
             for j in 0..p {
-                output.xtxr[j] -= component_products[offset + j];
+                output.xtxr[j] -= output.slot_weights.as_ref().map_or(1., |w| w[effect])
+                    * component_products[offset + j];
                 residual[j] = xty[j] - output.xtxr[j];
             }
-            let posterior = single_effect(
-                &residual,
-                &diagonal,
-                output.v[effect],
-                output.sigma2,
-                &log_prior,
-                method,
-                options.check_null_threshold,
-                &mut likelihood_scratch,
-                &mut ser_sampling,
-                &mut ser_betahat,
-                SingleEffect {
-                    alpha: &mut output.alpha[offset..offset + p],
-                    mu: &mut output.mu[offset..offset + p],
-                    mu2: &mut output.mu2[offset..offset + p],
-                    lbf: &mut output.lbf_variable[offset..offset + p],
-                    model_lbf: f64::NAN,
-                    v: output.v[effect],
-                },
-            )?;
+            let nig_yy = if use_nig {
+                for (j, b) in component.iter_mut().enumerate() {
+                    *b = sum((0..options.l).filter(|&l| l != effect).map(|l| {
+                        output.slot_weights.as_ref().map_or(1., |w| w[l])
+                            * output.alpha[l * p + j]
+                            * output.mu[l * p + j]
+                    }));
+                }
+                (yty - 2. * dot(&component, xty) + dot(&component, &output.xtxr)).max(f64::EPSILON)
+            } else {
+                0.
+            };
+            let posterior_row = SingleEffect {
+                alpha: &mut output.alpha[offset..offset + p],
+                mu: &mut output.mu[offset..offset + p],
+                mu2: &mut output.mu2[offset..offset + p],
+                lbf: &mut output.lbf_variable[offset..offset + p],
+                model_lbf: f64::NAN,
+                v: output.v[effect],
+            };
+            let posterior = if let Some(mixture) = &control.model.mixture {
+                let grid_size = p * mixture.variances.len();
+                single_effect_mixture(
+                    &residual,
+                    &diagonal,
+                    output.sigma2,
+                    &log_prior,
+                    mixture,
+                    &mut output.lbf_grid.as_mut().expect("mixture grid allocated")
+                        [effect * grid_size..(effect + 1) * grid_size],
+                    posterior_row,
+                )?
+            } else if use_nig {
+                let result = crate::nig::single_effect_nig(
+                    &residual,
+                    &diagonal,
+                    None,
+                    nig_yy,
+                    n,
+                    output.v[effect],
+                    alpha0,
+                    beta0,
+                    &log_prior,
+                    &options.prior_weights,
+                    method,
+                    posterior_row,
+                )?;
+                output.rv.as_mut().expect("NIG rv allocated")[effect] = result.residual_mean;
+                output
+                    .marginal_loglik
+                    .as_mut()
+                    .expect("NIG likelihood allocated")[effect] = result.marginal_loglik;
+                output.kl[effect] = if options.l == 1 { result.kl } else { 0. };
+                result.posterior
+            } else {
+                single_effect(
+                    &residual,
+                    &diagonal,
+                    output.v[effect],
+                    output.sigma2,
+                    &log_prior,
+                    method,
+                    options.check_null_threshold,
+                    &mut likelihood_scratch,
+                    &mut ser_sampling,
+                    &mut ser_betahat,
+                    posterior_row,
+                )?
+            };
             output.v[effect] = posterior.v;
             output.lbf[effect] = posterior.model_lbf;
             for (j, value) in component.iter_mut().enumerate() {
@@ -376,22 +449,25 @@ pub fn fit_controlled(
                             / s2
                     })
                 }));
-            output.kl[effect] = -posterior.model_lbf + expected_loglik;
-            if let Some(scale) = operator {
-                scaled_multiply(
-                    matrix,
-                    &component,
-                    &mut product,
-                    scale,
-                    &mut scaled_component,
-                );
-            } else {
-                multiply(matrix, &component, &mut product);
+            if !use_nig {
+                output.kl[effect] = -posterior.model_lbf + expected_loglik;
             }
+            gram.apply(&component, &mut product);
             component_products[offset..offset + p].copy_from_slice(&product);
-            for (fitted, increment) in output.xtxr.iter_mut().zip(&product) {
-                *fitted += increment;
+            if let Some(state) = &mut slot_state {
+                state.update(
+                    output.slot_weights.as_mut().expect("slot weights"),
+                    effect,
+                    output.lbf[effect],
+                );
             }
+            let weight = output.slot_weights.as_ref().map_or(1., |w| w[effect]);
+            for (fitted, increment) in output.xtxr.iter_mut().zip(&product) {
+                *fitted += weight * increment;
+            }
+        }
+        if let Some(state) = &mut slot_state {
+            state.finish_sweep(output.slot_weights.as_ref().expect("slot weights"));
         }
         let max_z = max_abs_score / output.sigma2.sqrt();
         if options.check_prior && output.v.iter().any(|&v| v > 100.0 * max_z * max_z) {
@@ -405,9 +481,29 @@ pub fn fit_controlled(
             &component_products,
             &mut residual_scratch,
         );
-        let elbo = -n / 2.0 * (2.0 * PI * output.sigma2).ln()
-            - 1.0 / (2.0 * output.sigma2) * er2
-            - sum(output.kl.iter().copied());
+        let mut elbo = if use_nig && options.l == 1 {
+            output.marginal_loglik.as_ref().expect("NIG likelihood")[0]
+        } else if use_nig {
+            let a = (alpha0 + n) / 2.;
+            let b = (beta0 + er2) / 2.;
+            let b_term = sum((0..options.l).flat_map(|l| {
+                let alpha = &output.alpha;
+                let v = output.v[l];
+                let d = &diagonal;
+                (0..p).map(move |j| alpha[l * p + j] * v / (v + 1. / d[j]))
+            }));
+            let a_term = er2 - b / (a - 1.) * b_term;
+            -n / 2. * (2. * PI).ln()
+                - n / 2. * (b.ln() - digamma(a))
+                - 0.5 * (a_term * a / b + b_term)
+        } else {
+            -n / 2.0 * (2.0 * PI * output.sigma2).ln()
+                - 1.0 / (2.0 * output.sigma2) * er2
+                - sum(output.kl.iter().copied())
+        };
+        if let Some(state) = &slot_state {
+            elbo += state.objective(output.slot_weights.as_ref().expect("slot weights"));
+        }
         if elbo.is_infinite() {
             return Err("get_objective() produced an infinite ELBO value".into());
         }
@@ -425,13 +521,15 @@ pub fn fit_controlled(
         output.elbo.push(elbo);
         output.niter = iteration + 1;
         let improvement = elbo - previous_elbo;
-        let current_pip = diagnostics::pip(
-            &output.alpha,
-            &output.v,
-            p,
-            options.prior_tol,
-            options.null_index,
-        );
+        let current_pip = fit_pip(&output.alpha, &output, p, options);
+        if control.criterion == ConvergenceMethod::Pip {
+            if let Some(alpha) = &previous_alpha {
+                previous_pip = Some(fit_pip(alpha, &output, p, options));
+            }
+            for (alpha, pip) in &mut history {
+                *pip = fit_pip(alpha, &output, p, options);
+            }
+        }
         let mean = diagnostics::posterior_mean(&output, p);
         let mut snapshot = Snapshot {
             iteration: iteration + 1,
@@ -503,6 +601,15 @@ pub fn fit_controlled(
             );
         }
         let (decision, fallback) = diagnostics::stopping_decision(control, &snapshot, options.tol);
+        if control.criterion == ConvergenceMethod::Pip && decision == StopDecision::Converged {
+            if let Some(lag) = snapshot.cycle_lag.filter(|&lag| lag > 1) {
+                let from = history.len().saturating_sub(lag - 1);
+                for (j, a) in output.alpha.iter_mut().enumerate() {
+                    *a = (*a + sum(history[from..].iter().map(|(alpha, _)| alpha[j]))) / lag as f64;
+                }
+                snapshot.events.push("alpha_pip_cycle_averaged".into());
+            }
+        }
         if fallback {
             output.diagnostics.effective_criterion = "alpha_pip_nonfinite_fallback".into();
             output.diagnostics.fallback_iterations.push(iteration + 1);
@@ -568,15 +675,27 @@ pub fn fit_controlled(
             history.remove(0);
         }
         previous_elbo = elbo;
-        if options.estimate_residual_variance {
-            let estimate = (1.0 / n) * er2;
+        if options.estimate_residual_variance || use_nig {
+            let estimate = if use_nig {
+                (beta0 + er2) / (alpha0 + n - 2.)
+            } else {
+                er2 / n
+            };
             if !estimate.is_finite() || estimate <= 0.0 {
                 return Err("Estimating residual variance failed: non-positive estimate".into());
             }
-            output.sigma2 = estimate;
+            output.sigma2 = estimate.clamp(
+                control.model.residual_lowerbound,
+                control.model.residual_upperbound,
+            );
         }
     }
     output.diagnostics.sigma2_after_loop = output.sigma2;
+    if let Some(rv) = &output.rv {
+        for (v, r) in output.v.iter_mut().zip(rv) {
+            *v *= r;
+        }
+    }
     let pretrim_alpha = output.alpha.clone();
     let pretrim_pip = diagnostics::pip(
         &output.alpha,
@@ -614,6 +733,116 @@ pub fn fit_controlled(
     Ok(output)
 }
 
+fn fit_pip(alpha: &[f64], fit: &FitOutput, p: usize, options: &FitOptions) -> Vec<f64> {
+    (0..p)
+        .filter(|&j| Some(j) != options.null_index)
+        .map(|j| {
+            1. - (0..fit.v.len())
+                .filter(|&l| fit.v[l] > options.prior_tol)
+                .map(|l| 1. - alpha[l * p + j] * fit.slot_weights.as_ref().map_or(1., |w| w[l]))
+                .product::<f64>()
+        })
+        .collect()
+}
+
+pub(crate) fn validate_model(
+    model: &crate::model::ModelOptions,
+    n: f64,
+    l: usize,
+) -> Result<(), String> {
+    if model.residual_lowerbound.is_nan()
+        || model.residual_lowerbound < 0.
+        || model.residual_upperbound.is_nan()
+        || model.residual_upperbound <= 0.
+        || model.residual_lowerbound > model.residual_upperbound
+    {
+        return Err("Residual variance bounds must satisfy 0 ≤ lower ≤ upper and upper > 0".into());
+    }
+    if let Some(mixture) = &model.mixture {
+        if mixture.variances.is_empty()
+            || mixture.variances.len() != mixture.weights.len()
+            || mixture.variances.iter().any(|&v| !v.is_finite() || v <= 0.)
+            || mixture.weights.iter().any(|&w| !w.is_finite() || w < 0.)
+            || (sum(mixture.weights.iter().copied()) - 1.).abs() >= 1e-8
+        {
+            return Err(
+                "Mixture requires positive variances and nonnegative normalized weights".into(),
+            );
+        }
+    }
+    if model.residual_method == crate::options::ResidualMethod::Nig {
+        let alpha0 = model.alpha0.unwrap_or(1. / n.sqrt());
+        let beta0 = model.beta0.unwrap_or(1. / n.sqrt());
+        if !alpha0.is_finite() || alpha0 <= 0. || !beta0.is_finite() || beta0 <= 0. {
+            return Err("NIG requires finite alpha0 > 0 and beta0 > 0".into());
+        }
+    }
+    if let Some(slot) = &model.slot_prior {
+        let (a, b) = match slot.family {
+            crate::model::SlotPriorFamily::BetaBinomial { a, b } => (a, b),
+            crate::model::SlotPriorFamily::GammaPoisson { expected, shape } => (expected, shape),
+        };
+        if !a.is_finite()
+            || a <= 0.
+            || !b.is_finite()
+            || b <= 0.
+            || !slot.skip_threshold_multiplier.is_finite()
+            || slot.skip_threshold_multiplier < 0.
+            || slot.initial.as_ref().is_some_and(|v| {
+                v.len() != l
+                    || v.iter()
+                        .any(|&x| !x.is_finite() || !(0.0..=1.0).contains(&x))
+            })
+        {
+            return Err("Invalid slot prior parameters or initial probabilities".into());
+        }
+    }
+    Ok(())
+}
+
+fn validate_fit_options(
+    p: usize,
+    xty: &[f64],
+    yty: f64,
+    n: f64,
+    options: &FitOptions,
+) -> Result<(), String> {
+    if p == 0
+        || options.l == 0
+        || p.checked_mul(options.l).is_none()
+        || !n.is_finite()
+        || n <= 1.
+        || !yty.is_finite()
+        || yty < 0.
+        || !input_validation::all_finite(xty)
+    {
+        return Err("Invalid sufficient statistics, sample size, or number of effects".into());
+    }
+    if options.max_iter == 0
+        || !options.tol.is_finite()
+        || options.tol < 0.0
+        || options.prior_tol.is_nan()
+        || options.prior_tol < 0.0
+        || !options.prior_variance.is_finite()
+        || options.prior_variance < 0.0
+        || !options.residual_variance.is_finite()
+        || options.residual_variance <= 0.0
+        || !options.check_null_threshold.is_finite()
+    {
+        return Err("Invalid variance, convergence, or null-threshold parameter".into());
+    }
+    if options.prior_weights.len() != p
+        || options
+            .prior_weights
+            .iter()
+            .any(|w| !w.is_finite() || *w < 0.0)
+        || sum(options.prior_weights.iter().copied()) <= 0.0
+    {
+        return Err("Prior weights must be finite, nonnegative, and nonzero".into());
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -634,6 +863,45 @@ mod tests {
             prior_tol: 1e-9,
             null_index: None,
         }
+    }
+
+    #[test]
+    fn residual_estimation_respects_both_variance_bounds() {
+        let mut settings = options(2);
+        settings.estimate_residual_variance = true;
+        settings.max_iter = 3;
+        let control = FitControl {
+            model: crate::model::ModelOptions {
+                residual_lowerbound: 0.8,
+                residual_upperbound: 1.2,
+                ..crate::model::ModelOptions::default()
+            },
+            ..FitControl::default()
+        };
+        let high = fit_controlled(
+            &[9., 0., 0., 9.],
+            &[0., 0.],
+            10000.,
+            10.,
+            &settings,
+            false,
+            None,
+            &control,
+        )
+        .unwrap();
+        assert_eq!(high.sigma2, 1.2);
+        let low = fit_controlled(
+            &[9., 0., 0., 9.],
+            &[0., 0.],
+            0.1,
+            10.,
+            &settings,
+            false,
+            None,
+            &control,
+        )
+        .unwrap();
+        assert_eq!(low.sigma2, 0.8);
     }
 
     #[test]

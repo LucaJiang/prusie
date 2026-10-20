@@ -33,4 +33,26 @@ pub struct FitOutput {
     pub xtxr: Vec<f64>,
     pub warnings: Vec<String>,
     pub diagnostics: Diagnostics,
+    /// Fixed-mixture log Bayes factors, shape L × p × K, row-major.
+    pub lbf_grid: Option<Vec<f64>>,
+    /// Posterior slot activity probabilities (one per effect), when requested.
+    pub slot_weights: Option<Vec<f64>>,
+    /// NIG per-effect posterior residual variance means.
+    pub rv: Option<Vec<f64>>,
+    /// Per-effect marginal log likelihood under the NIG prior.
+    pub marginal_loglik: Option<Vec<f64>>,
+}
+
+/// One untrimmed single-effect posterior, for model-specific outer algorithms.
+pub struct SerOutput {
+    pub alpha: Vec<f64>,
+    pub mu: Vec<f64>,
+    pub mu2: Vec<f64>,
+    pub lbf_variable: Vec<f64>,
+    pub lbf: f64,
+    pub v: f64,
+    pub lbf_grid: Option<Vec<f64>>,
+    pub rv: Option<f64>,
+    pub marginal_loglik: Option<f64>,
+    pub kl: Option<f64>,
 }
