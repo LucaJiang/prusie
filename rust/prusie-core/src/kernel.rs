@@ -65,9 +65,20 @@ pub(crate) fn candidate_multiply(
         } else {
             return false;
         };
+        // OpenBLAS Makefile.rule requires locking when a serial build is
+        // called by concurrent application threads. Keep initialization and
+        // shared scratch allocation inside the same process-wide guard.
+        static CALL_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _guard = match CALL_LOCK.lock() {
+            Ok(guard) => guard,
+            // The protected Rust value is (), and a C call cannot be
+            // interrupted by Rust unwinding, so no Rust invariant is lost.
+            Err(poisoned) => poisoned.into_inner(),
+        };
         // SAFETY: checked contiguous matrix, matching slice dimensions and
         // disjoint borrowed input/output slices satisfy the CBLAS ABI. LP64
         // dimensions are checked above; dgemv needs no matrix symmetry claim.
+        // CALL_LOCK protects the serial library's initialization and scratch.
         unsafe {
             cblas_dgemv(
                 layout,
@@ -147,5 +158,35 @@ mod tests {
                 ));
             }
         }
+    }
+
+    #[cfg(all(feature = "kernel-openblas", not(feature = "kernel-faer")))]
+    #[test]
+    fn serial_blas_accepts_concurrent_application_callers() {
+        let start = std::sync::Barrier::new(4);
+        std::thread::scope(|scope| {
+            for worker in 0..4 {
+                let start = &start;
+                scope.spawn(move || {
+                    let matrix = Array2::from_shape_fn((320, 257).f(), |(i, j)| {
+                        ((i * 7 + j * 13 + worker * 5) % 37) as f64 / 12. - 1.
+                    });
+                    let vector: Vec<_> = (0..257)
+                        .map(|j| ((j + worker) % 11) as f64 / 7. - 0.5)
+                        .collect();
+                    let expected: Vec<f64> = (0..320)
+                        .map(|i| (0..257).map(|j| matrix[(i, j)] * vector[j]).sum())
+                        .collect();
+                    start.wait();
+                    for _ in 0..6 {
+                        let mut actual = vec![f64::NAN; 320];
+                        assert!(candidate_multiply(matrix.view(), &vector, &mut actual));
+                        for (actual, expected) in actual.iter().zip(&expected) {
+                            assert!((actual - expected).abs() <= 1e-10);
+                        }
+                    }
+                });
+            }
+        });
     }
 }
