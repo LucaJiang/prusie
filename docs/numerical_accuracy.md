@@ -26,10 +26,10 @@ arguments and verified variant order:
 | Parameter cases | 54 | 4.6e-09 |
 | Core feature cases | 69 | 7.02e-06 |
 | NIG interactions | 2 | 5.5e-13 |
-| Real analyses | 200 | 1.22e-08 |
-| Real RSS model options | 60 | 1.2e-08 |
+| Real analyses | 200 | 1.32e-08 |
+| Real RSS model options | 60 | 7.93e-09 |
 | Dense scaling fixtures | 6 | 2.6e-11 |
-| Targeted regressions | 17 | 7.78e-09 |
+| Targeted regressions | 17 | 5e-09 |
 
 Six expected invalid-model errors also match. Auxiliary-function boundaries
 are checked separately. This finite panel does not establish agreement for
