@@ -24,7 +24,7 @@ from .diagnostics import (
     tracking_level,
 )
 from .posterior import credible_sets, marginal_pip
-from .refinement import RefinementConfig, data_signature, initial_options, make_prepared, refine_fit
+from .refinement import RefinementConfig, initial_options, make_prepared, refine_fit
 from .result import SusieResult
 
 
@@ -90,8 +90,10 @@ def _metadata(variant_ids, variant_metadata, m):
         # width as an explicitly supplied list of decimal strings.
         ids = np.arange(m).astype(f"<U{len(str(m - 1))}")
     else:
-        ids = np.asarray(
-            [str(i) for i in range(m)] if variant_ids is None else variant_ids, dtype=str
+        ids = np.array(
+            [str(i) for i in range(m)] if variant_ids is None else variant_ids,
+            dtype=str,
+            copy=True,
         )
         if ids.shape != (m,) or len(set(ids.tolist())) != m or np.any(ids == ""):
             raise ValueError("variant_ids must contain m distinct nonempty IDs in input order")
@@ -288,6 +290,8 @@ def _susie_suff_stat(
     s_init : SusieResult or mapping, optional
         Initial posterior state for the same data. Variant IDs, allele
         metadata, working scales, null column and data signature must agree.
+        The source must have an available input signature (fit with
+        ``retain_data=True``). New inputs are validated and hashed.
         A mapping needs ``alpha``, ``mu``, ``mu2``, ``variant_ids``,
         ``scales``, ``null_index`` and ``data_signature``; ``V`` and
         ``sigma2`` are optional. The first min(L, L_init) components are
@@ -321,7 +325,9 @@ def _susie_suff_stat(
         Retain read-only copies of the prepared inputs, as required by
         :func:`continue_fit`, :func:`refine_fit` and
         :func:`evaluate_objective`. Implied by ``track_fit``, ``s_init`` and
-        ``refine``.
+        ``refine``. Without a retained snapshot, ``data_signature`` is None.
+        Retained inputs are hashed once; continuation and refinement reuse
+        their cached identity.
     check_prior : bool, default False
         Raise an error if an estimated V_ℓ exceeds 100 max_j z_j², where z_j is
         the marginal z-score at the current σ².
@@ -532,9 +538,27 @@ def _susie_suff_stat(
     )
     level = tracking_level(track_fit)
     options.update(control.options(), track_level=level)
-    signature = data_signature(
-        crossproduct, crossresponse, yty, n, scales, _rss_matrix_scale, ids, metadata
-    )
+    # Only an owned snapshot can supply a stable identity for later reuse.
+    # Ordinary fits do not retain caller buffers or scan an unused hash.
+    signature = None
+    prepared = None
+    if retain_data or level or refine is not False or s_init is not None:
+        prepared = make_prepared(
+            crossproduct,
+            crossresponse,
+            yty,
+            n,
+            options,
+            XtX,
+            diagonal,
+            scales,
+            means,
+            y_mean_value,
+            _rss_matrix_scale,
+            ids,
+            metadata,
+        )
+        signature = prepared.signature
     if s_init is not None:
         options.update(
             initial_options(
@@ -551,24 +575,11 @@ def _susie_suff_stat(
                 prior_variance=options["prior_variance"],
             )
         )
-    prepared = None
-    if retain_data or level or refine is not False or s_init is not None:
-        prepared = make_prepared(
-            crossproduct,
-            crossresponse,
-            yty,
-            n,
-            options,
-            XtX,
-            diagonal,
-            scales,
-            means,
-            y_mean_value,
-            signature,
-            _rss_matrix_scale,
-            ids,
-            metadata,
-        )
+    if prepared is not None:
+        # Initialization callbacks may mutate caller arrays. Fit and construct
+        # credible sets from the same owned data whose signature was recorded.
+        crossproduct, crossresponse = prepared.matrix, prepared.response
+        XtX = prepared.cs_matrix
     native = _native.fit(crossproduct, crossresponse, yty, n, options)
     for message in native["warnings"]:
         _warn(message, collected)

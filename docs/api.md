@@ -138,6 +138,10 @@ without network access. See the [toy example tutorial](example.md).
 
 Both fitting interfaces support `s_init=None`, `refine=False`,
 `track_fit=False`, `convergence=None` and `retain_data=False`.
+Use `retain_data=True` on the source fit to enable later continuation,
+refinement or `s_init`. Tracking, initialization and refinement also retain
+inputs. `data_signature` is a content hash of the owned input snapshot,
+computed once and reused; ordinary unretained fits return `None`.
 `ConvergenceConfig` selects exact ELBO, alpha/PIP or joint stopping.
 Finite-ELBO stopping uses signed improvement; lagged posterior cycles remain
 diagnostics in that mode. Successful and statistical cycle exits respect

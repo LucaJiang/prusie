@@ -86,10 +86,23 @@ class PreparedData:
     scales: np.ndarray
     means: np.ndarray
     y_mean: float
-    signature: str
     matrix_scale: float
     variant_ids: np.ndarray
     alleles: dict
+
+    @cached_property
+    def signature(self):
+        """Hash the owned snapshot once, never mutable caller buffers."""
+        return data_signature(
+            self.matrix,
+            self.response,
+            self.yty,
+            self.n,
+            self.scales,
+            self.matrix_scale,
+            self.variant_ids,
+            self.alleles,
+        )
 
     @cached_property
     def _working_matrix(self):
@@ -119,7 +132,6 @@ def make_prepared(
     scales,
     means,
     y_mean,
-    signature,
     matrix_scale,
     ids,
     metadata,
@@ -145,12 +157,23 @@ def make_prepared(
         _readonly(scales),
         _readonly(means),
         y_mean,
-        signature,
         matrix_scale,
         _readonly(ids),
         MappingProxyType(
             {k: _readonly(metadata[k]) for k in ("effect_allele", "other_allele") if k in metadata}
         ),
+    )
+
+
+def _matching_data_signatures(left, right):
+    """Missing or malformed identities never establish that data agree."""
+    return (
+        isinstance(left, str)
+        and isinstance(right, str)
+        and len(left) == 64
+        and len(right) == 64
+        and all(c in "0123456789abcdef" for c in left)
+        and left == right
     )
 
 
@@ -201,9 +224,10 @@ def initial_options(
         raise ValueError("Initialization null column differs")
     if not np.array_equal(np.asarray(state["scales"]), scales):
         raise ValueError("Initialization working scale differs")
-    if state["data_signature"] != signature:
+    if not _matching_data_signatures(state["data_signature"], signature):
         raise ValueError(
-            "Initialization data/allele/scale signature differs; no implicit transformation"
+            "Initialization data/allele/scale signature differs or is unavailable; "
+            "fit the source with retain_data=True; no implicit transformation"
         )
     for key in ("effect_allele", "other_allele"):
         a = state.get("variant_metadata", {}).get(key)
@@ -307,7 +331,7 @@ def evaluate_objective(fit, data=None, *, prior_weights=None, hard_exclusion=Fal
     if data is None:
         raise ValueError("Objective evaluation needs retained data; fit with retain_data=True")
     _validate_labels(fit, data)
-    if fit.data_signature != data.signature or not np.array_equal(
+    if not _matching_data_signatures(fit.data_signature, data.signature) or not np.array_equal(
         fit.X_column_scale_factors, data.scales
     ):
         raise ValueError("Objective input/scale identity differs from posterior state")

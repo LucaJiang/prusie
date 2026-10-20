@@ -201,18 +201,19 @@ def test_hash_update_buffers_are_bounded(order):
 
 
 def test_hash_implementation_and_tracking_leave_default_posterior_exact(monkeypatch):
-    import prusie.api as api
+    import prusie.refinement as signature_module
 
     current = fit_small(retain_data=False)
     compact = fit_small(track_fit="compact")
     dense = fit_small(track_fit="dense")
-    monkeypatch.setattr(api, "data_signature", old_signature)
-    legacy = fit_small(retain_data=False)
+    monkeypatch.setattr(signature_module, "data_signature", old_signature)
+    legacy = fit_small(retain_data=True)
     for fit in (legacy, compact, dense):
         for name in ("pip", "alpha", "mu", "mu2", "V", "elbo", "KL", "XtXr", "lbf", "lbf_variable"):
             assert getattr(fit, name).tobytes() == getattr(current, name).tobytes(), name
         assert fit.sigma2 == current.sigma2
-        assert fit.data_signature == current.data_signature
+        assert fit.data_signature == compact.data_signature
+    assert current.data_signature is None
 
 
 def test_development_identity_is_distinct_and_installed():

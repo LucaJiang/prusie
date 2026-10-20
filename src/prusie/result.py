@@ -78,8 +78,10 @@ class SusieResult:
         Record of an explicit refinement search, if any.
     cs_audit : list of dict
         Decisions taken while constructing each candidate credible set.
-    data_signature : str
-        SHA-256 digest of the working inputs, used to validate warm starts.
+    data_signature : str or None
+        SHA-256 digest of the owned input snapshot, used to validate warm
+        starts. None for ordinary fits without retained inputs; missing
+        signatures never establish that inputs match.
     """
 
     variant_ids: np.ndarray
@@ -113,7 +115,7 @@ class SusieResult:
         )
     )
     cs_audit: list[dict[str, Any]] = field(default_factory=list)
-    data_signature: str = ""
+    data_signature: str | None = None
     _prepared: Any = field(default=None, repr=False, compare=False)
 
     def __repr__(self):

@@ -308,11 +308,17 @@ B restores the original ordinary-prior convention.</p>
 </details>
 <details>
 <summary>Warm-start validation and legacy configuration recovery</summary>
-<p>Tracking, initialization or <code>retain_data=True</code> retains validated input matrices
-and scale metadata. Ordinary calls with these options disabled do not retain
-the matrix. <code>continue_fit</code> reuses this context and starts from the saved posterior.
-To restore a saved result without that context, pass the original inputs and
-<code>s_init=restored</code> to the appropriate fitting interface.</p>
+<p>Tracking, initialization, refinement or <code>retain_data=True</code> retains validated
+input snapshots and scale metadata. Their content signature is computed once
+and reused by <code>continue_fit</code> and <code>refine_fit</code>. Ordinary unretained fits have
+<code>data_signature=None</code>; missing signatures never establish matching inputs.
+Set <code>retain_data=True</code> on the source fit before later continuation or use as
+<code>s_init</code>. Caller-array changes cannot alter the retained input identity.</p>
+<p><code>continue_fit</code> reuses the retained context and starts from the saved posterior.
+<code>save_analysis</code> preserves an available signature, but excludes the private
+snapshot. To warm-start a restored retained-origin result, pass the original
+inputs and <code>s_init=restored</code> to the fitting interface; new inputs are fully
+validated and hashed. A restored ordinary result has no usable input identity.</p>
 <p>Variant IDs/order, supplied allele labels, null layout, working scales and data
 signature must agree. An explicit state mapping needs <code>alpha</code>, <code>mu</code>, <code>mu2</code>,
 <code>variant_ids</code>, <code>scales</code>, <code>null_index</code>, <code>data_signature</code> and available allele

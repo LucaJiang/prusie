@@ -253,6 +253,10 @@ without network access. See the <a href="example.html">toy example tutorial</a>.
 <h2 id="convergence-and-post-analysis">Convergence and post-analysis</h2>
 <p>Both fitting interfaces support <code>s_init=None</code>, <code>refine=False</code>,
 <code>track_fit=False</code>, <code>convergence=None</code> and <code>retain_data=False</code>.
+Use <code>retain_data=True</code> on the source fit to enable later continuation,
+refinement or <code>s_init</code>. Tracking, initialization and refinement also retain
+inputs. <code>data_signature</code> is a content hash of the owned input snapshot,
+computed once and reused; ordinary unretained fits return <code>None</code>.
 <code>ConvergenceConfig</code> selects exact ELBO, alpha/PIP or joint stopping.
 Finite-ELBO stopping uses signed improvement; lagged posterior cycles remain
 diagnostics in that mode. Successful and statistical cycle exits respect
