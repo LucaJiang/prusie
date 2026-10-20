@@ -170,5 +170,5 @@ status. The settings of numerical comparisons are recorded separately on
 [Numerical accuracy](numerical_accuracy.md).
 
 A dense float64 matrix requires $8p^2$ bytes before working arrays and results.
-See [Implementation](implementation.md#dense-storage-and-exact-algebra) for copies,
+See [Implementation](implementation.md#dense-storage-and-matrix-products) for copies,
 layouts and additional storage.
