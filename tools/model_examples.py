@@ -34,11 +34,6 @@ def calculate():
     residual = g - (fitted - u1)
     replacement = fitted - u1 + Q @ new_m1
     np.testing.assert_allclose(replacement, Q @ (new_m1 + m2), atol=2e-16, rtol=0)
-    signed_Q = np.array([[1.0, 1.0, -1.0], [1.0, 1.0, -1.0], [-1.0, -1.0, 1.0]])
-    v, signs = np.array([0.2, 0.3, -0.1]), np.array([1.0, 1.0, -1.0])
-    combined = signs @ v
-    product = signed_Q @ v
-    np.testing.assert_array_equal(product, signed_Q[:, 0] * combined)
     V, s2 = 0.2, 0.1
     beta = np.array([0.1, 0.2, 0.3])
     # This is scalar explanatory arithmetic. Use the scalar library operation so
@@ -77,8 +72,6 @@ def calculate():
         ),
         matrix_bytes=8 * 5000**2,
         matrix_MiB=8 * 5000**2 / 2**20,
-        signed_coefficient=float(combined),
-        signed_product=product.tolist(),
         logsumexp=str(lse),
         normalized_first=str(probability),
     )
@@ -134,12 +127,6 @@ def snippets(x):
         ),
         "memory": f"At $p=5000$, $8p^2={x['matrix_bytes']:,}$ bytes, or "
         f"approximately **{x['matrix_MiB']:.1f} MiB**.\n",
-        "columns": (
-            f"The signed coefficient is $0.2+0.3-(-0.1)={x['signed_coefficient']:g}"
-            f"$, "
-            f"and the product is **{vec(x['signed_product'])}"
-            f"**.\n"
-        ),
         "logsum": (
             f"A 60-digit decimal calculation gives "
             f"**{float(x['logsumexp']):.12f}"
@@ -155,7 +142,7 @@ def build():
     text = snippets(values)
     for name, keys in [
         ("model.md", ["wald", "pip", "cs"]),
-        ("implementation.md", ["cache", "ser", "memory", "columns", "logsum"]),
+        ("implementation.md", ["cache", "ser", "memory", "logsum"]),
     ]:
         path = ROOT / "docs" / name
         updated = path.read_text()

@@ -157,7 +157,6 @@ pub fn fit_controlled(
         scaling: operator,
         diagonal,
         scratch: vec![0.; p],
-        compression: crate::signed_columns::SignedColumns::discover(matrix),
     };
     fit_operator(&mut gram, xty, yty, n, options, control)
 }

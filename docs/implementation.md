@@ -86,23 +86,14 @@ matrices are compared with pinned susieR 0.16.6 at absolute tolerance `1e-5`,
 with original component and variant order retained. PIPs and other summaries
 are separate diagnostics; see [numerical accuracy](numerical_accuracy.md).
 
-## Dense storage and exact algebra
+## Dense storage and matrix products
 
 <!-- calculated:memory:start -->
 At $p=5000$, $8p^2=200,000,000$ bytes, or approximately **190.7 MiB**.
 <!-- calculated:memory:end -->
 
-Scaling a matrix implicitly can save this allocation. Combining exactly equal
-or sign-reversed columns can also reduce matrix products. For example, columns
-$(1,1,-1)^T$, $(1,1,-1)^T$ and $(-1,-1,1)^T$ with coefficients
-$(0.2,0.3,-0.1)$ give:
-
-<!-- calculated:columns:start -->
-The signed coefficient is $0.2+0.3-(-0.1)=0.6$, and the product is **(0.6, 0.6, -0.6)**.
-<!-- calculated:columns:end -->
-
-The dense operator applies diagonal scaling implicitly and compresses exactly
-equal or sign-reversed columns. Its matrix products use a four-column kernel
+The dense operator applies diagonal scaling implicitly, avoiding a separate
+scaled matrix when the factors permit safe evaluation. Its products use a four-column kernel
 with runtime-checked AVX2 support and a portable fallback. Gaussian single-effect
 updates reuse groups of equal sampling variance. Default optimizations are
 selected using numerical validation and lower median complete-call runtime on

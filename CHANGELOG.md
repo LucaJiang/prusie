@@ -4,8 +4,8 @@
 
 - Separate the pure Rust solver from the PyO3 binding in a Cargo workspace.
 - Use mathematically equivalent float64 calculations without R-rounding emulation.
-- Make measured variance grouping, vector exponentials, implicit scaling and
-  exact signed-column compression default paths without mathematical switches.
+- Use variance grouping, vector exponentials and implicit matrix scaling
+  without mathematical-path switches.
 - Add individual-level dense/sparse fitting, reference-factor RSS, regularized
   RSS, automatic effect-count fitting, implicit trend filtering and standalone SER.
 - Add fixed mixture priors, NIG and MLE residual updates, residual bounds, slot

@@ -166,7 +166,6 @@ pub(crate) struct DenseGram<'a> {
     pub scaling: Option<&'a MatrixScaling<'a>>,
     pub diagonal: Vec<f64>,
     pub scratch: Vec<f64>,
-    pub compression: Option<crate::signed_columns::SignedColumns>,
 }
 
 impl GramOperator for DenseGram<'_> {
@@ -174,26 +173,6 @@ impl GramOperator for DenseGram<'_> {
         &self.diagonal
     }
     fn apply(&mut self, vector: &[f64], output: &mut [f64]) {
-        if let Some(plan) = &mut self.compression {
-            if let Some(scale) = self.scaling {
-                for ((value, &v), &factor) in self.scratch.iter_mut().zip(vector).zip(scale.inverse)
-                {
-                    *value = v * factor;
-                }
-                if self.scratch.iter().all(|x| x.is_finite()) {
-                    plan.apply(self.matrix, &self.scratch, output);
-                    for (value, &denominator) in output.iter_mut().zip(scale.scales) {
-                        *value = *value * scale.global / denominator;
-                    }
-                    if output.iter().all(|x| x.is_finite()) {
-                        return;
-                    }
-                }
-            } else {
-                plan.apply(self.matrix, vector, output);
-                return;
-            }
-        }
         if let Some(scaling) = self.scaling {
             scaled_multiply(self.matrix, vector, output, scaling, &mut self.scratch);
         } else {

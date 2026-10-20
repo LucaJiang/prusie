@@ -11,7 +11,6 @@ mod optimizer;
 pub mod options;
 mod residual;
 mod ser;
-mod signed_columns;
 mod slot;
 mod types;
 mod vector_math;
