@@ -135,7 +135,9 @@ def test_default_implicit_public_boundary(
     )
     np.testing.assert_allclose(response, expected_response, atol=1e-12, rtol=1e-12)
     assert yty == expected_yty and n == expected_n
-    oracle_settings = {key: value for key, value in settings.items() if not key.startswith("matrix_")}
+    oracle_settings = {
+        key: value for key, value in settings.items() if not key.startswith("matrix_")
+    }
     expected = original(working, expected_response, expected_yty, expected_n, oracle_settings)
     shape = (2, 3 + int(null_weight > 0))
     assert actual.alpha.shape == expected["alpha"].shape == shape

@@ -8,8 +8,14 @@ from prusie import _native
 
 X = np.array(
     [
-        [0, 1, 0], [1, 0, 0], [2, 1, 0], [0, 2, 1],
-        [1, 1, 2], [2, 0, 1], [0, 0, 2], [2, 2, 1],
+        [0, 1, 0],
+        [1, 0, 0],
+        [2, 1, 0],
+        [0, 2, 1],
+        [1, 1, 2],
+        [2, 0, 1],
+        [0, 0, 2],
+        [2, 2, 1],
     ],
     dtype=float,
 )
@@ -36,6 +42,7 @@ def call_fitter(kind, **extra):
         options["cs_extension_corr"] = 0.9
     options.update(extra)
     if kind in {"individual", "CSC"}:
+        options.pop("check_prior", None)
         predictors = X
         if kind == "CSC":
             predictors = pytest.importorskip("scipy.sparse").csc_matrix(X)
@@ -57,8 +64,21 @@ def call_fitter(kind, **extra):
 
 
 UNSUPPORTED = [
-    "individual", "CSC", "trend", "RSS_X", "finite", "mismatch", "multipanel",
-    "lambda", "mixture", "NIG", "slot", "pip", "greedy", "median", "extension",
+    "individual",
+    "CSC",
+    "trend",
+    "RSS_X",
+    "finite",
+    "mismatch",
+    "multipanel",
+    "lambda",
+    "mixture",
+    "NIG",
+    "slot",
+    "pip",
+    "greedy",
+    "median",
+    "extension",
 ]
 
 
@@ -145,9 +165,7 @@ def test_static_materialized_gaussian_retains_existing_helpers(route):
     elif route == "R_RSS":
         fit = prusie.susie_rss(Z, R, 8, **options)
     else:
-        fit = prusie.susie_rss(
-            bhat=0.2 * Z, shat=0.2, X=X, n=8, var_y=1, **options
-        )
+        fit = prusie.susie_rss(bhat=0.2 * Z, shat=0.2, X=X, n=8, var_y=1, **options)
     assert fit._prepared is not None
     assert fit.data_signature == fit._prepared.signature
     assert fit.convergence["retained_analysis_limitations"] == []

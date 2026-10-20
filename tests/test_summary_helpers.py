@@ -139,8 +139,13 @@ def test_lazy_rss_matches_materialized_sufficient_statistics(
     adj = (n - 1) / (z * z + n - 2)
     x_ty = np.sqrt(n - 1) * (np.sqrt(adj) * z)
     kwargs = dict(
-        L=2, estimate_residual_variance=False, check_prior=False, max_iter=100, tol=0.001,
-        variant_ids=["v2", "v0", "v1"], **options
+        L=2,
+        estimate_residual_variance=False,
+        check_prior=False,
+        max_iter=100,
+        tol=0.001,
+        variant_ids=["v2", "v0", "v1"],
+        **options,
     )
     crossproduct = (n - 1) * r
     before = [x.copy() for x in (r, z, crossproduct, x_ty)]

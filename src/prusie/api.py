@@ -990,9 +990,7 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
     if limitations:
         # Dynamic models can be attached after ordinary preparation. Never expose
         # their static snapshot to Gaussian-only objective/replay helpers.
-        request = replace(
-            request, prepared=None, signature=None, analysis_limitations=limitations
-        )
+        request = replace(request, prepared=None, signature=None, analysis_limitations=limitations)
     crossproduct = request.crossproduct
     crossresponse = request.crossresponse
     yty = request.yty

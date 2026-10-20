@@ -100,7 +100,9 @@ def test_default_uses_implicit_scaling_with_materialized_native_oracle(
     assert np.array_equal(settings["matrix_scales"], [1.0, 1.0])
     working = np.asfortranarray(99 * matrix)
     response = np.ascontiguousarray(np.sqrt(99) * np.sqrt(99 / (z**2 + 98)) * z)
-    oracle_settings = {key: value for key, value in settings.items() if not key.startswith("matrix_")}
+    oracle_settings = {
+        key: value for key, value in settings.items() if not key.startswith("matrix_")
+    }
     expected = original(working, response, 99, 100, oracle_settings)
     assert fit.alpha.shape == expected["alpha"].shape == (1, 2)
     assert fit.variant_ids.tolist() == ["second", "first"]
