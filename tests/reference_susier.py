@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fit a frozen 500-SNP synthetic toy fixture and check it offline against official R.
+"""Check seven frozen 500-SNP regression cases against official susieR outputs.
 
 Requires only the installed prusie package and NumPy. This program never
 downloads data, calls R, imports source from this checkout or regenerates goldens.
@@ -22,7 +22,7 @@ import numpy as np
 
 import prusie
 
-DATA = Path(__file__).resolve().parents[1] / "examples/data"
+DATA = Path(__file__).resolve().parent / "fixtures/susier_regression"
 PIP_ATOL = 1e-5
 VALIDITY_ATOL = 1e-10
 FIELDS = ("pip", "alpha", "mu", "mu2", "lbf_variable", "lbf", "V", "sigma2", "elbo", "KL")
@@ -385,7 +385,7 @@ def main(argv=None):
         "--data-dir",
         type=Path,
         default=DATA,
-        help=("Frozen example bundle directory (default: examples/data in the source tree)"),
+        help="Frozen regression bundle (default: tests/fixtures/susier_regression)",
     )
     parser.add_argument(
         "--case",

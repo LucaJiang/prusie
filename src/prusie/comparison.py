@@ -788,7 +788,7 @@ def sensitivity_key(inputs, settings, *, initialization="cold", software_version
 
 def _sensitivity_inputs(data, *, explicit_ids=False):
     """Validate RSS inputs of a sensitivity plan before any fit is run."""
-    from .api import _matrix, _metadata, _scalar, _vector
+    from .api import _metadata, _scalar, _validated_matrix, _vector
 
     if not isinstance(data, dict):
         raise ValueError("sensitivity inputs must be a mapping")
@@ -809,7 +809,7 @@ def _sensitivity_inputs(data, *, explicit_ids=False):
             raise ValueError("shat must be finite and strictly positive")
     if data.get("n") is not None:
         _scalar(data["n"], "n", lower=1.0, strict=True)
-    _matrix(data.get("R"), "R", len(values), correlation=True)
+    _validated_matrix(data.get("R"), "R", len(values), correlation=True)
     ids, metadata = _metadata(data.get("variant_ids"), data.get("variant_metadata"), len(values))
     return ids.tolist(), metadata
 

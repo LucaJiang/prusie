@@ -57,9 +57,7 @@ cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span
 
 <p>Tests cover frozen susieR outputs, an independent NumPy reference, analytical
 cases, input validation, plotting and reports. Preserve frozen inputs and
-reference outputs; add regression tests for numerical fixes. Optional LD
-comparisons use the saved references and instructions in
-<a href="https://github.com/LucaJiang/prusie/tree/main/dev/references/ld"><code>dev/references/ld</code></a>.</p>
+reference outputs; add regression tests for numerical fixes.</p>
 <h2 id="editing-and-building-documentation">Editing and building documentation</h2>
 <p>Install Node.js (tested with 24.18.0), then:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>tools/docs-requirements.txt
@@ -85,9 +83,7 @@ remain in the Git checkout. Retain <code>LICENSE</code>, <code>THIRD_PARTY_NOTIC
 notices in adapted source and frozen data when distributing packages.</p>
 <h2 id="benchmark-scripts">Benchmark scripts</h2>
 <p><a href="https://github.com/LucaJiang/prusie/tree/main/tools/benchmark"><code>tools/benchmark</code></a>
-contains the R comparison and measurement scripts;
-<a href="https://github.com/LucaJiang/prusie/tree/main/dev/references"><code>dev/references</code></a>
-contains the independent validation panel. Keep numerical tolerances fixed.
+contains the R comparison and measurement scripts. Keep numerical tolerances fixed.
 Measure each proposed optimization against its parent on cases chosen before
 inspecting outcomes, and report wins, ties, regressions and repeat variability.
 Merge it only if more than half of those cases have lower median complete-call

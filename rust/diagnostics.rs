@@ -12,6 +12,7 @@ pub struct InitialState {
 }
 pub struct FitControl {
     pub initial: Option<InitialState>,
+    pub component_prior_variance: Option<Vec<f64>>,
     pub track: u8,
     pub criterion: String,
     pub alpha_tol: f64,
@@ -24,6 +25,7 @@ impl Default for FitControl {
     fn default() -> Self {
         Self {
             initial: None,
+            component_prior_variance: None,
             track: 0,
             criterion: "elbo".into(),
             alpha_tol: 1e-4,

@@ -37,6 +37,7 @@
 </ul>
 </li>
 <li><a href="#pip-and-credible-sets">PIP and credible sets</a></li>
+<li><a href="#computational-compatibility">Computational compatibility</a></li>
 <li><a href="#methods-and-implementation-references">Methods and implementation references</a></li>
 </ul>
 </div>
@@ -427,6 +428,26 @@ stable ordering, deduplication and returned component IDs.</p>
 checked by <a href="https://github.com/LucaJiang/prusie/blob/main/tools/model_examples.py">model_examples.py</a>.
 They illustrate probability and linear algebra; the separately fitted
 <a href="example.html">500-variant toy example</a> demonstrates the complete API.</p>
+<h2 id="computational-compatibility">Computational compatibility</h2>
+<p>The default Gaussian path follows pinned susieR preprocessing, scalar Gaussian
+SER formulas and its Brent prior-variance search. Scalar exponentials are used
+by default. On GNU/Linux x86-64 builds with the C helper, likelihood-weight sums
+use a long-double accumulator, as in R's <code>sum</code>; other builds retain compensated
+summation. This is reference-oriented computation, not bitwise emulation of R's
+BLAS or every convergence extension.</p>
+<p>Algebraically regrouped SER likelihoods/vector exponentials and implicit matrix
+scaling/signed-column compression are experimental opt-ins, respectively
+<code>PRUSIE_SER_MATH=optimized</code> and <code>PRUSIE_MATRIX_MATH=optimized</code>, set before process
+startup. They are not the default or universally PIP-qualified optimizations.
+Retaining an optimization requires measured speed or memory improvement and
+maximum absolute PIP error below <code>1e-5</code> against the pinned reference; a speed
+claim alone is not acceptance. Historical timings describe their recorded source,
+not an unmeasured revision of the default path.</p>
+<p>Tiny differences near the fixed component-activity boundary can change whether
+an almost-null component contributes to PIP. Known cases remain above <code>1e-5</code>;
+universal numerical equivalence is not established, even with reference-oriented
+defaults. Neither activity thresholds nor fitting tolerances are relaxed to
+hide these failures.</p>
 <h2 id="methods-and-implementation-references">Methods and implementation references</h2>
 <p>The model and variational fitting method follow
 <a href="https://doi.org/10.1111/rssb.12388">Wang et al. (2020), <em>A simple new approach to variable selection in regression,

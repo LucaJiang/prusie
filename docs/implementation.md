@@ -8,6 +8,14 @@ reusing SER workspaces, and applying matrix structure when its conditions hold.
 The statistical update remains sequential IBSS as described in
 [Statistical model](model.md).
 
+The shared-SER algebra, implicit matrix scaling and signed-column compression
+described below are **experimental opt-ins**, not the default computation.
+`PRUSIE_SER_MATH=optimized` selects regrouped SER/vector math;
+`PRUSIE_MATRIX_MATH=optimized` selects the factorized/compressed matrix path.
+The default materializes the reference working matrix and uses scalar Gaussian
+likelihood formulas. Historical performance evidence does not qualify every
+experimental branch or establish universal PIP agreement.
+
 ## From the public call to a result
 
 Python validates options and defines the working sufficient statistics. It also
@@ -290,9 +298,10 @@ $$
 A 60-digit decimal calculation gives **1000.313261687518**; the first normalized weight is **0.731058578630**.
 <!-- calculated:logsum:end -->
 
-This avoids forming either overflowing exponential. The objective's positive
-exponential terms use balanced pairwise reduction. Posterior normalization and
-signed dot products/KL/ER2 reductions use the compensated `sum` helper where
+This avoids forming either overflowing exponential. Likelihood exponential
+terms and posterior normalization use R-style long-double accumulation on
+GNU/Linux x86-64 C-helper builds, with compensated fallback elsewhere. Signed
+dot products/KL/ER2 reductions use the compensated `sum` helper where
 called. Dense column products have their own fixed traversal. Algebraic
 identities such as implicit scaling and signed-column grouping can change
 floating-point association; bitwise equality to R is not implied. The
@@ -300,7 +309,8 @@ floating-point association; bitwise equality to R is not implied. The
 differences with the reference.
 
 The `vector-math` feature builds a small C helper on native GNU/Linux x86-64.
-It loads available libmvec symbols and selects AVX2 or SSE2 at runtime. Missing
+With `PRUSIE_SER_MATH=optimized`, it loads available libmvec symbols and selects
+AVX2 or SSE2 at runtime. Missing
 symbols or unsupported builds retain scalar exponentials. Nondefault rounding
 or flush controls also require scalar evaluation; scalar tails preserve the
 same exceptional-value handling. `PRUSIE_SER_MATH=scalar`, set before import,

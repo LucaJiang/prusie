@@ -161,12 +161,6 @@ tryCatch({
             length(pip)==case$n_variants && identical(as.character(colnames(a)),inputs$variant_ids)
         record$validity <- list(passed=valid,alpha_mass_max_abs_error=max(abs(rowSums(a)-1)))
         if (!valid) record$status <- 'invalid'
-        # Original official object for independent same-fit coloc pairing.
-        # Export is separate from fit clocks and memory measurement.
-        rds <- if (is.null(arg[['fit-rds']])) paste0(arg$output,'.fit.rds') else arg[['fit-rds']]
-        dir.create(dirname(rds),recursive=TRUE,showWarnings=FALSE)
-        saveRDS(fit,rds,version=3)
-        record$fit_rds <- rds
     }
     record$environment <- identity()
     if (!is.null(record$environment$blas_probe$threads))

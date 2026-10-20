@@ -1,5 +1,4 @@
-//! Exponentials for the SER weights: the system float64 vector library when it
-//! is available and safe to use, otherwise the scalar `exp`.
+//! Scalar SER exponentials by default; system vector math is experimental opt-in.
 use std::sync::OnceLock;
 
 #[derive(Clone, Copy)]
@@ -14,7 +13,7 @@ enum Backend {
 fn backend() -> Backend {
     static BACKEND: OnceLock<Backend> = OnceLock::new();
     *BACKEND.get_or_init(|| {
-        if std::env::var("PRUSIE_SER_MATH").as_deref() == Ok("scalar") {
+        if std::env::var("PRUSIE_SER_MATH").as_deref() != Ok("optimized") {
             return Backend::Scalar;
         }
         #[cfg(has_vector_math)]
@@ -58,10 +57,22 @@ pub(super) fn group_fill_avx2_allowed() -> bool {
 
 #[cfg(has_vector_math)]
 extern "C" {
+    fn prusie_weight_sum(values: *const f64, count: usize) -> f64;
     fn prusie_vector_init() -> i32;
     fn prusie_scalar_environment_required() -> i32;
     fn prusie_exp_shift_sse2(values: *mut f64, count: usize, maximum: f64);
     fn prusie_exp_shift_avx2(values: *mut f64, count: usize, maximum: f64);
+}
+
+pub(super) fn weight_sum(values: &[f64]) -> f64 {
+    #[cfg(has_vector_math)]
+    {
+        unsafe { prusie_weight_sum(values.as_ptr(), values.len()) }
+    }
+    #[cfg(not(has_vector_math))]
+    {
+        super::sum(values.iter().copied())
+    }
 }
 
 pub(super) fn exp_shift_inplace(values: &mut [f64], maximum: f64) {

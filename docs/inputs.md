@@ -29,24 +29,42 @@ but does not change the working likelihood.
 
 For $p$ biological variants, z or bhat and `variant_ids` have length $p$;
 R has shape $(p,p)$. `shat` is either a strictly positive scalar shared by all
-variants or a length-$p$ vector of positive standard errors. IDs are distinct
+variants or a length-$p$ vector of positive standard errors. Positive infinite
+standard errors are accepted: a finite bhat then produces z = 0. Missing
+effect estimates or standard errors remain invalid. IDs are distinct
 nonempty strings. `variant_metadata` contains aligned length-$p$ columns copied
 into the result; metadata does not itself establish allele correctness.
 
-`R` contains **signed correlation r**. Singular LD is allowed. Every entry must
-be finite; the diagonal must be within $10^{-8}$ of one and magnitudes at most
-$1+10^{-8}$. Symmetry uses both directions of the bound
-$|R_{ij}-R_{ji}|\leq10^{-12}+10^{-12}|R_{ji}|$. The API does not repair LD by
-ridge adjustment, eigenvalue clipping or silently symmetrizing invalid input.
+`R` should contain **signed correlation r**; supplying correctly scaled LD
+remains the caller's responsibility. Singular LD is allowed. Every entry must
+be finite and diagonal entries nonnegative. As in ordinary dense susieR RSS,
+the fitter does not impose a separate unit-diagonal or correlation-range check.
+For ordinary z/R input, symmetry follows susieR 0.16.6's dense
+numeric path: off-diagonal entries of the working `XtX = (n - 1) * R` must
+compare exactly equal. There is no numerical symmetry tolerance. With missing
+n, this check applies to `XtX = R`. If the check fails, the API issues a
+`RuntimeWarning` and uses `(XtX + XtX.T) / 2` internally before fitting.
+Scaling precedes averaging. With bhat, shat, n and var_y, the reconstructed
+original-scale XtX is always averaged, as in susieR. Caller arrays are never
+modified. No ridge adjustment or eigenvalue clipping is applied.
 
-`susie_suff_stat` requires a finite symmetric predictor crossproduct `XtX`,
-finite `Xty`, positive `yty`, and $n>1$. These describe the same centered data.
+`susie_suff_stat` requires a finite predictor crossproduct `XtX`,
+nonnegative finite `yty`, and $n>1$. Missing z-scores are replaced with zero;
+missing `Xty` entries are replaced with zero with a warning. Infinite summaries
+are rejected. With `check_input=True`, `Xty` must be finite before the optional
+projection check. Zero `yty` requires zero `Xty` and an explicitly fixed positive
+residual variance. These quantities describe the same centered data.
 `X_colmeans` and `y_mean` recover an original-scale intercept; missing means
 leave it NaN. Predictor standardization is enabled by default, and `coef`
-reverses its stored scales. Basic finite/symmetry/diagonal checks always run.
-`check_input=True` adds an eigendecomposition, rejects eigenvalues below
-`-r_tol`, and warns if Xty is outside the nonzero eigenspace. It does not
-repair the matrix or certify its external provenance.
+reverses its stored scales. Direct XtX uses the same exact check, warning and
+internal averaging. Basic finite/diagonal checks always run, including after
+averaging; overflow is rejected even where R's constructor permits it.
+`check_input=True` adds an eigendecomposition, rejects negative eigenvalues at
+or below `-r_tol`, and warns when the squared projection fraction onto eigenvectors
+with eigenvalues at most machine epsilon exceeds machine epsilon. This check
+has no absolute response-magnitude floor; zero eigenvalues remain legal when
+`r_tol=0`. It does not
+apply a positive-semidefinite repair or certify its external provenance.
 
 ## Variant order and alleles
 
@@ -72,6 +90,20 @@ Update the allele metadata consistently. The API does not infer these signs or
 filter variants on the caller's behalf.
 
 ## Priors and zero-information columns
+
+`scaled_prior_variance` accepts a nonnegative scalar or length-L vector,
+including values above one. With missing n, the likelihood instead uses
+`prior_variance`, and the unused `scaled_prior_variance` is ignored. An omitted
+`null_weight` or `null_weight=None` means no added null column. `tol=None`
+resolves to the ordinary Gaussian default `1e-4`.
+
+Warm starts can initialize a new fit on different summaries. A minimal
+`s_init` mapping contains working-coordinate `alpha`, `mu` and `mu2`; supplied
+variant/allele/scale metadata is checked rather than silently reordered or
+transformed. New fits do not require a retained-data hash. Continuation still
+requires the original retained data and its integrity checks. If the initial
+state has more effects than requested L, its effect count is retained, as in
+pinned susieR; expanding a state prioritizes its credible-set components.
 
 `prior_weights` are finite nonnegative variant weights with a positive finite
 total. Default weights are uniform. With a null weight $w_0$, the raw vector

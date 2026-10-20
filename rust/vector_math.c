@@ -15,6 +15,12 @@ static pair_exp_function pair_exp = NULL;
 static quad_exp_function quad_exp = NULL;
 static void *math_library = NULL;
 
+double prusie_weight_sum(const double *values, size_t count) {
+    long double total = 0.0;
+    for (size_t index = 0; index < count; ++index) total += values[index];
+    return (double)total;
+}
+
 static int scalar_environment_required(void) {
     /* fegetround covers the C environment; callers can also alter MXCSR
      * independently. Preserve scalar behavior for SIMD rounding changes and

@@ -56,7 +56,7 @@ optional original means for recovering the intercept.
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `L` | 10 | Maximum number of effects, capped at internal predictor count |
-| `scaled_prior_variance` | 0.2 | Initial component variance divided by yty/(n−1); ≤1 when standardized |
+| `scaled_prior_variance` | 0.2 | Initial component variance divided by yty/(n−1); nonnegative scalar or length-L vector, including values above one |
 | `residual_variance` | None | Initial/fixed residual variance; None uses yty/(n−1) |
 | `estimate_prior_variance` | True | Whether to update component V |
 | `estimate_prior_method` | `'optim'` | Continuous marginal-likelihood search; alternatives `'EM'` and `'simple'` follow the [model's update schedule](model.md#sequential-ibss-and-variance-estimation) |

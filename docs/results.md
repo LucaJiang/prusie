@@ -160,8 +160,9 @@ false. A successful criterion takes precedence over a cycle diagnostic.
 
 Only an actual NaN objective in ELBO mode permits the labelled alpha/PIP
 fallback. The initial −∞ sentinel or an overflowing difference between finite
-objectives does not. A NaN objective in joint mode, or an infinite objective in
-any mode, reports `numerical_failure`. Numerical failure may stop before
+objectives does not. A NaN objective in joint mode reports `numerical_failure`;
+an infinite computed objective raises `ValueError`, as in the pinned R fitter.
+Numerical failure may stop before
 `min_iter`; successful and cycle exits respect it. Every stop retains the
 complete current posterior; components are not averaged across states.
 Read [convergence and refinement](post_analysis.md) for thresholds, continuation,

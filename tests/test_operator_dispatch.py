@@ -1,4 +1,4 @@
-"""API wiring proof using exact materialization, not the new native operator."""
+"""Check API materialization wiring and the actual native matrix operator."""
 
 import warnings
 
@@ -6,6 +6,11 @@ import numpy as np
 import pytest
 
 from prusie import _native, susie_rss, susie_suff_stat
+
+
+@pytest.fixture(autouse=True)
+def experimental_operator(monkeypatch):
+    monkeypatch.setenv("PRUSIE_MATRIX_MATH", "optimized")
 
 
 def assert_results_equal(a, b):
@@ -39,13 +44,7 @@ def assert_results_equal(a, b):
         np.testing.assert_array_equal(a.sets["purity"][name], b.sets["purity"][name])
 
 
-@pytest.mark.parametrize("kind", ["known_n", "missing_n", "effects", "no_information"])
-@pytest.mark.parametrize("layout", ["C", "F", "strided"])
-@pytest.mark.parametrize("null_weight", [0.0, 0.2])
-@pytest.mark.parametrize("standardize", [False, True])
-def test_capability_dispatch_exact_materialization(
-    monkeypatch, kind, layout, null_weight, standardize
-):
+def public_operator_case(kind, layout, null_weight, standardize):
     r = np.array([[1.0 + 7e-9, -0.2, -0.0], [-0.2, 1.0, 0.125], [0.0, 0.125 + 1e-14, 1.0 - 7e-9]])
     options = dict(
         L=2,
@@ -80,6 +79,19 @@ def test_capability_dispatch_exact_materialization(
     matrix.flags.writeable = False
     before = matrix.view(np.uint64).copy()
     args[matrix_key] = matrix
+    return function, args, options, matrix, before
+
+
+@pytest.mark.parametrize("kind", ["known_n", "missing_n", "effects", "no_information"])
+@pytest.mark.parametrize("layout", ["C", "F", "strided"])
+@pytest.mark.parametrize("null_weight", [0.0, 0.2])
+@pytest.mark.parametrize("standardize", [False, True])
+def test_capability_dispatch_exact_materialization(
+    monkeypatch, kind, layout, null_weight, standardize
+):
+    function, args, options, matrix, before = public_operator_case(
+        kind, layout, null_weight, standardize
+    )
     original = _native.fit
     expected = {}
 
@@ -125,6 +137,38 @@ def test_capability_dispatch_exact_materialization(
     np.testing.assert_array_equal(matrix.view(np.uint64), before)
 
 
+@pytest.mark.parametrize("kind", ["known_n", "missing_n", "effects", "no_information"])
+@pytest.mark.parametrize("layout", ["C", "F", "strided"])
+@pytest.mark.parametrize("null_weight", [0.0, 0.2])
+@pytest.mark.parametrize("standardize", [False, True])
+def test_actual_operator_public_boundary(monkeypatch, kind, layout, null_weight, standardize):
+    function, args, options, matrix, before = public_operator_case(
+        kind, layout, null_weight, standardize
+    )
+    original = _native.fit
+    observed = []
+
+    def capture(matrix, response, yty, n, settings):
+        observed.append("matrix_global_scale" in settings)
+        return original(matrix, response, yty, n, settings)
+
+    monkeypatch.setattr(_native, "fit", capture)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 0)
+        expected = function(**args, **options)
+        monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 1)
+        actual = function(**args, **options)
+    assert observed == [False, True]
+    assert np.all(np.isfinite(actual.pip))
+    assert np.all((actual.pip >= 0) & (actual.pip <= 1))
+    np.testing.assert_allclose(actual.pip, expected.pip, atol=1e-5, rtol=0)
+    np.testing.assert_array_equal(actual.variant_ids, expected.variant_ids)
+    assert actual.alpha.shape == expected.alpha.shape
+    assert actual.params == expected.params
+    np.testing.assert_array_equal(matrix.view(np.uint64), before)
+
+
 @pytest.mark.parametrize("capability", [0, 2])
 def test_unknown_capability_retains_materialized_contract(monkeypatch, capability):
     original = _native.fit
@@ -142,9 +186,9 @@ def test_unknown_capability_retains_materialized_contract(monkeypatch, capabilit
     assert called
 
 
-def test_capability_keeps_public_invalid_correlation_rejection(monkeypatch):
+def test_capability_keeps_public_invalid_matrix_rejection(monkeypatch):
     monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 1, raising=False)
-    for matrix in [np.eye(4)[::-1, :], np.full((4, 4), np.nan)]:
+    for matrix in [-np.eye(4), np.full((4, 4), np.nan)]:
         with pytest.raises(ValueError):
             susie_rss(np.arange(4, dtype=float), matrix, 100, L=1)
 

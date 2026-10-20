@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import math
 import time
+import warnings as warning_module
 
 import numpy as np
 
@@ -84,8 +85,8 @@ def prepare_ld(R, *, r_tol=1e-8, cache=None):
     if raw.ndim != 2 or raw.shape[0] == 0:
         raise ValueError("R must be a nonempty square correlation matrix")
     R = _correlation(raw, raw.shape[0])
-    if not math.isfinite(r_tol) or r_tol <= 0:
-        raise ValueError("r_tol must be finite and positive")
+    if not math.isfinite(r_tol) or r_tol < 0:
+        raise ValueError("r_tol must be finite and nonnegative")
     digest = hashlib.sha256(np.ascontiguousarray(R, dtype="<f8").tobytes()).hexdigest()
     key = (
         f"prusie.ld.v1:{R.shape[0]}"
@@ -211,6 +212,8 @@ def estimate_s_rss(z, R, n=None, *, r_tol=1e-8, method="null-mle", cache=None, r
     decomposition = prepare_ld(R, r_tol=r_tol, cache=cache)
     adjusted, missing = _adjust(z, n, len(decomposition["eigenvalues"]))
     s = _estimate(adjusted, decomposition, method)
+    for message in decomposition["warnings"]:
+        warning_module.warn(message, RuntimeWarning, stacklevel=2)
     if not return_info:
         return s
     return dict(
@@ -433,6 +436,8 @@ def kriging_rss(
     for row in rows:
         if row["status"] == "assessed" and row["flag"] is None:
             row.update(status="conditional_only", unavailable_reason=mixture["reason"])
+    for message in dict.fromkeys(messages):
+        warning_module.warn(message, RuntimeWarning, stacklevel=2)
     counts = diagnostic_counts({"variants": rows})
     return dict(
         schema_version="prusie.ld.v1",

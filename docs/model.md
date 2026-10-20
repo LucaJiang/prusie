@@ -345,6 +345,30 @@ checked by [model_examples.py](https://github.com/LucaJiang/prusie/blob/main/too
 They illustrate probability and linear algebra; the separately fitted
 [500-variant toy example](example.md) demonstrates the complete API.
 
+## Computational compatibility
+
+The default Gaussian path follows pinned susieR preprocessing, scalar Gaussian
+SER formulas and its Brent prior-variance search. Scalar exponentials are used
+by default. On GNU/Linux x86-64 builds with the C helper, likelihood-weight sums
+use a long-double accumulator, as in R's `sum`; other builds retain compensated
+summation. This is reference-oriented computation, not bitwise emulation of R's
+BLAS or every convergence extension.
+
+Algebraically regrouped SER likelihoods/vector exponentials and implicit matrix
+scaling/signed-column compression are experimental opt-ins, respectively
+`PRUSIE_SER_MATH=optimized` and `PRUSIE_MATRIX_MATH=optimized`, set before process
+startup. They are not the default or universally PIP-qualified optimizations.
+Retaining an optimization requires measured speed or memory improvement and
+maximum absolute PIP error below `1e-5` against the pinned reference; a speed
+claim alone is not acceptance. Historical timings describe their recorded source,
+not an unmeasured revision of the default path.
+
+Tiny differences near the fixed component-activity boundary can change whether
+an almost-null component contributes to PIP. Known cases remain above `1e-5`;
+universal numerical equivalence is not established, even with reference-oriented
+defaults. Neither activity thresholds nor fitting tolerances are relaxed to
+hide these failures.
+
 ## Methods and implementation references
 
 The model and variational fitting method follow

@@ -4756,7 +4756,6 @@
   "signed_LD": "inputs.npz {dataset}_LD; row and column index match metadata SNP list and variants.tsv",
   "reference_lock": "reference.lock.json",
   "reference_environment": "reference_environment.json",
-  "independent_oracles": "independent_oracles.json",
   "checksum_manifest": "checksums.json",
   "input_reference_sha256": {
     "inputs.npz": "7a60a5d0ad9a2d7c550662677e47890610c6bf79e807c1cc269a0effed65af2d",
@@ -4765,8 +4764,6 @@
     "parameters.json": "456d444a73447219eab6cd9767923146c0bc4b0c5e5ee0cbbc074afe4606ee83",
     "r_fits.npz": "00475daf219179aad6a4c315cec9bd586966fb41e6c9e982632113ff71843d86",
     "r_fits.json": "5902700416afd4b8577eaf5ccffcd080cc8e010c341a3a4bf716ed6acdbf80bd",
-    "r_coloc.json": "8f04f20325a850aac5a27c034577b273ce97f3d21f1c0aae5b810b37942a6381",
-    "independent_oracles.json": "fd750a4b31a3750e0674e9b1dd199c1a25f0ce30326f97d9347a011b16602a27",
     "reference.lock.json": "f9113dda425405b54ab8577499dae6607e81acbb757beae485ae0b5a54b3970d",
     "reference_environment.json": "312c67e864582434b1df4012050bfbbb6a900e63b138c932e30102ef6881c457"
   }

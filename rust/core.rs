@@ -120,6 +120,7 @@ fn log_probabilities(v: f64, beta: &[f64], shat2: &[f64], prior: &[f64]) -> (Vec
 
 /// Pairwise (tree) summation of nonnegative likelihood weights. Posterior and
 /// signed KL/ER2 sums use the compensated `sum` instead.
+#[cfg(test)]
 fn positive_pairwise_sum(values: &mut [f64]) -> f64 {
     let mut length = values.len();
     while length > 1 {
@@ -145,7 +146,7 @@ fn log_sum_exp_at(x: &mut [f64], known_maximum: Option<f64>) -> f64 {
     // Exponentials (vector or scalar backend), then pairwise summation of the
     // nonnegative terms.
     vector_math::exp_shift_inplace(x, largest);
-    largest + positive_pairwise_sum(x).ln()
+    largest + vector_math::weight_sum(x).ln()
 }
 
 fn log_likelihood(
@@ -658,7 +659,9 @@ fn single_effect<'a>(
         *sampling_cache = Some(SerSampling::new(
             diagonal,
             sigma2,
-            method != "none" && method != "EM",
+            method != "none"
+                && method != "EM"
+                && std::env::var("PRUSIE_SER_MATH").as_deref() == Ok("optimized"),
         ));
     }
     let sampling = sampling_cache.as_ref().expect("sampling initialized");
@@ -715,7 +718,7 @@ fn single_effect<'a>(
     // The row holds log weights, then weights, then normalized α; the rows of
     // the other effects are not touched during this update.
     vector_math::exp_shift_inplace(posterior.alpha, largest);
-    let total = sum(posterior.alpha.iter().copied());
+    let total = vector_math::weight_sum(posterior.alpha);
     for value in posterior.alpha.iter_mut() {
         *value /= total;
     }
@@ -1633,7 +1636,11 @@ pub fn fit_controlled(
     control: &FitControl,
 ) -> Result<FitOutput, String> {
     let p = xty.len();
-    if p == 0 || p.checked_mul(p) != Some(xtx.len()) || options.l == 0 || options.l > p {
+    if p == 0
+        || p.checked_mul(p) != Some(xtx.len())
+        || options.l == 0
+        || p.checked_mul(options.l).is_none()
+    {
         return Err("Invalid sufficient-statistic dimensions or number of effects".into());
     }
     // Every raw entry is checked here. If the bounds hold, the input is finite
@@ -1676,7 +1683,7 @@ pub fn fit_controlled(
     if options.max_iter == 0
         || !options.tol.is_finite()
         || options.tol < 0.0
-        || !options.prior_tol.is_finite()
+        || options.prior_tol.is_nan()
         || options.prior_tol < 0.0
         || !options.prior_variance.is_finite()
         || options.prior_variance < 0.0
@@ -1695,10 +1702,12 @@ pub fn fit_controlled(
     {
         return Err("Prior weights must be finite, nonnegative, and nonzero".into());
     }
-    if !matches!(
-        options.estimate_prior_method.as_str(),
-        "optim" | "EM" | "simple"
-    ) {
+    if options.estimate_prior_variance
+        && !matches!(
+            options.estimate_prior_method.as_str(),
+            "optim" | "EM" | "simple"
+        )
+    {
         return Err("Unsupported prior variance estimation method".into());
     }
     // Either contiguous layout is accepted; column-major input is used in place,
@@ -1795,6 +1804,12 @@ pub fn fit_controlled(
     {
         return Err("Invalid convergence control".into());
     }
+    if let Some(v) = &control.component_prior_variance {
+        if v.len() != options.l || v.iter().any(|x| !x.is_finite() || *x < 0.0) {
+            return Err("Component prior variances must have L finite nonnegative entries".into());
+        }
+        output.v.copy_from_slice(v);
+    }
     if let Some(initial) = &control.initial {
         if initial.alpha.len() != size
             || initial.mu.len() != size
@@ -1805,7 +1820,7 @@ pub fn fit_controlled(
                 .chain(&initial.mu)
                 .chain(&initial.mu2)
                 .any(|x| !x.is_finite())
-            || initial.alpha.iter().any(|&x| x < 0.)
+            || initial.alpha.iter().any(|&x| !(0.0..=1.0).contains(&x))
         {
             return Err("Invalid initial posterior dimensions or values".into());
         }
@@ -1945,6 +1960,7 @@ pub fn fit_controlled(
                 }));
             output.kl[effect] = -posterior.model_lbf + expected_loglik;
             if !grouping_checked
+                && std::env::var("PRUSIE_MATRIX_MATH").as_deref() == Ok("optimized")
                 && p >= 1024
                 && component
                     .iter()
@@ -2000,6 +2016,9 @@ pub fn fit_controlled(
         let elbo = -n / 2.0 * (2.0 * PI * output.sigma2).ln()
             - 1.0 / (2.0 * output.sigma2) * er2
             - sum(output.kl.iter().copied());
+        if elbo.is_infinite() {
+            return Err("get_objective() produced an infinite ELBO value".into());
+        }
         if !elbo.is_finite()
             && output
                 .alpha
@@ -2915,6 +2934,7 @@ mod tests {
         assert!(fit(&[], &[], 1.0, 10.0, &options(1)).is_err());
         assert!(fit(&[-1.0], &[0.0], 1.0, 10.0, &options(1)).is_err());
         let mut settings = options(1);
+        settings.estimate_prior_variance = true;
         settings.estimate_prior_method = "uniroot".into();
         assert!(fit(&[1.0], &[0.0], 1.0, 10.0, &settings).is_err());
     }

@@ -46,6 +46,13 @@ dense matrix. prusie reduces these costs by retaining component products,
 reusing SER workspaces, and applying matrix structure when its conditions hold.
 The statistical update remains sequential IBSS as described in
 <a href="model.html">Statistical model</a>.</p>
+<p>The shared-SER algebra, implicit matrix scaling and signed-column compression
+described below are <strong>experimental opt-ins</strong>, not the default computation.
+<code>PRUSIE_SER_MATH=optimized</code> selects regrouped SER/vector math;
+<code>PRUSIE_MATRIX_MATH=optimized</code> selects the factorized/compressed matrix path.
+The default materializes the reference working matrix and uses scalar Gaussian
+likelihood formulas. Historical performance evidence does not qualify every
+experimental branch or establish universal PIP agreement.</p>
 <h2 id="from-the-public-call-to-a-result">From the public call to a result</h2>
 <p>Python validates options and defines the working sufficient statistics. It also
 normalizes priors, chooses predictor scales and assembles <code>SusieResult</code>. Matrix
@@ -355,16 +362,18 @@ imports and inputs as well as these algorithm arrays.</p>
 <p>A 60-digit decimal calculation gives <strong>1000.313261687518</strong>; the first normalized weight is <strong>0.731058578630</strong>.</p>
 <!-- calculated:logsum:end -->
 
-<p>This avoids forming either overflowing exponential. The objective's positive
-exponential terms use balanced pairwise reduction. Posterior normalization and
-signed dot products/KL/ER2 reductions use the compensated <code>sum</code> helper where
+<p>This avoids forming either overflowing exponential. Likelihood exponential
+terms and posterior normalization use R-style long-double accumulation on
+GNU/Linux x86-64 C-helper builds, with compensated fallback elsewhere. Signed
+dot products/KL/ER2 reductions use the compensated <code>sum</code> helper where
 called. Dense column products have their own fixed traversal. Algebraic
 identities such as implicit scaling and signed-column grouping can change
 floating-point association; bitwise equality to R is not implied. The
 <a href="numerical_accuracy.html">version-specific numerical comparison</a> reports actual
 differences with the reference.</p>
 <p>The <code>vector-math</code> feature builds a small C helper on native GNU/Linux x86-64.
-It loads available libmvec symbols and selects AVX2 or SSE2 at runtime. Missing
+With <code>PRUSIE_SER_MATH=optimized</code>, it loads available libmvec symbols and selects
+AVX2 or SSE2 at runtime. Missing
 symbols or unsupported builds retain scalar exponentials. Nondefault rounding
 or flush controls also require scalar evaluation; scalar tails preserve the
 same exceptional-value handling. <code>PRUSIE_SER_MATH=scalar</code>, set before import,

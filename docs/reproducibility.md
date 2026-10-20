@@ -103,6 +103,6 @@ Measurement records identify prusie 0.2.4.dev2 or 0.2.3rc4, the native extension
 Python/NumPy versions and loaded numerical libraries. The statistical reference
 is susieR 0.16.6 at commit `8e56a8e038e989856d106d9ca5175cc664fea9d2`.
 The toy reference records the same R source and its own output hash.
-The attributed regression inputs in `examples/data` retain their source,
+The attributed regression inputs in `tests/fixtures/susier_regression` retain their source,
 reference outputs and licenses. [Worked examples](worked_examples.md#sources-and-reproducibility)
 provide saved posterior states and report rendering commands.

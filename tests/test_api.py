@@ -124,9 +124,8 @@ def test_posterior_dedup_prior_filter_and_tie_order():
 @pytest.mark.parametrize(
     "kwargs, match",
     [
-        ({"z": [np.nan, 0.0]}, "finite"),
-        ({"R": [[1.0, 0.4], [0.2, 1.0]]}, "symmetric"),
-        ({"R": [[1.0, 2.0], [2.0, 1.0]]}, "correlation"),
+        ({"z": [np.inf, 0.0]}, "infinite"),
+        ({"R": [[1.0, np.nan], [np.nan, 1.0]]}, "finite"),
         ({"n": 1}, "n must"),
         ({"prior_weights": [0.0, 0.0]}, "positive sum"),
         ({"prior_weights": [-1.0, 2.0]}, "nonnegative"),

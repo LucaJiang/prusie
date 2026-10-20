@@ -126,9 +126,9 @@ def test_first_finite_objective_is_not_a_nonfinite_fallback():
     assert f.convergence["nonfinite_elbo_count"] == 0
 
 
-def test_infinite_objective_reports_numerical_failure_before_minimum():
-    with pytest.warns(RuntimeWarning, match="numerical_failure"):
-        f = susie_suff_stat(
+def test_infinite_objective_raises_before_minimum_like_pinned_r():
+    with pytest.raises(ValueError, match="produced an infinite ELBO"):
+        susie_suff_stat(
             [[1.0]],
             [0.0],
             1e308,
@@ -141,6 +141,3 @@ def test_infinite_objective_reports_numerical_failure_before_minimum():
             standardize=False,
             convergence=ConvergenceConfig(min_iter=50),
         )
-    assert f.niter == 1 and not f.converged
-    assert f.convergence["stop_reason"] == "numerical_failure"
-    assert not f.convergence["elbo_valid"]

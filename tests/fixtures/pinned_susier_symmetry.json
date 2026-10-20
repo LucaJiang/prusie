@@ -1,0 +1,3331 @@
+{
+  "reference": {
+    "susieR": "0.16.6",
+    "commit": "8e56a8e038e989856d106d9ca5175cc664fea9d2",
+    "Rfast": "2.1.0",
+    "Matrix": "1.7-6",
+    "R": "4.4.0",
+    "dense_rule": "Exact off-diagonal equality on constructed XtX; no numerical tolerance",
+    "source": "https://cran.r-project.org/src/contrib/Archive/Rfast/Rfast_2.1.0.tar.gz",
+    "Rfast_source_sha256": "f9e46cac99db756cd49c9cd83be8adc0d381e6c03102389bfdcb8258d02418ff",
+    "oracle": "Actual pinned R constructors, standardize=FALSE; no fitting or simulation"
+  },
+  "cases": [
+    {
+      "id": "rss_equal",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4692093338126385152",
+        "0",
+        "4681416193739430298",
+        "0",
+        "4692093338126385152",
+        "0",
+        "4681416193739430298",
+        "0",
+        "4692093338126385152"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_signed_zero",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9223372036854775808",
+        "0",
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4692093338126385152",
+        "0",
+        "9223372036854775808",
+        "0",
+        "4692093338126385152",
+        "0",
+        "0",
+        "0",
+        "4692093338126385152"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_ulp",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328219",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4692093338126385152",
+        "0",
+        "4681416193739430298",
+        "0",
+        "4692093338126385152",
+        "0",
+        "4681416193739430298",
+        "0",
+        "4692093338126385152"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_subnormal",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "1",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4692093338126385152",
+        "0",
+        "243009",
+        "0",
+        "4692093338126385152",
+        "0",
+        "243009",
+        "0",
+        "4692093338126385152"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_tiny",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4382569440205035030",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4692093338126385152",
+        "0",
+        "4463264108768770743",
+        "0",
+        "4692093338126385152",
+        "0",
+        "4463264108768770743",
+        "0",
+        "4692093338126385152"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_old_tolerance",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4426944402733311314",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4692093338126385152",
+        "0",
+        "4507358586150902325",
+        "0",
+        "4692093338126385152",
+        "0",
+        "4507358586150902325",
+        "0",
+        "4692093338126385152"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_clear",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4599075939470750515",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4692093338126385152",
+        "0",
+        "4683086138871644160",
+        "0",
+        "4692093338126385152",
+        "0",
+        "4683086138871644160",
+        "0",
+        "4692093338126385152"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_opposite",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "13819745816549104026",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4599075939470750515",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4692093338126385152",
+        "0",
+        "4672408994484689304",
+        "0",
+        "4692093338126385152",
+        "0",
+        "4672408994484689304",
+        "0",
+        "4692093338126385152"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_inf_equal",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4692093338126385152",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4692093338126385152",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4692093338126385152"
+      ],
+      "safe_public_input": false
+    },
+    {
+      "id": "rss_nan_equal",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9221120237041090560",
+        "0",
+        "4607182418800017408",
+        "0",
+        "9221120237041090560",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": "Input XtX matrix contains NAs.",
+      "symmetry_warning": true,
+      "safe_public_input": false
+    },
+    {
+      "id": "direct_equal",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_signed_zero",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9223372036854775808",
+        "0",
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "9223372036854775808",
+        "0",
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_ulp",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328219",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_subnormal",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "1",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_tiny",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4382569440205035030",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4378065840577664534",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4378065840577664534",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_old_tolerance",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4426944402733311314",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4422440803105940818",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4422440803105940818",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_clear",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4599075939470750515",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4598175219545276416",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4598175219545276416",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_opposite",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "13819745816549104026",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4599075939470750515",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4587366580439587224",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4587366580439587224",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_inf_equal",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": false
+    },
+    {
+      "id": "direct_nan_equal",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9221120237041090560",
+        "0",
+        "4607182418800017408",
+        "0",
+        "9221120237041090560",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": "Input XtX matrix contains NAs.",
+      "symmetry_warning": true,
+      "safe_public_input": false
+    },
+    {
+      "id": "missing_n_equal",
+      "route": "missing_n",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "HINT: Providing the sample size (n), or even a rough estimate of n, is highly recommended. Without n, the implicit assumption is n is large (Inf) and the effect sizes are small (close to zero).\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "missing_n_signed_zero",
+      "route": "missing_n",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9223372036854775808",
+        "0",
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "HINT: Providing the sample size (n), or even a rough estimate of n, is highly recommended. Without n, the implicit assumption is n is large (Inf) and the effect sizes are small (close to zero).\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "9223372036854775808",
+        "0",
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "missing_n_ulp",
+      "route": "missing_n",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328219",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "HINT: Providing the sample size (n), or even a rough estimate of n, is highly recommended. Without n, the implicit assumption is n is large (Inf) and the effect sizes are small (close to zero).\n",
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "missing_n_subnormal",
+      "route": "missing_n",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "1",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "HINT: Providing the sample size (n), or even a rough estimate of n, is highly recommended. Without n, the implicit assumption is n is large (Inf) and the effect sizes are small (close to zero).\n",
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "missing_n_tiny",
+      "route": "missing_n",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4382569440205035030",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "HINT: Providing the sample size (n), or even a rough estimate of n, is highly recommended. Without n, the implicit assumption is n is large (Inf) and the effect sizes are small (close to zero).\n",
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4378065840577664534",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4378065840577664534",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "missing_n_old_tolerance",
+      "route": "missing_n",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4426944402733311314",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "HINT: Providing the sample size (n), or even a rough estimate of n, is highly recommended. Without n, the implicit assumption is n is large (Inf) and the effect sizes are small (close to zero).\n",
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4422440803105940818",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4422440803105940818",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "missing_n_clear",
+      "route": "missing_n",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4599075939470750515",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "HINT: Providing the sample size (n), or even a rough estimate of n, is highly recommended. Without n, the implicit assumption is n is large (Inf) and the effect sizes are small (close to zero).\n",
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4598175219545276416",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4598175219545276416",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "missing_n_opposite",
+      "route": "missing_n",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "13819745816549104026",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4599075939470750515",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "HINT: Providing the sample size (n), or even a rough estimate of n, is highly recommended. Without n, the implicit assumption is n is large (Inf) and the effect sizes are small (close to zero).\n",
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4587366580439587224",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4587366580439587224",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "missing_n_inf_equal",
+      "route": "missing_n",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "HINT: Providing the sample size (n), or even a rough estimate of n, is highly recommended. Without n, the implicit assumption is n is large (Inf) and the effect sizes are small (close to zero).\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": false
+    },
+    {
+      "id": "missing_n_nan_equal",
+      "route": "missing_n",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9221120237041090560",
+        "0",
+        "4607182418800017408",
+        "0",
+        "9221120237041090560",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "HINT: Providing the sample size (n), or even a rough estimate of n, is highly recommended. Without n, the implicit assumption is n is large (Inf) and the effect sizes are small (close to zero).\n",
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": "Input XtX matrix contains NAs.",
+      "symmetry_warning": true,
+      "safe_public_input": false
+    },
+    {
+      "id": "original_equal",
+      "route": "original",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4656022185355830781",
+        "0",
+        "4625250421042120366",
+        "0",
+        "4631178160564600831",
+        "0",
+        "4625250421042120366",
+        "0",
+        "4614994797556251614"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "original_signed_zero",
+      "route": "original",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9223372036854775808",
+        "0",
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4656022185355830781",
+        "0",
+        "0",
+        "0",
+        "4631178160564600831",
+        "0",
+        "0",
+        "0",
+        "4614994797556251614"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "original_ulp",
+      "route": "original",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328219",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4656022185355830781",
+        "0",
+        "4625250421042120366",
+        "0",
+        "4631178160564600831",
+        "0",
+        "4625250421042120366",
+        "0",
+        "4614994797556251614"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "original_subnormal",
+      "route": "original",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "1",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4656022185355830781",
+        "0",
+        "44",
+        "0",
+        "4631178160564600831",
+        "0",
+        "44",
+        "0",
+        "4614994797556251614"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "original_tiny",
+      "route": "original",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4382569440205035030",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4656022185355830781",
+        "0",
+        "4406430529489071202",
+        "0",
+        "4631178160564600831",
+        "0",
+        "4406430529489071202",
+        "0",
+        "4614994797556251614"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "original_old_tolerance",
+      "route": "original",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4426944402733311314",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4656022185355830781",
+        "0",
+        "4450689867559686339",
+        "0",
+        "4631178160564600831",
+        "0",
+        "4450689867559686339",
+        "0",
+        "4614994797556251614"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "original_clear",
+      "route": "original",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4599075939470750515",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4656022185355830781",
+        "0",
+        "4626389721882118232",
+        "0",
+        "4631178160564600831",
+        "0",
+        "4626389721882118232",
+        "0",
+        "4614994797556251614"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "original_opposite",
+      "route": "original",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "13819745816549104026",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4599075939470750515",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4656022185355830781",
+        "0",
+        "4616243221787379374",
+        "0",
+        "4631178160564600831",
+        "0",
+        "4616243221787379374",
+        "0",
+        "4614994797556251614"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "original_inf_equal",
+      "route": "original",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4656022185355830781",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4631178160564600831",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4614994797556251614"
+      ],
+      "safe_public_input": false
+    },
+    {
+      "id": "original_nan_equal",
+      "route": "original",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "9221120237041090560",
+        "0",
+        "4607182418800017408",
+        "0",
+        "9221120237041090560",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": "Input XtX matrix contains NAs.",
+      "symmetry_warning": true,
+      "safe_public_input": false
+    },
+    {
+      "id": "direct_matrix_tol_50eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4398046511104000000",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4393542911476629504",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4393542911476629504",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_rel_50eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172646912",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647012",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172646962",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172646962",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_tol_99eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4402479741987192832",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4397976142359822336",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4397976142359822336",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_rel_99eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172646912",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647110",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172647011",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647011",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_tol_100eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4402550110731370496",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4398046511104000000",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4398046511104000000",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_rel_100eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172646912",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647112",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172647012",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647012",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_tol_101eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4402620479475548160",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4398116879848177664",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4398116879848177664",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_rel_101eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172646912",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647114",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172647013",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647013",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_tol_200eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4407053710358740992",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4402550110731370496",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4402550110731370496",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_rel_200eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172646912",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647312",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172647112",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647112",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_tol_800eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4416060909613481984",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4411557309986111488",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4411557309986111488",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_rel_800eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172646912",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172648512",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172647712",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647712",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_tol_801eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4416069705706504192",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4411566106079133696",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4411566106079133696",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "direct_matrix_rel_801eps",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172646912",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172648514",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4602678819172647713",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4602678819172647713",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_scale_2.0",
+      "route": "rss",
+      "n": 2.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328219",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_scale_2.5",
+      "route": "rss",
+      "n": 2.5,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328219",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4609434218613702656",
+        "0",
+        "4599075939470750516",
+        "0",
+        "4609434218613702656",
+        "0",
+        "4599075939470750516",
+        "0",
+        "4609434218613702656"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_scale_10000000.0",
+      "route": "rss",
+      "n": 10000000.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328219",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4711630319185297408",
+        "0",
+        "4701340745453063374",
+        "0",
+        "4711630319185297408",
+        "0",
+        "4701340745453063374",
+        "0",
+        "4711630319185297408"
+      ],
+      "safe_public_input": true
+    },
+    {
+      "id": "rss_scale_1.7976931348623157e+308",
+      "route": "rss",
+      "n": 1.7976931348623157e+308,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4596373779694328219",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "9218868437227405312",
+        "0",
+        "9208059798121716122",
+        "0",
+        "9218868437227405312",
+        "0",
+        "9208059798121716122",
+        "0",
+        "9218868437227405312"
+      ],
+      "safe_public_input": false
+    },
+    {
+      "id": "direct_diagonal_nan",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "9221120237041090560",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": "Input XtX matrix contains NAs.",
+      "symmetry_warning": false,
+      "safe_public_input": false
+    },
+    {
+      "id": "direct_diagonal_inf",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "9218868437227405312",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "0",
+        "0",
+        "9218868437227405312",
+        "0",
+        "0",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": false
+    },
+    {
+      "id": "direct_sum_overflow",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "9218868437227405311",
+        "0",
+        "4599075939470750515",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4598175219545276416",
+        "0",
+        "9218868437227405312",
+        "0",
+        "4598175219545276416",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": false
+    },
+    {
+      "id": "direct_negative_diagonal",
+      "route": "direct",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4596373779694328218",
+        "0",
+        "13830554455654793216",
+        "0",
+        "4599075939470750515",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": false,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": false,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": false,
+          "warnings": []
+        }
+      },
+      "R_messages": [
+        "WARNING: XtX is not symmetric; using (XtX + t(XtX))/2.\n"
+      ],
+      "R_error": null,
+      "symmetry_warning": true,
+      "expected_XtX_bits": [
+        "4607182418800017408",
+        "0",
+        "4598175219545276416",
+        "0",
+        "13830554455654793216",
+        "0",
+        "4598175219545276416",
+        "0",
+        "4607182418800017408"
+      ],
+      "safe_public_input": false
+    },
+    {
+      "id": "rss_range",
+      "route": "rss",
+      "n": 486019.0,
+      "size": 3,
+      "input_bits": [
+        "4607182418800017408",
+        "0",
+        "4607632778762754458",
+        "0",
+        "4607182418800017408",
+        "0",
+        "4607632778762754458",
+        "0",
+        "4607182418800017408"
+      ],
+      "R_predicates": {
+        "ordinary": {
+          "class": [
+            "matrix",
+            "array"
+          ],
+          "symmetric": true,
+          "warnings": []
+        },
+        "dense_Matrix": {
+          "class": "dgeMatrix",
+          "symmetric": true,
+          "warnings": []
+        },
+        "sparse_Matrix": {
+          "class": "dgCMatrix",
+          "symmetric": true,
+          "warnings": []
+        }
+      },
+      "R_messages": [],
+      "R_error": null,
+      "symmetry_warning": false,
+      "expected_XtX_bits": [
+        "4692093338126385152",
+        "0",
+        "4692839561206274458",
+        "0",
+        "4692093338126385152",
+        "0",
+        "4692839561206274458",
+        "0",
+        "4692093338126385152"
+      ],
+      "safe_public_input": false
+    }
+  ]
+}

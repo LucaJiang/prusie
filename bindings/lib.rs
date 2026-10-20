@@ -83,6 +83,10 @@ fn fit<'py>(
             }
         };
     }
+    if options.contains("component_prior_variance")? {
+        control.component_prior_variance =
+            Some(vector_option(options, "component_prior_variance")?);
+    }
     optional!("track_level", track);
     optional!("criterion", criterion);
     optional!("alpha_tol", alpha_tol);

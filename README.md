@@ -4,11 +4,17 @@
   <a href="docs/assets/logos/logo_title.jpeg"><img src="docs/assets/logos/prusie-banner-1792.jpg" alt="prusie — Python and Rust software for SuSiE fine-mapping" width="960"></a>
 </p>
 
-prusie is a fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for
+prusie is a Rust implementation of SuSiE and SuSiE-RSS fine-mapping for
 Python. It fits association summary statistics and linkage disequilibrium (LD),
 or sufficient statistics, and returns posterior inclusion probabilities (PIPs)
-and credible sets. Numerical comparisons with susieR 0.16.6 show agreement to
+and credible sets. The recorded source snapshot agrees with susieR 0.16.6 to
 within 1e-5 in PIP across the 200 GWAS and eQTL analyses described below.
+
+The current unreleased defaults favor reference-oriented computation; the
+recorded speed and memory measurements do not benchmark these changed defaults.
+Known weak-component cases still exceed 1e-5, so universal R agreement is not
+established. See [computational compatibility](docs/model.md#computational-compatibility)
+for the current qualification and experimental math options.
 
 ## Installation
 

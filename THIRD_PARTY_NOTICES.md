@@ -197,7 +197,7 @@ authorization of the copyright holder.
 | Dataset | Source | Terms |
 | --- | --- | --- |
 | `src/prusie/data/convergence` | [susieR FinemappingConvergence](https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData) | BSD-3-Clause, susieR notice above; synthetic response with real-genotype-derived sufficient statistics |
-| `examples/data` | [coloc 6.0.3 toy fixture](https://github.com/chr1swallace/coloc/tree/8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45), Chris Wallace and contributors | Upstream declares “GPL” without a version; the supplied `LICENSE.GPL-3` and provenance are retained |
+| `tests/fixtures/susier_regression` | [coloc 6.0.3 toy fixture](https://github.com/chr1swallace/coloc/tree/8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45), Chris Wallace and contributors | Upstream declares “GPL” without a version; the supplied `LICENSE.GPL-3` and provenance are retained |
 | `src/prusie/data/toy` | Independently generated prusie toy data, Copyright (c) 2026 Wenxin Jiang | GPL-3.0-or-later; see LICENSE |
 
 ## Documentation assets

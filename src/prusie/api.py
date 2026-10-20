@@ -8,8 +8,11 @@ native IBSS solver and assembles a :class:`~prusie.result.SusieResult`.
 from __future__ import annotations
 
 import math
+import os
 import warnings as warning_module
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
+from types import MappingProxyType
 from typing import Any
 
 import numpy as np
@@ -39,7 +42,22 @@ def _vector(value: ArrayLike, name: str, size: int | None = None) -> NDArray[np.
     return np.ascontiguousarray(native_array(array))
 
 
-def _matrix(
+def _summary_vector(value, name, collected=None):
+    array = np.asarray(value, dtype=np.float64)
+    if array.ndim != 1 or array.size == 0:
+        raise ValueError(f"{name} must be a nonempty one-dimensional array")
+    if np.any(np.isinf(array)):
+        raise ValueError(f"{name} must not contain infinite values")
+    missing = np.isnan(array)
+    if np.any(missing):
+        array = array.copy()
+        array[missing] = 0.0
+        if name == "Xty":
+            _warn("NA values in Xty are replaced with 0.", collected)
+    return np.ascontiguousarray(native_array(array))
+
+
+def _validated_matrix(
     value: ArrayLike,
     name: str,
     size: int,
@@ -47,19 +65,35 @@ def _matrix(
     correlation=False,
     scale=1.0,
     rss_scale=None,
-) -> NDArray[np.float64]:
+) -> tuple[NDArray[np.float64], bool]:
     array = np.asarray(value, dtype=np.float64)
     if array.shape != (size, size):
         raise ValueError(f"{name} must have shape ({size}, {size})")
     array = native_array(array)
     # Finite, symmetry and diagonal checks run natively without p × p temporaries.
     if rss_scale is None:
-        _native.validate_matrix(array, name, correlation, scale)
+        symmetric = _native.validate_matrix(array, name, correlation, scale)
     else:
-        _native.validate_rss_matrix(array, rss_scale)
+        symmetric = _native.validate_rss_matrix(array, rss_scale)
     # native_array has already ensured alignment and element-compatible strides;
     # any copy made here is C-ordered, matching the public input orientation.
-    return np.ascontiguousarray(array)
+    return np.ascontiguousarray(array), symmetric
+
+
+def _symmetrize_matrix(array, name, scale=1.0, collected=None):
+    if collected is None:
+        collected = []
+    _warn(f"{name} is not symmetric; using ({name} + t({name}))/2.", collected)
+    with np.errstate(over="ignore", invalid="ignore"):
+        working = array if scale == 1.0 else array * scale
+        repaired = (working + working.T) / 2
+    _native.validate_matrix(repaired, name)
+    return np.ascontiguousarray(repaired)
+
+
+def _matrix(value, name, size, *, correlation=False):
+    array, symmetric = _validated_matrix(value, name, size, correlation=correlation)
+    return array if symmetric else _symmetrize_matrix(array, name)
 
 
 def _scalar(value: float, name: str, *, lower: float = 0.0, strict: bool = False) -> float:
@@ -235,8 +269,8 @@ def _susie_suff_stat(
     Parameters
     ----------
     XtX : array_like, shape (p, p)
-        Centered predictor crossproduct XᵀX for p variants. Must be finite and
-        symmetric; converted to float64.
+        Centered predictor crossproduct XᵀX for p variants, converted to float64.
+        Must be finite. Asymmetric input is warned about and averaged internally.
     Xty : array_like, shape (p,)
         Centered predictor-response crossproduct Xᵀy, in the order of XtX.
     yty : float
@@ -252,9 +286,10 @@ def _susie_suff_stat(
     L : int, default 10
         Maximum number of single effects. The number fitted is min(L, q), where
         q counts the variants plus the optional null column.
-    scaled_prior_variance : float, default 0.2
-        Initial prior effect variance V (σ₀²) divided by yᵀy/(n - 1). Must not
-        exceed one when ``standardize=True``.
+    scaled_prior_variance : float or array_like, default 0.2
+        Initial prior effect variance V (σ₀²) divided by yᵀy/(n - 1).
+        A nonnegative scalar or a length-L nonnegative vector; values above
+        one are allowed, including when ``standardize=True``.
     residual_variance : float, optional
         Initial residual variance σ², or its fixed value when it is not
         estimated. Defaults to yᵀy/(n - 1).
@@ -288,13 +323,12 @@ def _susie_suff_stat(
     max_iter : int, default 100
         Maximum number of iterative Bayesian stepwise selection (IBSS) sweeps.
     s_init : SusieResult or mapping, optional
-        Initial posterior state for the same data. Variant IDs, allele
-        metadata, working scales, null column and data signature must agree.
-        The source must have an available input signature (fit with
-        ``retain_data=True``). New inputs are validated and hashed.
-        A mapping needs ``alpha``, ``mu``, ``mu2``, ``variant_ids``,
-        ``scales``, ``null_index`` and ``data_signature``; ``V`` and
-        ``sigma2`` are optional. The first min(L, L_init) components are
+        Working-coordinate posterior state; may initialize a new data set.
+        A mapping needs ``alpha``, ``mu`` and ``mu2``. Supplied variant IDs,
+        allele metadata, working scales and null layout must agree, but a
+        retained-data signature is not required. ``V`` and ``sigma2`` are
+        optional. An initial state with more components increases effective L.
+        Existing components are
         used and any further components start at the prior; fitted products
         are recomputed from the state.
     coverage : float or None, default 0.95
@@ -373,7 +407,9 @@ def _susie_suff_stat(
     entry with prior N(0, V_ℓ) at a location drawn from π. IBSS updates the L
     single effects in sequence on the working statistics D⁻¹XᵀXD⁻¹ and
     D⁻¹Xᵀy, where D = diag(d). The Gaussian updates follow susieR 0.16.6.
-    Nonfinite or asymmetric inputs raise an error; they are not repaired.
+    As in the dense numeric susieR path, exact off-diagonal inequality triggers
+    a warning and internal replacement by (XtX + XtXᵀ)/2. Nonfinite inputs or
+    averaging overflow raise an error. Caller arrays are never modified.
     ``mu`` and ``mu2`` are on the working predictor scale; ``coef`` returns
     posterior mean effects on the input scale. CS purity uses correlations
     derived from the complete XtX submatrix of each set.
@@ -398,45 +434,71 @@ def _susie_suff_stat(
     ):
         if requested:
             raise NotImplementedError(f"{name} is not implemented")
+    collected = []
     n = _scalar(n, "n", lower=1.0, strict=True)
-    yty = _scalar(yty, "yty", strict=True)
-    Xty = _vector(Xty, "Xty")
+    for name, value in (
+        ("standardize", standardize),
+        ("estimate_prior_variance", estimate_prior_variance),
+        ("estimate_residual_variance", estimate_residual_variance),
+        ("check_input", check_input),
+        ("check_prior", check_prior),
+        ("retain_data", retain_data),
+        ("verbose", verbose),
+    ):
+        if not isinstance(value, (bool, np.bool_)):
+            raise TypeError(f"{name} must be a boolean")
+    yty = _scalar(yty, "yty")
+    Xty = _vector(Xty, "Xty") if check_input else _summary_vector(Xty, "Xty", collected)
     m = Xty.size
     if _rss_matrix_validated:
         # Only susie_rss sets this flag, after validating every raw and scaled
         # matrix entry; direct susie_suff_stat calls always validate XtX here.
         assert isinstance(XtX, np.ndarray) and XtX.shape == (m, m) and XtX.dtype == np.float64
     else:
-        XtX = _matrix(XtX, "XtX", m, scale=_rss_matrix_scale)
+        XtX, symmetric = _validated_matrix(XtX, "XtX", m, scale=_rss_matrix_scale)
+        if not symmetric:
+            XtX = _symmetrize_matrix(XtX, "XtX", _rss_matrix_scale, collected)
+            _rss_matrix_scale = 1.0
     ids, metadata = _metadata(variant_ids, variant_metadata, m)
     L, max_iter = _integer(L, "L"), _integer(max_iter, "max_iter")
-    tol = _scalar(tol, "tol")
-    prior_tol = _scalar(prior_tol, "prior_tol")
+    tol = _scalar(1e-4 if tol is None else tol, "tol")
+    if np.ndim(prior_tol) != 0 or np.isnan(float(prior_tol)) or float(prior_tol) < 0:
+        raise ValueError("prior_tol must be a nonnegative scalar")
+    prior_tol = float(prior_tol)
     r_tol = _scalar(r_tol, "r_tol")
-    check_null_threshold = _scalar(check_null_threshold, "check_null_threshold")
-    scaled_prior_variance = _scalar(scaled_prior_variance, "scaled_prior_variance")
-    if standardize and scaled_prior_variance > 1:
-        raise ValueError("scaled_prior_variance must be <= 1 when standardize=True")
+    check_null_threshold = _scalar(check_null_threshold, "check_null_threshold", lower=-np.inf)
+    if np.ndim(scaled_prior_variance) == 0:
+        scaled_prior_variance = _scalar(scaled_prior_variance, "scaled_prior_variance")
+    else:
+        scaled_prior_variance = _vector(scaled_prior_variance, "scaled_prior_variance", L)
+        if np.any(scaled_prior_variance < 0):
+            raise ValueError("scaled_prior_variance must be nonnegative")
+        scaled_prior_variance = scaled_prior_variance.tolist()
+    if yty == 0 and (np.any(Xty != 0) or residual_variance is None or estimate_residual_variance):
+        raise ValueError("yty=0 requires Xty=0 and a fixed positive residual_variance")
     sigma2 = (
         yty / (n - 1)
         if residual_variance is None
         else _scalar(residual_variance, "residual_variance", strict=True)
     )
-    if estimate_prior_method not in ("optim", "EM", "simple"):
+    if estimate_prior_variance and estimate_prior_method not in ("optim", "EM", "simple"):
         raise ValueError("estimate_prior_method must be 'optim', 'EM', or 'simple'")
     for name, value in (("coverage", coverage), ("min_abs_corr", min_abs_corr)):
-        if value is not None and (not np.isfinite(value) or not 0 < value <= 1):
-            if name == "min_abs_corr" and value == 0:
-                continue
-            raise ValueError(f"{name} must be in (0, 1] (min_abs_corr also allows 0)")
+        if value is not None and (not np.isfinite(value) or not 0 <= value <= 1):
+            raise ValueError(f"{name} must be in [0, 1]")
     if n_purity is not None:
-        n_purity = _integer(n_purity, "n_purity")
-    collected = []
+        if (
+            isinstance(n_purity, (bool, np.bool_))
+            or not np.isscalar(n_purity)
+            or not np.isfinite(n_purity)
+        ):
+            raise ValueError("n_purity must be a finite number or None")
+        n_purity = int(np.floor(n_purity))
     qc: dict[str, Any] = {
         "matrix_symmetric": True,
         "psd_checked": bool(check_input),
         "input_columns": m,
-        "input_missing_policy": "error",
+        "input_missing_policy": "susieR_zero_z_and_Xty",
         "variant_ids_are_positional": variant_ids is None,
     }
     if check_input:
@@ -444,12 +506,17 @@ def _susie_suff_stat(
             XtX if _rss_matrix_scale == 1.0 else XtX * _rss_matrix_scale
         )
         qc["minimum_eigenvalue"] = float(eigenvalues[0])
-        if eigenvalues[0] < -r_tol:
+        if eigenvalues[0] < 0 and eigenvalues[0] <= -r_tol:
             raise ValueError("XtX is not positive semidefinite")
-        basis = eigenvectors[:, eigenvalues > np.finfo(float).eps]
-        projection_error = float(np.linalg.norm(Xty - basis @ (basis.T @ Xty)))
-        qc["projection_residual_norm"] = projection_error
-        if projection_error > 1e-8 * max(1.0, np.linalg.norm(Xty)):
+        low = eigenvectors[:, eigenvalues <= np.finfo(float).eps]
+        magnitude = float(np.max(np.abs(Xty)))
+        fraction = 0.0
+        if magnitude > 0 and low.shape[1]:
+            normalized = Xty / magnitude
+            coefficients = low.T @ normalized
+            fraction = float(np.sum(coefficients**2) / np.sum(normalized**2))
+        qc["projection_squared_fraction"] = fraction
+        if fraction > np.finfo(float).eps:
             _warn("Xty does not lie in the nonzero eigenspace of XtX", collected)
     weights = (
         np.full(m, 1.0 / m)
@@ -458,7 +525,7 @@ def _susie_suff_stat(
     )
     if np.any(weights < 0) or not np.isfinite(weights.sum()) or weights.sum() <= 0:
         raise ValueError("prior_weights must be nonnegative with a finite positive sum")
-    null_weight = _scalar(null_weight, "null_weight")
+    null_weight = _scalar(0.0 if null_weight is None else null_weight, "null_weight")
     if null_weight >= 1:
         raise ValueError("null_weight must be < 1")
     null_index = m if null_weight > 0 else None
@@ -470,6 +537,7 @@ def _susie_suff_stat(
     # susieR 0.16.6 normalizes default and supplied weights alike.
     weights /= math.fsum(weights)
     p = len(Xty)
+    effective_L = min(L, p)
     means = np.full(p, np.nan) if X_colmeans is None else np.asarray(X_colmeans, dtype=float)
     if means.ndim == 0:
         means = np.full(p, means)
@@ -488,7 +556,8 @@ def _susie_suff_stat(
     # and division determine the rounding of every entry; keep both.
     inverse_scales = 1.0 / scales
     matrix_operator = (
-        getattr(_native, "MATRIX_OPERATOR_VERSION", 0) == 1
+        os.environ.get("PRUSIE_MATRIX_MATH") == "optimized"
+        and getattr(_native, "MATRIX_OPERATOR_VERSION", 0) == 1
         and np.isfinite(_rss_matrix_scale)
         and _rss_matrix_scale > 0
         and bool(np.all(np.isfinite(scales) & (scales > 0)))
@@ -513,8 +582,8 @@ def _susie_suff_stat(
             np.divide(crossproduct, scales[:, None], out=crossproduct)
     crossresponse = np.ascontiguousarray(Xty / scales)
     options = dict(
-        l=min(L, p),
-        prior_variance=scaled_prior_variance * (yty / (n - 1)),
+        l=effective_L,
+        prior_variance=float(np.asarray(scaled_prior_variance).flat[0]) * (yty / (n - 1)),
         residual_variance=sigma2,
         prior_weights=weights,
         estimate_prior_variance=bool(estimate_prior_variance),
@@ -527,6 +596,10 @@ def _susie_suff_stat(
         prior_tol=prior_tol,
         null_index=null_index,
     )
+    if isinstance(scaled_prior_variance, list):
+        options["component_prior_variance"] = np.asarray(scaled_prior_variance[:effective_L]) * (
+            yty / (n - 1)
+        )
     if matrix_operator:
         options.update(
             matrix_global_scale=float(_rss_matrix_scale),
@@ -560,6 +633,22 @@ def _susie_suff_stat(
         )
         signature = prepared.signature
     if s_init is not None:
+        initial_alpha = (
+            s_init.alpha
+            if hasattr(s_init, "alpha")
+            else s_init.get("alpha")
+            if isinstance(s_init, Mapping)
+            else None
+        )
+        initial_shape = np.shape(initial_alpha)
+        if len(initial_shape) == 2 and initial_shape[0] > effective_L:
+            effective_L = initial_shape[0]
+            options["l"] = effective_L
+            prepared = replace(
+                prepared, options=MappingProxyType({**prepared.options, "l": effective_L})
+            )
+            prepared.__dict__["signature"] = signature
+            _warn(f"Requested L={L} is smaller than model_init; using L={effective_L}.", collected)
         options.update(
             initial_options(
                 s_init,
@@ -568,11 +657,11 @@ def _susie_suff_stat(
                 scales=scales,
                 null_index=null_index,
                 signature=signature,
-                L=min(L, p),
+                L=effective_L,
                 weights=weights,
                 estimate_prior_variance=bool(estimate_prior_variance),
                 estimate_residual_variance=bool(estimate_residual_variance),
-                prior_variance=options["prior_variance"],
+                prior_variance=options.get("component_prior_variance", options["prior_variance"]),
             )
         )
     if prepared is not None:
@@ -604,7 +693,7 @@ def _susie_suff_stat(
     )
     params = dict(
         L=L,
-        effective_L=min(L, p),
+        effective_L=effective_L,
         n=n,
         yty=yty,
         scaled_prior_variance=scaled_prior_variance,
@@ -729,7 +818,8 @@ def susie_rss(
         internal n = 2) and a warning is issued.
     bhat, shat : array_like, optional
         Marginal effect estimates and positive standard errors, used instead
-        of z (z = bhat/shat). ``shat`` may be a scalar.
+        of z (z = bhat/shat). ``shat`` may be a scalar; positive infinity
+        produces a zero z-score for a finite effect estimate.
     var_y : float, optional
         Positive sample variance of the phenotype. With known ``n``, sets
         yᵀy = (n - 1) var_y; with ``bhat`` and ``shat`` it also reconstructs
@@ -772,7 +862,7 @@ def susie_rss(
     ------
     ValueError
         Ambiguous or incomplete input, an invalid correlation matrix,
-        nonfinite values, or z² + n - 2 ≤ 0 for known n.
+        invalid summary values, or invalid parameter ranges.
     NotImplementedError
         ``verbose`` or a nonzero ``z_ld_weight`` is requested.
 
@@ -793,7 +883,12 @@ def susie_rss(
     and ``var_y``.
     When n is omitted, a supplied var_y is validated and recorded but does
     not enter the working statistics, and effects are on the noncentrality
-    scale. If R is an external reference panel, its agreement with the study
+    scale. For ordinary z/R input, symmetry is checked exactly on the working
+    XtX after scaling by n − 1 (or on R if n is omitted). Inequality triggers
+    a warning and internal averaging of XtX with its transpose, as in susieR's
+    dense numeric path. The bhat/shat/var_y route always averages its reconstructed
+    XtX. Nonfinite inputs and averaging overflow are rejected. Input arrays
+    remain unchanged. If R is an external reference panel, its agreement with the study
     LD is a modeling assumption that this function does not test.
 
     References
@@ -820,20 +915,22 @@ def susie_rss(
         se = (
             np.full(beta.size, shat, dtype=float)
             if np.ndim(shat) == 0
-            else _vector(shat, "shat", beta.size)
+            else np.asarray(shat, dtype=np.float64)
         )
-        if not np.all(np.isfinite(se)) or np.any(se <= 0):
-            raise ValueError("shat must be finite and strictly positive")
+        if se.shape != beta.shape:
+            raise ValueError(f"shat must have length {beta.size}")
+        if np.any(np.isnan(se)) or np.any(se <= 0):
+            raise ValueError("shat must be strictly positive without missing values")
         z = beta / se
-    z = _vector(z, "z")
+    z = _summary_vector(z, "z")
     prevalidated_scale = None
     if n is None:
         prevalidated_scale = 1.0
     elif not (has_effects and var_y is not None):
         n = _scalar(n, "n", lower=1.0, strict=True)
         prevalidated_scale = n - 1
-    R = _matrix(R, "R", len(z), correlation=True, rss_scale=prevalidated_scale)
     extra_warnings = []
+    R, symmetric = _validated_matrix(R, "R", len(z), rss_scale=prevalidated_scale)
     rss_matrix_scale = 1.0
     if var_y is not None:
         var_y = _scalar(var_y, "var_y", strict=True)
@@ -843,21 +940,18 @@ def susie_rss(
             extra_warnings,
         )
         XtX, Xty, yty, effective_n = R, z, 1.0, 2.0
-        if scaled_prior_variance != 0.2:
-            raise ValueError("Missing-n mode uses prior_variance, not scaled_prior_variance")
         effective_scaled_prior, effective_standardize = prior_variance, False
         scale_kind = "noncentrality"
     else:
         n = _scalar(n, "n", lower=1.0, strict=True)
-        denominator = z * z + n - 2
-        if np.any(denominator <= 0):
-            raise ValueError("Known-n PVE adjustment requires z²+n-2 > 0")
-        adj = (n - 1) / denominator
-        adjusted_z = np.sqrt(adj) * z
+        with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+            denominator = z * z + n - 2
+            adj = (n - 1) / denominator
+            adjusted_z = np.sqrt(adj) * z
         if has_effects and var_y is not None:
             diagonal = var_y * adj / (se * se)
             sd = np.sqrt(diagonal)
-            XtX = R * sd[:, None] * sd[None, :]
+            XtX = (R * sd[:, None]).T * sd[:, None]
             XtX = (XtX + XtX.T) / 2
             Xty = adjusted_z * np.sqrt(adj) * var_y / se
             effective_var_y, scale_kind = var_y, "original"
@@ -873,6 +967,9 @@ def susie_rss(
             scaled_prior_variance,
             standardize,
         )
+    if prevalidated_scale is not None and not symmetric:
+        XtX = _symmetrize_matrix(XtX, "XtX", rss_matrix_scale, extra_warnings)
+        rss_matrix_scale = 1.0
     if estimate_residual_variance:
         _warn(
             (

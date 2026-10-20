@@ -88,7 +88,8 @@ Investigate an objective anomaly or cycle before deciding to continue it.</p>
 Accepted attempts: 0 of 2
 </code></pre></div>
 
-<p>Refinement requires a converged baseline with retained inputs. It inherits the
+<p>Refinement requires a valid baseline with retained inputs, not necessarily a
+converged inner IBSS fit. It inherits the
 baseline's <strong>requested</strong> convergence configuration unless explicitly overridden;
 <code>search_config.inner_tol</code> separately sets the inner ELBO tolerance. A runtime
 alpha/PIP fallback after a NaN ELBO is recorded as the effective rule and
@@ -97,11 +98,11 @@ does not replace the original request for later calls.</p>
 prior weights to zero and fits from a cold start. It then restores the original
 prior and refits, starting from the excluded-variant solution. The saved search
 records call these steps A and B, respectively.</p>
-<p>Candidates are compared using the <strong>ELBO of the full model with the original
-prior</strong>, evaluated after zeroing components with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&lt;</mo><mrow><mi mathvariant="monospace">p</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">i</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">_</mi><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">V_\ell &lt; \mathtt{prior\_tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.2222em;"></span><span class="mord"><span class="mord mathtt">prior_tol</span></span></span></span></span></span>.
-Below, “ELBO” refers to this value; the iteration log stores the value before
-that finalization step. A candidate must be valid, finite and converged, and
-improve the ELBO by more than <code>absolute_tol</code>. An unsuccessful search does not
+<p>Candidates are compared using the <strong>last logged ELBO with the original
+prior</strong>, before final component trimming, as in pinned susieR. The recomputed
+post-trimming objective is retained only as a validity check and diagnostic.
+A candidate must be valid and finite, but need not have converged internally.
+It must improve the logged ELBO by more than <code>absolute_tol</code>. An unsuccessful search does not
 establish global optimality.</p>
 <h2 id="refinement-compared-with-susier">Refinement compared with susieR</h2>
 <p><code>refine=True</code> and <code>refine_fit</code> perform the same prusie search. The table compares
@@ -119,8 +120,8 @@ standard-fit R agreement alone does not validate refinement equivalence.</p>
 <tbody>
 <tr>
 <td>Excluded-variant fit (A)</td>
-<td>Cold fit; CS weights are zero with log weight −∞, enforcing hard exclusion</td>
-<td>Cold fit; zero CS weights enter the ordinary <code>log(pi + sqrt(eps))</code> convention, retaining small prior support</td>
+<td>Cold fit; zero CS weights use the ordinary <code>log(pi + sqrt(eps))</code> convention</td>
+<td>Same stabilized zero weights, not hard exclusion</td>
 </tr>
 <tr>
 <td>Refit under the original prior (B)</td>
@@ -129,27 +130,27 @@ standard-fit R agreement alone does not validate refinement equivalence.</p>
 </tr>
 <tr>
 <td>Candidate ELBO</td>
-<td>Full model after zeroing low-variance components; A's objective is diagnostic only</td>
-<td>Last logged ELBO returned by <code>susie_get_objective</code>; A's objective is not compared with the baseline</td>
+<td>Last logged ELBO; A's objective is diagnostic only</td>
+<td>Same</td>
 </tr>
 <tr>
 <td>Required absolute gain</td>
-<td>Strictly greater than <code>absolute_tol=1e-3</code></td>
+<td>Fit <code>tol</code> by default; explicit configs can override <code>absolute_tol</code></td>
 <td>Strictly greater than fit <code>tol</code>, default <code>1e-4</code></td>
 </tr>
 <tr>
 <td>Relative round stop</td>
-<td>Disabled (<code>relative_tol=None</code>); if set, accepted gain divided by <code>max(1, abs(incumbent objective))</code> is compared with it</td>
-<td>Absolute logged gain divided by <code>max(1, abs(new objective))</code> is compared with fit <code>tol</code></td>
+<td>By default, accepted gain divided by <code>max(1, abs(new objective))</code>, compared with fit <code>tol</code></td>
+<td>Same</td>
 </tr>
 <tr>
 <td>Convergence eligibility</td>
-<td>Baseline and both A/B fits must be converged; returned <code>converged</code> describes IBSS separately from search status</td>
-<td>No explicit baseline/A/B convergence eligibility test; the outer search overwrites <code>converged</code> with its own status</td>
+<td>No inner convergence requirement; outer status determines <code>converged</code> after an executed search, with inner status recorded separately</td>
+<td>No explicit baseline/A/B convergence eligibility test; the outer search overwrites <code>converged</code></td>
 </tr>
 <tr>
 <td>Search bound</td>
-<td><code>max_rounds=10</code>; optional candidate budget, unlimited by default</td>
+<td>100 rounds by default; optional explicit candidate budget</td>
 <td>100 outer rounds; no separate candidate budget</td>
 </tr>
 <tr>
@@ -159,8 +160,9 @@ standard-fit R agreement alone does not validate refinement equivalence.</p>
 </tr>
 </tbody>
 </table></div>
-<p>The prusie inner defaults are <code>max_iter=100</code> and <code>inner_tol=1e-4</code>, independent
-of the outer improvement threshold. susieR forwards the original fit settings.
+<p>Without an explicit <code>RefinementConfig</code>, both APIs forward the original fit's
+iteration budget and tolerance. An explicitly constructed config is a custom
+search and may intentionally override these settings; the example above does so.
 For exact definitions, see the
 <a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/refinement.py">prusie implementation</a>,
 <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/refinement.R">pinned R search</a>
@@ -275,8 +277,12 @@ reported separately and is not the default stopping condition.</p>
 <td>Use the explicitly requested posterior rule and record the nonfinite objective</td>
 </tr>
 <tr>
-<td>NaN ELBO in <code>joint</code> mode, or an infinite ELBO in any mode</td>
+<td>NaN ELBO in <code>joint</code> mode</td>
 <td>Stop with <code>numerical_failure</code> and <code>converged=False</code>, even before <code>min_iter</code></td>
+</tr>
+<tr>
+<td>Infinite computed ELBO in any mode</td>
+<td>Raise <code>ValueError</code>, as in the pinned R fitter</td>
 </tr>
 </tbody>
 </table></div>
@@ -312,19 +318,21 @@ B restores the original ordinary-prior convention.</p>
 input snapshots and scale metadata. Their content signature is computed once
 and reused by <code>continue_fit</code> and <code>refine_fit</code>. Ordinary unretained fits have
 <code>data_signature=None</code>; missing signatures never establish matching inputs.
-Set <code>retain_data=True</code> on the source fit before later continuation or use as
-<code>s_init</code>. Caller-array changes cannot alter the retained input identity.</p>
+Set <code>retain_data=True</code> before later continuation. New fits using <code>s_init</code> do not
+require an input signature. Caller-array changes cannot alter retained inputs.</p>
 <p><code>continue_fit</code> reuses the retained context and starts from the saved posterior.
 <code>save_analysis</code> preserves an available signature, but excludes the private
 snapshot. To warm-start a restored retained-origin result, pass the original
 inputs and <code>s_init=restored</code> to the fitting interface; new inputs are fully
-validated and hashed. A restored ordinary result has no usable input identity.</p>
-<p>Variant IDs/order, supplied allele labels, null layout, working scales and data
-signature must agree. An explicit state mapping needs <code>alpha</code>, <code>mu</code>, <code>mu2</code>,
-<code>variant_ids</code>, <code>scales</code>, <code>null_index</code>, <code>data_signature</code> and available allele
-metadata. Optional V and sigma2 are checked; estimated parameters can resume
-while fixed parameters follow the requested model. Growing L keeps existing
-components and adds zero-mean prior rows; shrinking L keeps the first L.
+validated. A restored ordinary result can initialize a new fit, but cannot
+continue without the original private retained context.</p>
+<p>Supplied variant IDs/order, allele labels, null layout and working scales must
+agree. An explicit working-coordinate mapping needs <code>alpha</code>, <code>mu</code>, <code>mu2</code>;
+identity metadata is optional but checked when provided. Optional V and sigma2
+are checked; supplied V initializes even fixed-prior fits, while sigma2 is
+resumed only when residual variance is estimated, as in R. Growing L prioritizes
+credible-set components and adds uniform, zero-mean rows; requesting fewer
+effects than the state retains its existing effect count.
 Fitted crossproducts are rebuilt from the current posterior and inputs; old KL,
 BF and fitted caches are not reused as current values.</p>
 <p>Requested controls are read from <code>params['convergence']</code>, with labelled recovery

@@ -2,6 +2,15 @@
 
 ## 0.2.4.dev2 — stopping and prior validation (unreleased)
 
+- Align supported Gaussian preprocessing with pinned susieR: warned working-XtX
+  symmetrization, missing-summary repair, vector/large initial priors and boundary checks.
+- Use reference-oriented scalar SER and materialized-matrix defaults; retain
+  regrouped/vector and factorized/compressed math only as experimental opt-ins.
+- Align default refinement initialization, objective comparison and stopping;
+  allow new-data warm starts while preserving retained-data integrity for continuation.
+- Keep known weak-component PIP failures explicit; do not relax activity or
+  convergence thresholds or claim a newly measured speed/memory improvement.
+
 - Simplified repository tooling, CI and license notices; no change to the package API or results.
 - Continue finite-ELBO fits through repeated alpha/PIP diagnostics until the
   ELBO criterion or iteration limit is reached. Respect minimum iterations

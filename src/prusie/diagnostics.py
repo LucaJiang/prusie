@@ -32,9 +32,7 @@ class ConvergenceConfig:
     In 'elbo' mode with a finite objective, repeated states at lags 2 to
     ``cycle_lag`` are recorded as diagnostics only. In 'alpha_pip' and
     'joint' modes they may stop the fit with ``converged=False``, returning
-    the current posterior. A NaN objective in 'elbo' mode switches, after
-    ``min_iter``, to the 'alpha_pip' rule, and the switch is recorded.
-    'joint' cannot be satisfied with a NaN objective. An infinite objective
+    the current posterior. Every nonfinite objective (NaN or either infinity)
     stops the fit as a numerical failure in every mode, even before
     ``min_iter``. The first finite objective, which follows the initial −∞
     value, is never used for a convergence check.

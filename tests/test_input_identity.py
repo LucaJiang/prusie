@@ -182,19 +182,22 @@ def test_missing_or_malformed_signatures_fail_closed(invalid, side):
         evaluate_objective(fit)
     assert refine_fit(fit).refinement_stop_reason == "invalid_baseline_state"
     if side != "snapshot":
-        with pytest.raises(ValueError, match="signature"):
-            susie_rss(**values, s_init=fit)
+        initialized = susie_rss(**values, s_init=fit)
+        assert initialized.data_signature == initialized._prepared.signature
+        assert isinstance(initialized.data_signature, str) and len(initialized.data_signature) == 64
 
 
-def test_unretained_source_cannot_supply_a_warm_start():
+def test_unretained_source_can_initialize_a_new_fit_but_not_continue():
     values = inputs()
     fit = susie_rss(**values)
-    with pytest.raises(ValueError, match="unavailable.*retain_data=True"):
-        susie_rss(**values, s_init=fit)
+    initialized = susie_rss(**values, s_init=fit)
+    assert np.isfinite(initialized.pip).all()
+    with pytest.raises(ValueError, match="retained data"):
+        continue_fit(fit)
 
 
 @pytest.mark.parametrize("change", ["matrix", "response", "allele"])
-def test_new_inputs_require_a_matching_content_signature(change):
+def test_new_inputs_allow_new_content_but_reject_incompatible_alleles(change):
     values = inputs()
     fit = susie_rss(**values, retain_data=True)
     if change == "matrix":
@@ -203,5 +206,10 @@ def test_new_inputs_require_a_matching_content_signature(change):
         values["z"][0] += 0.125
     else:
         values["variant_metadata"]["effect_allele"][0] = "G"
-    with pytest.raises(ValueError, match="signature"):
-        susie_rss(**values, s_init=fit)
+    if change == "allele":
+        with pytest.raises(ValueError, match="allele"):
+            susie_rss(**values, s_init=fit)
+    else:
+        initialized = susie_rss(**values, s_init=fit)
+        assert np.isfinite(initialized.pip).all()
+        assert initialized.data_signature != fit.data_signature

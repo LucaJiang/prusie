@@ -191,8 +191,9 @@ def initial_options(
     estimate_residual_variance,
     reset_variances=False,
     prior_variance=0.2,
+    require_same_data=False,
 ):
-    """Validate an initial posterior for the same data and return native options.
+    """Validate a working-coordinate initial posterior and return native options.
 
     The first min(L, L_init) effects are used; remaining rows start at the
     prior weights with zero moments.
@@ -209,22 +210,23 @@ def initial_options(
             scales=s_init.X_column_scale_factors,
             null_index=s_init.null_index,
             data_signature=s_init.data_signature,
+            sets=s_init.sets,
         )
     elif isinstance(s_init, Mapping):
         state = dict(s_init)
     else:
         raise TypeError("s_init must be a SusieResult or an explicit posterior-state mapping")
-    required = ("alpha", "mu", "mu2", "variant_ids", "scales", "null_index", "data_signature")
+    required = ("alpha", "mu", "mu2")
     missing = [k for k in required if k not in state]
     if missing:
-        raise ValueError("Initialization metadata required: " + ", ".join(missing))
-    if not np.array_equal(np.asarray(state["variant_ids"]), ids):
+        raise ValueError("Initialization fields required: " + ", ".join(missing))
+    if "variant_ids" in state and not np.array_equal(np.asarray(state["variant_ids"]), ids):
         raise ValueError("Initialization variant IDs/order differ")
-    if state["null_index"] != null_index:
+    if "null_index" in state and state["null_index"] != null_index:
         raise ValueError("Initialization null column differs")
-    if not np.array_equal(np.asarray(state["scales"]), scales):
+    if "scales" in state and not np.array_equal(np.asarray(state["scales"]), scales):
         raise ValueError("Initialization working scale differs")
-    if not _matching_data_signatures(state["data_signature"], signature):
+    if require_same_data and not _matching_data_signatures(state.get("data_signature"), signature):
         raise ValueError(
             "Initialization data/allele/scale signature differs or is unavailable; "
             "fit the source with retain_data=True; no implicit transformation"
@@ -232,7 +234,7 @@ def initial_options(
     for key in ("effect_allele", "other_allele"):
         a = state.get("variant_metadata", {}).get(key)
         b = metadata.get(key)
-        if (a is None) != (b is None) or (a is not None and not np.array_equal(a, b)):
+        if a is not None and (b is None or not np.array_equal(a, b)):
             raise ValueError("Initialization allele metadata differs or is missing")
     arrays = [np.asarray(state[k], dtype=float) for k in ("alpha", "mu", "mu2")]
     alpha, mu, mu2 = arrays
@@ -247,24 +249,35 @@ def initial_options(
     if (
         any(not np.isfinite(a).all() for a in arrays)
         or (alpha < 0).any()
+        or (alpha > 1).any()
         or not np.allclose(alpha.sum(1), 1, atol=1e-8, rtol=0)
     ):
-        raise ValueError("Initialization alpha must be finite, nonnegative and normalized")
+        raise ValueError("Initialization alpha must be finite, within [0, 1] and normalized")
     if np.any(mu2 < mu * mu):
         raise ValueError("Initialization mu2 must be >= mu squared")
+    if not np.any(mu) and not np.any(state.get("V", 0)):
+        return {}
+    order = np.arange(len(alpha))
+    if len(alpha) < L:
+        leading = np.asarray((state.get("sets") or {}).get("cs_index", []), dtype=int)
+        if leading.ndim != 1 or np.any((leading < 0) | (leading >= len(alpha))):
+            raise ValueError("Initialization credible-set component indices are invalid")
+        order = np.concatenate((leading, np.setdiff1d(order, leading)))
+        if len(np.unique(order)) != len(alpha):
+            raise ValueError("Initialization credible-set component indices are duplicated")
     keep = min(L, len(alpha))
     out = {}
     for name, a in zip(("alpha", "mu", "mu2"), arrays, strict=True):
-        target = np.broadcast_to(weights, (L, p)).copy() if name == "alpha" else np.zeros((L, p))
-        target[:keep] = a[:keep]
+        target = np.full((L, p), 1.0 / p) if name == "alpha" else np.zeros((L, p))
+        target[:keep] = a[order[:keep]]
         out["init_" + name] = target.ravel()
     if "V" in state:
         v = np.asarray(state["V"], dtype=float)
         if v.shape != (len(alpha),) or not np.isfinite(v).all() or (v < 0).any():
             raise ValueError("Initialization V invalid")
-        if not reset_variances and estimate_prior_variance:
+        if not reset_variances:
             resized = np.full(L, prior_variance)
-            resized[:keep] = v[:keep]
+            resized[:keep] = v[order[:keep]]
             out["init_V"] = resized
     if "sigma2" in state:
         v = float(state["sigma2"])
@@ -354,9 +367,9 @@ def evaluate_objective(fit, data=None, *, prior_weights=None, hard_exclusion=Fal
     ):
         raise ValueError("Fixed residual variance differs from original model")
     if not data.options["estimate_prior_variance"]:
-        expected_v = data.options["prior_variance"]
-        if expected_v < data.options["prior_tol"]:
-            expected_v = 0.0
+        expected_v = data.options.get("component_prior_variance", data.options["prior_variance"])
+        expected_v = np.asarray(expected_v)
+        expected_v = np.where(expected_v < data.options["prior_tol"], 0.0, expected_v)
         if np.any(expected_v != fit.V):
             raise ValueError("Fixed prior variance differs from original model")
     a, m, m2 = fit.alpha, fit.mu, fit.mu2
@@ -366,7 +379,12 @@ def evaluate_objective(fit, data=None, *, prior_weights=None, hard_exclusion=Fal
         or fit.sigma2 <= 0
     ):
         raise ValueError("Nonfinite or invalid posterior state")
-    if (a < 0).any() or not np.allclose(a.sum(1), 1, atol=1e-8, rtol=0) or (m2 < m * m).any():
+    if (
+        (a < 0).any()
+        or (a > 1).any()
+        or not np.allclose(a.sum(1), 1, atol=1e-8, rtol=0)
+        or (m2 < m * m).any()
+    ):
         raise ValueError("Inconsistent posterior probabilities or moments")
     q = data.working_matrix()
     d = np.diag(q)
@@ -498,7 +516,8 @@ def _run(
                 estimate_prior_variance=o["estimate_prior_variance"],
                 estimate_residual_variance=o["estimate_residual_variance"],
                 reset_variances=reset_variances,
-                prior_variance=o["prior_variance"],
+                prior_variance=o.get("component_prior_variance", o["prior_variance"]),
+                require_same_data=True,
             )
         )
     native = _native.fit(data.matrix, data.response, data.yty, data.n, o)
@@ -611,7 +630,7 @@ def _brief(fit, objective=None):
         pip=fit.pip.copy(),
         cs=[c.copy() for c in fit.sets["cs"]],
         cs_index=fit.sets["cs_index"].copy(),
-        ibss_converged=fit.converged,
+        ibss_converged=fit.convergence.get("inner_ibss_converged", fit.converged),
         elbo=objective,
         logged_elbo=float(fit.elbo[-1]),
         niter=fit.niter,
@@ -625,19 +644,21 @@ def refine_fit(fit, config=None, *, convergence=None):
 
     Each round fixes the incumbent and its credible sets. For each set, stage
     A refits from a cold start with the prior weights of its members set to
-    zero (hard exclusion). Stage B restores the original prior and refits
+    zero, retaining the ordinary square-root-epsilon prior stabilization.
+    Stage B restores the original prior and refits
     from the stage-A posterior, with V and σ² reset to their initial values.
-    Candidates whose two fits both converge are compared by the objective of
-    :func:`evaluate_objective` under the original prior, and the best one
+    Candidates are compared by their last logged ELBO under the original
+    prior, without requiring inner IBSS convergence, and the best one
     replaces the incumbent if it improves the objective by more than
     ``config.absolute_tol``.
 
     Parameters
     ----------
     fit : SusieResult
-        Converged result fitted with ``retain_data=True``.
+        Result fitted with ``retain_data=True``.
     config : RefinementConfig, optional
-        Search settings; defaults to ``RefinementConfig()``.
+        Search settings. When omitted, use 100 rounds and inherit the fit's
+        iteration budget and tolerance, including both improvement thresholds.
     convergence : ConvergenceConfig, optional
         Stopping rule of the candidate fits; defaults to the rule requested
         for ``fit``.
@@ -653,10 +674,18 @@ def refine_fit(fit, config=None, *, convergence=None):
     -----
     An outcome without accepted candidates indicates that no improvement was
     found by this search, not that the solution is a global optimum.
-    Unsupported inputs (no retained data, an unconverged or invalid baseline)
+    Unsupported inputs (no retained data or an invalid baseline)
     are reported in ``refinement['status']`` rather than raised.
     """
-    config = config or RefinementConfig()
+    if config is None:
+        tolerance = float(fit.params["tol"])
+        config = RefinementConfig(
+            max_rounds=100,
+            absolute_tol=tolerance,
+            relative_tol=tolerance,
+            max_iter=int(fit.params["max_iter"]),
+            inner_tol=tolerance,
+        )
     config.validate()
     control, resolution = resolve_convergence(fit, convergence)
     best = _copy_result(fit)
@@ -672,11 +701,18 @@ def refine_fit(fit, config=None, *, convergence=None):
         config=vars(config).copy(),
         requested_convergence=control.options(),
         convergence_resolution=resolution,
-        objective_definition="post_loop_post_sigma2_update_and_trim; original prior",
+        objective_definition="last_logged_elbo; original prior; susieR refinement",
     )
     best.refinement = record
 
     def finish(status, reason):
+        outer_converged = status in ("completed", "no_improvement", "no_cs")
+        if status not in ("unsupported", "all_candidates_failed") and not (
+            status in ("budget_exhausted", "no_cs") and record["total_fits"] == 0
+        ):
+            best.convergence["inner_ibss_converged"] = best.converged
+            best.convergence["refinement_converged"] = outer_converged
+            best.converged = outer_converged
         record.update(
             status=status, stop_reason=reason, after=_brief(best, record.get("best_objective"))
         )
@@ -689,19 +725,25 @@ def refine_fit(fit, config=None, *, convergence=None):
 
     if data is None:
         return finish("unsupported", "prepared_data_unavailable")
-    if not fit.converged:
-        return finish("unsupported", "baseline_ibss_not_converged")
     try:
-        current = evaluate_objective(best, data)["elbo"]
+        evaluate_objective(best, data)
+        current = float(best.elbo[-1])
+        if not math.isfinite(current):
+            raise ValueError("Baseline objective is not finite")
     except ValueError as e:
         record["error"] = str(e)
         return finish("unsupported", "invalid_baseline_state")
     record["best_objective"] = current
     record["before"] = _brief(fit, current)
-    requested_tracking = fit.params.get("track_fit", False)
     attempts = 0
     accepted_any = False
     original = np.array(data.options["prior_weights"], copy=True)
+    if fit.null_index is not None:
+        null_weight = fit.params["null_weight"]
+        original /= 1 - null_weight
+        original *= 1 - null_weight
+        original[fit.null_index] = null_weight
+        original /= math.fsum(original)
     for round_id in range(1, config.max_rounds + 1):
         if not best.sets["cs"]:
             return finish("no_cs", "no_retained_credible_sets")
@@ -730,10 +772,10 @@ def refine_fit(fit, config=None, *, convergence=None):
             history.append(row)
             weights = original.copy()
             weights[members] = 0.0
-            if weights.sum() <= 0:
+            support = np.delete(weights, fit.null_index) if fit.null_index is not None else weights
+            if support.sum() <= 0:
                 row["reason"] = "no_prior_support"
-                failures += 1
-                continue
+                break
             weights /= math.fsum(weights)
             attempts += 1
             o = dict(data.options)
@@ -741,7 +783,7 @@ def refine_fit(fit, config=None, *, convergence=None):
                 max_iter=config.max_iter,
                 tol=config.inner_tol,
                 prior_weights=weights,
-                hard_exclusion=True,
+                hard_exclusion=False,
             )
             stages = {}
             proposal = None
@@ -765,7 +807,7 @@ def refine_fit(fit, config=None, *, convergence=None):
                             restored,
                             initial=proposal,
                             reset_variances=True,
-                            track_fit=requested_tracking,
+                            track_fit=False,
                             convergence=control,
                         )
                     # Both stages share one resolved stopping rule; passing it on
@@ -790,16 +832,12 @@ def refine_fit(fit, config=None, *, convergence=None):
                     row["stages"] = stages
                     if phase == "A":
                         stage["excluded_max_alpha"] = float(np.max(candidate.alpha[:, members]))
-                        if stage["excluded_max_alpha"] != 0:
-                            raise ValueError("Hard exclusion failed")
-                    stage["objective"] = evaluate_objective(
-                        candidate,
-                        data,
-                        prior_weights=weights if phase == "A" else original,
-                        hard_exclusion=phase == "A",
+                    stage["post_trim_objective"] = evaluate_objective(
+                        candidate, data, prior_weights=weights if phase == "A" else original
                     )["elbo"]
-                    if not candidate.converged:
-                        raise ValueError("inner_ibss_not_converged")
+                    stage["objective"] = float(candidate.elbo[-1])
+                    if not math.isfinite(stage["objective"]):
+                        raise ValueError("Candidate objective is not finite")
                     if phase == "A":
                         proposal = candidate
                     else:
@@ -809,8 +847,7 @@ def refine_fit(fit, config=None, *, convergence=None):
                         row.update(
                             objective=obj,
                             improvement=obj - incumbent_obj,
-                            relative_improvement=(obj - incumbent_obj)
-                            / max(1.0, abs(incumbent_obj)),
+                            relative_improvement=(obj - incumbent_obj) / max(1.0, abs(obj)),
                         )
                         candidates.append((obj, candidate, row))
                         evaluated += 1
@@ -836,7 +873,7 @@ def refine_fit(fit, config=None, *, convergence=None):
                     return finish("budget_exhausted", "candidate_budget")
                 if (
                     config.relative_tol is not None
-                    and (obj - incumbent_obj) / max(1.0, abs(incumbent_obj)) < config.relative_tol
+                    and (obj - incumbent_obj) / max(1.0, abs(obj)) < config.relative_tol
                 ):
                     return finish("completed", "relative_improvement_threshold")
                 continue
@@ -845,7 +882,7 @@ def refine_fit(fit, config=None, *, convergence=None):
         if budget_exhausted:
             return finish("budget_exhausted", "candidate_budget")
         if not evaluated and failures:
-            return finish("all_candidates_failed", "no_valid_converged_candidate")
+            return finish("all_candidates_failed", "no_valid_finite_candidate")
         return finish(
             "completed" if accepted_any else "no_improvement", "no_improvement_above_absolute_tol"
         )

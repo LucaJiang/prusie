@@ -1,4 +1,4 @@
-"""Exercise public calls and prove both checksum and numerical failure paths."""
+"""Exercise frozen susieR regressions and checksum/numerical failure paths."""
 
 import hashlib
 import json
@@ -12,8 +12,8 @@ import numpy as np
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNNER = ROOT / "tests/reference_coloc.py"
-DATA = ROOT / "examples/data"
+RUNNER = ROOT / "tests/reference_susier.py"
+DATA = ROOT / "tests/fixtures/susier_regression"
 
 
 def run_example(tmp_path, data=DATA, case=None):
@@ -66,7 +66,7 @@ def update_checksum(data, filename):
     (data / "checksums.json").write_text(json.dumps(checks))
 
 
-def test_all_public_examples_without_R(tmp_path):
+def test_all_regression_cases_without_R(tmp_path):
     result, record = run_example(tmp_path)
     assert result.returncode == 0, result.stdout + result.stderr
     assert record["passed"] and len(record["cases"]) == 7

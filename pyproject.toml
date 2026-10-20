@@ -32,14 +32,12 @@ features = ["extension-module", "vector-math"]
 exclude = [
     "dist/**", "target/**", "**/*.orig", "**/*.rej", "**/__pycache__/**",
     ".pytest_cache/**", ".ruff_cache/**", "docs/**", ".github/**", "tools/**",
-    "dev/**", "examples/quickstart.py", "examples/post_analysis.py",
-    "examples/check_example.py", "examples/README.md", "requirements-dev.lock",
+    "dev/**", "examples/**", "requirements-dev.lock",
 ]
 include = [
     {path = "rust-toolchain.toml", format = "sdist"},
     {path = "rustfmt.toml", format = "sdist"},
     {path = "tests/**", format = "sdist"},
-    {path = "examples/data/**", format = "sdist"},
     {path = "CITATION.cff", format = "sdist"},
     {path = "CHANGELOG.md", format = "sdist"},
 ]
@@ -51,7 +49,7 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py310"
 # Preserve upstream copies, frozen evidence, and generated documentation byte for byte.
-extend-exclude = ["tools/vendor", "docs", "examples/data", "src/prusie/data", "tests/data", "tests/fixtures"]
+extend-exclude = ["tools/vendor", "docs", "src/prusie/data", "tests/data", "tests/fixtures"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
@@ -60,7 +58,7 @@ allowed-confusables = ["α", "γ", "σ", "ℓ", "×", "−"]
 
 [tool.ruff.lint.per-file-ignores]
 # Mathematical signs and Greek labels are intentional output, not identifiers.
-"tests/reference_coloc.py" = ["RUF001"]
+"tests/reference_susier.py" = ["RUF001"]
 "src/prusie/_style.py" = ["RUF001"]
 "src/prusie/plots.py" = ["RUF001"]
 # Preserve the mathematical minus sign in the convergence criterion documentation.

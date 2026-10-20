@@ -1,0 +1,1113 @@
+{
+  "reference": "susieR 0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2",
+  "boundary_reference_sha256": "d972ffee1ccacf601605b5d1383d579e11a1efeccbf6a55c0ae2d451ef635a7c",
+  "new_oracle_sha256": "befe42227bbdc96311584b0ac4a5eeaa60e8ff385e0fe9fa2808e2d29d428443",
+  "namespace_functions_checked": 448,
+  "boundaries": [
+    {
+      "id": "baseline_rss",
+      "api": "rss",
+      "args": {},
+      "pip": [
+        0.9813554465471219,
+        0.018644553452878077
+      ]
+    },
+    {
+      "id": "n_two_zero_z",
+      "api": "rss",
+      "args": {
+        "n": 2
+      },
+      "pip": [
+        0.520821285372743,
+        0.47917871462725703
+      ]
+    },
+    {
+      "id": "n_missing",
+      "api": "rss",
+      "args": {
+        "n": null
+      },
+      "pip": [
+        0.9880117158748744,
+        0.011988284125125648
+      ]
+    },
+    {
+      "id": "nonunit_diagonal",
+      "api": "rss",
+      "args": {
+        "R": [
+          [
+            0.9,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "pip": [
+        0.9879164880156281,
+        0.012083511984371964
+      ]
+    },
+    {
+      "id": "beta_shat_scalar",
+      "api": "rss",
+      "args": {
+        "z": null,
+        "bhat": [
+          0.3,
+          0
+        ],
+        "shat": 0.1
+      },
+      "pip": [
+        0.9813554465471219,
+        0.018644553452878077
+      ]
+    },
+    {
+      "id": "zero_prior_weight",
+      "api": "rss",
+      "args": {
+        "prior_weights": [
+          0,
+          1
+        ]
+      },
+      "pip": [
+        7.843214935299159e-07,
+        0.9999992156785066
+      ]
+    },
+    {
+      "id": "null_weight",
+      "api": "rss",
+      "args": {
+        "null_weight": 0.2
+      },
+      "pip": [
+        0.9413335900580604,
+        0.017884187119538653
+      ]
+    },
+    {
+      "id": "max_iter_one",
+      "api": "rss",
+      "args": {
+        "max_iter": 1
+      },
+      "pip": [
+        0.9813554465471219,
+        0.018644553452878077
+      ]
+    },
+    {
+      "id": "check_prior_off",
+      "api": "rss",
+      "args": {
+        "scaled_prior_variance": 1,
+        "z": [
+          0.001,
+          0.001
+        ],
+        "check_prior": false
+      },
+      "pip": [
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "missing_n_ignored_scale",
+      "api": "rss",
+      "args": {
+        "n": null,
+        "scaled_prior_variance": 0.3
+      },
+      "pip": [
+        0.9880117158748744,
+        0.011988284125125648
+      ]
+    },
+    {
+      "id": "refine_nonconverged",
+      "api": "rss",
+      "args": {
+        "refine": true,
+        "max_iter": 1
+      },
+      "pip": [
+        0.9813554465471219,
+        0.018644553452878077
+      ]
+    },
+    {
+      "id": "em_threshold_bypass",
+      "api": "rss",
+      "args": {
+        "estimate_prior_method": "EM",
+        "estimate_prior_variance": true,
+        "check_null_threshold": 1000000.0
+      },
+      "pip": [
+        0.9747040499921288,
+        0.025295950007871215
+      ]
+    },
+    {
+      "id": "optim_null",
+      "api": "rss",
+      "args": {
+        "estimate_prior_method": "optim",
+        "estimate_prior_variance": true,
+        "z": [
+          0,
+          0
+        ],
+        "check_prior": false
+      },
+      "pip": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "simple_null",
+      "api": "rss",
+      "args": {
+        "estimate_prior_method": "simple",
+        "estimate_prior_variance": true,
+        "z": [
+          0,
+          0
+        ],
+        "check_prior": false
+      },
+      "pip": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "negative_null_threshold",
+      "api": "rss",
+      "args": {
+        "check_null_threshold": -0.1
+      },
+      "pip": [
+        0.9813554465471219,
+        0.018644553452878077
+      ]
+    },
+    {
+      "id": "rss_symmetry_0",
+      "api": "rss",
+      "args": {
+        "R": [
+          [
+            1,
+            0.0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "n": 100000
+      },
+      "pip": [
+        0.9890066993736868,
+        0.010993300626313096
+      ]
+    },
+    {
+      "id": "rss_symmetry_5e-13",
+      "api": "rss",
+      "args": {
+        "R": [
+          [
+            1,
+            5e-13
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "n": 100000
+      },
+      "pip": [
+        0.9890066993736868,
+        0.010993300626313096
+      ]
+    },
+    {
+      "id": "rss_symmetry_1e-12",
+      "api": "rss",
+      "args": {
+        "R": [
+          [
+            1,
+            1e-12
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "n": 100000
+      },
+      "pip": [
+        0.9890066993736868,
+        0.010993300626313096
+      ]
+    },
+    {
+      "id": "rss_symmetry_2e-12",
+      "api": "rss",
+      "args": {
+        "R": [
+          [
+            1,
+            2e-12
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "n": 100000
+      },
+      "pip": [
+        0.9890066993736868,
+        0.010993300626313096
+      ]
+    },
+    {
+      "id": "rss_symmetry_low_n",
+      "api": "rss",
+      "args": {
+        "R": [
+          [
+            1,
+            5e-13
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "n": 1.01
+      },
+      "pip": [
+        0.500002803382,
+        0.4999971966179999
+      ]
+    },
+    {
+      "id": "rss_symmetry_beta_original",
+      "api": "rss",
+      "args": {
+        "z": null,
+        "bhat": [
+          0.3,
+          0
+        ],
+        "shat": 0.1,
+        "var_y": 1,
+        "R": [
+          [
+            1,
+            5e-13
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "pip": [
+        0.9813554465471219,
+        0.018644553452878188
+      ]
+    },
+    {
+      "id": "baseline_ss",
+      "api": "ss",
+      "args": {},
+      "pip": [
+        0.9869640549803573,
+        0.01303594501964278
+      ]
+    },
+    {
+      "id": "ss_xty_nan",
+      "api": "ss",
+      "args": {
+        "Xty": [
+          "NaN",
+          0
+        ]
+      },
+      "pip": [
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "ss_asymmetry",
+      "api": "ss",
+      "args": {
+        "XtX": [
+          [
+            99,
+            1e-06
+          ],
+          [
+            0,
+            99
+          ]
+        ]
+      },
+      "pip": [
+        0.9869640549803573,
+        0.01303594501964278
+      ]
+    },
+    {
+      "id": "ss_scaled_asymmetry",
+      "api": "ss",
+      "args": {
+        "XtX": [
+          [
+            100000,
+            5e-08
+          ],
+          [
+            0,
+            100000
+          ]
+        ]
+      },
+      "pip": [
+        0.5010709118239639,
+        0.4989290881760361
+      ]
+    },
+    {
+      "id": "ss_zero_yty",
+      "api": "ss",
+      "args": {
+        "yty": 0,
+        "Xty": [
+          0,
+          0
+        ]
+      },
+      "pip": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "ss_large_scaled_prior",
+      "api": "ss",
+      "args": {
+        "scaled_prior_variance": 1.2
+      },
+      "pip": [
+        0.989094390967497,
+        0.010905609032503039
+      ]
+    },
+    {
+      "id": "ss_vector_prior",
+      "api": "ss",
+      "args": {
+        "L": 2,
+        "scaled_prior_variance": [
+          0.2,
+          0.3
+        ]
+      },
+      "pip": [
+        0.9895648545684306,
+        0.49379287830548935
+      ]
+    },
+    {
+      "id": "ss_inf_prior_tol",
+      "api": "ss",
+      "args": {
+        "prior_tol": "Inf"
+      },
+      "pip": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "ss_zero_diagonal",
+      "api": "ss",
+      "args": {
+        "XtX": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            99
+          ]
+        ],
+        "Xty": [
+          0,
+          3
+        ]
+      },
+      "pip": [
+        0.813696027110257,
+        0.18630397288974287
+      ]
+    },
+    {
+      "id": "ss_invalid_joint_gram",
+      "api": "ss",
+      "args": {
+        "XtX": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "Xty": [
+          100,
+          100
+        ],
+        "yty": 1,
+        "check_input": true
+      },
+      "pip": [
+        0.5,
+        0.5
+      ]
+    },
+    {
+      "id": "ss_projection_tiny",
+      "api": "ss",
+      "args": {
+        "XtX": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "Xty": [
+          1e-10,
+          1e-12
+        ],
+        "check_input": true
+      },
+      "pip": [
+        0.17983341921194707,
+        0.8201665807880528
+      ]
+    },
+    {
+      "id": "ss_coverage0",
+      "api": "ss",
+      "args": {
+        "coverage": 0
+      },
+      "pip": [
+        0.9869640549803573,
+        0.01303594501964278
+      ]
+    },
+    {
+      "id": "ss_purity_none",
+      "api": "ss",
+      "args": {
+        "min_abs_corr": null
+      },
+      "pip": [
+        0.9869640549803573,
+        0.01303594501964278
+      ]
+    },
+    {
+      "id": "ss_npurity_negative",
+      "api": "ss",
+      "args": {
+        "n_purity": -1
+      },
+      "pip": [
+        0.9869640549803573,
+        0.01303594501964278
+      ]
+    },
+    {
+      "id": "psd_boundary_0.124",
+      "api": "ss",
+      "args": {
+        "XtX": [
+          [
+            1,
+            1.124
+          ],
+          [
+            1.124,
+            1
+          ]
+        ],
+        "Xty": [
+          0,
+          0
+        ],
+        "yty": 10,
+        "standardize": false,
+        "scaled_prior_variance": 0,
+        "check_input": true,
+        "r_tol": 0.125
+      },
+      "pip": [
+        0,
+        0
+      ]
+    }
+  ],
+  "refinement": [
+    {
+      "id": "refine_default",
+      "api": "rss",
+      "args": {
+        "z": [
+          5,
+          3,
+          0.1
+        ],
+        "R": [
+          [
+            1,
+            0.6,
+            0
+          ],
+          [
+            0.6,
+            1,
+            0.1
+          ],
+          [
+            0,
+            0.1,
+            1
+          ]
+        ],
+        "n": 200,
+        "L": 2,
+        "tol": 0.001,
+        "max_iter": 100,
+        "refine": true
+      },
+      "initial_state": null,
+      "reference": {
+        "pip": [
+          0.998508160857953,
+          0.00146816057604149,
+          2.36785660050476e-05
+        ],
+        "alpha": [
+          [
+            0.998508160857953,
+            0.00146816057604146,
+            2.36785660050917e-05
+          ],
+          [
+            0.333333333333333,
+            0.333333333333333,
+            0.333333333333333
+          ]
+        ],
+        "V": [
+          0.106979091681876,
+          0
+        ],
+        "sigma2": 1,
+        "niter": 2,
+        "converged": true,
+        "elbo": [
+          -275.282622018999,
+          -275.282622018999
+        ],
+        "cs": {
+          "L1": 0
+        },
+        "messages": []
+      }
+    },
+    {
+      "id": "refine_short_inner",
+      "api": "rss",
+      "args": {
+        "z": [
+          5,
+          3,
+          0.1
+        ],
+        "R": [
+          [
+            1,
+            0.6,
+            0
+          ],
+          [
+            0.6,
+            1,
+            0.1
+          ],
+          [
+            0,
+            0.1,
+            1
+          ]
+        ],
+        "n": 200,
+        "L": 2,
+        "tol": 0.001,
+        "max_iter": 1,
+        "refine": true
+      },
+      "initial_state": null,
+      "reference": {
+        "pip": [
+          0.998508160857953,
+          0.00146816057604149,
+          2.36785660050476e-05
+        ],
+        "alpha": [
+          [
+            0.998508160857953,
+            0.00146816057604146,
+            2.36785660050917e-05
+          ],
+          [
+            0.333333333333333,
+            0.333333333333333,
+            0.333333333333333
+          ]
+        ],
+        "V": [
+          0.106979091681876,
+          0
+        ],
+        "sigma2": 1,
+        "niter": 1,
+        "converged": true,
+        "elbo": -275.282622018999,
+        "cs": {
+          "L1": 0
+        },
+        "messages": [
+          "WARNING: IBSS algorithm did not converge in 1 iterations!\n",
+          "IBSS algorithm did not converge in 1 iterations!",
+          "WARNING: IBSS algorithm did not converge in 1 iterations!\n",
+          "IBSS algorithm did not converge in 1 iterations!",
+          "WARNING: IBSS algorithm did not converge in 1 iterations!\n",
+          "IBSS algorithm did not converge in 1 iterations!"
+        ]
+      }
+    },
+    {
+      "id": "refine_null_weights",
+      "api": "rss",
+      "args": {
+        "z": [
+          5,
+          3,
+          0.1
+        ],
+        "R": [
+          [
+            1,
+            0.6,
+            0
+          ],
+          [
+            0.6,
+            1,
+            0.1
+          ],
+          [
+            0,
+            0.1,
+            1
+          ]
+        ],
+        "n": 200,
+        "L": 2,
+        "tol": 0.001,
+        "max_iter": 3,
+        "refine": true,
+        "null_weight": 0.1,
+        "prior_weights": [
+          0.7,
+          0,
+          0.3
+        ]
+      },
+      "initial_state": null,
+      "reference": {
+        "pip": [
+          0.9999721565485,
+          3.47670781053466e-11,
+          1.01581991651667e-05
+        ],
+        "alpha": [
+          [
+            0.9999721565485,
+            3.47670640412467e-11,
+            1.01581991652138e-05,
+            1.76852175682508e-05
+          ],
+          [
+            0.63,
+            0,
+            0.27,
+            0.1
+          ]
+        ],
+        "V": [
+          0.107081363505044,
+          0
+        ],
+        "sigma2": 1,
+        "niter": 2,
+        "converged": true,
+        "elbo": [
+          -274.647510092347,
+          -274.647510092347
+        ],
+        "cs": {
+          "L1": 0
+        },
+        "messages": []
+      }
+    },
+    {
+      "id": "refine_no_sets",
+      "api": "rss",
+      "args": {
+        "z": [
+          5,
+          3,
+          0.1
+        ],
+        "R": [
+          [
+            1,
+            0.6,
+            0
+          ],
+          [
+            0.6,
+            1,
+            0.1
+          ],
+          [
+            0,
+            0.1,
+            1
+          ]
+        ],
+        "n": 200,
+        "L": 2,
+        "tol": 0.001,
+        "max_iter": 1,
+        "refine": true,
+        "coverage": null
+      },
+      "initial_state": null,
+      "reference": {
+        "pip": [
+          0.998508160857953,
+          0.00146816057604149,
+          2.36785660050476e-05
+        ],
+        "alpha": [
+          [
+            0.998508160857953,
+            0.00146816057604146,
+            2.36785660050917e-05
+          ],
+          [
+            0.333333333333333,
+            0.333333333333333,
+            0.333333333333333
+          ]
+        ],
+        "V": [
+          0.106979091681876,
+          0
+        ],
+        "sigma2": 1,
+        "niter": 1,
+        "converged": false,
+        "elbo": -275.282622018999,
+        "cs": [],
+        "messages": [
+          "WARNING: IBSS algorithm did not converge in 1 iterations!\n",
+          "IBSS algorithm did not converge in 1 iterations!"
+        ]
+      }
+    },
+    {
+      "id": "refine_all_support",
+      "api": "rss",
+      "args": {
+        "z": [
+          5
+        ],
+        "R": [
+          [
+            1
+          ]
+        ],
+        "n": 100,
+        "L": 1,
+        "refine": true
+      },
+      "initial_state": null,
+      "reference": {
+        "pip": 1,
+        "alpha": [
+          [
+            1
+          ]
+        ],
+        "V": 0.19315102280452,
+        "sigma2": 1,
+        "niter": 2,
+        "converged": true,
+        "elbo": [
+          -133.333783355625,
+          -133.333783355625
+        ],
+        "cs": {
+          "L1": 0
+        },
+        "messages": "HINT: Setting max_iter = 50 for the SuSiE RSS model because slow convergence is often a sign of unstable summary-statistics fitting. To disable this message, explicitly set max_iter = 50 or another value in the susie_rss() call.\n"
+      }
+    },
+    {
+      "id": "effects_covariance",
+      "api": "rss",
+      "args": {
+        "bhat": [
+          0.3,
+          0
+        ],
+        "shat": [
+          0.1,
+          0.2
+        ],
+        "R": [
+          [
+            2,
+            0.1
+          ],
+          [
+            0.1,
+            0.7
+          ]
+        ],
+        "var_y": 1.4,
+        "n": 100,
+        "L": 1,
+        "estimate_prior_variance": false
+      },
+      "initial_state": null,
+      "reference": {
+        "pip": [
+          0.878861237028522,
+          0.121138762971478
+        ],
+        "alpha": [
+          [
+            0.878861237028522,
+            0.121138762971478
+          ]
+        ],
+        "V": 0.28,
+        "sigma2": 1.4,
+        "niter": 2,
+        "converged": true,
+        "elbo": [
+          -158.317270206597,
+          -158.317270206597
+        ],
+        "cs": [],
+        "messages": "HINT: Setting max_iter = 50 for the SuSiE RSS model because slow convergence is often a sign of unstable summary-statistics fitting. To disable this message, explicitly set max_iter = 50 or another value in the susie_rss() call.\n"
+      }
+    },
+    {
+      "id": "refine_unnormalized_null",
+      "api": "rss",
+      "args": {
+        "z": [
+          5,
+          3,
+          0.1
+        ],
+        "R": [
+          [
+            1,
+            0.6,
+            0
+          ],
+          [
+            0.6,
+            1,
+            0.1
+          ],
+          [
+            0,
+            0.1,
+            1
+          ]
+        ],
+        "n": 200,
+        "L": 2,
+        "tol": 0.001,
+        "max_iter": 3,
+        "refine": true,
+        "null_weight": 0.1,
+        "prior_weights": [
+          7,
+          0,
+          3
+        ]
+      },
+      "initial_state": null,
+      "reference": {
+        "pip": [
+          0.999988073055123,
+          3.16385806442554e-11,
+          1.01583611940015e-05
+        ],
+        "alpha": [
+          [
+            0.999988073055123,
+            3.16385326316457e-11,
+            1.01583611939694e-05,
+            1.76855204469146e-06
+          ],
+          [
+            0.692307692307692,
+            0,
+            0.296703296703297,
+            0.010989010989011
+          ]
+        ],
+        "V": [
+          0.107081355333964,
+          0
+        ],
+        "sigma2": 1,
+        "niter": 2,
+        "converged": true,
+        "elbo": [
+          -274.553215331828,
+          -274.553215331828
+        ],
+        "cs": {
+          "L1": 0
+        },
+        "messages": []
+      }
+    },
+    {
+      "id": "warm_fixed_V",
+      "api": "rss",
+      "args": {
+        "z": [
+          2,
+          0
+        ],
+        "R": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "n": 100,
+        "L": 1,
+        "max_iter": 100,
+        "residual_variance": 1,
+        "estimate_prior_variance": false
+      },
+      "initial_state": {
+        "alpha": [
+          [
+            0.8,
+            0.2
+          ]
+        ],
+        "mu": [
+          [
+            0.1,
+            0
+          ]
+        ],
+        "mu2": [
+          [
+            0.02,
+            0.01
+          ]
+        ],
+        "V": [
+          0.3
+        ]
+      },
+      "reference": {
+        "pip": [
+          0.867375017758588,
+          0.132624982241412
+        ],
+        "alpha": [
+          [
+            0.867375017758588,
+            0.132624982241412
+          ]
+        ],
+        "V": 0.3,
+        "sigma2": 1,
+        "niter": 2,
+        "converged": true,
+        "elbo": [
+          -141.778901982573,
+          -141.778901982573
+        ],
+        "cs": [],
+        "messages": []
+      }
+    }
+  ]
+}

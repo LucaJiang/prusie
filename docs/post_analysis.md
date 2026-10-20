@@ -69,7 +69,8 @@ Search: no_improvement
 Accepted attempts: 0 of 2
 ```
 
-Refinement requires a converged baseline with retained inputs. It inherits the
+Refinement requires a valid baseline with retained inputs, not necessarily a
+converged inner IBSS fit. It inherits the
 baseline's **requested** convergence configuration unless explicitly overridden;
 `search_config.inner_tol` separately sets the inner ELBO tolerance. A runtime
 alpha/PIP fallback after a NaN ELBO is recorded as the effective rule and
@@ -80,11 +81,11 @@ prior weights to zero and fits from a cold start. It then restores the original
 prior and refits, starting from the excluded-variant solution. The saved search
 records call these steps A and B, respectively.
 
-Candidates are compared using the **ELBO of the full model with the original
-prior**, evaluated after zeroing components with $V_\ell < \mathtt{prior\_tol}$.
-Below, “ELBO” refers to this value; the iteration log stores the value before
-that finalization step. A candidate must be valid, finite and converged, and
-improve the ELBO by more than `absolute_tol`. An unsuccessful search does not
+Candidates are compared using the **last logged ELBO with the original
+prior**, before final component trimming, as in pinned susieR. The recomputed
+post-trimming objective is retained only as a validity check and diagnostic.
+A candidate must be valid and finite, but need not have converged internally.
+It must improve the logged ELBO by more than `absolute_tol`. An unsuccessful search does not
 establish global optimality.
 
 ## Refinement compared with susieR
@@ -96,17 +97,18 @@ standard-fit R agreement alone does not validate refinement equivalence.
 
 | Step or control | prusie | Pinned susieR |
 | --- | --- | --- |
-| Excluded-variant fit (A) | Cold fit; CS weights are zero with log weight −∞, enforcing hard exclusion | Cold fit; zero CS weights enter the ordinary `log(pi + sqrt(eps))` convention, retaining small prior support |
+| Excluded-variant fit (A) | Cold fit; zero CS weights use the ordinary `log(pi + sqrt(eps))` convention | Same stabilized zero weights, not hard exclusion |
 | Refit under the original prior (B) | Restore original prior and model; initialize alpha/mu/mu2 from A, reset V and sigma² to original initialization | Restore original prior; initialize alpha/mu/mu2 from A with ordinary variance initialization |
-| Candidate ELBO | Full model after zeroing low-variance components; A's objective is diagnostic only | Last logged ELBO returned by `susie_get_objective`; A's objective is not compared with the baseline |
-| Required absolute gain | Strictly greater than `absolute_tol=1e-3` | Strictly greater than fit `tol`, default `1e-4` |
-| Relative round stop | Disabled (`relative_tol=None`); if set, accepted gain divided by `max(1, abs(incumbent objective))` is compared with it | Absolute logged gain divided by `max(1, abs(new objective))` is compared with fit `tol` |
-| Convergence eligibility | Baseline and both A/B fits must be converged; returned `converged` describes IBSS separately from search status | No explicit baseline/A/B convergence eligibility test; the outer search overwrites `converged` with its own status |
-| Search bound | `max_rounds=10`; optional candidate budget, unlimited by default | 100 outer rounds; no separate candidate budget |
+| Candidate ELBO | Last logged ELBO; A's objective is diagnostic only | Same |
+| Required absolute gain | Fit `tol` by default; explicit configs can override `absolute_tol` | Strictly greater than fit `tol`, default `1e-4` |
+| Relative round stop | By default, accepted gain divided by `max(1, abs(new objective))`, compared with fit `tol` | Same |
+| Convergence eligibility | No inner convergence requirement; outer status determines `converged` after an executed search, with inner status recorded separately | No explicit baseline/A/B convergence eligibility test; the outer search overwrites `converged` |
+| Search bound | 100 rounds by default; optional explicit candidate budget | 100 outer rounds; no separate candidate budget |
 | Invalid or failed candidate | Record failed stage, reject candidate, retain incumbent; require a finite recomputed objective | No per-candidate exception recovery or nonfinite filtering in `run_refine`; underlying fitting/objective errors propagate |
 
-The prusie inner defaults are `max_iter=100` and `inner_tol=1e-4`, independent
-of the outer improvement threshold. susieR forwards the original fit settings.
+Without an explicit `RefinementConfig`, both APIs forward the original fit's
+iteration budget and tolerance. An explicitly constructed config is a custom
+search and may intentionally override these settings; the example above does so.
 For exact definitions, see the
 [prusie implementation](https://github.com/LucaJiang/prusie/blob/main/src/prusie/refinement.py),
 [pinned R search](https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/refinement.R)
@@ -196,7 +198,8 @@ reported separately and is not the default stopping condition.
 | Finite ELBO with a negative or nonfinite increment | Does not satisfy the ELBO condition; no alpha/PIP fallback |
 | NaN ELBO in `elbo` mode | At or after `min_iter`, use the labelled `alpha_pip_nonfinite_fallback` rule; success requires both posterior distances |
 | NaN ELBO in `alpha_pip` mode | Use the explicitly requested posterior rule and record the nonfinite objective |
-| NaN ELBO in `joint` mode, or an infinite ELBO in any mode | Stop with `numerical_failure` and `converged=False`, even before `min_iter` |
+| NaN ELBO in `joint` mode | Stop with `numerical_failure` and `converged=False`, even before `min_iter` |
+| Infinite computed ELBO in any mode | Raise `ValueError`, as in the pinned R fitter |
 
 A nonfinite objective cannot win refinement selection. `criterion_satisfied`
 means the effective rule succeeded; inspect that rule and objective validity
@@ -238,21 +241,23 @@ Tracking, initialization, refinement or `retain_data=True` retains validated
 input snapshots and scale metadata. Their content signature is computed once
 and reused by `continue_fit` and `refine_fit`. Ordinary unretained fits have
 `data_signature=None`; missing signatures never establish matching inputs.
-Set `retain_data=True` on the source fit before later continuation or use as
-`s_init`. Caller-array changes cannot alter the retained input identity.
+Set `retain_data=True` before later continuation. New fits using `s_init` do not
+require an input signature. Caller-array changes cannot alter retained inputs.
 
 `continue_fit` reuses the retained context and starts from the saved posterior.
 `save_analysis` preserves an available signature, but excludes the private
 snapshot. To warm-start a restored retained-origin result, pass the original
 inputs and `s_init=restored` to the fitting interface; new inputs are fully
-validated and hashed. A restored ordinary result has no usable input identity.
+validated. A restored ordinary result can initialize a new fit, but cannot
+continue without the original private retained context.
 
-Variant IDs/order, supplied allele labels, null layout, working scales and data
-signature must agree. An explicit state mapping needs `alpha`, `mu`, `mu2`,
-`variant_ids`, `scales`, `null_index`, `data_signature` and available allele
-metadata. Optional V and sigma2 are checked; estimated parameters can resume
-while fixed parameters follow the requested model. Growing L keeps existing
-components and adds zero-mean prior rows; shrinking L keeps the first L.
+Supplied variant IDs/order, allele labels, null layout and working scales must
+agree. An explicit working-coordinate mapping needs `alpha`, `mu`, `mu2`;
+identity metadata is optional but checked when provided. Optional V and sigma2
+are checked; supplied V initializes even fixed-prior fits, while sigma2 is
+resumed only when residual variance is estimated, as in R. Growing L prioritizes
+credible-set components and adds uniform, zero-mean rows; requesting fewer
+effects than the state retains its existing effect count.
 Fitted crossproducts are rebuilt from the current posterior and inputs; old KL,
 BF and fitted caches are not reused as current values.
 

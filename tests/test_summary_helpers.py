@@ -31,6 +31,10 @@ def test_complete_matrix_validation(size, defect):
         before = value.copy()
         if defect == "none":
             np.testing.assert_array_equal(_matrix(value, "XtX", size), value)
+        elif defect == "asymmetric":
+            with pytest.warns(RuntimeWarning, match="XtX is not symmetric"):
+                actual = _matrix(value, "XtX", size)
+            np.testing.assert_array_equal(actual, (value + value.T) / 2)
         else:
             with pytest.raises(ValueError):
                 _matrix(value, "XtX", size)
@@ -38,17 +42,13 @@ def test_complete_matrix_validation(size, defect):
 
 
 @pytest.mark.parametrize("scale", [0.0, 1e-12, 1.0, 1e8, 1e200])
-def test_symmetry_tolerance_matches_full_numpy(scale):
+def test_dense_symmetry_has_no_numerical_tolerance(scale):
     tolerance = 1e-12 + 1e-12 * abs(scale)
     for delta in [0.0, tolerance * 0.999, tolerance, tolerance * 1.001, 2 * tolerance]:
         a = np.array([[1.0, scale], [scale + delta, 1.0]])
-        expected = np.allclose(a, a.T, rtol=1e-12, atol=1e-12)
+        expected = np.array_equal(a, a.T)
         for value in layouts(a):
-            if expected:
-                _native.validate_matrix(value, "XtX")
-            else:
-                with pytest.raises(ValueError, match=r"symmetric"):
-                    _native.validate_matrix(value, "XtX")
+            assert _native.validate_matrix(value, "XtX") == expected
 
 
 @pytest.mark.parametrize("scaled", [False, True])
@@ -131,6 +131,7 @@ def test_correlation_validation_exact_boundaries(diagonal, offdiag):
 def test_lazy_rss_matches_materialized_sufficient_statistics(
     n, options, monkeypatch, record_property, capability
 ):
+    monkeypatch.setenv("PRUSIE_MATRIX_MATH", "optimized")
     if capability and getattr(_native, "MATRIX_OPERATOR_VERSION", 0) != 1:
         pytest.skip("This native build has no actual matrix operator")
     monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", capability, raising=False)
@@ -196,11 +197,15 @@ def test_lazy_rss_matches_materialized_sufficient_statistics(
             )
 
 
-def test_scaled_xtx_symmetry_is_rechecked_in_rss():
+def test_rss_symmetry_warns_after_scalar_scaling():
     r = np.array([[1.0, 9e-13], [0.0, 1.0]])
-    _matrix(r, "R", 2, correlation=True)
-    with pytest.raises(ValueError, match=r"symmetric"):
-        susie_rss([2.0, 1.0], r, 100, L=1)
+    with pytest.warns(RuntimeWarning, match="R is not symmetric"):
+        _matrix(r, "R", 2, correlation=True)
+    before = r.tobytes()
+    with pytest.warns(RuntimeWarning, match="XtX is not symmetric"):
+        fit = susie_rss([2.0, 1.0], r, 100, L=1)
+    assert np.isfinite(fit.pip).all()
+    assert r.tobytes() == before
 
 
 def test_scaled_xtx_overflow_is_rejected_in_rss():
@@ -230,7 +235,7 @@ def test_signed_zero_pair_is_valid_and_unmodified():
 @pytest.mark.parametrize(
     "defect", ["none", "close_symmetry", "bad_symmetry", "range", "nonfinite", "diagonal"]
 )
-def test_combined_rss_checks_match_two_complete_checks(scale, defect):
+def test_combined_rss_returns_exact_scaled_symmetry_and_checks_safety(scale, defect):
     a = np.eye(40)
     if defect == "close_symmetry":
         a[1, 9] = 9e-13
@@ -247,15 +252,11 @@ def test_combined_rss_checks_match_two_complete_checks(scale, defect):
             scaled = matrix * scale
             valid = (
                 np.isfinite(matrix).all()
-                and np.allclose(matrix, matrix.T, atol=1e-12, rtol=1e-12)
-                and np.allclose(matrix.diagonal(), 1.0, atol=1e-8, rtol=0)
-                and not np.any(np.abs(matrix) > 1.0 + 1e-8)
                 and np.isfinite(scaled).all()
-                and np.allclose(scaled, scaled.T, atol=1e-12, rtol=1e-12)
                 and not np.any(scaled.diagonal() < 0)
             )
         if valid:
-            _native.validate_rss_matrix(matrix, scale)
+            assert _native.validate_rss_matrix(matrix, scale) == np.array_equal(scaled, scaled.T)
         else:
             with pytest.raises(ValueError):
                 _native.validate_rss_matrix(matrix, scale)
@@ -379,10 +380,7 @@ def test_conservative_scale_bound_keeps_complete_numpy_gate(scale, pair):
             valid = (
                 np.isfinite(matrix).all()
                 and np.allclose(matrix, matrix.T, atol=1e-12, rtol=1e-12)
-                and np.allclose(matrix.diagonal(), 1.0, atol=1e-8, rtol=0)
-                and not np.any(np.abs(matrix) > 1.0 + 1e-8)
                 and np.isfinite(scaled).all()
-                and np.allclose(scaled, scaled.T, atol=1e-12, rtol=1e-12)
                 and not np.any(scaled.diagonal() < 0)
             )
         before = matrix.view(np.uint64).copy()

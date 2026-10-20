@@ -1,4 +1,4 @@
-"""Valid byte-layout inputs are normalized before typed native views exist."""
+"""Array layout, logical matrix validation and caller ownership regressions."""
 
 import numpy as np
 import pytest
@@ -146,3 +146,81 @@ def test_disabled_and_singleton_cs_do_not_convert_unused_correlation():
 
     assert credible_sets(np.ones((1, 1)), [1.0], Unused(), coverage=None)["cs"] == []
     assert len(credible_sets(np.ones((1, 1)), [1.0], Unused())["cs"]) == 1
+
+
+@pytest.mark.parametrize(
+    "mode", ["known_n", "missing_n", "effects", "null", "EM", "fixed", "residual"]
+)
+def test_layout_and_no_mutation(mode):
+    R = np.array([[1.0, 0.2, -0.1], [0.2, 1.0, 0.3], [-0.1, 0.3, 1.0]])
+    z = np.array([3.0, -1.0, 0.2])
+    original = R.copy()
+    original_z = z.copy()
+    args = dict(z=z, R=R, n=100, L=2, check_prior=False)
+    if mode == "missing_n":
+        args["n"] = None
+    if mode == "effects":
+        args.pop("z")
+        args.update(bhat=z * 0.1, shat=0.1, var_y=1.3)
+    if mode == "null":
+        args["null_weight"] = 0.2
+    if mode == "EM":
+        args["estimate_prior_method"] = "EM"
+    if mode == "fixed":
+        args["estimate_prior_variance"] = False
+    if mode == "residual":
+        args["estimate_residual_variance"] = True
+    a = susie_rss(**args)
+    args["R"] = np.asfortranarray(R)
+    b = susie_rss(**args)
+    np.testing.assert_array_equal(a.pip, b.pip)
+    np.testing.assert_array_equal(a.alpha, b.alpha)
+    np.testing.assert_array_equal(R, original)
+    np.testing.assert_array_equal(z, original_z)
+    np.testing.assert_array_equal(args["R"], original)
+
+
+@pytest.mark.parametrize("bad", ["nonfinite", "asymmetric", "negative_diagonal"])
+def test_all_validation_blocks(bad):
+    R = np.eye(130)
+    if bad == "nonfinite":
+        R[-1, -1] = np.nan
+    elif bad == "asymmetric":
+        R[-1, 0] = 0.1
+    else:
+        R[-1, -1] = -1
+    if bad == "asymmetric":
+        before = R.tobytes()
+        with pytest.warns(RuntimeWarning, match="XtX is not symmetric"):
+            fit = susie_suff_stat(R, np.ones(130), 129.0, 130)
+        assert np.isfinite(fit.pip).all()
+        assert R.tobytes() == before
+    else:
+        with pytest.raises(ValueError):
+            susie_suff_stat(R, np.ones(130), 129.0, 130)
+
+
+def test_strided_input_not_mutated():
+    backing = np.eye(6)
+    R = backing[::2, ::2]
+    z = np.array([2.0, 1.0, 0.0])
+    f = susie_rss(z, R, 100, L=1)
+    g = susie_rss(z, R.copy(), 100, L=1)
+    np.testing.assert_array_equal(f.pip, g.pip)
+    np.testing.assert_array_equal(backing, np.eye(6))
+
+
+@pytest.mark.parametrize("size", [4, 5])
+@pytest.mark.parametrize("layout", ["C-row", "C-column", "F-row", "F-column"])
+def test_public_negative_stride_matches_its_logical_matrix(size, layout):
+    storage = np.full((size, size), 0.25)
+    np.fill_diagonal(storage, 1.0)
+    if layout.startswith("F"):
+        storage = np.asfortranarray(storage)
+    matrix = storage[::-1, :] if layout.endswith("row") else storage[:, ::-1]
+    matrix.flags.writeable = False
+    before = matrix.view(np.uint64).copy()
+    fit = susie_rss(np.arange(size, dtype=float), matrix, 100, L=1, check_prior=False)
+    copied = susie_rss(np.arange(size, dtype=float), matrix.copy(), 100, L=1, check_prior=False)
+    np.testing.assert_array_equal(fit.pip, copied.pip)
+    np.testing.assert_array_equal(matrix.view(np.uint64), before)

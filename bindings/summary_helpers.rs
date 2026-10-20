@@ -14,7 +14,7 @@ fn validate_matrix(
     name: &str,
     correlation: bool,
     scale: f64,
-) -> PyResult<()> {
+) -> PyResult<bool> {
     ensure_layout(&array)?;
     let array = array
         .try_readonly()
@@ -38,7 +38,6 @@ fn validate_matrix(
             valid_correlation &= (value - 1.0).abs() <= 1e-8;
         }
     }
-    // Each off-diagonal pair is checked once, in both tolerance directions.
     // Small tiles keep both sides of a transposed comparison cache-resident.
     let mut symmetric = true;
     const BLOCK: usize = 32;
@@ -51,8 +50,6 @@ fn validate_matrix(
                     } else {
                         (a[[i, j]] * scale, a[[j, i]] * scale)
                     };
-                    // np.allclose's atol + rtol * abs(reference), evaluated
-                    // in both directions since the full matrix was checked.
                     if x == y {
                         // Equality proves both entries share finiteness and
                         // absolute bounds, including the two signed zeros.
@@ -71,9 +68,7 @@ fn validate_matrix(
                                 "{name} must contain only finite values"
                             )));
                         }
-                        let delta = (x - y).abs();
-                        symmetric &=
-                            delta <= 1e-12 + 1e-12 * y.abs() && delta <= 1e-12 + 1e-12 * x.abs();
+                        symmetric = false;
                         if correlation {
                             valid_correlation &= x.abs() <= 1.0 + 1e-8 && y.abs() <= 1.0 + 1e-8;
                         }
@@ -81,11 +76,6 @@ fn validate_matrix(
                 }
             }
         }
-    }
-    if !symmetric {
-        return Err(PyValueError::new_err(format!(
-            "{name} must be symmetric; no automatic symmetrization is performed"
-        )));
     }
     if negative_diagonal {
         return Err(PyValueError::new_err(format!(
@@ -97,7 +87,7 @@ fn validate_matrix(
             "R must be a signed correlation matrix with unit diagonal and values in [-1,1]",
         ));
     }
-    Ok(())
+    Ok(symmetric)
 }
 
 #[pyfunction]
@@ -213,24 +203,21 @@ fn complete_finite_scan(array: Bound<'_, PyArray1<f64>>, reduction: bool) -> PyR
 fn validate_rss_matrix_impl<const SAFE_SCALE: bool>(
     a: ndarray::ArrayView2<'_, f64>,
     scale: f64,
-) -> PyResult<()> {
+) -> PyResult<bool> {
     let n = a.nrows();
     if a.ncols() != n {
         return Err(PyValueError::new_err("R must be square"));
     }
     let mut raw_nonnegative = true;
-    let mut raw_correlation = true;
-    let mut raw_symmetric = true;
+    let mut scaled_symmetric = true;
     let mut scaled_finite = true;
     let mut scaled_nonnegative = true;
-    let mut scaled_symmetric = true;
     for i in 0..n {
         let raw = a[[i, i]];
         if !raw.is_finite() {
             return Err(PyValueError::new_err("R must contain only finite values"));
         }
         raw_nonnegative &= raw >= 0.0;
-        raw_correlation &= (raw - 1.0).abs() <= 1e-8 && raw.abs() <= 1.0 + 1e-8;
         let scaled = raw * scale;
         scaled_finite &= scaled.is_finite();
         scaled_nonnegative &= scaled >= 0.0;
@@ -246,57 +233,33 @@ fn validate_rss_matrix_impl<const SAFE_SCALE: bool>(
                         // Equality plus the range bound proves both raw
                         // entries finite and symmetric. For SAFE_SCALE,
                         // |scale| <= MAX/2 and |x| < 2 also prove both scaled
-                        // entries finite. Scaled equality then proves BOTH
-                        // symmetry orientations. No input entry is omitted.
+                        // entries finite.
                         if !SAFE_SCALE {
                             scaled_finite &= (x * scale).is_finite();
                         }
                         continue;
                     }
-                    // The exceptional path still evaluates every original
-                    // condition, including the scaled tolerance expressions.
                     if !x.is_finite() || !y.is_finite() {
                         return Err(PyValueError::new_err("R must contain only finite values"));
                     }
-                    let difference = (x - y).abs();
-                    raw_symmetric &= difference <= 1e-12 + 1e-12 * x.abs()
-                        && difference <= 1e-12 + 1e-12 * y.abs();
-                    raw_correlation &= x.abs() <= 1.0 + 1e-8 && y.abs() <= 1.0 + 1e-8;
                     let sx = x * scale;
                     let sy = y * scale;
+                    scaled_symmetric &= sx == sy;
                     scaled_finite &= sx.is_finite() && sy.is_finite();
-                    let scaled_difference = (sx - sy).abs();
-                    scaled_symmetric &= scaled_difference <= 1e-12 + 1e-12 * sx.abs()
-                        && scaled_difference <= 1e-12 + 1e-12 * sy.abs();
                 }
             }
         }
     }
-    if !raw_symmetric {
-        return Err(PyValueError::new_err(
-            "R must be symmetric; no automatic symmetrization is performed",
-        ));
-    }
     if !raw_nonnegative {
         return Err(PyValueError::new_err("R diagonal must be nonnegative"));
-    }
-    if !raw_correlation {
-        return Err(PyValueError::new_err(
-            "R must be a signed correlation matrix with unit diagonal and values in [-1,1]",
-        ));
     }
     if !scaled_finite {
         return Err(PyValueError::new_err("XtX must contain only finite values"));
     }
-    if !scaled_symmetric {
-        return Err(PyValueError::new_err(
-            "XtX must be symmetric; no automatic symmetrization is performed",
-        ));
-    }
     if !scaled_nonnegative {
         return Err(PyValueError::new_err("XtX diagonal must be nonnegative"));
     }
-    Ok(())
+    Ok(scaled_symmetric)
 }
 
 #[pyfunction]
@@ -306,7 +269,7 @@ fn validate_rss_matrix(
     scale: f64,
     use_simd: bool,
     proof_threads: Option<usize>,
-) -> PyResult<()> {
+) -> PyResult<bool> {
     ensure_layout(&array)?;
     let array = array
         .try_readonly()
@@ -328,7 +291,7 @@ fn validate_rss_matrix(
         && scale.abs() <= f64::MAX * 0.5
         && exact_contiguous_rss_proof(array.as_array(), scale, proof_threads)
     {
-        return Ok(());
+        return Ok(true);
     }
     #[cfg(not(target_arch = "x86_64"))]
     let _ = (use_simd, proof_threads);

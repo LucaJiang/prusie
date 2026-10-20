@@ -21,7 +21,8 @@ The default input is the independently generated 500-variant toy example
 in `src/prusie/data/toy`. Set `R_LIBS_USER` for your intended R library.
 The output directory must be new. `--validation-only` skips clocks and memory
 measurement and needs no BLAS probe. `--fixture regression` instead uses the
-older attributed fixture, whose existing inputs/references are unchanged.
+older attributed fixture in `tests/fixtures/susier_regression`, whose existing
+inputs/references are unchanged. See its [provenance](../../tests/fixtures/susier_regression/README.md).
 
 The script freezes inputs and order before fitting, runs backends sequentially
 with one numerical thread and retains seven timings of the fitting call after one
@@ -100,8 +101,8 @@ although it is outside the fitting clock. Use the ordinary separate row/column
 files for matrices that are not bitwise symmetric.
 
 Validation exports alpha, moments, PIPs, natural-log BFs, variances, ELBO, KL and
-original CS component/member IDs, returned mass and purity. The R adapter also
-retains its original RDS fit. `compare_fits.py` checks PIP absolute error ≤1e-5,
+original CS component/member IDs, returned mass and purity.
+`compare_fits.py` checks PIP absolute error ≤1e-5,
 rtol=0, plus input/model/probability validity, and retains all other diagnostics.
 
 ## Retained-record analysis
@@ -117,4 +118,4 @@ process RSS and the separately labeled sampled incremental memory.
 See [reproducibility](../../docs/reproducibility.md) for the distinction between
 record regeneration and input-level reruns.
 
-The independent pinned-R validation panel is in `dev/references`; its NumPy oracle lives in `tests/reference_numpy.py` so source distributions can run the numerical tests.
+The independent NumPy oracle in `tests/reference_numpy.py` is included in source distributions for numerical regression tests.

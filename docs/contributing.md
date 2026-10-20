@@ -31,9 +31,7 @@ cargo test --locked --lib --no-default-features --features vector-math -- --test
 
 Tests cover frozen susieR outputs, an independent NumPy reference, analytical
 cases, input validation, plotting and reports. Preserve frozen inputs and
-reference outputs; add regression tests for numerical fixes. Optional LD
-comparisons use the saved references and instructions in
-[`dev/references/ld`](https://github.com/LucaJiang/prusie/tree/main/dev/references/ld).
+reference outputs; add regression tests for numerical fixes.
 
 ## Editing and building documentation
 
@@ -68,9 +66,7 @@ notices in adapted source and frozen data when distributing packages.
 ## Benchmark scripts
 
 [`tools/benchmark`](https://github.com/LucaJiang/prusie/tree/main/tools/benchmark)
-contains the R comparison and measurement scripts;
-[`dev/references`](https://github.com/LucaJiang/prusie/tree/main/dev/references)
-contains the independent validation panel. Keep numerical tolerances fixed.
+contains the R comparison and measurement scripts. Keep numerical tolerances fixed.
 Measure each proposed optimization against its parent on cases chosen before
 inspecting outcomes, and report wins, ties, regressions and repeat variability.
 Merge it only if more than half of those cases have lower median complete-call

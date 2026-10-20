@@ -85,7 +85,7 @@ def main():
         case_file = prepare_toy(ROOT / "src/prusie/data/toy", out / "inputs")
         manifest = {"cases": [case_file.name], "timed_cases": [case_file.name]}
     else:
-        manifest = prepare(ROOT / "examples/data", out / "inputs")
+        manifest = prepare(ROOT / "tests/fixtures/susier_regression", out / "inputs")
     env = os.environ.copy()
     for name in (
         "OMP_NUM_THREADS",

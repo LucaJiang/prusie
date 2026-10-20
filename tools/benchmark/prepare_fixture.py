@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export all seven frozen public cases for identical Python/R input loading."""
+"""Export all seven frozen regression cases for identical Python/R input loading."""
 
 import argparse
 import hashlib
@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def prepare(data, output):
     # Reuse checksum/order checks only; no fit, goldens update or simulation.
     sys.path.insert(0, str(ROOT / "tests"))
-    from reference_coloc import validate_checksums, validate_order
+    from reference_susier import validate_checksums, validate_order
 
     manifest = validate_checksums(data)
     metadata = json.loads((data / "metadata.json").read_text())
@@ -79,7 +79,7 @@ def prepare(data, output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data-dir", type=Path, default=ROOT / "examples/data")
+    parser.add_argument("--data-dir", type=Path, default=ROOT / "tests/fixtures/susier_regression")
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     prepare(args.data_dir.resolve(), args.output_dir.resolve())
