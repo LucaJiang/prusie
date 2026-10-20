@@ -349,6 +349,15 @@ def susie_get_cs_attainable(
     coverage: float = 0.95,
     ethres: float | None = None,
     dedup: bool = True,
+    X: Any = None,
+    Xcorr: ArrayLike | None = None,
+    min_abs_corr: float | None = 0.5,
+    squared: bool = False,
+    check_symmetric: bool = True,
+    n_purity: int | float | Literal["auto"] = "auto",
+    median_abs_corr: float | None = None,
+    cs_extension_corr: float | None = None,
+    seed: int | None = None,
 ) -> dict[str, Any]:
     """Return credible sets retained by attainable coverage and entropy.
 
@@ -360,9 +369,16 @@ def susie_get_cs_attainable(
         Strict minimum attainable probability mass and target CS mass.
     ethres : float, optional
         Effective-number-of-variables entropy threshold; defaults to
-        ``max(100, 0.1 * p)``.
+        ``max(100, 0.1 * p)``. Positive infinity disables the entropy filter.
     dedup : bool, default True
         Remove duplicate selected sets.
+    X, Xcorr : array_like, optional
+        Accepted for compatibility and ignored; attainable sets use no LD.
+    min_abs_corr, squared, check_symmetric, n_purity, median_abs_corr
+        Passed to :func:`susie_get_cs` without any correlation data.
+    cs_extension_corr, seed
+        Compatibility controls passed to :func:`susie_get_cs`; no LD extension
+        or purity subsampling occurs without correlation data.
 
     Returns
     -------
@@ -371,8 +387,8 @@ def susie_get_cs_attainable(
     """
     p = res.alpha.shape[1]
     threshold = max(100, 0.1 * p) if ethres is None else float(ethres)
-    if not np.isfinite(threshold) or threshold <= 0:
-        raise ValueError("ethres must be positive and finite")
+    if np.isnan(threshold) or threshold <= 0:
+        raise ValueError("ethres must be positive and not NaN")
     attainable = res.alpha * (res.alpha == np.max(res.alpha, axis=0))
     mass = attainable.sum(axis=1)
     projection = np.divide(
@@ -383,7 +399,20 @@ def susie_get_cs_attainable(
     entropy[mass == 0] = np.inf
     keep = np.flatnonzero((mass > coverage) & (entropy < np.log(threshold)))
     view = SimpleNamespace(alpha=res.alpha[keep], V=res.V[keep], null_index=res.null_index)
-    out = susie_get_cs(view, coverage=coverage, min_abs_corr=None, dedup=dedup)
+    out = susie_get_cs(
+        view,
+        X=None,
+        Xcorr=None,
+        coverage=coverage,
+        min_abs_corr=min_abs_corr,
+        dedup=dedup,
+        squared=squared,
+        check_symmetric=check_symmetric,
+        n_purity=n_purity,
+        median_abs_corr=median_abs_corr,
+        cs_extension_corr=cs_extension_corr,
+        seed=seed,
+    )
     out["cs_index"] = keep[out["cs_index"]]
     return out
 
@@ -419,6 +448,7 @@ def get_cs_correlation(
     selected = np.array([members[np.argmax(model.pip[members])] for members in sets])
     if Xcorr is None:
         matrix = _design_correlation(X, selected, selected)
+        np.fill_diagonal(matrix, 1.0)
     else:
         correlation = np.asarray(Xcorr, dtype=float)
         if not np.array_equal(correlation, correlation.T):
@@ -529,6 +559,8 @@ def predict(
         return coef(res)
     if newx is None:
         return None if res.fitted is None else res.fitted.copy()
+    if not hasattr(newx, "shape"):
+        newx = np.asarray(newx)
     if len(newx.shape) != 2 or newx.shape[1] != len(res.variant_ids):
         raise ValueError("newx must have one column per original predictor")
     coefficients = coef(res)
