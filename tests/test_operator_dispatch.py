@@ -8,41 +8,67 @@ import pytest
 from prusie import _native, susie_rss, susie_suff_stat
 
 
-def assert_results_equal(a, b):
-    for name in [
-        "alpha",
-        "mu",
-        "mu2",
-        "pip",
-        "V",
-        "elbo",
-        "XtXr",
-        "KL",
-        "lbf",
-        "lbf_variable",
-        "sigma2",
-        "niter",
-        "converged",
-        "X_column_scale_factors",
-        "intercept",
-    ]:
-        np.testing.assert_array_equal(getattr(a, name), getattr(b, name))
-    assert a.params == b.params
-    assert a.qc == b.qc
-    assert a.warnings == b.warnings
-    for name in ["cs_index", "coverage", "actual_coverage"]:
-        np.testing.assert_array_equal(a.sets[name], b.sets[name])
-    assert len(a.sets["cs"]) == len(b.sets["cs"])
-    for x, y in zip(a.sets["cs"], b.sets["cs"], strict=True):
-        np.testing.assert_array_equal(x, y)
-    for name in a.sets["purity"]:
-        np.testing.assert_array_equal(a.sets["purity"][name], b.sets["purity"][name])
+def materialized_working_statistics(args, options):
+    """Construct the likelihood matrix explicitly, outside public preparation."""
+    if "XtX" in args:
+        gram = np.array(args["XtX"], copy=True)
+        response = np.asarray(args["Xty"], dtype=float)
+        yty, n = args["yty"], args["n"]
+        standardize = options["standardize"]
+    else:
+        correlation = np.asarray(args["R"], dtype=float)
+        n = args["n"]
+        effects = "bhat" in args
+        z = (np.asarray(args["bhat"]) / np.asarray(args["shat"])) if effects else args["z"]
+        z = np.asarray(z, dtype=float)
+        if n is None:
+            gram, response, yty, n = correlation.copy(), z, 1.0, 2.0
+            standardize = False
+        else:
+            adjustment = (n - 1) / (z * z + n - 2)
+            adjusted = np.sqrt(adjustment) * z
+            if effects:
+                se = np.asarray(args["shat"])
+                variance = args["var_y"]
+                diagonal = variance * adjustment / se**2
+                gram = correlation * np.sqrt(diagonal[:, None] * diagonal[None, :])
+                response = adjusted * np.sqrt(adjustment) * variance / se
+                yty = (n - 1) * variance
+            else:
+                gram = (n - 1) * correlation
+                response, yty = np.sqrt(n - 1) * adjusted, n - 1
+            standardize = options["standardize"]
+    gram = (gram + gram.T) / 2
+    if options["null_weight"]:
+        gram = np.pad(gram, ((0, 1), (0, 1)))
+        response = np.r_[response, 0.0]
+    scales = np.sqrt(np.diag(gram) / (n - 1)) if standardize else np.ones(len(response))
+    scales[scales == 0] = 1
+    working = np.asfortranarray(gram / scales[:, None] / scales[None, :])
+    return working, np.ascontiguousarray(response / scales), yty, n
+
+
+def record_native_diagnostics(actual, expected, record_property):
+    active = expected["V"] > actual.params["prior_tol"]
+    expected_pip = 1 - np.prod(1 - expected["alpha"][active], axis=0)
+    if actual.null_index is not None:
+        expected_pip = np.delete(expected_pip, actual.null_index)
+    record_property("pip_max_abs", float(np.max(np.abs(actual.pip - expected_pip))))
+    for field in ("mu", "mu2", "V", "sigma2", "elbo", "XtXr", "KL", "lbf", "lbf_variable"):
+        left, right = np.asarray(getattr(actual, field)), np.asarray(expected[field])
+        if left.shape == right.shape:
+            record_property(field + "_max_abs", float(np.max(np.abs(left - right))))
+        else:
+            record_property(field + "_shapes", [list(left.shape), list(right.shape)])
+    for field in ("niter", "converged"):
+        record_property(field + "_values", [getattr(actual, field), expected[field]])
 
 
 def public_operator_case(kind, layout, null_weight, standardize):
     r = np.array([[1.0 + 7e-9, -0.2, -0.0], [-0.2, 1.0, 0.125], [0.0, 0.125 + 1e-14, 1.0 - 7e-9]])
     options = dict(
         L=2,
+        variant_ids=["v2", "v0", "v1"],
         null_weight=null_weight,
         standardize=standardize,
         prior_weights=[0.7, 0.0, 0.3],
@@ -81,31 +107,45 @@ def public_operator_case(kind, layout, null_weight, standardize):
 @pytest.mark.parametrize("layout", ["C", "F", "strided"])
 @pytest.mark.parametrize("null_weight", [0.0, 0.2])
 @pytest.mark.parametrize("standardize", [False, True])
-def test_default_materialized_public_boundary(monkeypatch, kind, layout, null_weight, standardize):
+def test_default_implicit_public_boundary(
+    monkeypatch, record_property, kind, layout, null_weight, standardize
+):
+    assert _native.MATRIX_OPERATOR_VERSION == 1
     function, args, options, matrix, before = public_operator_case(
         kind, layout, null_weight, standardize
     )
     original = _native.fit
-    observed = []
+    calls = []
 
     def capture(matrix, response, yty, n, settings):
-        observed.append("matrix_global_scale" in settings)
+        calls.append((dict(settings), response.copy(), yty, n))
+        assert "matrix_global_scale" in settings
+        assert "matrix_inverse_scales" in settings
+        assert "matrix_scales" in settings
         return original(matrix, response, yty, n, settings)
 
     monkeypatch.setattr(_native, "fit", capture)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
-        monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 0, raising=False)
-        expected = function(**args, **options)
-        monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 1, raising=False)
         actual = function(**args, **options)
-    assert observed == [False, False]
-    assert np.all(np.isfinite(actual.pip))
-    assert np.all((actual.pip >= 0) & (actual.pip <= 1))
-    np.testing.assert_allclose(actual.alpha, expected.alpha, atol=1e-5, rtol=0)
-    np.testing.assert_array_equal(actual.variant_ids, expected.variant_ids)
-    assert actual.alpha.shape == expected.alpha.shape
-    assert actual.params == expected.params
+    assert len(calls) == 1
+    settings, response, yty, n = calls[0]
+    working, expected_response, expected_yty, expected_n = materialized_working_statistics(
+        args, options
+    )
+    np.testing.assert_allclose(response, expected_response, atol=1e-12, rtol=1e-12)
+    assert yty == expected_yty and n == expected_n
+    oracle_settings = {key: value for key, value in settings.items() if not key.startswith("matrix_")}
+    expected = original(working, expected_response, expected_yty, expected_n, oracle_settings)
+    shape = (2, 3 + int(null_weight > 0))
+    assert actual.alpha.shape == expected["alpha"].shape == shape
+    assert actual.variant_ids.tolist() == ["v2", "v0", "v1"]
+    for alpha in (actual.alpha, expected["alpha"]):
+        assert np.isfinite(alpha).all() and ((alpha >= 0) & (alpha <= 1)).all()
+        np.testing.assert_allclose(alpha.sum(axis=1), 1, atol=1e-10, rtol=0)
+    # Compare complete component rows in their original order, including null columns.
+    np.testing.assert_allclose(actual.alpha, expected["alpha"], atol=1e-5, rtol=0)
+    record_native_diagnostics(actual, expected, record_property)
     np.testing.assert_array_equal(matrix.view(np.uint64), before)
 
 
@@ -136,7 +176,7 @@ def test_capability_keeps_public_invalid_matrix_rejection(monkeypatch):
 def test_nonfinite_factors_keep_original_materialization(monkeypatch):
     # Standardization can produce infinite scales while the prepared matrix is
     # finite zero. Such inputs must retain the old API behavior rather than
-    # violating the optional operator's finite-positive factor contract.
+    # violating the native operator's finite-positive factor contract.
     original = _native.fit
     calls = []
 

@@ -139,18 +139,55 @@ def test_lazy_rss_matches_materialized_sufficient_statistics(
     adj = (n - 1) / (z * z + n - 2)
     x_ty = np.sqrt(n - 1) * (np.sqrt(adj) * z)
     kwargs = dict(
-        L=2, estimate_residual_variance=False, check_prior=False, max_iter=100, tol=0.001, **options
+        L=2, estimate_residual_variance=False, check_prior=False, max_iter=100, tol=0.001,
+        variant_ids=["v2", "v0", "v1"], **options
     )
     crossproduct = (n - 1) * r
     before = [x.copy() for x in (r, z, crossproduct, x_ty)]
+    # The oracle always gives native.fit an explicit working matrix without
+    # matrix_* factors; changing public defaults cannot turn it into the same path.
+    gram, response = crossproduct.copy(), x_ty.copy()
+    if options.get("null_weight", 0):
+        gram, response = np.pad(gram, ((0, 1), (0, 1))), np.r_[response, 0.0]
+    scale = (
+        np.sqrt(gram.diagonal() / (n - 1))
+        if options.get("standardize", True)
+        else np.ones(len(response))
+    )
+    scale[scale == 0] = 1
+    working = np.asfortranarray(gram / scale[:, None] / scale[None, :])
+    response = np.ascontiguousarray(response / scale)
+    native_fit = _native.fit
+    oracle_calls = []
+
+    def materialized_oracle(matrix, crossresponse, yty, sample_size, settings):
+        clean = {key: value for key, value in settings.items() if not key.startswith("matrix_")}
+        oracle_calls.append(True)
+        return native_fit(working, response, yty, sample_size, clean)
+
+    monkeypatch.setattr(_native, "fit", materialized_oracle)
     materialized = susie_suff_stat(crossproduct, x_ty, n - 1, n, **kwargs)
+    assert oracle_calls == [True]
+    actual_calls = []
+
+    def actual_fit(matrix, crossresponse, yty, sample_size, settings):
+        assert ("matrix_global_scale" in settings) == bool(capability)
+        actual_calls.append(True)
+        return native_fit(matrix, crossresponse, yty, sample_size, settings)
+
+    monkeypatch.setattr(_native, "fit", actual_fit)
     lazy = susie_rss(z, r, n, **kwargs)
+    assert actual_calls == [True]
     for actual, expected in zip((r, z, crossproduct, x_ty), before, strict=True):
         np.testing.assert_array_equal(actual.view(np.uint64), expected.view(np.uint64))
-    np.testing.assert_allclose(materialized.pip, lazy.pip, atol=1e-5, rtol=0)
+    shape = (2, 3 + int(options.get("null_weight", 0) > 0))
+    assert materialized.alpha.shape == lazy.alpha.shape == shape
+    assert materialized.variant_ids.tolist() == lazy.variant_ids.tolist() == ["v2", "v0", "v1"]
+    np.testing.assert_allclose(materialized.alpha, lazy.alpha, atol=1e-5, rtol=0)
     for fit in [materialized, lazy]:
         assert np.isfinite(fit.pip).all() and ((fit.pip >= 0) & (fit.pip <= 1)).all()
         assert np.isfinite(fit.alpha).all() and ((fit.alpha >= 0) & (fit.alpha <= 1)).all()
+        np.testing.assert_allclose(fit.alpha.sum(axis=1), 1, atol=1e-10, rtol=0)
     for field in [
         "alpha",
         "mu",
@@ -167,9 +204,7 @@ def test_lazy_rss_matches_materialized_sufficient_statistics(
         "converged",
     ]:
         left, right = getattr(materialized, field), getattr(lazy, field)
-        if not capability:
-            np.testing.assert_array_equal(left, right)
-        elif np.shape(left) == np.shape(right) and field != "converged":
+        if np.shape(left) == np.shape(right) and field != "converged":
             record_property(
                 field + "_max_abs", float(np.max(np.abs(np.asarray(left) - np.asarray(right))))
             )
@@ -178,22 +213,14 @@ def test_lazy_rss_matches_materialized_sufficient_statistics(
                 field + "_values", [np.asarray(left).tolist(), np.asarray(right).tolist()]
             )
     for field in ["cs_index", "coverage", "actual_coverage"]:
-        if not capability:
-            np.testing.assert_array_equal(materialized.sets[field], lazy.sets[field])
-        else:
-            record_property(
-                "sets_" + field, [materialized.sets[field].tolist(), lazy.sets[field].tolist()]
-            )
+        record_property(
+            "sets_" + field, [materialized.sets[field].tolist(), lazy.sets[field].tolist()]
+        )
     for field in materialized.sets["purity"]:
-        if not capability:
-            np.testing.assert_array_equal(
-                materialized.sets["purity"][field], lazy.sets["purity"][field]
-            )
-        else:
-            record_property(
-                "purity_" + field,
-                [materialized.sets["purity"][field].tolist(), lazy.sets["purity"][field].tolist()],
-            )
+        record_property(
+            "purity_" + field,
+            [materialized.sets["purity"][field].tolist(), lazy.sets["purity"][field].tolist()],
+        )
 
 
 def test_rss_symmetry_warns_after_scalar_scaling():
@@ -294,6 +321,7 @@ def test_native_input_preserves_bits_and_ownership_for_unit_scales(
         before = matrix.view(np.uint64).copy()
 
         def capture(crossproduct, *args, matrix=matrix, expected=expected):
+            assert "matrix_global_scale" not in args[-1]
             assert crossproduct.flags.f_contiguous
             assert not np.shares_memory(crossproduct, matrix)
             np.testing.assert_array_equal(crossproduct.view(np.uint64), expected.view(np.uint64))

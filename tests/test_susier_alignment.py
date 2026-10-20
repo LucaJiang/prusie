@@ -78,18 +78,44 @@ def test_missing_summary_is_zeroed_without_mutating_readonly_input(entry):
     assert any("Xty are replaced" in str(item.message) for item in caught) == (entry == "Xty")
 
 
-def test_default_does_not_use_regrouped_matrix_operator(monkeypatch):
-    options_seen = []
+def test_default_uses_implicit_scaling_with_materialized_native_oracle(
+    monkeypatch, record_property
+):
+    assert _native.MATRIX_OPERATOR_VERSION == 1
     original = _native.fit
+    settings_seen = []
 
-    def capture(matrix, response, yty, n, options):
-        options_seen.append(options)
-        return original(matrix, response, yty, n, options)
+    def capture(matrix, response, yty, n, settings):
+        settings_seen.append(dict(settings))
+        return original(matrix, response, yty, n, settings)
 
+    matrix = np.array([[1.0, 0.2], [0.2, 1.0]])
+    z = np.array([3.0, 0.0])
+    before = [array.tobytes() for array in (matrix, z)]
     monkeypatch.setattr(_native, "fit", capture)
-    susie_rss([3.0, 0.0], np.eye(2), 100, L=1)
-    assert "matrix_global_scale" not in options_seen[0]
-    assert "matrix_inverse_scales" not in options_seen[0]
+    fit = susie_rss(z, matrix, 100, L=1, variant_ids=["second", "first"])
+    assert len(settings_seen) == 1
+    settings = settings_seen[0]
+    assert settings["matrix_global_scale"] == 99
+    assert np.array_equal(settings["matrix_scales"], [1.0, 1.0])
+    working = np.asfortranarray(99 * matrix)
+    response = np.ascontiguousarray(np.sqrt(99) * np.sqrt(99 / (z**2 + 98)) * z)
+    oracle_settings = {key: value for key, value in settings.items() if not key.startswith("matrix_")}
+    expected = original(working, response, 99, 100, oracle_settings)
+    assert fit.alpha.shape == expected["alpha"].shape == (1, 2)
+    assert fit.variant_ids.tolist() == ["second", "first"]
+    for alpha in (fit.alpha, expected["alpha"]):
+        assert np.isfinite(alpha).all() and ((alpha >= 0) & (alpha <= 1)).all()
+        np.testing.assert_allclose(alpha.sum(axis=1), 1, atol=1e-10, rtol=0)
+    np.testing.assert_allclose(fit.alpha, expected["alpha"], atol=1e-5, rtol=0)
+    for field in ("mu", "mu2", "V", "sigma2", "elbo", "lbf", "KL"):
+        record_property(
+            field + "_max_abs",
+            float(np.max(np.abs(np.asarray(getattr(fit, field)) - np.asarray(expected[field])))),
+        )
+    record_property("niter_values", [fit.niter, expected["niter"]])
+    record_property("converged_values", [fit.converged, expected["converged"]])
+    assert [array.tobytes() for array in (matrix, z)] == before
 
 
 @pytest.mark.parametrize("scale", [1e-100, 1.0, 1e100])

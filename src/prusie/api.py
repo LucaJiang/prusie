@@ -746,7 +746,18 @@ def _prepare_suff_stat(
     scales[scales == 0] = 1.0
     # Working crossproduct D⁻¹ XtX D⁻¹ in native column-major layout.
     inverse_scales = 1.0 / scales
-    matrix_operator = bool(getattr(_native, "MATRIX_IMPLICIT_SCALING", False))
+    # Version 1 accepts finite positive factors; keep the materialized path for
+    # unsupported native contracts and extreme derived scales (e.g. sqrt overflow).
+    matrix_operator = (
+        _design is None
+        and getattr(_native, "MATRIX_OPERATOR_VERSION", 0) == 1
+        and math.isfinite(_rss_matrix_scale)
+        and _rss_matrix_scale > 0
+        and np.isfinite(scales).all()
+        and (scales > 0).all()
+        and np.isfinite(inverse_scales).all()
+        and (inverse_scales > 0).all()
+    )
     if _design is not None:
         crossproduct = None
     elif matrix_operator:
