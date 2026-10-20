@@ -7,7 +7,7 @@ Dense and sparse predictor matrices are passed to matrix-free native operators.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Literal
 
 import numpy as np
@@ -189,6 +189,10 @@ def susie(
         Residual and single-effect prior controls.
     variant_ids, variant_metadata, retain_data, refine, unmappable_effects
         As in :func:`susie_suff_stat`; unmappable models are excluded.
+        Retained continuation/refinement is unavailable for matrix-free
+        designs: explicit ``retain_data=True`` or ``refine=True`` raises
+        ValueError before fitting. Default fitting and ``init_only`` remain
+        available, and no dense Gram is formed for post-analysis retention.
 
     Returns
     -------
@@ -272,6 +276,7 @@ def susie(
         _design=design,
     )
     request = _prepare_suff_stat(None, crossresponse, float(working_y @ working_y), n, **options)
+    request = replace(request, requested_convergence_method=convergence_method)
     result = _fit(request)
     if isinstance(result, SusieResult):
         result.params.update(interface="susie", intercept=bool(intercept), na_rm=bool(na_rm))

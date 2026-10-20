@@ -92,6 +92,9 @@ def susie_rss_lambda(
         Check LD positive semidefiniteness and z-score projection, respectively.
     **options
         Other options have the same meaning as in :func:`susie_rss`.
+        ``refine=True`` is unavailable for this dynamic likelihood; retained
+        refinement supports static materialized Gaussian models. Default fits and
+        initialization-only preparation remain available.
 
     Returns
     -------

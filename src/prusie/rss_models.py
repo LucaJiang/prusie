@@ -742,6 +742,10 @@ def prepare_multipanel(arguments: dict[str, Any]) -> Any:
     request = replace(
         inputs._request,
         dynamic=dynamic,
+        prepared=None,
+        signature=None,
+        requested_convergence_method=arguments["convergence_method"],
+        analysis_limitations=(*inputs._request.analysis_limitations, "multi-panel RSS"),
         params={**inputs._request.params, "init_only": arguments["init_only"]},
     )
     if arguments["init_only"]:

@@ -148,6 +148,46 @@ def _warn(message: str, collected: list[str]) -> None:
     warning_module.warn(message, RuntimeWarning, stacklevel=3)
 
 
+def _legacy_analysis_limitations(
+    options: Mapping[str, Any],
+    *,
+    design: Any = None,
+    dynamic: Any = None,
+    L_greedy: int | None = None,
+    median_abs_corr: float | None = None,
+    cs_extension_corr: float | None = None,
+) -> tuple[str, ...]:
+    """Describe models/controls the existing retained-analysis engine cannot replay."""
+    conditions = (
+        (design is not None, "matrix-free design"),
+        (dynamic is not None, "dynamic RSS model"),
+        (options.get("prior_variance_grid") is not None, "mixture prior"),
+        (options.get("estimate_residual_method") == "NIG", "NIG residual model"),
+        (options.get("slot_prior") is not None, "slot-activity prior"),
+        (options.get("criterion") == "pip", "convergence_method='pip'"),
+        (L_greedy is not None, "L_greedy"),
+        (median_abs_corr is not None, "median_abs_corr"),
+        (cs_extension_corr is not None, "cs_extension_corr"),
+    )
+    return tuple(reason for active, reason in conditions if active)
+
+
+def _require_legacy_analysis(
+    retain_data: bool,
+    refine: bool | RefinementConfig,
+    limitations: tuple[str, ...],
+) -> None:
+    """Reject explicit unsupported post-analysis requests before scientific fitting."""
+    if limitations and (retain_data or refine is not False):
+        raise ValueError(
+            "Retained continuation/refinement is unavailable for "
+            + ", ".join(limitations)
+            + ". It supports static materialized Gaussian models with fixed L, "
+            "ELBO or ConvergenceConfig stopping, and default median_abs_corr/"
+            "cs_extension_corr. Use retain_data=False and refine=False for fitting."
+        )
+
+
 @dataclass(frozen=True)
 class _FitRequest:
     """Validated native inputs and metadata used by every fitting entry point."""
@@ -181,6 +221,8 @@ class _FitRequest:
     design: Any = None
     dynamic: Any = None
     deferred_model_init: SusieInputs | None = None
+    analysis_limitations: tuple[str, ...] = ()
+    requested_convergence_method: str | None = None
 
 
 # Both public fitters share input preparation and result assembly.
@@ -324,18 +366,24 @@ def susie_suff_stat(
         and warn if Xty lies outside the span of the eigenvectors whose
         eigenvalues exceed machine epsilon.
     refine : bool or RefinementConfig, default False
-        After a converged fit, run the credible-set exclusion search of
-        :func:`refine_fit`; True uses the default configuration.
+        Run the credible-set exclusion search; True uses its default
+        configuration. Supports static materialized Gaussian models with fixed
+        L, ELBO or ConvergenceConfig stopping, and default median_abs_corr and
+        cs_extension_corr. Matrix-free designs, mixture/NIG/slot models,
+        dynamic RSS and convergence_method='pip' are unavailable for refinement
+        and raise ValueError. These combinations remain a feature limitation.
     convergence : ConvergenceConfig, optional
         Stopping rule (ELBO, alpha/PIP or joint). Defaults to the ELBO rule,
         or to the controls recorded in ``s_init`` when it is a fit.
     retain_data : bool, default False
-        Retain read-only copies of the prepared inputs, as required by
-        :func:`continue_fit`, :func:`refine_fit` and
-        :func:`evaluate_objective`. Implied by ``track_fit``, ``s_init`` and
-        ``refine``. Without a retained snapshot, ``data_signature`` is None.
-        Retained inputs are hashed once; continuation and refinement reuse
-        their cached identity.
+        Retain read-only inputs for continuation, refinement and objective
+        evaluation within the same supported scope as ``refine``;
+        unsupported explicit requests raise ValueError before fitting.
+        Tracking, initialization and refinement imply retention only within
+        that scope. Other models remain fit-capable with the default flags
+        and do not retain a snapshot for these helpers. No dense Gram is formed to
+        retain a matrix-free design. Without retention, ``data_signature`` is
+        None. Initialization-only calls prepare inputs without this rejection.
     check_prior : bool, default False
         Raise an error if an estimated V_ℓ exceeds 100 max_j z_j², where z_j is
         the marginal z-score at the current σ².
@@ -770,7 +818,17 @@ def _prepare_suff_stat(
     # Ordinary fits do not retain caller buffers or scan an unused hash.
     signature = None
     prepared = None
-    if _design is None and (retain_data or level or refine is not False or s_init is not None):
+    analysis_limitations = _legacy_analysis_limitations(
+        options,
+        design=_design,
+        dynamic=_dynamic,
+        L_greedy=L_greedy,
+        median_abs_corr=median_abs_corr,
+        cs_extension_corr=cs_extension_corr,
+    )
+    if not analysis_limitations and (
+        retain_data or level or refine is not False or s_init is not None
+    ):
         prepared = make_prepared(
             crossproduct,
             crossresponse,
@@ -849,6 +907,7 @@ def _prepare_suff_stat(
         check_prior=bool(check_prior),
         s_init="posterior_state" if s_init is not None else None,
         refine=bool(refine),
+        retain_data=bool(retain_data),
         track_fit=track_fit,
         convergence=control.options(),
         convergence_resolution=resolution,
@@ -897,11 +956,32 @@ def _prepare_suff_stat(
         _rss_matrix_scale=_rss_matrix_scale,
         design=_design,
         dynamic=_dynamic,
+        analysis_limitations=analysis_limitations,
+        requested_convergence_method=convergence_method,
     )
 
 
 def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
     """Run the prepared model and assemble the common public result."""
+    limitations = tuple(
+        dict.fromkeys(
+            request.analysis_limitations
+            + _legacy_analysis_limitations(
+                request.options,
+                design=request.design,
+                dynamic=request.dynamic,
+                L_greedy=request.params.get("L_greedy"),
+                median_abs_corr=request.params.get("median_abs_corr"),
+                cs_extension_corr=request.params.get("cs_extension_corr"),
+            )
+        )
+    )
+    if limitations:
+        # Dynamic models can be attached after ordinary preparation. Never expose
+        # their static snapshot to Gaussian-only objective/replay helpers.
+        request = replace(
+            request, prepared=None, signature=None, analysis_limitations=limitations
+        )
     crossproduct = request.crossproduct
     crossresponse = request.crossresponse
     yty = request.yty
@@ -944,6 +1024,7 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
         raise ValueError(
             "model_init must be a fitted SusieResult; prepared SusieInputs has no posterior state"
         )
+    _require_legacy_analysis(bool(params.get("retain_data")), refine, limitations)
     if params.get("L_greedy") is not None:
         return _fit_greedy(request)
     if request.dynamic is not None:
@@ -1003,7 +1084,17 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
     intercept = y_mean_value - float(np.sum(means * np.sum(alpha * native["mu"], axis=0) / scales))
     summary, trace = convergence_summary(native, options, control)
     summary["config_resolution"] = resolution.copy()
+    summary["legacy_requested_config"] = control.options()
+    summary["requested_convergence_method"] = request.requested_convergence_method
+    summary["requested_config"] = {
+        name: options[name]
+        for name in ("criterion", "alpha_tol", "pip_tol", "min_iter", "cycle_lag")
+    }
     summary["requested_criterion"] = options["criterion"]
+    summary["alpha_tol"] = options["alpha_tol"]
+    summary["pip_tol"] = options["pip_tol"]
+    summary["retained_analysis_available"] = prepared is not None
+    summary["retained_analysis_limitations"] = list(limitations)
     fit = SusieResult(
         variant_ids=ids,
         alpha=alpha,
@@ -1186,7 +1277,10 @@ def susie_rss(
     prior_weights, null_weight, standardize, s_init, coverage, min_abs_corr
         As in :func:`susie_suff_stat`.
     tol, verbose, track_fit, check_input, refine, convergence, retain_data
-        As in :func:`susie_suff_stat`.
+        As in :func:`susie_suff_stat`, including retained-analysis limitations.
+        Ordinary static R-based RSS supports retained helpers in that scope.
+        Operator X inputs and dynamic RSS do not; the X/bhat/shat/known-var_y
+        route explicitly materializes its Gram and is the static exception.
     X : array_like or scipy.sparse matrix, optional
         Reference genotypes instead of R. Centering/scaling and products remain
         implicit; reference sample size may differ from n. Lists of LD or genotype
@@ -1263,6 +1357,7 @@ def susie_rss(
     >>> fit.pip.shape
     (2,)
     """
+    requested_convergence_method = convergence_method
     if (R is None) == (X is None):
         raise ValueError("Supply exactly one of R or X")
     if z_method not in ("wald", "score"):
@@ -1285,6 +1380,9 @@ def susie_rss(
     if multipanel:
         from .rss_models import prepare_multipanel
 
+        # Panel selection fits candidate models before the final shared fitter.
+        if not init_only:
+            _require_legacy_analysis(retain_data, refine, ("multi-panel RSS",))
         return prepare_multipanel(dict(locals()))
     design_data = None
     if R_finite is True:
@@ -1474,6 +1572,7 @@ def susie_rss(
         maf=maf,
         maf_thresh=maf_thresh,
     )
+    request = replace(request, requested_convergence_method=requested_convergence_method)
     fit = _fit(request)
     if init_only:
         return fit
