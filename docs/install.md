@@ -1,7 +1,9 @@
 # Installation
 
-prusie is installed from source for CPython 3.10–3.13. Its only Python run-time
-dependency is NumPy (≥1.26, <3); fitting does not call R.
+prusie is installed from source for CPython 3.10–3.13. NumPy (≥1.26, <3)
+supports ordinary dense fitting. Install the analysis extra below for sparse
+designs, advanced RSS models and auxiliary functions that use SciPy.
+Fitting does not call R.
 
 This checkout contains **0.2.4.dev2** (development version). Record the package
 version and source revision with each analysis.
@@ -9,7 +11,7 @@ version and source revision with each analysis.
 ## Build from source
 
 Building requires the Rust toolchain pinned in `rust-toolchain.toml` (1.98.1),
-a C linker and the Python development headers. The build uses maturin 1.10.2
+a C compiler and archiver and the Python development headers. The build uses maturin 1.10.2
 and the locked Cargo dependencies.
 
 The pinned PyO3 0.23.5 supports CPython up to 3.13, and the package metadata
@@ -17,8 +19,7 @@ therefore requires Python ≥3.10, <3.14. Support for newer interpreters would
 require an updated binding and its validation.
 
 ```sh
-git clone --branch main https://github.com/LucaJiang/prusie.git
-cd prusie
+cd prusie  # source checkout for the version documented here
 python -m venv .venv
 . .venv/bin/activate
 python -m pip install .
@@ -26,9 +27,8 @@ python -m pip install .
 
 pip and Cargo need network access or locally cached build dependencies. Install
 the pinned Rust toolchain with your usual Rust installer before building. The
-extension does not require a BLAS development library. At run time, the CPU is
-checked and the system vector math library is used where available, otherwise
-scalar code.
+extension does not require a BLAS development library. The portable scalar
+solver requires no system vector-math library.
 
 ## Use a prebuilt wheel
 
@@ -45,12 +45,12 @@ python -m pip install ./prusie-0.2.3rc6-cp312-cp312-manylinux_2_34_x86_64.whl
 
 Installing a compatible wheel requires neither Cargo nor a compiler; a source
 distribution requires the build toolchain above. The API documented here
-requires a build from `main`. The version and platform tags of a wheel identify
+requires a build of this source revision. The version and platform tags of a wheel identify
 its code and supported environment.
 
-The documented development version has local installation checks on Linux
-x86-64 with Python 3.10.12, 3.12.2 and 3.13.5 and compatible combinations of
-NumPy 1.26.4, 2.2.6 and 2.5.3. Other operating systems have not been tested.
+Earlier snapshots had local installation checks with Python 3.10–3.13.
+The current refactor is validated on Linux x86-64 with CPython 3.12;
+other interpreter/platform combinations have not been retested for this revision.
 See [contributing](contributing.md) for package validation commands.
 
 ## Optional analysis tools
@@ -61,9 +61,10 @@ To install the plotting and LD-diagnostic dependencies from the same checkout:
 python -m pip install '.[analysis]'
 ```
 
-The analysis extra adds Matplotlib and SciPy. Fitting and posterior summaries
-require only NumPy. Reports are written for offline reading, and figures and
-diagnostics are computed only when requested.
+The analysis extra adds Matplotlib and SciPy. Ordinary dense Gaussian fitting
+needs only NumPy; sparse input, dynamic RSS and posterior outcome configurations
+also use SciPy. Reports are written for offline reading, and figures and diagnostics
+are computed only when requested.
 
 ## Run the installed example
 

@@ -6,18 +6,36 @@ allele harmonization and covariate adjustment belong to the input preparation.
 
 ## Supported model and input routes
 
-prusie fits Gaussian SuSiE on CPU in float64, using summary statistics or
-centered sufficient statistics. Choose the route that preserves the scale
+prusie fits Gaussian SuSiE on CPU in float64, using individual-level data,
+summary statistics or centered sufficient statistics. Choose the route that preserves the scale
 information available for the study:
 
 | Inputs | Working representation and coefficient interpretation |
 | --- | --- |
+| `X`, `y` via `susie` | Dense or sparse individual data, with optional centering and standardization |
 | `z`, `R`, `n` | Finite-sample Wald-adjusted summaries on a standardized working scale |
 | `bhat`, `shat`, `R`, `n` | Forms signed z as bhat/shat, then uses the same standardized route |
 | `bhat`, `shat`, `R`, `n`, `var_y` | Reconstructs predictor crossproducts using the known phenotype sample variance; `coef` returns original-scale coefficients |
 | `z`, `R`, `n`, `var_y` | Sets response sum of squares and initial variance scales; leaves z-based crossproducts unchanged |
 | `z` or `bhat/shat`, `R`, with n omitted | Noncentrality-parameter likelihood; emits a warning and uses `prior_variance` |
 | `XtX`, `Xty`, `yty`, `n` | Centered sufficient statistics via `susie_suff_stat` |
+| Summaries and reference `X` via `susie_rss` | Reference rows may differ from association n; ordinary single-panel products are matrix-free |
+| `z`, `R` via `susie_rss_lambda` | RSS with fixed or estimated regularization |
+| Summaries via `susie_ser` | One-effect regression without LD |
+
+For individual-level data, rows are observations and columns are predictors.
+SciPy sparse input remains sparse. `na_rm=True` removes missing-outcome rows;
+predictor entries must be finite. `intercept=True` centers predictors and outcome.
+Do not pass unadjusted genotypes and outcomes when covariate adjustment is required
+by the scientific analysis: perform that adjustment before fitting.
+
+Advanced RSS options include score-statistic preparation, multiple reference
+panels, mismatch variance and finite-reference corrections. These are explicit
+model choices; they are not automatic repairs of the ordinary RSS input route.
+Reference `X` is converted to dense correlation matrices for finite-reference or
+mismatch corrections, panel lists, RSS-lambda, and effect reconstruction using
+`bhat`, `shat` and `var_y`.
+See [the API](api.md#shared-fitting-options) for their controls.
 
 The [model page](model.md#from-summaries-to-working-sufficient-statistics)
 derives each transformation. Provide either z or both bhat and shat. `var_y`
@@ -87,7 +105,7 @@ R_new = signs[:, None] * R * signs[None, :]
 
 For effect-estimate inputs, recode bhat in the same way and leave shat unchanged.
 Update the allele metadata consistently. The API does not infer these signs or
-filter variants on the caller's behalf.
+automatically filter variants. Explicit `maf`/`maf_thresh` filtering applies before fitting.
 
 ## Priors and zero-information columns
 
@@ -103,7 +121,8 @@ variant/allele/scale metadata is checked rather than silently reordered or
 transformed. New fits do not require a retained-data hash. Continuation still
 requires the original retained data and its integrity checks. If the initial
 state has more effects than requested L, its effect count is retained, as in
-pinned susieR; expanding a state prioritizes its credible-set components.
+pinned susieR. Initialization retains original component row order; credible-set
+return order does not reorder the supplied alpha matrix.
 
 `prior_weights` are finite nonnegative variant weights with a positive finite
 total. Default weights are uniform. With a null weight $w_0$, the raw vector
@@ -151,5 +170,5 @@ status. The settings of numerical comparisons are recorded separately on
 [Numerical accuracy](numerical_accuracy.md).
 
 A dense float64 matrix requires $8p^2$ bytes before working arrays and results.
-See [Implementation](implementation.md#layout-ownership-and-memory) for copies,
+See [Implementation](implementation.md#dense-storage-and-exact-algebra) for copies,
 layouts and additional storage.

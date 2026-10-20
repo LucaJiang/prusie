@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python">
+<meta name="description" content="SuSiE fine-mapping with a Rust solver and Python API">
 <title>Inputs, alignment and priors · prusie</title>
 <link rel="icon" href="assets/logos/favicon.ico" sizes="16x16 32x32 48x48" type="image/x-icon">
 <link rel="stylesheet" href="assets/site.css">
@@ -15,7 +15,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping from summary statistics</small></span></a>
+<a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html" aria-current="page">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
@@ -36,8 +36,8 @@
 alleles before fitting. prusie checks numerical arrays; the study design,
 allele harmonization and covariate adjustment belong to the input preparation.</p>
 <h2 id="supported-model-and-input-routes">Supported model and input routes</h2>
-<p>prusie fits Gaussian SuSiE on CPU in float64, using summary statistics or
-centered sufficient statistics. Choose the route that preserves the scale
+<p>prusie fits Gaussian SuSiE on CPU in float64, using individual-level data,
+summary statistics or centered sufficient statistics. Choose the route that preserves the scale
 information available for the study:</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
@@ -47,6 +47,10 @@ information available for the study:</p>
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>X</code>, <code>y</code> via <code>susie</code></td>
+<td>Dense or sparse individual data, with optional centering and standardization</td>
+</tr>
 <tr>
 <td><code>z</code>, <code>R</code>, <code>n</code></td>
 <td>Finite-sample Wald-adjusted summaries on a standardized working scale</td>
@@ -71,8 +75,32 @@ information available for the study:</p>
 <td><code>XtX</code>, <code>Xty</code>, <code>yty</code>, <code>n</code></td>
 <td>Centered sufficient statistics via <code>susie_suff_stat</code></td>
 </tr>
+<tr>
+<td>Summaries and reference <code>X</code> via <code>susie_rss</code></td>
+<td>Reference rows may differ from association n; ordinary single-panel products are matrix-free</td>
+</tr>
+<tr>
+<td><code>z</code>, <code>R</code> via <code>susie_rss_lambda</code></td>
+<td>RSS with fixed or estimated regularization</td>
+</tr>
+<tr>
+<td>Summaries via <code>susie_ser</code></td>
+<td>One-effect regression without LD</td>
+</tr>
 </tbody>
 </table></div>
+<p>For individual-level data, rows are observations and columns are predictors.
+SciPy sparse input remains sparse. <code>na_rm=True</code> removes missing-outcome rows;
+predictor entries must be finite. <code>intercept=True</code> centers predictors and outcome.
+Do not pass unadjusted genotypes and outcomes when covariate adjustment is required
+by the scientific analysis: perform that adjustment before fitting.</p>
+<p>Advanced RSS options include score-statistic preparation, multiple reference
+panels, mismatch variance and finite-reference corrections. These are explicit
+model choices; they are not automatic repairs of the ordinary RSS input route.
+Reference <code>X</code> is converted to dense correlation matrices for finite-reference or
+mismatch corrections, panel lists, RSS-lambda, and effect reconstruction using
+<code>bhat</code>, <code>shat</code> and <code>var_y</code>.
+See <a href="api.html#shared-fitting-options">the API</a> for their controls.</p>
 <p>The <a href="model.html#from-summaries-to-working-sufficient-statistics">model page</a>
 derives each transformation. Provide either z or both bhat and shat. <code>var_y</code>
 is a measured sample phenotype variance, not a value inferred from a trait name
@@ -131,7 +159,7 @@ signs to z and both LD axes:</p>
 
 <p>For effect-estimate inputs, recode bhat in the same way and leave shat unchanged.
 Update the allele metadata consistently. The API does not infer these signs or
-filter variants on the caller's behalf.</p>
+automatically filter variants. Explicit <code>maf</code>/<code>maf_thresh</code> filtering applies before fitting.</p>
 <h2 id="priors-and-zero-information-columns">Priors and zero-information columns</h2>
 <p><code>scaled_prior_variance</code> accepts a nonnegative scalar or length-L vector,
 including values above one. With missing n, the likelihood instead uses
@@ -144,7 +172,8 @@ variant/allele/scale metadata is checked rather than silently reordered or
 transformed. New fits do not require a retained-data hash. Continuation still
 requires the original retained data and its integrity checks. If the initial
 state has more effects than requested L, its effect count is retained, as in
-pinned susieR; expanding a state prioritizes its credible-set components.</p>
+pinned susieR. Initialization retains original component row order; credible-set
+return order does not reorder the supplied alpha matrix.</p>
 <p><code>prior_weights</code> are finite nonnegative variant weights with a positive finite
 total. Default weights are uniform. With a null weight <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>w</mi><mn>0</mn></msub></mrow><annotation encoding="application/x-tex">w_0</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span>, the raw vector
 is augmented as <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mi>w</mi><mn>0</mn></msub><mo stretchy="false">)</mo><msub><mi>w</mi><mn>1</mn></msub><mo separator="true">,</mo><mo>…</mo><mo separator="true">,</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mi>w</mi><mn>0</mn></msub><mo stretchy="false">)</mo><msub><mi>w</mi><mi>p</mi></msub><mo separator="true">,</mo><msub><mi>w</mi><mn>0</mn></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">((1-w_0)w_1,\ldots,(1-w_0)w_p,w_0)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">((</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="minner">…</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0269em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span>, then the <strong>whole</strong> vector
@@ -195,7 +224,7 @@ errors; <a href="results.html#iterations-and-finalization">Results</a> explains 
 status. The settings of numerical comparisons are recorded separately on
 <a href="numerical_accuracy.html">Numerical accuracy</a>.</p>
 <p>A dense float64 matrix requires <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><msup><mi>p</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">8p^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0085em;vertical-align:-0.1944em;"></span><span class="mord">8</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> bytes before working arrays and results.
-See <a href="implementation.html#layout-ownership-and-memory">Implementation</a> for copies,
+See <a href="implementation.html#dense-storage-and-exact-algebra">Implementation</a> for copies,
 layouts and additional storage.</p></article>
 <footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
 </main>

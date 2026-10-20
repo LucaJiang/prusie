@@ -1,38 +1,40 @@
-# prusie: SuSiE fine-mapping from summary statistics
+# prusie: SuSiE fine-mapping in Python
 
 <p align="center">
   <a href="docs/assets/logos/logo_title.jpeg"><img src="docs/assets/logos/prusie-banner-1792.jpg" alt="prusie — Python and Rust software for SuSiE fine-mapping" width="960"></a>
 </p>
 
-prusie is a Rust implementation of SuSiE and SuSiE-RSS fine-mapping for
-Python. It fits association summary statistics and linkage disequilibrium (LD),
-or sufficient statistics, and returns posterior inclusion probabilities (PIPs)
-and credible sets. The recorded source snapshot agrees with susieR 0.16.6 to
-within 1e-5 in PIP across the 200 GWAS and eQTL analyses described below.
+prusie fits SuSiE fine-mapping models in Python with a Rust solver. It returns
+component-level posterior probabilities, marginal inclusion probabilities (PIPs)
+and credible sets from association summaries, sufficient statistics or
+individual-level data. See [numerical accuracy](docs/numerical_accuracy.md) for
+validation against susieR 0.16.6 and [the model](docs/model.md) for assumptions.
 
-The current unreleased defaults favor reference-oriented computation; the
-recorded speed and memory measurements do not benchmark these changed defaults.
-Known weak-component cases still exceed 1e-5, so universal R agreement is not
-established. See [computational compatibility](docs/model.md#computational-compatibility)
-for the current qualification and experimental math options.
+- Dense and sparse individual data, summary statistics, sufficient statistics,
+  regularized RSS, single-effect regression and trend filtering.
+- Gaussian or fixed mixture priors, conjugate NIG residual inference, slot
+  activity models and automatic or greedy effect counts.
+- Posterior accessors, credible-set controls, prediction and model summaries.
+
+SuSiE-inf, SuSiE-ash and Mr.ASH are outside the supported model set.
 
 ## Installation
 
-This checkout contains **0.2.4.dev2** (development version). Building from source requires CPython 3.10–3.13,
-the Rust toolchain pinned in `rust-toolchain.toml`, a C linker and the Python
-development headers:
+This checkout contains **0.2.4.dev2** (development version). Building from source
+requires CPython 3.10–3.13, the Rust toolchain pinned in `rust-toolchain.toml`,
+a C compiler and archiver, and the Python development headers:
 
 ```sh
-git clone --branch main https://github.com/LucaJiang/prusie.git
-cd prusie
+cd prusie  # source checkout for the version documented here
 python -m venv .venv
 . .venv/bin/activate
 python -m pip install '.[analysis]'
 ```
 
-Fitting requires only NumPy at run time; the optional `analysis` extra adds
-Matplotlib and SciPy for figures and LD diagnostics. An installed package
-requires neither R nor Rust. The [installation guide](docs/install.md) also
+Ordinary dense fitting requires only NumPy at run time. The optional `analysis`
+extra adds SciPy for sparse designs, advanced RSS models and posterior outcome
+configurations, and Matplotlib for figures. An installed package requires
+neither R nor Rust. The [installation guide](docs/install.md) also
 describes the earlier prerelease wheel for CPython 3.12 on Linux x86-64.
 
 ## Example
@@ -68,7 +70,7 @@ sets (CS) and then produces figures and an offline report from the same fit.
 ## Accuracy and performance
 
 <!-- current:highlights:start -->
-Measured **0.2.4.dev2** against susieR 0.16.6.
+Historical measurements of the recorded **0.2.4.dev2** snapshot against susieR 0.16.6.
 
 | Analysis | Loci | Max. absolute PIP difference vs susieR | Speed-up¹ | Memory ratio² |
 | --- | --- | --- | --- | --- |

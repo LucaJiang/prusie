@@ -6,6 +6,7 @@ from __future__ import annotations
 import html
 import json
 import re
+from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -100,16 +101,35 @@ def page_toc(filename: str, markdown_document) -> str:
     )
 
 
+class _PageAnchors(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.anchors = set()
+
+    def handle_starttag(self, tag, attrs):
+        for key, value in attrs:
+            if value is not None and (key == "id" or (tag == "a" and key == "name")):
+                self.anchors.add(value)
+
+
 def check_links():
-    """Catch missing local page and asset targets before publishing the site."""
+    """Catch missing local pages, assets and HTML section targets."""
+    anchors = {}
     for page in DOCS.rglob("*.html"):
         for target in re.findall(r'(?:href|src)="([^"]+)"', page.read_text()):
             url = urlsplit(html.unescape(target))
-            if url.scheme or url.netloc or not url.path:
+            if url.scheme or url.netloc:
                 continue
-            path = page.parent / unquote(url.path)
+            path = (page.parent / unquote(url.path) if url.path else page).resolve()
             if not path.is_file():
                 raise ValueError(f"{page.relative_to(ROOT)}: missing link target {target}")
+            if url.fragment and path.suffix.lower() == ".html":
+                if path not in anchors:
+                    parser = _PageAnchors()
+                    parser.feed(path.read_text())
+                    anchors[path] = parser.anchors
+                if unquote(url.fragment) not in anchors[path]:
+                    raise ValueError(f"{page.relative_to(ROOT)}: missing section target {target}")
 
 
 def build() -> None:

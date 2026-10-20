@@ -21,12 +21,10 @@ After source changes, reinstall the package or use
 ```sh
 ruff check
 ruff format --check
-cargo fmt --check
-cargo clippy --locked --all-targets --no-default-features -- -D warnings
-cargo clippy --locked --all-targets --no-default-features --features vector-math -- -D warnings
+cargo fmt --all --check
+cargo clippy --locked --workspace --all-targets -- -D warnings
 python -m pytest tests
-cargo test --locked --lib --no-default-features -- --test-threads=1
-cargo test --locked --lib --no-default-features --features vector-math -- --test-threads=1
+cargo test --locked -p prusie-core -- --test-threads=1
 ```
 
 Tests cover frozen susieR outputs, an independent NumPy reference, analytical

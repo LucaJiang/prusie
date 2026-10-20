@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python">
+<meta name="description" content="SuSiE fine-mapping with a Rust solver and Python API">
 <title>Python API · prusie</title>
 <link rel="icon" href="assets/logos/favicon.ico" sizes="16x16 32x32 48x48" type="image/x-icon">
 <link rel="stylesheet" href="assets/site.css">
@@ -15,7 +15,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping from summary statistics</small></span></a>
+<a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html" aria-current="page">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
@@ -24,11 +24,10 @@
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="api.md">Markdown source</a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#susie_rss">susie_rss</a></li>
-<li><a href="#susie_suff_stat">susie_suff_stat</a></li>
+<li><a href="#fitting-entry-points">Fitting entry points</a></li>
 <li><a href="#shared-fitting-options">Shared fitting options</a></li>
 <li><a href="#susieresult">SusieResult</a></li>
-<li><a href="#posterior-helpers">Posterior helpers</a></li>
+<li><a href="#posterior-and-model-helpers">Posterior and model helpers</a></li>
 <li><a href="#load_example">load_example</a></li>
 <li><a href="#convergence-and-post-analysis">Convergence and post-analysis</a></li>
 <li><a href="#summaries-comparisons-and-reports">Summaries, comparisons and reports</a></li>
@@ -40,204 +39,255 @@
 </ul>
 </div>
 </details><h1 id="python-api">Python API</h1>
-<p>The fitting entry points are <code>susie_rss</code> and <code>susie_suff_stat</code>, both returning
-<code>SusieResult</code>. <code>load_example</code> supplies the packaged toy data; the analysis
-helpers below operate on a completed fit. Numerical fitting inputs are converted
-to float64 as needed.
-Result indices are zero-based. See <a href="inputs.html">inputs</a> for alignment and
-<a href="results.html">results</a> for the complete return schema.</p>
-<p>The two fitting snippets below illustrate calls on caller-prepared arrays;
-<code>prusie</code> must be imported and the displayed input names defined. For a complete
-offline script, start with <a href="example.html">the toy example</a>.</p>
-<h2 id="susie_rss">susie_rss</h2>
-<p>Fit Gaussian SuSiE from signed association statistics and LD:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span>
+<p>The Gaussian SuSiE fitters return a typed <code>SusieResult</code>. Inputs are converted
+to float64 as needed; variant and component indices are zero-based. See
+<a href="inputs.html">inputs</a> for alignment and <a href="results.html">results</a> for returned fields.
+Python <code>help()</code> provides complete signatures and NumPy-style docstrings.</p>
+<h2 id="fitting-entry-points">Fitting entry points</h2>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Input and purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>susie(X, y, *, ...)</code></td>
+<td>Individual-level dense NumPy or SciPy sparse data</td>
+</tr>
+<tr>
+<td><code>susie_suff_stat(XtX, Xty, yty, n, *, ...)</code></td>
+<td>Centered sufficient statistics; <code>susie_ss</code> is an alias</td>
+</tr>
+<tr>
+<td><code>susie_rss(z=..., R=..., n=..., ...)</code></td>
+<td>Signed summary statistics with LD; accepts <code>bhat</code>/<code>shat</code> and reference <code>X</code> routes</td>
+</tr>
+<tr>
+<td><code>susie_rss_lambda(z, R, *, lambda_=..., ...)</code></td>
+<td>RSS with fixed or estimated LD regularization</td>
+</tr>
+<tr>
+<td><code>susie_ser(z=..., ...)</code></td>
+<td>One-effect summary-statistic model without an LD matrix</td>
+</tr>
+<tr>
+<td><code>susie_auto(X, y, *, ...)</code></td>
+<td>Increase the effect count using the susieR automatic fitting rule</td>
+</tr>
+<tr>
+<td><code>susie_trendfilter(y, *, order=0, ...)</code></td>
+<td>Trend filtering with an implicit cumulative design</td>
+</tr>
+</tbody>
+</table></div>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
+
+<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span>
     <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span>
-    <span class="n">L</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span>
+    <span class="n">L</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
     <span class="n">estimate_residual_variance</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">coverage</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">min_abs_corr</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
     <span class="n">variant_ids</span><span class="o">=</span><span class="n">variant_ids</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 
-<p>Input routes, shapes and alignment requirements are centralized in
-<a href="inputs.html#supported-model-and-input-routes">Inputs</a>. The
-<a href="model.html#from-summaries-to-working-sufficient-statistics">model page</a> gives
-separate working-scale formulas for each route.</p>
-<p>A supplied <code>var_y</code> must be positive and finite. When <code>n</code> is omitted, it is
-validated and recorded but does not enter the working likelihood.</p>
-<h2 id="susie_suff_stat">susie_suff_stat</h2>
-<p>Fit from centered sufficient statistics:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_suff_stat</span><span class="p">(</span>
-    <span class="n">XtX</span><span class="o">=</span><span class="n">Q</span><span class="p">,</span> <span class="n">Xty</span><span class="o">=</span><span class="n">g</span><span class="p">,</span> <span class="n">yty</span><span class="o">=</span><span class="n">yty</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">n</span><span class="p">,</span>
-    <span class="n">L</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span>
-    <span class="n">estimate_residual_variance</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">coverage</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span> <span class="n">min_abs_corr</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-    <span class="n">variant_ids</span><span class="o">=</span><span class="n">variant_ids</span><span class="p">,</span>
-<span class="p">)</span>
-</code></pre></div>
-
-<p><code>XtX</code>, <code>Xty</code>, <code>yty</code> and <code>n</code> describe the same centered data, as detailed in
-<a href="inputs.html#shapes-and-numerical-checks">Inputs</a>. <code>X_colmeans</code> and <code>y_mean</code> are
-optional original means for recovering the intercept.</p>
+<p>Here <code>z</code>, <code>R</code>, <code>n</code> and <code>variant_ids</code> must describe the same ordered variants.
+For a runnable offline script, start with <a href="example.html">the toy example</a>.
+Individual-level fitting centers the outcome and, by default, the design;
+<code>intercept=False</code> disables centering. <code>standardize</code> controls predictor scaling,
+<code>na_rm=True</code> drops rows with missing outcomes, and <code>compute_univariate_zscore</code>
+requests marginal z-scores. Dense and CSC sparse designs use matrix-vector
+operators without constructing a dense Gram matrix; sparse designs are not
+densified. Trend filtering also avoids storing its dense design matrix.</p>
+<p>The reference-factor <code>X</code> route in <code>susie_rss</code> uses the number of reference
+rows to estimate LD, independently of the association sample size <code>n</code>.
+Lists of reference panels are supported where susieR accepts them. SciPy is
+required for sparse inputs and advanced RSS linear algebra.</p>
+<p><code>susie</code>, <code>susie_suff_stat</code>, <code>susie_rss</code> and <code>susie_rss_lambda</code> accept
+<code>init_only=True</code> to return a <code>SusieInputs</code> specification;
+<code>susie_workhorse(inputs)</code> fits it later. Panel-list RSS initialization performs
+per-panel selection fits before returning that specification. <code>model_init</code> accepts a previous fit
+or posterior state; <code>s_init</code> remains its supported alias. Supplying both raises
+an error. The existing retained-data continuation interface remains available.
+With the default <code>use_mad=True</code>, trend-filter initialization follows susieR's
+nested preparation; use <code>use_mad=False</code> for a directly reusable <code>SusieInputs</code>.
+<code>susie_auto</code> requires fitting and does not accept <code>init_only=True</code>.</p>
 <h2 id="shared-fitting-options">Shared fitting options</h2>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Option</th>
-<th>Default</th>
 <th>Meaning</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>L</code></td>
-<td>10</td>
-<td>Maximum number of effects, capped at internal predictor count</td>
+<td><code>L=10</code></td>
+<td>Maximum number of effects, capped at the internal predictor count</td>
 </tr>
 <tr>
-<td><code>scaled_prior_variance</code></td>
-<td>0.2</td>
-<td>Initial component variance divided by yty/(n−1); nonnegative scalar or length-L vector, including values above one</td>
+<td><code>scaled_prior_variance=0.2</code></td>
+<td>Gaussian initial variance relative to outcome variance; NIG slab variance relative to residual variance; scalar or length-L vector</td>
 </tr>
 <tr>
-<td><code>residual_variance</code></td>
-<td>None</td>
-<td>Initial/fixed residual variance; None uses yty/(n−1)</td>
+<td><code>residual_variance=None</code></td>
+<td>Initial or fixed residual variance; defaults to the working outcome variance</td>
 </tr>
 <tr>
-<td><code>estimate_prior_variance</code></td>
-<td>True</td>
-<td>Whether to update component V</td>
+<td><code>estimate_prior_variance=True</code></td>
+<td>Update component prior variances</td>
 </tr>
 <tr>
-<td><code>estimate_prior_method</code></td>
-<td><code>'optim'</code></td>
-<td>Continuous marginal-likelihood search; alternatives <code>'EM'</code> and <code>'simple'</code> follow the <a href="model.html#sequential-ibss-and-variance-estimation">model's update schedule</a></td>
+<td><code>estimate_prior_method="optim"</code></td>
+<td>Prior update: <code>optim</code>, <code>EM</code> or <code>simple</code> (<code>susie_ser</code> accepts <code>optim</code> or <code>simple</code>); disable estimation with <code>estimate_prior_variance=False</code></td>
 </tr>
 <tr>
-<td><code>check_null_threshold</code></td>
-<td>0</td>
-<td>Log-BF threshold for the applicable null-V comparison</td>
+<td><code>prior_variance_grid</code>, <code>mixture_weights</code></td>
+<td>Fixed mixture of positive prior variances; weights default to uniform</td>
 </tr>
 <tr>
-<td><code>prior_weights</code></td>
-<td>None</td>
-<td>Uniform prior by default; finite nonnegative weights with positive total otherwise</td>
+<td><code>estimate_residual_method="MoM"</code></td>
+<td>Residual update: <code>MoM</code>, <code>MLE</code> or conjugate <code>NIG</code></td>
 </tr>
 <tr>
-<td><code>null_weight</code></td>
-<td>0</td>
-<td>Optional last internal null column, in [0,1)</td>
+<td><code>alpha0</code>, <code>beta0</code></td>
+<td>Positive NIG hyperparameters; defaults are 1/√n</td>
 </tr>
 <tr>
-<td><code>standardize</code></td>
-<td>True</td>
-<td>Scale predictors to unit sample variance</td>
+<td><code>residual_variance_lowerbound</code>, <code>residual_variance_upperbound</code></td>
+<td>Bounds for residual variance updates</td>
 </tr>
 <tr>
-<td><code>prior_tol</code></td>
-<td>1e-9</td>
-<td>Final trim/PIP threshold; precise inequalities and separate CS activity are in <a href="results.html#iterations-and-finalization">Results</a></td>
+<td><code>prior_weights=None</code>, <code>null_weight=0</code></td>
+<td>Variant prior probabilities and optional null-effect probability</td>
 </tr>
 <tr>
-<td><code>coverage</code></td>
-<td>0.95</td>
-<td>Requested credible-set posterior mass</td>
+<td><code>slot_prior=None</code></td>
+<td>Optional effect-activity model from <code>slot_prior_betabinom</code> or <code>slot_prior_poisson</code></td>
 </tr>
 <tr>
-<td><code>min_abs_corr</code></td>
-<td>0.5</td>
-<td>Minimum complete-pair absolute correlation for retained sets</td>
+<td><code>L_greedy</code>, <code>greedy_lbf_cutoff</code></td>
+<td>Greedy effect-count extension controls</td>
+</tr>
+<tr>
+<td><code>convergence_method</code></td>
+<td>Effective ordinary default <code>elbo</code>; SS/RSS default <code>None</code> preserves configured controls. <code>pip</code> checks complete alpha and aggregate PIP</td>
+</tr>
+<tr>
+<td><code>coverage=0.95</code>, <code>min_abs_corr=0.5</code></td>
+<td>Credible-set mass and purity thresholds</td>
 </tr>
 <tr>
 <td><code>n_purity</code></td>
-<td>None</td>
-<td>Accepted option; matrix-input purity always uses all selected pairs</td>
+<td>Defaults to <code>None</code> for sufficient-statistic/ordinary RSS and <code>"auto"</code> for individual data, RSS-lambda and CS getters; correlation-matrix purity uses all pairs</td>
 </tr>
 <tr>
-<td><code>check_input</code></td>
-<td>False</td>
-<td>Additional eigendecomposition/projection diagnostics; basic validity checks stay active</td>
+<td><code>median_abs_corr</code>, <code>cs_extension_corr</code></td>
+<td>Alternative purity criterion and correlated-variant CS extension</td>
 </tr>
 <tr>
-<td><code>r_tol</code></td>
-<td>1e-8</td>
-<td>Tolerance for optional sufficient-statistic eigenvalue checks</td>
+<td><code>maf</code>, <code>maf_thresh</code></td>
+<td>Filter predictors before fitting using aligned minor-allele frequencies</td>
 </tr>
 <tr>
-<td><code>check_prior</code></td>
-<td>True in RSS, False in sufficient statistics</td>
-<td>Check for unreasonably large estimated prior variance</td>
+<td><code>verbose=False</code></td>
+<td>Emit progress through the <code>prusie</code> Python logger</td>
 </tr>
 <tr>
-<td><code>variant_ids</code></td>
-<td>None</td>
-<td>Distinct nonempty strings; omitted IDs become positional labels</td>
-</tr>
-<tr>
-<td><code>variant_metadata</code></td>
-<td>None</td>
-<td>Aligned length-p columns copied into the result</td>
+<td><code>variant_ids</code>, <code>variant_metadata</code></td>
+<td>Ordered identifiers and aligned annotations</td>
 </tr>
 </tbody>
 </table></div>
-<p>RSS defaults to <code>max_iter=50</code>; sufficient statistics to 100. Both default to
-<code>tol=0.0001</code>. See <a href="results.html#iterations-and-finalization">Results</a> for the stopping criterion.
-<code>estimate_residual_variance</code> defaults to False in RSS and True in sufficient
-statistics. Use fixed variance with external LD unless estimation is justified.
-<code>coverage=None</code> or <code>min_abs_corr=None</code> disables CS construction while retaining PIP.</p>
-<p>The following exposed options accept only their listed defaults:</p>
+<p>RSS defaults to <code>max_iter=50</code> and fixed residual variance; sufficient-statistic
+and individual-level fitting default to <code>max_iter=100</code> and estimated residual
+variance. Ordinary Gaussian ELBO tolerance is <code>1e-4</code>. Passing <code>tol=None</code>
+selects method-specific defaults (<code>1e-6</code> for NIG); omitted <code>tol</code> retains the
+existing <code>1e-4</code> default in <code>susie_rss</code> and <code>susie_suff_stat</code>.
+Individual-level NIG uses <code>1e-6</code> when tolerance is omitted.
+NIG integrates out residual variance unless a fixed mixture selects Gaussian
+SER updates; it enables residual estimation and uses posterior stopping when
+L &gt; 1. Slot priors also select
+posterior stopping. Use fixed residual variance with external LD unless
+estimation is justified.</p>
+<p>For RSS, <code>z_method="wald"</code> or <code>"score"</code> selects the working statistic;
+<code>R_mismatch</code> and <code>R_finite</code> control reference mismatch and finite-reference
+adjustments. <code>susie_rss_control(...)</code> creates a validated control object for
+these options. <code>susie_rss_lambda</code> uses <code>lambda_="estimate"</code> for automatic
+regularization and exposes <code>intercept_value</code>, <code>check_R</code> and <code>check_z</code>.
+Its residual method is <code>"MLE"</code> only, with default tolerance <code>1e-3</code>.</p>
+<p>The legacy <code>z_ld_weight=0</code> argument is retained. Nonzero values are rejected:
+this parameter has no defined semantics in the pinned susieR 0.16.6 source.
+SuSiE-inf, SuSiE-ash and Mr.ASH are outside the supported model set.</p>
+<h2 id="susieresult">SusieResult</h2>
+<p>Results include documented fields <code>pip</code>, <code>alpha</code>, <code>mu</code>, <code>mu2</code>, <code>lbf_variable</code>,
+<code>lbf</code>, <code>V</code>, <code>sigma2</code>, <code>elbo</code>, <code>KL</code>, <code>sets</code>, <code>niter</code> and <code>converged</code>. Mixture and
+activity models additionally return grid Bayes factors and slot probabilities.
+<code>input_quality</code> gives typed input diagnostics; <code>fit.qc</code> retains the existing
+mapping interface. <code>fit.as_dict()</code> returns a shallow mapping and does not copy arrays.</p>
+<h2 id="posterior-and-model-helpers">Posterior and model helpers</h2>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
-<th>Parameter</th>
-<th>Allowed value</th>
-<th>Error for another value</th>
+<th>Functions</th>
+<th>Output</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>verbose</code></td>
-<td>False</td>
-<td><code>NotImplementedError: verbose is not implemented</code></td>
+<td><code>susie_get_pip</code>, <code>susie_get_cs</code>, <code>susie_get_cs_attainable</code></td>
+<td>Inclusion probabilities and credible sets</td>
 </tr>
 <tr>
-<td><code>maf</code>, <code>maf_thresh</code> (sufficient statistics)</td>
-<td>None, 0</td>
-<td><code>NotImplementedError: maf is not implemented</code></td>
+<td><code>susie_get_posterior_mean</code>, <code>susie_get_posterior_sd</code>, <code>susie_get_lfsr</code></td>
+<td>Marginal moments and local false-sign rates</td>
 </tr>
 <tr>
-<td><code>z_ld_weight</code> (RSS)</td>
-<td>0</td>
-<td><code>NotImplementedError: Nonzero z_ld_weight is not implemented</code></td>
+<td><code>susie_get_posterior_samples(..., seed=...)</code></td>
+<td>Reproducible posterior draws using an explicit NumPy RNG seed</td>
+</tr>
+<tr>
+<td><code>susie_get_objective</code>, <code>susie_get_niter</code></td>
+<td>Objective history and completed iterations</td>
+</tr>
+<tr>
+<td><code>susie_get_prior_variance</code>, <code>susie_get_residual_variance</code></td>
+<td>Fitted variance parameters</td>
+</tr>
+<tr>
+<td><code>get_cs_correlation</code></td>
+<td>Correlations between credible-set representative variants</td>
+</tr>
+<tr>
+<td><code>coef</code>, <code>predict</code>, <code>summary</code></td>
+<td>Coefficients, predictions and tabular model summaries</td>
+</tr>
+<tr>
+<td><code>compute_suff_stat</code>, <code>univariate_regression</code>, <code>calc_z</code></td>
+<td>Individual-level data preparation</td>
+</tr>
+<tr>
+<td><code>susie_init_coef</code></td>
+<td>Construct a sparse coefficient initialization</td>
+</tr>
+<tr>
+<td><code>susie_post_outcome_configuration</code></td>
+<td>Shared-variant posterior outcome configurations from fitted models</td>
 </tr>
 </tbody>
 </table></div>
-<p>Invalid shapes, nonfinite values and parameter ranges raise <code>ValueError</code>.
-<code>L</code>, <code>max_iter</code> and supplied <code>n_purity</code> must be positive integers; <code>tol</code>,
-<code>prior_tol</code>, <code>r_tol</code> and <code>check_null_threshold</code> must be finite and nonnegative.
-<code>coverage</code> lies in (0, 1], <code>min_abs_corr</code> in [0, 1], or either may be None.
-In missing-n mode, <code>prior_variance</code> (default 50) replaces
-<code>scaled_prior_variance</code>; changing the latter from 0.2 raises an error.</p>
-<p>Full signatures and docstrings are available through Python <code>help()</code> and the
-<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py">API source</a>.</p>
-<h2 id="susieresult">SusieResult</h2>
-<p>Both fitting functions return a <code>SusieResult</code>, including <code>pip</code>, <code>alpha</code>, <code>mu</code>,
-<code>mu2</code>, <code>lbf_variable</code>, <code>lbf</code>, <code>V</code>, <code>sigma2</code>, <code>elbo</code>, <code>KL</code>, <code>sets</code>, <code>niter</code>,
-<code>converged</code> and execution metadata. <code>fit.coef</code> gives posterior coefficient means on the scale defined by the input
-route. <code>fit.as_dict()</code> returns a shallow mapping; it does not copy
-arrays. See <a href="results.html">results</a> for shapes and finalization details.</p>
-<h2 id="posterior-helpers">Posterior helpers</h2>
-<p><code>prusie.posterior.marginal_pip(alpha, V, *, null_index=None, prior_tol=1e-9)</code>
-computes marginal inclusion probabilities from active components and excludes
-the optional null position.</p>
-<p><code>prusie.posterior.credible_sets</code> accepts alpha, V and a signed correlation
-matrix, with keyword options <code>coverage</code>, <code>min_abs_corr</code>, <code>null_index</code>,
-<code>n_purity</code>, <code>covariance_scales</code> and <code>covariance_multiplier</code>. See <a href="results.html#credible-set-fields">Results</a> for original component IDs,
-selection order, posterior mass and aliases.
-The scale options are used when the matrix contains covariance rather than
-correlation. Normal fitting constructs these arguments internally.</p>
+<p><code>susie_get_lfsr</code> computes Gaussian sign probabilities from each matched posterior
+mean and standard deviation. It intentionally avoids susieR 0.16.6's recycled
+matrix indexing in this auxiliary calculation. NumPy posterior samples are
+reproducible for a fixed seed; they do not reproduce R's random-number stream.
+X-based purity subsampling also uses a local NumPy RNG. Sparse-X credible-set
+extension evaluates the requested correlation blocks without densifying X;
+susieR skips this extension for sparse designs.</p>
+<p>Lower-level <code>prusie.posterior.marginal_pip</code> and <code>credible_sets</code> also accept
+posterior arrays directly. Covariance scale options allow purity calculations
+without materializing a correlation matrix. Original component IDs are retained
+in credible-set results; see <a href="results.html#credible-set-fields">results</a>.</p>
 <h2 id="load_example">load_example</h2>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 
@@ -251,13 +301,24 @@ effects and sample size. Input bytes are checked against packaged hashes and
 returned arrays are owned by the caller. The loader works from any directory
 without network access. See the <a href="example.html">toy example tutorial</a>.</p>
 <h2 id="convergence-and-post-analysis">Convergence and post-analysis</h2>
-<p>Both fitting interfaces support <code>s_init=None</code>, <code>refine=False</code>,
+<p>The core fitters support <code>s_init=None</code>, <code>refine=False</code>,
 <code>track_fit=False</code>, <code>convergence=None</code> and <code>retain_data=False</code>.
-Use <code>retain_data=True</code> on the source fit to enable later continuation,
-refinement or <code>s_init</code>. Tracking, initialization and refinement also retain
-inputs. <code>data_signature</code> is a content hash of the owned input snapshot,
-computed once and reused; ordinary unretained fits return <code>None</code>.
+The retained continuation, refinement and objective helpers support static,
+materialized Gaussian sufficient-statistic and R-based RSS models using the
+default or <code>ConvergenceConfig</code> stopping controls. Matrix-free designs, dynamic
+RSS, mixture/NIG/slot models, susieR <code>pip</code> stopping, greedy component growth,
+<code>median_abs_corr</code> and <code>cs_extension_corr</code> are outside that scope.
+Explicit <code>retain_data=True</code> or <code>refine=True</code> requests for
+these combinations raise before fitting; ordinary fitting and tracking remain
+available without a retained snapshot. No dense Gram matrix is constructed to
+enable retention of a matrix-free design.</p>
+<p>For supported models, <code>retain_data=True</code> enables later continuation,
+refinement or objective evaluation. Tracking, initialization and refinement
+also retain inputs within this scope. A new fit with <code>model_init</code>/<code>s_init</code>
+does not require source data retention. <code>data_signature</code> is a content hash of
+the owned input snapshot, computed once and reused; unretained fits return <code>None</code>.
 <code>ConvergenceConfig</code> selects exact ELBO, alpha/PIP or joint stopping.
+The separate <code>convergence_method="pip"</code> uses the susieR posterior stopping rule.
 Finite-ELBO stopping uses signed improvement; lagged posterior cycles remain
 diagnostics in that mode. Successful and statistical cycle exits respect
 <code>min_iter</code>; numerical failure is reported separately.

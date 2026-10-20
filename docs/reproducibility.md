@@ -68,8 +68,9 @@ maximum differences of 1.60e-14 for z, 1.12e-15 for R, 5.56e-16 for marginal
 effects and 2.09e-17 for their standard errors. Regeneration tolerances are
 8e-14, 5e-15, 3e-15 and 1e-16, respectively, with zero relative tolerance.
 Compressed archive bytes may differ after regeneration; the original files
-and provenance remain frozen. PIP comparisons with the R reference use absolute
-tolerance 1e-5 and zero relative tolerance.
+and provenance remain frozen. Current comparisons use complete final alpha
+matrices in original component and variant order, with absolute tolerance 1e-5
+and zero relative tolerance. PIP differences are retained as diagnostics.
 
 ### R comparison
 
@@ -77,7 +78,7 @@ Install susieR 0.16.6 at the recorded commit and jsonlite in your R library.
 Verify the package version, then run:
 
 ```sh
-python tools/benchmark/compare_r.py --rscript Rscript \
+python tools/benchmark/reproduce.py --rscript Rscript \
   --validation-only --output-dir new-reference-comparison
 ```
 

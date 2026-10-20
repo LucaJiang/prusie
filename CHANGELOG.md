@@ -1,27 +1,20 @@
 # Changelog
 
-## 0.2.4.dev2 — stopping and prior validation (unreleased)
+## 0.2.4.dev2 — Gaussian model and API expansion (unreleased)
 
-- Align supported Gaussian preprocessing with pinned susieR: warned working-XtX
-  symmetrization, missing-summary repair, vector/large initial priors and boundary checks.
-- Use reference-oriented scalar SER and materialized-matrix defaults; retain
-  regrouped/vector and factorized/compressed math only as experimental opt-ins.
-- Align default refinement initialization, objective comparison and stopping;
-  allow new-data warm starts while preserving retained-data integrity for continuation.
-- Keep known weak-component PIP failures explicit; do not relax activity or
-  convergence thresholds or claim a newly measured speed/memory improvement.
-
-- Simplified repository tooling, CI and license notices; no change to the package API or results.
-- Continue finite-ELBO fits through repeated alpha/PIP diagnostics until the
-  ELBO criterion or iteration limit is reached. Respect minimum iterations
-  and distinguish numerical failure from the initial iteration sentinel.
-- Check prior variance against the residual variance at the current fitting
-  step, including when continuing a saved fit.
-- Add a compact text representation of fitted results.
-- Removed the optional `prusie.ai` interpretation adapter.
-- Clarify installation, result interpretation and the worked examples;
-  simplify documentation navigation and the performance report.
-- Include license texts and third-party notices in distributions.
+- Separate the pure Rust solver from the PyO3 binding in a Cargo workspace.
+- Use mathematically equivalent float64 calculations without R-rounding emulation.
+- Make measured variance grouping, vector exponentials, implicit scaling and
+  exact signed-column compression default paths without mathematical switches.
+- Add individual-level dense/sparse fitting, reference-factor RSS, regularized
+  RSS, automatic effect-count fitting, implicit trend filtering and standalone SER.
+- Add fixed mixture priors, NIG and MLE residual updates, residual bounds, slot
+  activity priors, greedy effects and posterior convergence controls.
+- Add credible-set purity/extension options, posterior accessors, prediction,
+  model summaries and posterior outcome configurations.
+- Validate complete final component alpha matrices against susieR 0.16.6;
+  retain other model quantities as numerical diagnostics.
+- Keep post-analysis, convergence diagnostics, plotting and report interfaces.
 
 ## 0.2.4.dev1 — post-analysis (unreleased)
 

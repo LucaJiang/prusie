@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python">
+<meta name="description" content="SuSiE fine-mapping with a Rust solver and Python API">
 <title>Contributing · prusie</title>
 <link rel="icon" href="assets/logos/favicon.ico" sizes="16x16 32x32 48x48" type="image/x-icon">
 <link rel="stylesheet" href="assets/site.css">
@@ -15,7 +15,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping from summary statistics</small></span></a>
+<a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html" aria-current="page">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
@@ -47,12 +47,10 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <h2 id="lint-and-tests">Lint and tests</h2>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>ruff<span class="w"> </span>check
 ruff<span class="w"> </span>format<span class="w"> </span>--check
-cargo<span class="w"> </span>fmt<span class="w"> </span>--check
-cargo<span class="w"> </span>clippy<span class="w"> </span>--locked<span class="w"> </span>--all-targets<span class="w"> </span>--no-default-features<span class="w"> </span>--<span class="w"> </span>-D<span class="w"> </span>warnings
-cargo<span class="w"> </span>clippy<span class="w"> </span>--locked<span class="w"> </span>--all-targets<span class="w"> </span>--no-default-features<span class="w"> </span>--features<span class="w"> </span>vector-math<span class="w"> </span>--<span class="w"> </span>-D<span class="w"> </span>warnings
+cargo<span class="w"> </span>fmt<span class="w"> </span>--all<span class="w"> </span>--check
+cargo<span class="w"> </span>clippy<span class="w"> </span>--locked<span class="w"> </span>--workspace<span class="w"> </span>--all-targets<span class="w"> </span>--<span class="w"> </span>-D<span class="w"> </span>warnings
 python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests
-cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--locked<span class="w"> </span>--lib<span class="w"> </span>--no-default-features<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
-cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--locked<span class="w"> </span>--lib<span class="w"> </span>--no-default-features<span class="w"> </span>--features<span class="w"> </span>vector-math<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--locked<span class="w"> </span>-p<span class="w"> </span>prusie-core<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
 </code></pre></div>
 
 <p>Tests cover frozen susieR outputs, an independent NumPy reference, analytical

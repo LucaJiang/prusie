@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python">
-<title>prusie: SuSiE fine-mapping from summary statistics · prusie</title>
+<meta name="description" content="SuSiE fine-mapping with a Rust solver and Python API">
+<title>prusie: SuSiE fine-mapping in Python · prusie</title>
 <link rel="icon" href="assets/logos/favicon.ico" sizes="16x16 32x32 48x48" type="image/x-icon">
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -15,36 +15,36 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
-<a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping from summary statistics</small></span></a>
+<a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html" aria-current="page">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 <div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="index.md">Markdown source</a></div>
-<article><h1 id="prusie-susie-fine-mapping-from-summary-statistics">prusie: SuSiE fine-mapping from summary statistics</h1>
+<article><h1 id="prusie-susie-fine-mapping-in-python">prusie: SuSiE fine-mapping in Python</h1>
 <div class="logo-banner">
   <a href="assets/logos/logo_title.jpeg"><img src="assets/logos/prusie-banner-1792.jpg" alt="prusie — Python and Rust software for SuSiE fine-mapping" width="1792" height="592"></a>
 </div>
 
-<p>prusie is a fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for
-Python. It fits association summary statistics and linkage disequilibrium (LD),
-or sufficient statistics, and returns posterior inclusion probabilities (PIPs)
-and credible sets. Numerical comparisons with susieR 0.16.6 show agreement to
-within 1e-5 in PIP across the 200 GWAS and eQTL analyses described below.</p>
+<p>prusie fits SuSiE fine-mapping models in Python with a Rust solver. It returns
+component-level posterior probabilities, marginal inclusion probabilities (PIPs)
+and credible sets from association summaries, sufficient statistics or
+individual-level data. See <a href="numerical_accuracy.html">numerical accuracy</a> for
+validation against susieR 0.16.6 and <a href="model.html">the model</a> for assumptions.</p>
 <h2 id="installation">Installation</h2>
 <p>This checkout contains <strong>0.2.4.dev2</strong> (development version). Building from source requires CPython 3.10–3.13,
 the Rust toolchain pinned in <code>rust-toolchain.toml</code>, a C linker and the Python
 development headers:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>--branch<span class="w"> </span>main<span class="w"> </span>https://github.com/LucaJiang/prusie.git
-<span class="nb">cd</span><span class="w"> </span>prusie
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="nb">cd</span><span class="w"> </span>prusie<span class="w">  </span><span class="c1"># source checkout for the version documented here</span>
 python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
 .<span class="w"> </span>.venv/bin/activate
 python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span>
 </code></pre></div>
 
-<p>Fitting requires only NumPy at run time; the optional <code>analysis</code> extra adds
-Matplotlib and SciPy for figures and LD diagnostics. An installed package
+<p>Ordinary dense fitting requires only NumPy at run time. The optional <code>analysis</code>
+extra adds SciPy for sparse designs and advanced RSS models, and Matplotlib
+for figures. An installed package
 requires neither R nor Rust. The <a href="install.html">installation guide</a> also
 describes the earlier prerelease wheel for CPython 3.12 on Linux x86-64.</p>
 <h2 id="example">Example</h2>
@@ -73,7 +73,7 @@ CS 1: syn0350
 sets (CS) and then produces figures and an offline report from the same fit.</p>
 <h2 id="accuracy-and-performance">Accuracy and performance</h2>
 <!-- current:highlights:start -->
-<p>Measured <strong>0.2.4.dev2</strong> against susieR 0.16.6.</p>
+<p>Historical measurements of the recorded <strong>0.2.4.dev2</strong> snapshot against susieR 0.16.6.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>

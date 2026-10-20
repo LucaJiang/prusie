@@ -1,123 +1,139 @@
 # Python API
 
-The fitting entry points are `susie_rss` and `susie_suff_stat`, both returning
-`SusieResult`. `load_example` supplies the packaged toy data; the analysis
-helpers below operate on a completed fit. Numerical fitting inputs are converted
-to float64 as needed.
-Result indices are zero-based. See [inputs](inputs.md) for alignment and
-[results](results.md) for the complete return schema.
+The Gaussian SuSiE fitters return a typed `SusieResult`. Inputs are converted
+to float64 as needed; variant and component indices are zero-based. See
+[inputs](inputs.md) for alignment and [results](results.md) for returned fields.
+Python `help()` provides complete signatures and NumPy-style docstrings.
 
-The two fitting snippets below illustrate calls on caller-prepared arrays;
-`prusie` must be imported and the displayed input names defined. For a complete
-offline script, start with [the toy example](example.md).
+## Fitting entry points
 
-## susie_rss
-
-Fit Gaussian SuSiE from signed association statistics and LD:
+| Function | Input and purpose |
+| --- | --- |
+| `susie(X, y, *, ...)` | Individual-level dense NumPy or SciPy sparse data |
+| `susie_suff_stat(XtX, Xty, yty, n, *, ...)` | Centered sufficient statistics; `susie_ss` is an alias |
+| `susie_rss(z=..., R=..., n=..., ...)` | Signed summary statistics with LD; accepts `bhat`/`shat` and reference `X` routes |
+| `susie_rss_lambda(z, R, *, lambda_=..., ...)` | RSS with fixed or estimated LD regularization |
+| `susie_ser(z=..., ...)` | One-effect summary-statistic model without an LD matrix |
+| `susie_auto(X, y, *, ...)` | Increase the effect count using the susieR automatic fitting rule |
+| `susie_trendfilter(y, *, order=0, ...)` | Trend filtering with an implicit cumulative design |
 
 ```python
+import prusie
+
 fit = prusie.susie_rss(
     z=z, R=R, n=n,
-    L=10, max_iter=50, tol=0.0001,
+    L=10, max_iter=100,
     estimate_residual_variance=False,
-    coverage=0.95, min_abs_corr=0.5,
     variant_ids=variant_ids,
 )
 ```
 
-Input routes, shapes and alignment requirements are centralized in
-[Inputs](inputs.md#supported-model-and-input-routes). The
-[model page](model.md#from-summaries-to-working-sufficient-statistics) gives
-separate working-scale formulas for each route.
+Here `z`, `R`, `n` and `variant_ids` must describe the same ordered variants.
+For a runnable offline script, start with [the toy example](example.md).
+Individual-level fitting centers the outcome and, by default, the design;
+`intercept=False` disables centering. `standardize` controls predictor scaling,
+`na_rm=True` drops rows with missing outcomes, and `compute_univariate_zscore`
+requests marginal z-scores. Dense and CSC sparse designs use matrix-vector
+operators without constructing a dense Gram matrix; sparse designs are not
+densified. Trend filtering also avoids storing its dense design matrix.
 
-A supplied `var_y` must be positive and finite. When `n` is omitted, it is
-validated and recorded but does not enter the working likelihood.
+The reference-factor `X` route in `susie_rss` uses the number of reference
+rows to estimate LD, independently of the association sample size `n`.
+Lists of reference panels are supported where susieR accepts them. SciPy is
+required for sparse inputs and advanced RSS linear algebra.
 
-## susie_suff_stat
-
-Fit from centered sufficient statistics:
-
-```python
-fit = prusie.susie_suff_stat(
-    XtX=Q, Xty=g, yty=yty, n=n,
-    L=10, max_iter=100, tol=0.0001,
-    estimate_residual_variance=True,
-    coverage=0.95, min_abs_corr=0.5,
-    variant_ids=variant_ids,
-)
-```
-
-`XtX`, `Xty`, `yty` and `n` describe the same centered data, as detailed in
-[Inputs](inputs.md#shapes-and-numerical-checks). `X_colmeans` and `y_mean` are
-optional original means for recovering the intercept.
+`susie`, `susie_suff_stat`, `susie_rss` and `susie_rss_lambda` accept
+`init_only=True` to return a `SusieInputs` specification;
+`susie_workhorse(inputs)` fits it later. Panel-list RSS initialization performs
+per-panel selection fits before returning that specification. `model_init` accepts a previous fit
+or posterior state; `s_init` remains its supported alias. Supplying both raises
+an error. The existing retained-data continuation interface remains available.
+With the default `use_mad=True`, trend-filter initialization follows susieR's
+nested preparation; use `use_mad=False` for a directly reusable `SusieInputs`.
+`susie_auto` requires fitting and does not accept `init_only=True`.
 
 ## Shared fitting options
 
-| Option | Default | Meaning |
-| --- | --- | --- |
-| `L` | 10 | Maximum number of effects, capped at internal predictor count |
-| `scaled_prior_variance` | 0.2 | Initial component variance divided by yty/(n−1); nonnegative scalar or length-L vector, including values above one |
-| `residual_variance` | None | Initial/fixed residual variance; None uses yty/(n−1) |
-| `estimate_prior_variance` | True | Whether to update component V |
-| `estimate_prior_method` | `'optim'` | Continuous marginal-likelihood search; alternatives `'EM'` and `'simple'` follow the [model's update schedule](model.md#sequential-ibss-and-variance-estimation) |
-| `check_null_threshold` | 0 | Log-BF threshold for the applicable null-V comparison |
-| `prior_weights` | None | Uniform prior by default; finite nonnegative weights with positive total otherwise |
-| `null_weight` | 0 | Optional last internal null column, in [0,1) |
-| `standardize` | True | Scale predictors to unit sample variance |
-| `prior_tol` | 1e-9 | Final trim/PIP threshold; precise inequalities and separate CS activity are in [Results](results.md#iterations-and-finalization) |
-| `coverage` | 0.95 | Requested credible-set posterior mass |
-| `min_abs_corr` | 0.5 | Minimum complete-pair absolute correlation for retained sets |
-| `n_purity` | None | Accepted option; matrix-input purity always uses all selected pairs |
-| `check_input` | False | Additional eigendecomposition/projection diagnostics; basic validity checks stay active |
-| `r_tol` | 1e-8 | Tolerance for optional sufficient-statistic eigenvalue checks |
-| `check_prior` | True in RSS, False in sufficient statistics | Check for unreasonably large estimated prior variance |
-| `variant_ids` | None | Distinct nonempty strings; omitted IDs become positional labels |
-| `variant_metadata` | None | Aligned length-p columns copied into the result |
+| Option | Meaning |
+| --- | --- |
+| `L=10` | Maximum number of effects, capped at the internal predictor count |
+| `scaled_prior_variance=0.2` | Gaussian initial variance relative to outcome variance; NIG slab variance relative to residual variance; scalar or length-L vector |
+| `residual_variance=None` | Initial or fixed residual variance; defaults to the working outcome variance |
+| `estimate_prior_variance=True` | Update component prior variances |
+| `estimate_prior_method="optim"` | Prior update: `optim`, `EM` or `simple` (`susie_ser` accepts `optim` or `simple`); disable estimation with `estimate_prior_variance=False` |
+| `prior_variance_grid`, `mixture_weights` | Fixed mixture of positive prior variances; weights default to uniform |
+| `estimate_residual_method="MoM"` | Residual update: `MoM`, `MLE` or conjugate `NIG` |
+| `alpha0`, `beta0` | Positive NIG hyperparameters; defaults are 1/√n |
+| `residual_variance_lowerbound`, `residual_variance_upperbound` | Bounds for residual variance updates |
+| `prior_weights=None`, `null_weight=0` | Variant prior probabilities and optional null-effect probability |
+| `slot_prior=None` | Optional effect-activity model from `slot_prior_betabinom` or `slot_prior_poisson` |
+| `L_greedy`, `greedy_lbf_cutoff` | Greedy effect-count extension controls |
+| `convergence_method` | Effective ordinary default `elbo`; SS/RSS default `None` preserves configured controls. `pip` checks complete alpha and aggregate PIP |
+| `coverage=0.95`, `min_abs_corr=0.5` | Credible-set mass and purity thresholds |
+| `n_purity` | Defaults to `None` for sufficient-statistic/ordinary RSS and `"auto"` for individual data, RSS-lambda and CS getters; correlation-matrix purity uses all pairs |
+| `median_abs_corr`, `cs_extension_corr` | Alternative purity criterion and correlated-variant CS extension |
+| `maf`, `maf_thresh` | Filter predictors before fitting using aligned minor-allele frequencies |
+| `verbose=False` | Emit progress through the `prusie` Python logger |
+| `variant_ids`, `variant_metadata` | Ordered identifiers and aligned annotations |
 
-RSS defaults to `max_iter=50`; sufficient statistics to 100. Both default to
-`tol=0.0001`. See [Results](results.md#iterations-and-finalization) for the stopping criterion.
-`estimate_residual_variance` defaults to False in RSS and True in sufficient
-statistics. Use fixed variance with external LD unless estimation is justified.
-`coverage=None` or `min_abs_corr=None` disables CS construction while retaining PIP.
+RSS defaults to `max_iter=50` and fixed residual variance; sufficient-statistic
+and individual-level fitting default to `max_iter=100` and estimated residual
+variance. Ordinary Gaussian ELBO tolerance is `1e-4`. Passing `tol=None`
+selects method-specific defaults (`1e-6` for NIG); omitted `tol` retains the
+existing `1e-4` default in `susie_rss` and `susie_suff_stat`.
+Individual-level NIG uses `1e-6` when tolerance is omitted.
+NIG integrates out residual variance unless a fixed mixture selects Gaussian
+SER updates; it enables residual estimation and uses posterior stopping when
+L > 1. Slot priors also select
+posterior stopping. Use fixed residual variance with external LD unless
+estimation is justified.
 
-The following exposed options accept only their listed defaults:
+For RSS, `z_method="wald"` or `"score"` selects the working statistic;
+`R_mismatch` and `R_finite` control reference mismatch and finite-reference
+adjustments. `susie_rss_control(...)` creates a validated control object for
+these options. `susie_rss_lambda` uses `lambda_="estimate"` for automatic
+regularization and exposes `intercept_value`, `check_R` and `check_z`.
+Its residual method is `"MLE"` only, with default tolerance `1e-3`.
 
-| Parameter | Allowed value | Error for another value |
-| --- | --- | --- |
-| `verbose` | False | `NotImplementedError: verbose is not implemented` |
-| `maf`, `maf_thresh` (sufficient statistics) | None, 0 | `NotImplementedError: maf is not implemented` |
-| `z_ld_weight` (RSS) | 0 | `NotImplementedError: Nonzero z_ld_weight is not implemented` |
-
-Invalid shapes, nonfinite values and parameter ranges raise `ValueError`.
-`L`, `max_iter` and supplied `n_purity` must be positive integers; `tol`,
-`prior_tol`, `r_tol` and `check_null_threshold` must be finite and nonnegative.
-`coverage` lies in (0, 1], `min_abs_corr` in [0, 1], or either may be None.
-In missing-n mode, `prior_variance` (default 50) replaces
-`scaled_prior_variance`; changing the latter from 0.2 raises an error.
-
-Full signatures and docstrings are available through Python `help()` and the
-[API source](https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py).
+The legacy `z_ld_weight=0` argument is retained. Nonzero values are rejected:
+this parameter has no defined semantics in the pinned susieR 0.16.6 source.
+SuSiE-inf, SuSiE-ash and Mr.ASH are outside the supported model set.
 
 ## SusieResult
 
-Both fitting functions return a `SusieResult`, including `pip`, `alpha`, `mu`,
-`mu2`, `lbf_variable`, `lbf`, `V`, `sigma2`, `elbo`, `KL`, `sets`, `niter`,
-`converged` and execution metadata. `fit.coef` gives posterior coefficient means on the scale defined by the input
-route. `fit.as_dict()` returns a shallow mapping; it does not copy
-arrays. See [results](results.md) for shapes and finalization details.
+Results include documented fields `pip`, `alpha`, `mu`, `mu2`, `lbf_variable`,
+`lbf`, `V`, `sigma2`, `elbo`, `KL`, `sets`, `niter` and `converged`. Mixture and
+activity models additionally return grid Bayes factors and slot probabilities.
+`input_quality` gives typed input diagnostics; `fit.qc` retains the existing
+mapping interface. `fit.as_dict()` returns a shallow mapping and does not copy arrays.
 
-## Posterior helpers
+## Posterior and model helpers
 
-`prusie.posterior.marginal_pip(alpha, V, *, null_index=None, prior_tol=1e-9)`
-computes marginal inclusion probabilities from active components and excludes
-the optional null position.
+| Functions | Output |
+| --- | --- |
+| `susie_get_pip`, `susie_get_cs`, `susie_get_cs_attainable` | Inclusion probabilities and credible sets |
+| `susie_get_posterior_mean`, `susie_get_posterior_sd`, `susie_get_lfsr` | Marginal moments and local false-sign rates |
+| `susie_get_posterior_samples(..., seed=...)` | Reproducible posterior draws using an explicit NumPy RNG seed |
+| `susie_get_objective`, `susie_get_niter` | Objective history and completed iterations |
+| `susie_get_prior_variance`, `susie_get_residual_variance` | Fitted variance parameters |
+| `get_cs_correlation` | Correlations between credible-set representative variants |
+| `coef`, `predict`, `summary` | Coefficients, predictions and tabular model summaries |
+| `compute_suff_stat`, `univariate_regression`, `calc_z` | Individual-level data preparation |
+| `susie_init_coef` | Construct a sparse coefficient initialization |
+| `susie_post_outcome_configuration` | Shared-variant posterior outcome configurations from fitted models |
 
-`prusie.posterior.credible_sets` accepts alpha, V and a signed correlation
-matrix, with keyword options `coverage`, `min_abs_corr`, `null_index`,
-`n_purity`, `covariance_scales` and `covariance_multiplier`. See [Results](results.md#credible-set-fields) for original component IDs,
-selection order, posterior mass and aliases.
-The scale options are used when the matrix contains covariance rather than
-correlation. Normal fitting constructs these arguments internally.
+`susie_get_lfsr` computes Gaussian sign probabilities from each matched posterior
+mean and standard deviation. It intentionally avoids susieR 0.16.6's recycled
+matrix indexing in this auxiliary calculation. NumPy posterior samples are
+reproducible for a fixed seed; they do not reproduce R's random-number stream.
+X-based purity subsampling also uses a local NumPy RNG. Sparse-X credible-set
+extension evaluates the requested correlation blocks without densifying X;
+susieR skips this extension for sparse designs.
+
+Lower-level `prusie.posterior.marginal_pip` and `credible_sets` also accept
+posterior arrays directly. Covariance scale options allow purity calculations
+without materializing a correlation matrix. Original component IDs are retained
+in credible-set results; see [results](results.md#credible-set-fields).
 
 ## load_example
 
@@ -136,13 +152,25 @@ without network access. See the [toy example tutorial](example.md).
 
 ## Convergence and post-analysis
 
-Both fitting interfaces support `s_init=None`, `refine=False`,
+The core fitters support `s_init=None`, `refine=False`,
 `track_fit=False`, `convergence=None` and `retain_data=False`.
-Use `retain_data=True` on the source fit to enable later continuation,
-refinement or `s_init`. Tracking, initialization and refinement also retain
-inputs. `data_signature` is a content hash of the owned input snapshot,
-computed once and reused; ordinary unretained fits return `None`.
+The retained continuation, refinement and objective helpers support static,
+materialized Gaussian sufficient-statistic and R-based RSS models using the
+default or `ConvergenceConfig` stopping controls. Matrix-free designs, dynamic
+RSS, mixture/NIG/slot models, susieR `pip` stopping, greedy component growth,
+`median_abs_corr` and `cs_extension_corr` are outside that scope.
+Explicit `retain_data=True` or `refine=True` requests for
+these combinations raise before fitting; ordinary fitting and tracking remain
+available without a retained snapshot. No dense Gram matrix is constructed to
+enable retention of a matrix-free design.
+
+For supported models, `retain_data=True` enables later continuation,
+refinement or objective evaluation. Tracking, initialization and refinement
+also retain inputs within this scope. A new fit with `model_init`/`s_init`
+does not require source data retention. `data_signature` is a content hash of
+the owned input snapshot, computed once and reused; unretained fits return `None`.
 `ConvergenceConfig` selects exact ELBO, alpha/PIP or joint stopping.
+The separate `convergence_method="pip"` uses the susieR posterior stopping rule.
 Finite-ELBO stopping uses signed improvement; lagged posterior cycles remain
 diagnostics in that mode. Successful and statistical cycle exits respect
 `min_iter`; numerical failure is reported separately.

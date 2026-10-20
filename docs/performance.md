@@ -1,10 +1,9 @@
 # Performance
 
-These are measurements of the frozen source and settings identified on this
-page, not of the current unreleased reference-oriented arithmetic defaults.
-Those changed defaults have not received a new runtime or peak-memory benchmark.
-Experimental math paths are not universally PIP-qualified; see
-[computational compatibility](model.md#computational-compatibility).
+These measurements describe the source revision and settings identified on this
+page. They do not measure later revisions of the solver. See
+[computational compatibility](model.md#computational-compatibility) for the
+current numerical validation criteria.
 
 These measurements compare prusie 0.2.4.dev2 with susieR 0.16.6 on 100 GWAS and
 100 eQTL locus analyses. They measure the runtime of one fitting call and the

@@ -4,8 +4,10 @@ Fine-mapping aims to identify the variants in a region that affect a trait
 when nearby variants are correlated, so that several variants can explain much
 the same association signal. SuSiE represents multiple effects and quantifies,
 for each effect, the uncertainty about which variant carries it. prusie fits
-the Gaussian SuSiE model to association summary statistics and signed LD, or to
-centered sufficient statistics.
+the Gaussian SuSiE model to individual data, association summary statistics and
+signed LD, or centered sufficient statistics. The equations below first describe
+the ordinary Gaussian-prior model; additional supported options are described
+under [model options](#additional-model-options).
 
 ## Data, notation and scale
 
@@ -202,10 +204,11 @@ $$
 
 The Gaussian expected log likelihood requires the expected residual sum of
 squares (ER2), which accounts for posterior uncertainty in the effects;
-[Implementation](implementation.md#expected-residual-sum-of-squares) derives it
+[Implementation](implementation.md#retained-component-products) derives it
 from `mu2` and the stored matrix products. The ELBO is recorded at the current
 $\sigma^2$, **before** any residual-variance update. If the fit has not stopped
-and $\sigma^2$ is estimated, it is updated as $\sigma^2\leftarrow\mathrm{ER2}/n$,
+and Gaussian residual variance is estimated, it is updated as
+$\sigma^2\leftarrow\mathrm{ER2}/n$,
 also after the last permitted sweep. A fit that reaches the iteration limit can
 therefore return a `sigma2` that differs from the value used for its last ELBO;
 a converged fit omits this update. The final trimming recomputes neither the
@@ -345,29 +348,72 @@ checked by [model_examples.py](https://github.com/LucaJiang/prusie/blob/main/too
 They illustrate probability and linear algebra; the separately fitted
 [500-variant toy example](example.md) demonstrates the complete API.
 
+## Additional model options
+
+A fixed mixture prior replaces a component's single Gaussian variance by
+
+$$
+p(a_\ell)=\sum_{k=1}^{K}w_k N(a_\ell;0,v_k),\qquad
+w_k\geq0,\quad\sum_k w_k=1.
+$$
+
+`prior_variance_grid` supplies positive $v_k$ and `mixture_weights` supplies
+$w_k$. The SER integrates over the grid and returns posterior mixture moments;
+it does not optimize one scalar variance in place of the mixture.
+
+`estimate_residual_method="NIG"` uses the conjugate Normal–Inverse-Gamma
+formulation, with $\sigma^2\sim\operatorname{IG}(\alpha_0/2,\beta_0/2)$ and
+effect variance proportional to $\sigma^2$. Both hyperparameters must be
+positive; their default is $1/\sqrt n$. This integrates residual variance
+instead of the ordinary plug-in Gaussian SER. When combined with a fixed
+mixture prior, Gaussian mixture SER takes precedence, while NIG still controls
+the outer residual-variance updates. `"MoM"` and `"MLE"`
+retain Gaussian SER updates and select the residual update rule. Residual
+lower and upper bounds constrain these updates.
+For NIG, the residual update is the inverse-gamma posterior mean,
+$\sigma^2\leftarrow(\beta_0+\mathrm{ER2})/(\alpha_0+n-2)$.
+
+`slot_prior_betabinom` and `slot_prior_poisson` place hierarchical priors on
+effect activity. The posterior activity probability $c_\ell$ weights each
+component's contribution, so its fitted mean becomes
+$c_\ell\boldsymbol\alpha_\ell\odot\boldsymbol\mu_\ell$.
+These models use posterior convergence checks because the ordinary Gaussian
+ELBO is not their fitting objective. NIG with multiple effects also uses
+posterior stopping. `convergence_method="pip"` follows susieR's joint
+alpha/PIP change and lagged-cycle rule; it is distinct from the existing
+configurable convergence diagnostics.
+
+For summary statistics, `z_method="score"` changes the working statistic.
+`R_mismatch` and `R_finite` specify explicit reference-mismatch and finite-LD
+models; `susie_rss_lambda` instead fits a regularized LD likelihood. These
+options change the likelihood and should be selected for the analysis design,
+rather than as numerical remedies for misaligned alleles or variants.
+
+Automatic and greedy effect-count fitting follow their respective likelihood
+and Bayes-factor rules. Trend filtering uses cumulative predictor columns
+applied by an implicit operator. SuSiE-inf, SuSiE-ash and Mr.ASH are not
+implemented.
+
 ## Computational compatibility
 
-The default Gaussian path follows pinned susieR preprocessing, scalar Gaussian
-SER formulas and its Brent prior-variance search. Scalar exponentials are used
-by default. On GNU/Linux x86-64 builds with the C helper, likelihood-weight sums
-use a long-double accumulator, as in R's `sum`; other builds retain compensated
-summation. This is reference-oriented computation, not bitwise emulation of R's
-BLAS or every convergence extension.
+The default path follows the Gaussian SuSiE model and pinned susieR 0.16.6
+semantics. It uses mathematically equivalent float64 formulas, without reproducing
+R's operation order, long-double reductions or log/exp round trips.
 
-Algebraically regrouped SER likelihoods/vector exponentials and implicit matrix
-scaling/signed-column compression are experimental opt-ins, respectively
-`PRUSIE_SER_MATH=optimized` and `PRUSIE_MATRIX_MATH=optimized`, set before process
-startup. They are not the default or universally PIP-qualified optimizations.
-Retaining an optimization requires measured speed or memory improvement and
-maximum absolute PIP error below `1e-5` against the pinned reference; a speed
-claim alone is not acceptance. Historical timings describe their recorded source,
-not an unmeasured revision of the default path.
+Numerical validation compares every entry of the complete final component alpha
+matrix with the same arguments and verified variant order: absolute error at most
+`1e-5`, relative tolerance zero. Inactive components and components without credible
+sets remain in that comparison. Alpha rows must be finite probabilities summing
+to one within `1e-10`. PIP, credible sets, moments, variances, objectives and
+convergence metadata are retained as diagnostics rather than alpha acceptance criteria.
+Near a component-activity threshold, small differences can still change marginal
+PIP or credible-set summaries. Fitting thresholds are not changed to conceal this.
 
-Tiny differences near the fixed component-activity boundary can change whether
-an almost-null component contributes to PIP. Known cases remain above `1e-5`;
-universal numerical equivalence is not established, even with reference-oriented
-defaults. Neither activity thresholds nor fitting tolerances are relaxed to
-hide these failures.
+Default-path optimizations must also improve median complete-call runtime on a
+strict majority of the fixed comparison panel against their own parent.
+Historical measurements describe their recorded source revision; they do not
+benchmark an unmeasured revision. See [implementation](implementation.md) and
+[numerical accuracy](numerical_accuracy.md).
 
 ## Methods and implementation references
 
@@ -380,9 +426,9 @@ Effects” model*](https://doi.org/10.1371/journal.pgen.1010299).
 
 For the executed path, read
 [api.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py)
-(`susie_rss`, `_susie_suff_stat`),
-[core.rs](https://github.com/LucaJiang/prusie/blob/main/rust/core.rs)
-(`single_effect`, `fit_layout_operator`) and
+(`susie_rss`, `susie_suff_stat`),
+[solver crate](https://github.com/LucaJiang/prusie/tree/main/rust/prusie-core/src)
+(`single_effect`, `fit_layout_operator_controlled`) and
 [posterior.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/posterior.py).
 The [reference mapping](implementation.md#reference-source-mapping) identifies
 corresponding functions at the pinned susieR commit.

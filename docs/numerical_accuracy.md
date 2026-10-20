@@ -1,6 +1,30 @@
 # Numerical accuracy
 
-## Version 0.2.4.dev2
+## Component posterior validation
+
+Current core validation uses susieR 0.16.6, commit
+`8e56a8e038e989856d106d9ca5175cc664fea9d2`, with identical arguments and verified
+variant order. The acceptance criterion is maximum absolute difference `1e-5`
+(relative tolerance zero) across the **complete final alpha matrix**, including
+inactive components and components without credible sets. Rows retain their
+original component order; they are never permuted to improve agreement.
+Each row must be finite, lie in [0, 1], and sum to one within `1e-10`.
+
+PIPs, credible-set memberships, moments, variances, Bayes factors, objectives,
+iteration counts and convergence flags remain diagnostics. Small differences
+near activity thresholds can change these summaries even when alpha agrees.
+The implementation uses mathematically equivalent float64 arithmetic rather
+than reproducing R rounding. No thresholds or stopping tolerances are relaxed
+for validation.
+
+After the solver workspace refactor, all 284 existing alpha cases passed:
+200 real analyses (maximum error `2.06e-8`), six dense scaling fixtures
+(`8.66e-14`), 54 parameter cases (`6.06e-9`), seven bundled cases (`4.44e-16`)
+and 17 targeted cases (`8.77e-9`). Four expected invalid-model errors also
+matched. These results identify the tested refactor; the historical tables
+below retain their original source and acceptance criteria.
+
+## Recorded earlier 0.2.4.dev2 snapshot
 
 Comparisons against susieR 0.16.6 at commit `8e56a8e038e989856d106d9ca5175cc664fea9d2`
 use compute commit `ff379ada284a63a3cf1770d43faacc6b929dc923`. All 100 GWAS and 100 eQTL

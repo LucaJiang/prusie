@@ -1,14 +1,14 @@
-# prusie: SuSiE fine-mapping from summary statistics
+# prusie: SuSiE fine-mapping in Python
 
 <div class="logo-banner">
   <a href="assets/logos/logo_title.jpeg"><img src="assets/logos/prusie-banner-1792.jpg" alt="prusie — Python and Rust software for SuSiE fine-mapping" width="1792" height="592"></a>
 </div>
 
-prusie is a fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for
-Python. It fits association summary statistics and linkage disequilibrium (LD),
-or sufficient statistics, and returns posterior inclusion probabilities (PIPs)
-and credible sets. Numerical comparisons with susieR 0.16.6 show agreement to
-within 1e-5 in PIP across the 200 GWAS and eQTL analyses described below.
+prusie fits SuSiE fine-mapping models in Python with a Rust solver. It returns
+component-level posterior probabilities, marginal inclusion probabilities (PIPs)
+and credible sets from association summaries, sufficient statistics or
+individual-level data. See [numerical accuracy](numerical_accuracy.md) for
+validation against susieR 0.16.6 and [the model](model.md) for assumptions.
 
 ## Installation
 
@@ -17,15 +17,15 @@ the Rust toolchain pinned in `rust-toolchain.toml`, a C linker and the Python
 development headers:
 
 ```sh
-git clone --branch main https://github.com/LucaJiang/prusie.git
-cd prusie
+cd prusie  # source checkout for the version documented here
 python -m venv .venv
 . .venv/bin/activate
 python -m pip install '.[analysis]'
 ```
 
-Fitting requires only NumPy at run time; the optional `analysis` extra adds
-Matplotlib and SciPy for figures and LD diagnostics. An installed package
+Ordinary dense fitting requires only NumPy at run time. The optional `analysis`
+extra adds SciPy for sparse designs and advanced RSS models, and Matplotlib
+for figures. An installed package
 requires neither R nor Rust. The [installation guide](install.md) also
 describes the earlier prerelease wheel for CPython 3.12 on Linux x86-64.
 
@@ -62,7 +62,7 @@ sets (CS) and then produces figures and an offline report from the same fit.
 ## Accuracy and performance
 
 <!-- current:highlights:start -->
-Measured **0.2.4.dev2** against susieR 0.16.6.
+Historical measurements of the recorded **0.2.4.dev2** snapshot against susieR 0.16.6.
 
 | Analysis | Loci | Max. absolute PIP difference vs susieR | Speed-up¹ | Memory ratio² |
 | --- | --- | --- | --- | --- |

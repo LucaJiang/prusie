@@ -56,7 +56,6 @@ Actual iterations and convergence remain in each record. Generation streams rows
 to disk; a 20,000-variant matrix alone occupies 3.2 GB. Each case records a rough
 four-matrix-plus-2-GiB allocation estimate. Check available address space before
 running and retain allocation failures; the estimate does not guarantee a fit.
-`--sizes` can explicitly select a smaller panel before any fitting outcomes.
 
 Every completed settings-matched timing pair with valid positive times is
 included, independently of numerical differences, convergence and CS presence.

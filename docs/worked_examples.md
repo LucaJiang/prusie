@@ -190,12 +190,11 @@ The saved result directories include baseline, refined and alternative fits.
 To fit both examples anew from the source checkout with the analysis extra installed:
 
 ```sh
-PRUSIE_SER_MATH=scalar python examples/post_analysis.py --output-dir output/post-analysis --case both
+python examples/post_analysis.py --output-dir output/post-analysis --case both
 ```
 
-This explicit command runs fits and diagnostics, using the scalar SER math
-setting recorded for the saved numerical examples. Opening the saved reports above
-does not. Each report includes PNG/SVG, complete CSV tables, lossless JSON/NPZ,
+This explicit command runs fits and diagnostics with the installed solver.
+Opening the saved reports above does not. Each report includes PNG/SVG, complete CSV tables, lossless JSON/NPZ,
 provenance and a figure index. The compact main figures are supplemented by a
 separate variance-details figure and full search tables.
 
