@@ -1,8 +1,11 @@
-//! Compile-time vector-exponential candidate; summation always stays in Rust.
+//! Vector exponentials with a portable fallback; summation stays in Rust.
 #[cfg(has_vector_math)]
 use std::sync::OnceLock;
 
 #[cfg(has_vector_math)]
+// SAFETY: these declarations match the linked C shim's int/double/size_t ABI.
+// Initialization is serialized below and keeps resolved symbols alive; callers
+// check CPU support and pass exclusively borrowed slices of the stated length.
 unsafe extern "C" {
     fn prusie_vector_init() -> i32;
     fn prusie_scalar_environment_required() -> i32;

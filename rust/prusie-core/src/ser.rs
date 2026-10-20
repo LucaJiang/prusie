@@ -67,12 +67,10 @@ fn log_likelihood(
     log_sum_exp(scratch)
 }
 
-#[cfg(feature = "ser-grouped")]
 struct VarianceGroups {
     indices: Vec<usize>,
     variances: Vec<f64>,
 }
-#[cfg(feature = "ser-grouped")]
 impl VarianceGroups {
     fn new(sampling: &[f64]) -> Option<Self> {
         let mut result = Self {
@@ -108,7 +106,6 @@ impl VarianceGroups {
         (constant, scale)
     }
 }
-#[cfg(feature = "ser-grouped")]
 fn grouped_probabilities(
     v: f64,
     beta: &[f64],
@@ -129,7 +126,6 @@ fn grouped_probabilities(
         lpo[j] = bf + log_prior[j];
     }
 }
-#[cfg(feature = "ser-grouped")]
 fn grouped_likelihood(
     v: f64,
     beta: &[f64],
@@ -154,18 +150,15 @@ fn grouped_likelihood(
 pub(crate) struct SerSampling {
     sigma2: f64,
     pub(crate) shat2: Vec<f64>,
-    #[cfg(feature = "ser-grouped")]
     groups: Option<VarianceGroups>,
 }
 impl SerSampling {
     fn new(diagonal: &[f64], sigma2: f64) -> Self {
         let shat2: Vec<f64> = diagonal.iter().map(|d| sigma2 / d).collect();
-        #[cfg(feature = "ser-grouped")]
         let groups = VarianceGroups::new(&shat2);
         Self {
             sigma2,
             shat2,
-            #[cfg(feature = "ser-grouped")]
             groups,
         }
     }
@@ -214,7 +207,6 @@ pub(crate) fn single_effect<'a>(
     let sampling = sampling_cache.as_ref().expect("sampling initialized");
     let shat2 = &sampling.shat2;
     let mut likelihood = |v| {
-        #[cfg(feature = "ser-grouped")]
         if let Some(groups) = &sampling.groups {
             return grouped_likelihood(v, betahat, log_prior, groups, likelihood_scratch);
         }
@@ -240,7 +232,6 @@ pub(crate) fn single_effect<'a>(
             v = 0.0;
         }
     }
-    #[cfg(feature = "ser-grouped")]
     if let Some(groups) = &sampling.groups {
         grouped_probabilities(
             v,
@@ -253,8 +244,6 @@ pub(crate) fn single_effect<'a>(
     } else {
         log_probabilities_into(v, betahat, shat2, log_prior, posterior.lbf, posterior.alpha);
     }
-    #[cfg(not(feature = "ser-grouped"))]
-    log_probabilities_into(v, betahat, shat2, log_prior, posterior.lbf, posterior.alpha);
     let largest = posterior
         .alpha
         .iter()

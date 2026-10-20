@@ -401,6 +401,8 @@ fn exact_contiguous_rss_pairs(values: &[f64], n: usize, rank: usize, threads: us
 
 /// SSE2 is part of the x86-64 target baseline. The caller proves both complete
 /// four-by-four blocks are in bounds and keeps the NumPy read borrow/GIL alive.
+// SAFETY: base must address a live contiguous n*n f64 slice, and both
+// transposed four-by-four blocks starting at (i,j) must lie within that slice.
 #[cfg(target_arch = "x86_64")]
 #[inline]
 unsafe fn exact_block4(base: *const f64, n: usize, i: usize, j: usize) -> bool {

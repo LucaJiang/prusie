@@ -212,12 +212,10 @@ The MIT notice, font copyrights and full OFL-1.1 terms are in
 
 The native solver uses rust-lang/libm for special functions in inverse-gamma and slot priors. Its MIT-compatible terms and retained upstream notices are included in `licenses/libm-0.2.15-LICENSE.txt`. The package license remains GPL-3.0-or-later.
 
-## Dense linear algebra dependencies
+## Sparse matrix comparison rules
 
-Builds using faer 0.24.4 retain its MIT license and dependency notices in
-`licenses/faer-dependencies-LICENSES.txt`, including the upstream BSD and
-MPL-2.0 notices. Exact crate source versions are pinned by `Cargo.lock`.
-Builds using statically linked OpenBLAS 0.3.32 through openblas-src 0.10.16
-retain OpenBLAS's BSD-3-Clause notice and the wrapper's MIT permission in
-`licenses/openblas-dependencies-LICENSES.txt`. These source and license
-references also accompany binary distributions.
+The sparse symmetry comparison in `src/prusie/utilities.py` adapts the comparison rules of Matrix 1.7-6. Copyright (c) 1999–2020 Douglas Bates and Martin Maechler; Copyright (c) 2021–2024 Douglas Bates, Martin Maechler and Mikael Jagan. Matrix's full license record, including GPL-3 terms for its R code, is retained in `licenses/Matrix-1.7-6-LICENCE.txt`. No compiled Matrix or SuiteSparse library is bundled or linked.
+
+## Optional system vector mathematics
+
+On supported GNU/Linux x86-64 systems, the exponential helper can dynamically load GNU C Library `libmvec` symbols. The system library is optional and is not bundled; unavailable symbols, unsupported CPUs and nonstandard floating-point controls use the scalar fallback. The applicable LGPL-2.1-or-later terms and retained host copyright record are in `licenses/glibc-LGPL-2.1.txt` and `licenses/glibc-system-copyright.txt`. The copyright record's version wording does not identify the runtime library version.

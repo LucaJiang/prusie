@@ -136,8 +136,8 @@ fn fit<'py>(
     }
     let p = vector.len();
 
-    // The GIL is held while NumPy memory is borrowed, so Python cannot modify
-    // it concurrently. The matrix is passed to the solver without conversion.
+    // The GIL and read borrows remain held through the solver call. The
+    // solver reads the matrix directly and mutates only its owned buffers.
     let values = matrix
         .as_slice_memory_order()
         .ok_or_else(|| PyValueError::new_err("Matrix must be contiguous"))?;
@@ -162,10 +162,6 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     design::register(module)?;
     ser::register(module)?;
     module.add("MATRIX_OPERATOR_VERSION", 1)?;
-    module.add(
-        "MATRIX_IMPLICIT_SCALING",
-        solver::implicit_scaling_enabled(),
-    )?;
     module.add_function(wrap_pyfunction!(fit, module)?)?;
     module.add_function(wrap_pyfunction!(backend_version, module)?)?;
     module.add_function(wrap_pyfunction!(ser_math_backend, module)?)?;

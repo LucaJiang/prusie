@@ -8,17 +8,3 @@ publish.workspace = true
 [dependencies]
 libm = "=0.2.15"
 ndarray.workspace = true
-faer = { version = "=0.24.4", default-features = false, features = ["std"], optional = true }
-openblas-src = { version = "=0.10.16", default-features = false, features = ["cblas", "static", "rustls"], optional = true }
-
-# Temporary, individually measured candidate builds. Release integration keeps
-# only kernels that pass the recorded numerical and majority-runtime gates.
-[features]
-default = []
-kernel-faer = ["dep:faer"]
-kernel-openblas = ["dep:openblas-src"]
-kernel-ndarray = []
-ser-grouped = []
-vector-exp = []
-signed-columns = []
-implicit-scaling = []

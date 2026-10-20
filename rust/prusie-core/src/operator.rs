@@ -43,6 +43,8 @@ fn multiply_columns(values: &[f64], vector: &[f64], output: &mut [f64]) {
     multiply_columns_grouped(values, vector, output);
 }
 
+// SAFETY: callers must establish AVX2 support before entering this function.
+// Slice accesses remain bounds checked and inputs do not alias mutable output.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 unsafe fn multiply_columns_avx2(values: &[f64], vector: &[f64], output: &mut [f64]) {
@@ -51,9 +53,6 @@ unsafe fn multiply_columns_avx2(values: &[f64], vector: &[f64], output: &mut [f6
 
 pub(crate) fn multiply(matrix: ArrayView2<'_, f64>, vector: &[f64], output: &mut [f64]) {
     if output.is_empty() {
-        return;
-    }
-    if crate::kernel::candidate_multiply(matrix, vector, output) {
         return;
     }
     if matrix.t().is_standard_layout() {
@@ -167,7 +166,6 @@ pub(crate) struct DenseGram<'a> {
     pub scaling: Option<&'a MatrixScaling<'a>>,
     pub diagonal: Vec<f64>,
     pub scratch: Vec<f64>,
-    #[cfg(feature = "signed-columns")]
     pub compression: Option<crate::signed_columns::SignedColumns>,
 }
 
@@ -176,7 +174,6 @@ impl GramOperator for DenseGram<'_> {
         &self.diagonal
     }
     fn apply(&mut self, vector: &[f64], output: &mut [f64]) {
-        #[cfg(feature = "signed-columns")]
         if let Some(plan) = &mut self.compression {
             if let Some(scale) = self.scaling {
                 for ((value, &v), &factor) in self.scratch.iter_mut().zip(vector).zip(scale.inverse)

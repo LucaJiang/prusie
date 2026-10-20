@@ -3,7 +3,6 @@ mod design;
 pub mod diagnostics;
 mod ibss;
 pub mod input_validation;
-mod kernel;
 pub mod model;
 mod nig;
 mod numerical;
@@ -12,7 +11,6 @@ mod optimizer;
 pub mod options;
 mod residual;
 mod ser;
-#[cfg(feature = "signed-columns")]
 mod signed_columns;
 mod slot;
 mod types;
@@ -34,11 +32,6 @@ pub fn num_threads() -> usize {
             .unwrap_or(1)
             .clamp(1, 32)
     })
-}
-
-/// Compile-time experimental capability used only by separately built gate artifacts.
-pub fn implicit_scaling_enabled() -> bool {
-    cfg!(feature = "implicit-scaling")
 }
 
 /// Exponential implementation actually selected on the calling thread.

@@ -16,6 +16,9 @@ fn preparation_simd_supported() -> bool {
     }
 }
 
+// SAFETY: callers must detect AVX512F, supply input length n*n and scale
+// lengths n, and provide nonaliasing writable output for n*n f64 entries.
+// The caller holds the NumPy borrows and GIL until this function returns.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 unsafe fn prepare_avx512(
