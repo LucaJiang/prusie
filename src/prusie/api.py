@@ -12,7 +12,7 @@ import warnings as warning_module
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -27,12 +27,10 @@ from .diagnostics import (
     resolve_convergence,
     tracking_level,
 )
+from .individual import SusieInputs
 from .posterior import credible_sets, marginal_pip
 from .refinement import RefinementConfig, initial_options, make_prepared, refine_fit
 from .result import SusieResult
-
-if TYPE_CHECKING:
-    from .individual import SusieInputs
 
 
 def _vector(value: ArrayLike, name: str, size: int | None = None) -> NDArray[np.float64]:
@@ -929,8 +927,6 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
     refine = request.refine
     _rss_matrix_scale = request._rss_matrix_scale
     if params.get("init_only", False):
-        from .individual import SusieInputs
-
         return SusieInputs(
             data={
                 "XtX": XtX,
