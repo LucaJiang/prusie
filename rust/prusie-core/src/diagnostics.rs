@@ -1,6 +1,6 @@
 //! Convergence metrics and stopping rules, evaluated after each sweep and before
 //! the residual-variance update.
-use super::FitOutput;
+use crate::{options::ConvergenceMethod, FitOutput};
 
 #[derive(Default)]
 pub struct InitialState {
@@ -14,7 +14,7 @@ pub struct FitControl {
     pub initial: Option<InitialState>,
     pub component_prior_variance: Option<Vec<f64>>,
     pub track: u8,
-    pub criterion: String,
+    pub criterion: ConvergenceMethod,
     pub alpha_tol: f64,
     pub pip_tol: f64,
     pub min_iter: usize,
@@ -27,7 +27,7 @@ impl Default for FitControl {
             initial: None,
             component_prior_variance: None,
             track: 0,
-            criterion: "elbo".into(),
+            criterion: ConvergenceMethod::Elbo,
             alpha_tol: 1e-4,
             pip_tol: 1e-4,
             min_iter: 2,
@@ -112,20 +112,23 @@ pub fn stopping_decision(
     snapshot: &Snapshot,
     tol: f64,
 ) -> (StopDecision, bool) {
-    if snapshot.elbo.is_infinite() || (snapshot.elbo.is_nan() && control.criterion == "joint") {
+    if snapshot.elbo.is_infinite()
+        || (snapshot.elbo.is_nan() && control.criterion == ConvergenceMethod::Joint)
+    {
         return (StopDecision::NumericalFailure, false);
     }
     if snapshot.iteration < control.min_iter {
         return (StopDecision::Continue, false);
     }
-    let fallback = control.criterion == "elbo" && snapshot.elbo.is_nan();
+    let fallback = control.criterion == ConvergenceMethod::Elbo && snapshot.elbo.is_nan();
     let posterior_stable = snapshot.delta_alpha.is_some_and(|d| d < control.alpha_tol)
         && snapshot.delta_pip.is_some_and(|d| d < control.pip_tol);
     let objective_stable =
         snapshot.elbo.is_finite() && snapshot.delta_elbo.is_some_and(|d| elbo_stable(d, tol));
-    let converged = match control.criterion.as_str() {
-        "alpha_pip" => posterior_stable,
-        "joint" => objective_stable && posterior_stable,
+    let converged = match control.criterion {
+        ConvergenceMethod::AlphaPip => posterior_stable,
+        ConvergenceMethod::Joint => objective_stable && posterior_stable,
+        ConvergenceMethod::Pip => snapshot.delta_pip.is_some_and(|d| d < tol),
         _ if fallback => posterior_stable,
         _ => objective_stable,
     };
@@ -133,7 +136,9 @@ pub fn stopping_decision(
     if converged {
         return (StopDecision::Converged, fallback);
     }
-    if (control.criterion != "elbo" || fallback) && snapshot.cycle_lag.is_some_and(|lag| lag > 1) {
+    if (control.criterion != ConvergenceMethod::Elbo || fallback)
+        && snapshot.cycle_lag.is_some_and(|lag| lag > 1)
+    {
         return (StopDecision::Cycle, fallback);
     }
     (StopDecision::Continue, fallback)
@@ -216,7 +221,7 @@ mod tests {
     fn minimum_applies_to_success_and_cycle_in_every_mode() {
         for criterion in ["elbo", "alpha_pip", "joint"] {
             let mut control = FitControl {
-                criterion: criterion.into(),
+                criterion: criterion.parse().unwrap(),
                 min_iter: 4,
                 ..FitControl::default()
             };
@@ -242,7 +247,7 @@ mod tests {
     fn posterior_joint_and_fallback_have_distinct_success_rules() {
         let mut control = FitControl::default();
         let mut state = snapshot(10., Some(1.));
-        control.criterion = "alpha_pip".into();
+        control.criterion = ConvergenceMethod::AlphaPip;
         assert_eq!(
             stopping_decision(&control, &state, 1e-4).0,
             StopDecision::Cycle
@@ -253,7 +258,7 @@ mod tests {
             stopping_decision(&control, &state, 1e-4).0,
             StopDecision::Converged
         );
-        control.criterion = "joint".into();
+        control.criterion = ConvergenceMethod::Joint;
         state.cycle_lag = Some(1);
         assert_eq!(
             stopping_decision(&control, &state, 1e-4).0,
@@ -279,7 +284,7 @@ mod tests {
             stopping_decision(&control, &state, 1e-4).0,
             StopDecision::NumericalFailure
         );
-        control.criterion = "elbo".into();
+        control.criterion = ConvergenceMethod::Elbo;
         state.delta_pip = Some(0.);
         assert_eq!(
             stopping_decision(&control, &state, 1e-4),

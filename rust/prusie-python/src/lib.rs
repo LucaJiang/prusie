@@ -1,4 +1,4 @@
-//! NumPy/PyO3 interface of the native extension; the IBSS solver is in rust/core.rs.
+//! NumPy/PyO3 interface of the native extension; the IBSS solver is in prusie-core.
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -6,8 +6,7 @@ use pyo3::types::PyDict;
 use pyo3::PyTypeInfo;
 
 mod array_layout;
-#[path = "../rust/core.rs"]
-mod core;
+use prusie_core as solver;
 mod diagnostic_helpers;
 mod prepare_helpers;
 mod summary_helpers;
@@ -60,13 +59,15 @@ fn fit<'py>(
     n: f64,
     options: &Bound<'py, PyDict>,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let settings = core::FitOptions {
+    let settings = solver::FitOptions {
         l: option(options, "l")?,
         prior_variance: option(options, "prior_variance")?,
         residual_variance: option(options, "residual_variance")?,
         prior_weights: vector_option(options, "prior_weights")?,
         estimate_prior_variance: option(options, "estimate_prior_variance")?,
-        estimate_prior_method: option(options, "estimate_prior_method")?,
+        estimate_prior_method: option::<String>(options, "estimate_prior_method")?
+            .parse()
+            .map_err(PyValueError::new_err)?,
         estimate_residual_variance: option(options, "estimate_residual_variance")?,
         check_null_threshold: option(options, "check_null_threshold")?,
         max_iter: option(options, "max_iter")?,
@@ -75,7 +76,7 @@ fn fit<'py>(
         prior_tol: option(options, "prior_tol")?,
         null_index: option(options, "null_index")?,
     };
-    let mut control = core::diagnostics::FitControl::default();
+    let mut control = solver::diagnostics::FitControl::default();
     macro_rules! optional {
         ($key:literal, $field:ident) => {
             if let Some(value) = options.get_item($key)? {
@@ -88,14 +89,19 @@ fn fit<'py>(
             Some(vector_option(options, "component_prior_variance")?);
     }
     optional!("track_level", track);
-    optional!("criterion", criterion);
+    if let Some(value) = options.get_item("criterion")? {
+        control.criterion = value
+            .extract::<String>()?
+            .parse()
+            .map_err(PyValueError::new_err)?;
+    }
     optional!("alpha_tol", alpha_tol);
     optional!("pip_tol", pip_tol);
     optional!("min_iter", min_iter);
     optional!("cycle_lag", cycle_lag);
     optional!("hard_exclusion", hard_exclusion);
     if options.contains("init_alpha")? {
-        control.initial = Some(core::diagnostics::InitialState {
+        control.initial = Some(solver::diagnostics::InitialState {
             alpha: vector_option(options, "init_alpha")?,
             mu: vector_option(options, "init_mu")?,
             mu2: vector_option(options, "init_mu2")?,
@@ -124,7 +130,7 @@ fn fit<'py>(
     } else {
         (Vec::new(), Vec::new())
     };
-    let scaling = global.map(|global| core::MatrixScaling {
+    let scaling = global.map(|global| solver::MatrixScaling {
         global,
         inverse: &inverse,
         scales: &scales,
@@ -218,7 +224,7 @@ fn fit<'py>(
     let values = matrix
         .as_slice_memory_order()
         .ok_or_else(|| PyValueError::new_err("Matrix must be contiguous"))?;
-    let output = core::fit_controlled(
+    let output = solver::fit_controlled(
         values,
         xty.as_slice()?,
         yty,
@@ -266,7 +272,6 @@ fn fit<'py>(
 fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     summary_helpers::register(module)?;
     prepare_helpers::register(module)?;
-    module.add("MATRIX_OPERATOR_VERSION", 1)?;
     module.add_function(wrap_pyfunction!(fit, module)?)?;
     module.add_function(wrap_pyfunction!(backend_version, module)?)?;
     module.add_function(wrap_pyfunction!(ser_math_backend, module)?)?;
@@ -275,5 +280,5 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[pyfunction]
 fn ser_math_backend() -> &'static str {
-    core::ser_math_backend()
+    "portable_scalar_exp"
 }

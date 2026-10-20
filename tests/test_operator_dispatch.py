@@ -8,11 +8,6 @@ import pytest
 from prusie import _native, susie_rss, susie_suff_stat
 
 
-@pytest.fixture(autouse=True)
-def experimental_operator(monkeypatch):
-    monkeypatch.setenv("PRUSIE_MATRIX_MATH", "optimized")
-
-
 def assert_results_equal(a, b):
     for name in [
         "alpha",
@@ -86,62 +81,7 @@ def public_operator_case(kind, layout, null_weight, standardize):
 @pytest.mark.parametrize("layout", ["C", "F", "strided"])
 @pytest.mark.parametrize("null_weight", [0.0, 0.2])
 @pytest.mark.parametrize("standardize", [False, True])
-def test_capability_dispatch_exact_materialization(
-    monkeypatch, kind, layout, null_weight, standardize
-):
-    function, args, options, matrix, before = public_operator_case(
-        kind, layout, null_weight, standardize
-    )
-    original = _native.fit
-    expected = {}
-
-    def capture(crossproduct, crossresponse, yty, n, native_options):
-        expected["matrix"] = crossproduct.copy()
-        expected["response"] = crossresponse.copy()
-        expected["options"] = dict(native_options)
-        return original(crossproduct, crossresponse, yty, n, native_options)
-
-    monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 0, raising=False)
-    monkeypatch.setattr(_native, "fit", capture)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", RuntimeWarning)
-        baseline = function(**args, **options)
-
-    def adapter(raw_matrix, crossresponse, yty, n, native_options):
-        native_options = dict(native_options)
-        global_scale = native_options.pop("matrix_global_scale")
-        inverse = np.asarray(native_options.pop("matrix_inverse_scales"))
-        scales = np.asarray(native_options.pop("matrix_scales"))
-        prepared = np.array(raw_matrix, dtype=np.float64, order="F", copy=True)
-        np.multiply(prepared, global_scale, out=prepared)
-        np.multiply(prepared, inverse[None, :], out=prepared)
-        np.divide(prepared, scales[:, None], out=prepared)
-        np.testing.assert_array_equal(prepared.view(np.uint64), expected["matrix"].view(np.uint64))
-        np.testing.assert_array_equal(crossresponse, expected["response"])
-        assert native_options.keys() == expected["options"].keys()
-        for key, value in native_options.items():
-            if isinstance(value, np.ndarray):
-                np.testing.assert_array_equal(
-                    value.view(np.uint64), expected["options"][key].view(np.uint64)
-                )
-            else:
-                assert value == expected["options"][key]
-        return original(prepared, crossresponse, yty, n, native_options)
-
-    monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 1)
-    monkeypatch.setattr(_native, "fit", adapter)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", RuntimeWarning)
-        actual = function(**args, **options)
-    assert_results_equal(baseline, actual)
-    np.testing.assert_array_equal(matrix.view(np.uint64), before)
-
-
-@pytest.mark.parametrize("kind", ["known_n", "missing_n", "effects", "no_information"])
-@pytest.mark.parametrize("layout", ["C", "F", "strided"])
-@pytest.mark.parametrize("null_weight", [0.0, 0.2])
-@pytest.mark.parametrize("standardize", [False, True])
-def test_actual_operator_public_boundary(monkeypatch, kind, layout, null_weight, standardize):
+def test_default_materialized_public_boundary(monkeypatch, kind, layout, null_weight, standardize):
     function, args, options, matrix, before = public_operator_case(
         kind, layout, null_weight, standardize
     )
@@ -155,14 +95,14 @@ def test_actual_operator_public_boundary(monkeypatch, kind, layout, null_weight,
     monkeypatch.setattr(_native, "fit", capture)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
-        monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 0)
+        monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 0, raising=False)
         expected = function(**args, **options)
-        monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 1)
+        monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", 1, raising=False)
         actual = function(**args, **options)
-    assert observed == [False, True]
+    assert observed == [False, False]
     assert np.all(np.isfinite(actual.pip))
     assert np.all((actual.pip >= 0) & (actual.pip <= 1))
-    np.testing.assert_allclose(actual.pip, expected.pip, atol=1e-5, rtol=0)
+    np.testing.assert_allclose(actual.alpha, expected.alpha, atol=1e-5, rtol=0)
     np.testing.assert_array_equal(actual.variant_ids, expected.variant_ids)
     assert actual.alpha.shape == expected.alpha.shape
     assert actual.params == expected.params

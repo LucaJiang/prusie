@@ -194,7 +194,7 @@ fn complete_finite_scan(array: Bound<'_, PyArray1<f64>>, reduction: bool) -> PyR
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let values = array.as_slice()?;
     Ok(if reduction {
-        crate::core::input_validation::all_finite(values)
+        prusie_core::input_validation::all_finite(values)
     } else {
         !values.iter().any(|value| !value.is_finite())
     })
@@ -280,11 +280,7 @@ fn validate_rss_matrix(
         if array.shape()[0] < 1024 {
             return 1;
         }
-        std::env::var("PRUSIE_NUM_THREADS")
-            .ok()
-            .and_then(|value| value.parse::<usize>().ok())
-            .unwrap_or(1)
-            .clamp(1, 32)
+        prusie_core::num_threads()
     });
     #[cfg(target_arch = "x86_64")]
     if use_simd
@@ -380,6 +376,8 @@ fn exact_contiguous_rss_pairs(values: &[f64], n: usize, rank: usize, threads: us
             for i in (ii..(ii + BLOCK).min(n)).step_by(4) {
                 for j in (jj.max(i)..(jj + BLOCK).min(n)).step_by(4) {
                     if j > i && i + 4 <= n && j + 4 <= n {
+                        // SAFETY: both 4 × 4 blocks are inside the checked n × n
+                        // contiguous slice; SSE2 is an x86-64 baseline feature.
                         if !unsafe { exact_block4(values.as_ptr(), n, i, j) } {
                             return false;
                         }

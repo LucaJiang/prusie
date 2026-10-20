@@ -8,7 +8,6 @@ native IBSS solver and assembles a :class:`~prusie.result.SusieResult`.
 from __future__ import annotations
 
 import math
-import os
 import warnings as warning_module
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
@@ -551,18 +550,9 @@ def _susie_suff_stat(
         diagonal *= _rss_matrix_scale
     scales = np.sqrt(diagonal / (n - 1)) if standardize else np.ones(p)
     scales[scales == 0] = 1.0
-    # Working crossproduct D⁻¹ XtX D⁻¹ in the column-major layout read by the
-    # native column updates. The transpose and the order of the multiplication
-    # and division determine the rounding of every entry; keep both.
+    # Working crossproduct D⁻¹ XtX D⁻¹ in native column-major layout.
     inverse_scales = 1.0 / scales
-    matrix_operator = (
-        os.environ.get("PRUSIE_MATRIX_MATH") == "optimized"
-        and getattr(_native, "MATRIX_OPERATOR_VERSION", 0) == 1
-        and np.isfinite(_rss_matrix_scale)
-        and _rss_matrix_scale > 0
-        and bool(np.all(np.isfinite(scales) & (scales > 0)))
-        and bool(np.all(np.isfinite(inverse_scales) & (inverse_scales > 0)))
-    )
+    matrix_operator = False
     if matrix_operator:
         # The native operator applies the scalar and diagonal scales itself and
         # falls back to full materialization; pass the unscaled matrix.
@@ -576,7 +566,6 @@ def _susie_suff_stat(
                 np.multiply(XtX.T, inverse_scales[None, :], out=crossproduct)
             else:
                 # Apply the RSS scalar in place in the single p × p allocation,
-                # keeping the order of the subsequent operations.
                 np.multiply(XtX.T, _rss_matrix_scale, out=crossproduct)
                 np.multiply(crossproduct, inverse_scales[None, :], out=crossproduct)
             np.divide(crossproduct, scales[:, None], out=crossproduct)
@@ -647,7 +636,6 @@ def _susie_suff_stat(
             prepared = replace(
                 prepared, options=MappingProxyType({**prepared.options, "l": effective_L})
             )
-            prepared.__dict__["signature"] = signature
             _warn(f"Requested L={L} is smaller than model_init; using L={effective_L}.", collected)
         options.update(
             initial_options(

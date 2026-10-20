@@ -142,11 +142,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "prusie-native"
+name = "prusie-core"
+version = "0.2.4-dev.2"
+dependencies = [
+ "ndarray",
+]
+
+[[package]]
+name = "prusie-python"
 version = "0.2.4-dev.2"
 dependencies = [
  "ndarray",
  "numpy",
+ "prusie-core",
  "pyo3",
 ]
 

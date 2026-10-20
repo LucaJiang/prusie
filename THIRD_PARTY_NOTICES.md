@@ -41,7 +41,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### R Brent_fmin
 
-[`rust/optimizer.rs`](rust/optimizer.rs) adapts
+[`rust/prusie-core/src/optimizer.rs`](rust/prusie-core/src/optimizer.rs) adapts
 [R 4.4 optimize.c](https://svn.r-project.org/R/branches/R-4-4-branch/src/library/stats/src/optimize.c).
 Copyright (C) 1995, 1996 Robert Gentleman and Ross Ihaka;
 Copyright (C) 2003–2004 The R Foundation;

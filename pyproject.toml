@@ -24,9 +24,10 @@ test = ["pytest>=8,<9"]
 analysis = ["scipy>=1.11", "matplotlib>=3.7"]
 
 [tool.maturin]
+manifest-path = "rust/prusie-python/Cargo.toml"
 python-source = "src"
 module-name = "prusie._native"
-features = ["extension-module", "vector-math"]
+features = ["extension-module"]
 # Runtime Python files/data and Cargo sources are included by maturin.
 # The source distribution also includes the tests and their frozen references.
 exclude = [

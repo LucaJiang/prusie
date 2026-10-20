@@ -79,7 +79,6 @@ def test_missing_summary_is_zeroed_without_mutating_readonly_input(entry):
 
 
 def test_default_does_not_use_regrouped_matrix_operator(monkeypatch):
-    monkeypatch.delenv("PRUSIE_MATRIX_MATH", raising=False)
     options_seen = []
     original = _native.fit
 

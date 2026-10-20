@@ -23,7 +23,6 @@ jobs:
       - run: ruff format --check
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets --no-default-features -- -D warnings
-      - run: cargo clippy --locked --all-targets --no-default-features --features vector-math -- -D warnings
   test:
     runs-on: ubuntu-24.04
     strategy:
@@ -47,7 +46,6 @@ jobs:
       - if: matrix.python == '3.13'
         run: |
           cargo test --locked --lib --no-default-features -- --test-threads=1
-          cargo test --locked --lib --no-default-features --features vector-math -- --test-threads=1
   package:
     runs-on: ubuntu-24.04
     steps:

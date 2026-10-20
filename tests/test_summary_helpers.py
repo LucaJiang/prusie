@@ -131,7 +131,6 @@ def test_correlation_validation_exact_boundaries(diagonal, offdiag):
 def test_lazy_rss_matches_materialized_sufficient_statistics(
     n, options, monkeypatch, record_property, capability
 ):
-    monkeypatch.setenv("PRUSIE_MATRIX_MATH", "optimized")
     if capability and getattr(_native, "MATRIX_OPERATOR_VERSION", 0) != 1:
         pytest.skip("This native build has no actual matrix operator")
     monkeypatch.setattr(_native, "MATRIX_OPERATOR_VERSION", capability, raising=False)

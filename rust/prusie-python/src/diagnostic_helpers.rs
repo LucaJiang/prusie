@@ -1,4 +1,4 @@
-use crate::core::diagnostics::{Diagnostics, Snapshot};
+use prusie_core::diagnostics::{Diagnostics, Snapshot};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
