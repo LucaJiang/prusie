@@ -7,12 +7,12 @@ authors = [{name = "Wenxin Jiang"}]
 maintainers = [{name = "Wenxin Jiang"}]
 name = "prusie"
 version = "0.2.4.dev2"
-description = "Fast Rust implementation of SuSiE and SuSiE-RSS fine-mapping for Python"
+description = "SuSiE fine-mapping with a Rust solver and Python API"
 requires-python = ">=3.10,<3.14"
 dependencies = ["numpy>=1.26,<3"]
 readme = "README.md"
 license = "GPL-3.0-or-later"
-license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/**"]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/*.txt"]
 
 [project.urls]
 Repository = "https://github.com/LucaJiang/prusie"
@@ -36,6 +36,7 @@ exclude = [
     "dev/**", "examples/**", "requirements-dev.lock",
 ]
 include = [
+    {path = "licenses/**", format = "sdist"},
     {path = "rust-toolchain.toml", format = "sdist"},
     {path = "rustfmt.toml", format = "sdist"},
     {path = "tests/**", format = "sdist"},

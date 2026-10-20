@@ -1,5 +1,5 @@
 //! Preparation of the working crossproduct with AVX-512 when available;
-//! otherwise Python uses NumPy with the same operation order.
+//! otherwise Python uses the equivalent NumPy calculation.
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

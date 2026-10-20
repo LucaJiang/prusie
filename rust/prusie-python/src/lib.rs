@@ -6,8 +6,8 @@ use pyo3::types::PyDict;
 
 mod array_layout;
 use prusie_core as solver;
-mod diagnostic_helpers;
 mod design;
+mod diagnostic_helpers;
 mod options;
 mod output;
 mod prepare_helpers;
@@ -162,6 +162,10 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     design::register(module)?;
     ser::register(module)?;
     module.add("MATRIX_OPERATOR_VERSION", 1)?;
+    module.add(
+        "MATRIX_IMPLICIT_SCALING",
+        solver::implicit_scaling_enabled(),
+    )?;
     module.add_function(wrap_pyfunction!(fit, module)?)?;
     module.add_function(wrap_pyfunction!(backend_version, module)?)?;
     module.add_function(wrap_pyfunction!(ser_math_backend, module)?)?;
@@ -170,5 +174,5 @@ fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[pyfunction]
 fn ser_math_backend() -> &'static str {
-    "portable_scalar_exp"
+    solver::ser_math_backend()
 }

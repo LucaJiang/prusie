@@ -37,9 +37,7 @@ fn log_sum_exp(x: &mut [f64]) -> f64 {
 fn log_sum_exp_at(x: &mut [f64], known_maximum: Option<f64>) -> f64 {
     let largest =
         known_maximum.unwrap_or_else(|| x.iter().copied().fold(f64::NEG_INFINITY, f64::max));
-    for value in x.iter_mut() {
-        *value = (*value - largest).exp();
-    }
+    crate::vector_math::exp_shift(x, largest);
     largest + sum(x.iter().copied()).ln()
 }
 
@@ -69,16 +67,106 @@ fn log_likelihood(
     log_sum_exp(scratch)
 }
 
+#[cfg(feature = "ser-grouped")]
+struct VarianceGroups {
+    indices: Vec<usize>,
+    variances: Vec<f64>,
+}
+#[cfg(feature = "ser-grouped")]
+impl VarianceGroups {
+    fn new(sampling: &[f64]) -> Option<Self> {
+        let mut result = Self {
+            indices: Vec::with_capacity(sampling.len()),
+            variances: Vec::new(),
+        };
+        for &s in sampling {
+            if !s.is_finite() {
+                result.indices.push(usize::MAX);
+                continue;
+            }
+            let safe = s.max(f64::EPSILON);
+            let index = if let Some(index) = result.variances.iter().position(|&v| v == safe) {
+                index
+            } else {
+                if result.variances.len() == 16 {
+                    return None;
+                }
+                result.variances.push(safe);
+                result.variances.len() - 1
+            };
+            result.indices.push(index);
+        }
+        Some(result)
+    }
+    fn terms(&self, v: f64) -> ([f64; 16], [f64; 16]) {
+        let mut constant = [0.; 16];
+        let mut scale = [0.; 16];
+        for (k, &s) in self.variances.iter().enumerate() {
+            constant[k] = -0.5 * (1. + v / s).ln();
+            scale[k] = v / (s * (s + v));
+        }
+        (constant, scale)
+    }
+}
+#[cfg(feature = "ser-grouped")]
+fn grouped_probabilities(
+    v: f64,
+    beta: &[f64],
+    log_prior: &[f64],
+    groups: &VarianceGroups,
+    lbf: &mut [f64],
+    lpo: &mut [f64],
+) {
+    let (constant, scale) = groups.terms(v);
+    for j in 0..beta.len() {
+        let k = groups.indices[j];
+        let bf = if k == usize::MAX || !beta[j].is_finite() {
+            0.
+        } else {
+            constant[k] + 0.5 * beta[j].powi(2) * scale[k]
+        };
+        lbf[j] = bf;
+        lpo[j] = bf + log_prior[j];
+    }
+}
+#[cfg(feature = "ser-grouped")]
+fn grouped_likelihood(
+    v: f64,
+    beta: &[f64],
+    log_prior: &[f64],
+    groups: &VarianceGroups,
+    scratch: &mut [f64],
+) -> f64 {
+    let (constant, scale) = groups.terms(v);
+    for j in 0..beta.len() {
+        let k = groups.indices[j];
+        let bf = if k == usize::MAX || !beta[j].is_finite() {
+            0.
+        } else {
+            constant[k] + 0.5 * beta[j].powi(2) * scale[k]
+        };
+        scratch[j] = bf + log_prior[j];
+    }
+    log_sum_exp(scratch)
+}
+
 /// Sampling variances are invariant between residual-variance updates.
 pub(crate) struct SerSampling {
     sigma2: f64,
     pub(crate) shat2: Vec<f64>,
+    #[cfg(feature = "ser-grouped")]
+    groups: Option<VarianceGroups>,
 }
 impl SerSampling {
     fn new(diagonal: &[f64], sigma2: f64) -> Self {
+        let shat2: Vec<f64> = diagonal.iter().map(|d| sigma2 / d).collect();
+        #[cfg(feature = "ser-grouped")]
+        let groups = VarianceGroups::new(&shat2);
         Self {
             sigma2,
-            shat2: diagonal.iter().map(|d| sigma2 / d).collect(),
+            shat2,
+            #[cfg(feature = "ser-grouped")]
+            groups,
         }
     }
 }
@@ -123,8 +211,15 @@ pub(crate) fn single_effect<'a>(
     {
         *sampling_cache = Some(SerSampling::new(diagonal, sigma2));
     }
-    let shat2 = &sampling_cache.as_ref().expect("sampling initialized").shat2;
-    let mut likelihood = |v| log_likelihood(v, betahat, shat2, log_prior, likelihood_scratch);
+    let sampling = sampling_cache.as_ref().expect("sampling initialized");
+    let shat2 = &sampling.shat2;
+    let mut likelihood = |v| {
+        #[cfg(feature = "ser-grouped")]
+        if let Some(groups) = &sampling.groups {
+            return grouped_likelihood(v, betahat, log_prior, groups, likelihood_scratch);
+        }
+        log_likelihood(v, betahat, shat2, log_prior, likelihood_scratch)
+    };
     let mut v = v_init;
     let mut selected_likelihood = None;
     if method == PriorMethod::Optim {
@@ -145,6 +240,20 @@ pub(crate) fn single_effect<'a>(
             v = 0.0;
         }
     }
+    #[cfg(feature = "ser-grouped")]
+    if let Some(groups) = &sampling.groups {
+        grouped_probabilities(
+            v,
+            betahat,
+            log_prior,
+            groups,
+            posterior.lbf,
+            posterior.alpha,
+        );
+    } else {
+        log_probabilities_into(v, betahat, shat2, log_prior, posterior.lbf, posterior.alpha);
+    }
+    #[cfg(not(feature = "ser-grouped"))]
     log_probabilities_into(v, betahat, shat2, log_prior, posterior.lbf, posterior.alpha);
     let largest = posterior
         .alpha
@@ -153,9 +262,7 @@ pub(crate) fn single_effect<'a>(
         .fold(f64::NEG_INFINITY, f64::max);
     // The row holds log weights, then weights, then normalized α; the rows of
     // the other effects are not touched during this update.
-    for value in posterior.alpha.iter_mut() {
-        *value = (*value - largest).exp();
-    }
+    crate::vector_math::exp_shift(posterior.alpha, largest);
     let total = sum(posterior.alpha.iter().copied());
     for value in posterior.alpha.iter_mut() {
         *value /= total;
@@ -250,9 +357,7 @@ pub(crate) fn single_effect_mixture<'a>(
             .iter()
             .copied()
             .fold(f64::NEG_INFINITY, f64::max);
-        for value in &mut responsibilities {
-            *value = (*value - maximum).exp();
-        }
+        crate::vector_math::exp_shift(&mut responsibilities, maximum);
         let total = sum(responsibilities.iter().copied());
         let mut mean = 0.;
         let mut second = 0.;
@@ -272,9 +377,7 @@ pub(crate) fn single_effect_mixture<'a>(
         .iter()
         .copied()
         .fold(f64::NEG_INFINITY, f64::max);
-    for a in posterior.alpha.iter_mut() {
-        *a = (*a - maximum).exp();
-    }
+    crate::vector_math::exp_shift(posterior.alpha, maximum);
     let total = sum(posterior.alpha.iter().copied());
     for a in posterior.alpha.iter_mut() {
         *a /= total;

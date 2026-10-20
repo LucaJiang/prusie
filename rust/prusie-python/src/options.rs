@@ -1,8 +1,8 @@
 //! Extract Python settings completely before borrowing any input arrays.
-use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
-use pyo3::{prelude::*, exceptions::PyValueError, types::PyDict, PyTypeInfo};
-use prusie_core as solver;
 use crate::array_layout;
+use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
+use prusie_core as solver;
+use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict, PyTypeInfo};
 
 fn option<'py, T: FromPyObject<'py>>(options: &Bound<'py, PyDict>, name: &str) -> PyResult<T> {
     options
@@ -34,7 +34,9 @@ pub(crate) fn vector_option(options: &Bound<'_, PyDict>, name: &str) -> PyResult
     value.extract()
 }
 
-pub(crate) fn parse(options: &Bound<'_, PyDict>) -> PyResult<(solver::FitOptions, solver::diagnostics::FitControl)> {
+pub(crate) fn parse(
+    options: &Bound<'_, PyDict>,
+) -> PyResult<(solver::FitOptions, solver::diagnostics::FitControl)> {
     let estimate_prior_variance: bool = option(options, "estimate_prior_variance")?;
     let method_name: String = option(options, "estimate_prior_method")?;
     let prior_method = if estimate_prior_variance {
@@ -98,7 +100,10 @@ pub(crate) fn parse(options: &Bound<'_, PyDict>) -> PyResult<(solver::FitOptions
         });
     }
     if let Some(value) = options.get_item("estimate_residual_method")? {
-        control.model.residual_method = value.extract::<String>()?.parse().map_err(PyValueError::new_err)?;
+        control.model.residual_method = value
+            .extract::<String>()?
+            .parse()
+            .map_err(PyValueError::new_err)?;
     }
     if let Some(value) = options.get_item("residual_variance_lowerbound")? {
         control.model.residual_lowerbound = value.extract()?;
@@ -124,10 +129,12 @@ pub(crate) fn parse(options: &Bound<'_, PyDict>) -> PyResult<(solver::FitOptions
             let family_name: String = option(prior, "family")?;
             let family = match family_name.as_str() {
                 "betabinom" => solver::model::SlotPriorFamily::BetaBinomial {
-                    a: option(prior, "a_beta")?, b: option(prior, "b_beta")?,
+                    a: option(prior, "a_beta")?,
+                    b: option(prior, "b_beta")?,
                 },
                 "poisson" => solver::model::SlotPriorFamily::GammaPoisson {
-                    expected: option(prior, "C")?, shape: option(prior, "nu")?,
+                    expected: option(prior, "C")?,
+                    shape: option(prior, "nu")?,
                 },
                 _ => return Err(PyValueError::new_err("Unknown slot prior family")),
             };
@@ -136,11 +143,18 @@ pub(crate) fn parse(options: &Bound<'_, PyDict>) -> PyResult<(solver::FitOptions
                 "batch" => solver::model::UpdateSchedule::Batch,
                 _ => return Err(PyValueError::new_err("Unknown slot update schedule")),
             };
-            let initial = if prior.get_item("c_hat_init")?.is_some_and(|value| !value.is_none()) {
+            let initial = if prior
+                .get_item("c_hat_init")?
+                .is_some_and(|value| !value.is_none())
+            {
                 Some(vector_option(prior, "c_hat_init")?)
-            } else { None };
+            } else {
+                None
+            };
             control.model.slot_prior = Some(solver::model::SlotPrior {
-                family, schedule, initial,
+                family,
+                schedule,
+                initial,
                 skip_threshold_multiplier: option(prior, "skip_threshold_multiplier")?,
             });
         }

@@ -198,6 +198,7 @@ authorization of the copyright holder.
 | --- | --- | --- |
 | `src/prusie/data/convergence` | [susieR FinemappingConvergence](https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData) | BSD-3-Clause, susieR notice above; synthetic response with real-genotype-derived sufficient statistics |
 | `tests/fixtures/susier_regression` | [coloc 6.0.3 toy fixture](https://github.com/chr1swallace/coloc/tree/8f20f0bc5e60ffc99e4c2f787bd55fd30cfe7c45), Chris Wallace and contributors | Upstream declares “GPL” without a version; the supplied `LICENSE.GPL-3` and provenance are retained |
+| `tests/fixtures/susier_parity_0166` | Deterministic subsets of susieR 0.16.6 N2finemapping and N3finemapping, with raw R outputs | BSD-3-Clause; the complete susieR notice is retained with the fixture |
 | `src/prusie/data/toy` | Independently generated prusie toy data, Copyright (c) 2026 Wenxin Jiang | GPL-3.0-or-later; see LICENSE |
 
 ## Documentation assets
@@ -210,3 +211,13 @@ The MIT notice, font copyrights and full OFL-1.1 terms are in
 ### libm 0.2.15
 
 The native solver uses rust-lang/libm for special functions in inverse-gamma and slot priors. Its MIT-compatible terms and retained upstream notices are included in `licenses/libm-0.2.15-LICENSE.txt`. The package license remains GPL-3.0-or-later.
+
+## Dense linear algebra dependencies
+
+Builds using faer 0.24.4 retain its MIT license and dependency notices in
+`licenses/faer-dependencies-LICENSES.txt`, including the upstream BSD and
+MPL-2.0 notices. Exact crate source versions are pinned by `Cargo.lock`.
+Builds using statically linked OpenBLAS 0.3.32 through openblas-src 0.10.16
+retain OpenBLAS's BSD-3-Clause notice and the wrapper's MIT permission in
+`licenses/openblas-dependencies-LICENSES.txt`. These source and license
+references also accompany binary distributions.
