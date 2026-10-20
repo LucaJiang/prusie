@@ -90,7 +90,7 @@ def path_order(fit: Any) -> NDArray[np.int64]:
 
 
 def is_symmetric_matrix(x: Any) -> bool:
-    """Return whether a real square matrix equals its transpose exactly.
+    """Return whether a real square matrix passes susieR's symmetry check.
 
     Parameters
     ----------
@@ -100,16 +100,51 @@ def is_symmetric_matrix(x: Any) -> bool:
     Returns
     -------
     bool
-        Whether x is square and exactly symmetric, with matching NaNs allowed.
+        Dense inputs compare off-diagonal entries exactly; paired off-diagonal
+        NaNs fail. Sparse inputs allow matching NaNs and use Matrix's mean
+        relative-difference test at 100 times float64 machine precision.
     """
     shape = np.shape(x)
     if len(shape) != 2 or shape[0] != shape[1]:
         return False
     if hasattr(x, "nnz"):
-        difference = x - x.T
-        return bool(difference.nnz == 0 or np.all(difference.data == 0))
+        return _sparse_symmetric(x)
     values = np.asarray(x)
-    return bool(np.array_equal(values, values.T, equal_nan=True))
+    return all(
+        np.array_equal(values[index + 1 :, index], values[index, index + 1 :])
+        for index in range(shape[0])
+    )
+
+
+def _sparse_symmetric(x: Any) -> bool:
+    """Compare stored coordinates using Matrix/base R all.equal semantics."""
+    # Matrix 1.7-6 compares sparse vectors at tol=100*eps via all.equal.numeric.
+    # Merge stored coordinates without constructing a dense square matrix.
+    matrix = x.tocoo(copy=True)
+    matrix.sum_duplicates()
+    n = matrix.shape[0]
+    locations = matrix.row.astype(np.int64) + n * matrix.col.astype(np.int64)
+    transposed = matrix.col.astype(np.int64) + n * matrix.row.astype(np.int64)
+    union = np.union1d(locations, transposed)
+    values = np.asarray(matrix.data, dtype=np.result_type(matrix.dtype, np.float64))
+    target = np.zeros(len(union), dtype=values.dtype)
+    current = np.zeros(len(union), dtype=values.dtype)
+    target[np.searchsorted(union, locations)] = values
+    current[np.searchsorted(union, transposed)] = values.conj()
+    missing = np.isnan(target)
+    if not np.array_equal(missing, np.isnan(current)):
+        return False
+    unequal = ~(missing | (target == current))
+    target, current = target[unequal], current[unequal]
+    if not target.size:
+        return True
+    tolerance = 100 * np.finfo(np.float64).eps
+    with np.errstate(invalid="ignore", over="ignore"):
+        scale = float(np.sum(np.abs(target) / target.size))
+        if not np.isfinite(scale) or scale <= tolerance:
+            scale = 1.0
+        error = float(np.mean(np.abs(target - current) / scale))
+    return bool(error <= tolerance)
 
 
 def compute_marginal_bhat_shat(
