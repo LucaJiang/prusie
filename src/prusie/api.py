@@ -182,6 +182,7 @@ class _FitRequest:
     _rss_matrix_scale: float
     design: Any = None
     dynamic: Any = None
+    deferred_model_init: SusieInputs | None = None
 
 
 # Both public fitters share input preparation and result assembly.
@@ -940,6 +941,10 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
             },
             params=params.copy(),
             _request=request,
+        )
+    if request.deferred_model_init is not None:
+        raise ValueError(
+            "model_init must be a fitted SusieResult; prepared SusieInputs has no posterior state"
         )
     if params.get("L_greedy") is not None:
         return _fit_greedy(request)

@@ -35,7 +35,9 @@ class SusieInputs:
     """Validated data and fitting parameters returned by ``init_only=True``.
 
     ``data`` and ``params`` are inspectable mappings. Pass this object to
-    :func:`susie_workhorse` to fit the same prepared inputs.
+    :func:`susie_workhorse` to fit the same prepared inputs. A trend-filter
+    MAD preparation may retain another preparation as ``model_init``;
+    this is not a fitted warm start and cannot be used by the workhorse.
     """
 
     data: dict[str, Any]
@@ -292,6 +294,12 @@ def susie_workhorse(inputs: SusieInputs) -> SusieResult:
     -------
     SusieResult
         Posterior fit using the stored request without repeating preprocessing.
+
+    Raises
+    ------
+    ValueError
+        A deferred ``model_init`` contains prepared inputs instead of a fitted
+        posterior, as in the default-MAD trend-filter preparation-only path.
     """
     from dataclasses import replace
 

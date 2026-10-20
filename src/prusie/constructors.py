@@ -7,12 +7,13 @@ from __future__ import annotations
 
 import logging
 import warnings
+from dataclasses import replace
 from typing import Any
 
 import numpy as np
 from numpy.typing import ArrayLike
 
-from .individual import susie
+from .individual import SusieInputs, susie
 from .result import SusieResult
 
 
@@ -63,7 +64,8 @@ def susie_auto(
     tol : float, default 0.01
         Final fit tolerance.
     **kwargs
-        Additional options passed to :func:`susie`.
+        Additional options passed to :func:`susie`. ``init_only=True`` is
+        unsupported because each stage requires a fitted posterior.
 
     Returns
     -------
@@ -165,7 +167,7 @@ def susie_trendfilter(
     standardize: bool = False,
     use_mad: bool = True,
     **kwargs: Any,
-) -> SusieResult:
+) -> SusieResult | SusieInputs:
     """Fit piecewise polynomial trends using SuSiE's trend-filter design.
 
     Parameters
@@ -184,8 +186,11 @@ def susie_trendfilter(
 
     Returns
     -------
-    SusieResult
-        Fitted trend model, with change-point coefficients on the design scale.
+    SusieResult or SusieInputs
+        Fitted trend model, or prepared inputs with ``init_only=True``.
+        With MAD initialization, the prepared result retains the first
+        preparation in ``params["model_init"]``. This nested object is not a
+        fitted posterior, so :func:`susie_workhorse` rejects it, as in susieR.
     """
     if isinstance(order, bool) or int(order) != order or order < 0:
         raise ValueError("order must be a nonnegative integer")
@@ -208,5 +213,11 @@ def susie_trendfilter(
             "residual_variance": variance,
         }
         initial = susie(design, response, standardize=standardize, **initial_controls)
+        if isinstance(initial, SusieInputs):
+            prepared = susie(design, response, standardize=standardize, **controls)
+            assert isinstance(prepared, SusieInputs)
+            params = {**prepared.params, "model_init": initial}
+            request = replace(prepared._request, params=params, deferred_model_init=initial)
+            return replace(prepared, params=params.copy(), _request=request)
         controls["model_init"] = initial
     return susie(design, response, standardize=standardize, **controls)
