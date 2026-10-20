@@ -1,9 +1,43 @@
-"""Result container returned by the SuSiE fitting functions."""
+"""Typed result containers returned by the SuSiE fitting functions."""
 
-from dataclasses import dataclass, field, fields
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
+
+
+@dataclass(frozen=True)
+class InputQuality:
+    """Input checks performed before fitting.
+
+    Attributes
+    ----------
+    predictor_count : int
+        Number of input predictor columns, before a null column is added.
+    matrix_symmetric : bool
+        Whether the working covariance is symmetric after preprocessing.
+    psd_checked : bool
+        Whether positive semidefiniteness was checked by eigendecomposition.
+    missing_summary_values : str
+        Policy for missing summary associations: ``'zero'`` or ``'reject'``.
+    positional_variant_ids : bool
+        Whether variant identifiers were generated from column positions.
+    minimum_eigenvalue : float or None
+        Smallest eigenvalue, when explicitly checked.
+    projection_squared_fraction : float or None
+        Fraction of association squared norm outside the covariance span.
+    """
+
+    predictor_count: int
+    matrix_symmetric: bool = True
+    psd_checked: bool = False
+    missing_summary_values: str = "zero"
+    positional_variant_ids: bool = True
+    minimum_eigenvalue: float | None = None
+    projection_squared_fraction: float | None = None
 
 
 @dataclass
@@ -82,6 +116,24 @@ class SusieResult:
         SHA-256 digest of the owned input snapshot, used to validate warm
         starts. None for ordinary fits without retained inputs; missing
         signatures never establish that inputs match.
+    input_quality : InputQuality
+        Typed description of input checks. ``qc`` remains available for
+        backwards-compatible access to the historical mapping.
+    fitted : ndarray, shape (n,), or None
+        Original-scale fitted responses for individual-level data.
+    univariate_zscore : ndarray, shape (p,), or None
+        Marginal regression z-scores when requested for individual-level data.
+    slot_weights : ndarray, shape (L,), or None
+        Posterior activity probabilities when a slot prior was fitted.
+    lbf_grid : ndarray, shape (L, q, k), or None
+        Per-component, per-variant log Bayes factors for each mixture variance.
+    rv : ndarray, shape (L,), or None
+        NIG residual-variance posterior modes for each single effect.
+    marginal_loglik : ndarray, shape (L,), or None
+        Integrated NIG single-effect marginal log likelihoods.
+    R_finite_diagnostics : dict
+        Finite-reference LD and mismatch reliability summaries, including
+        component and credible-set Bayes-factor attenuation when available.
     """
 
     variant_ids: np.ndarray
@@ -116,9 +168,37 @@ class SusieResult:
     )
     cs_audit: list[dict[str, Any]] = field(default_factory=list)
     data_signature: str | None = None
+    input_quality: InputQuality | None = None
+    fitted: NDArray[np.float64] | None = None
+    univariate_zscore: NDArray[np.float64] | None = None
+    slot_weights: NDArray[np.float64] | None = None
+    lbf_grid: NDArray[np.float64] | None = None
+    rv: NDArray[np.float64] | None = None
+    marginal_loglik: NDArray[np.float64] | None = None
+    R_finite_diagnostics: dict[str, Any] = field(default_factory=dict)
     _prepared: Any = field(default=None, repr=False, compare=False)
+    _input_quality_export: dict[str, Any] | None = field(
+        default=None, init=False, repr=False, compare=False
+    )
+    _input_quality_snapshot: InputQuality | None = field(
+        default=None, init=False, repr=False, compare=False
+    )
 
-    def __repr__(self):
+    def __post_init__(self) -> None:
+        """Populate typed QC information for callers constructing legacy results."""
+        if isinstance(self.input_quality, dict):
+            self.input_quality = InputQuality(**self.input_quality)
+        if self.input_quality is None:
+            self.input_quality = InputQuality(
+                predictor_count=int(self.qc.get("input_columns", len(self.variant_ids))),
+                matrix_symmetric=bool(self.qc.get("matrix_symmetric", True)),
+                psd_checked=bool(self.qc.get("psd_checked", False)),
+                positional_variant_ids=bool(self.qc.get("variant_ids_are_positional", True)),
+                minimum_eigenvalue=self.qc.get("minimum_eigenvalue"),
+                projection_squared_fraction=self.qc.get("projection_squared_fraction"),
+            )
+
+    def __repr__(self) -> str:
         """Summarize dimensions and stopping status."""
         reason = self.convergence.get("stop_reason", "not_available")
         return (
@@ -130,24 +210,33 @@ class SusieResult:
         )
 
     @property
-    def ibss_converged(self):
+    def ibss_converged(self) -> bool:
         """Convergence of the returned IBSS fit, independent of any refinement."""
         return self.converged
 
     @property
-    def refinement_status(self):
+    def refinement_status(self) -> str:
         """Outcome of the refinement search, or 'not_executed'."""
         return self.refinement.get("status", "not_executed")
 
     @property
-    def refinement_stop_reason(self):
+    def refinement_stop_reason(self) -> str:
         """Reason the refinement search ended, or 'not_requested'."""
         return self.refinement.get("stop_reason", "not_requested")
 
     def as_dict(self) -> dict[str, Any]:
-        """Return the public fields as a shallow mapping; arrays are not copied."""
+        """Return public fields as a mapping; arrays remain shared, typed QC is serialized."""
+        if self._input_quality_snapshot is not self.input_quality:
+            self._input_quality_export = (
+                None if self.input_quality is None else asdict(self.input_quality)
+            )
+            self._input_quality_snapshot = self.input_quality
         return {
-            field.name: getattr(self, field.name)
+            field.name: (
+                self._input_quality_export
+                if field.name == "input_quality" and self.input_quality is not None
+                else getattr(self, field.name)
+            )
             for field in fields(self)
             if not field.name.startswith("_")
         }

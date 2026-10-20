@@ -10,16 +10,18 @@ from __future__ import annotations
 import math
 import warnings as warning_module
 from collections.abc import Mapping, Sequence
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from types import MappingProxyType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from . import _native
 from ._array_layout import native_array
+from .control import RSSControl, SlotPrior, susie_rss_control
 from .diagnostics import (
+    ConvergenceConfig,
     convergence_summary,
     nonconvergence_message,
     resolve_convergence,
@@ -28,6 +30,9 @@ from .diagnostics import (
 from .posterior import credible_sets, marginal_pip
 from .refinement import RefinementConfig, initial_options, make_prepared, refine_fit
 from .result import SusieResult
+
+if TYPE_CHECKING:
+    from .individual import SusieInputs
 
 
 def _vector(value: ArrayLike, name: str, size: int | None = None) -> NDArray[np.float64]:
@@ -145,7 +150,41 @@ def _warn(message: str, collected: list[str]) -> None:
     warning_module.warn(message, RuntimeWarning, stacklevel=3)
 
 
-# The public wrapper hides the private keyword arguments of _susie_suff_stat.
+@dataclass(frozen=True)
+class _FitRequest:
+    """Validated native inputs and metadata used by every fitting entry point."""
+
+    crossproduct: NDArray[np.float64]
+    crossresponse: NDArray[np.float64]
+    yty: float
+    n: float
+    options: dict[str, Any]
+    XtX: NDArray[np.float64]
+    diagonal: NDArray[np.float64]
+    scales: NDArray[np.float64]
+    means: NDArray[np.float64]
+    y_mean_value: float
+    ids: NDArray[np.str_]
+    metadata: dict[str, NDArray[Any]]
+    coverage: float | None
+    min_abs_corr: float | None
+    null_index: int | None
+    n_purity: int | str | None
+    prior_tol: float
+    collected: list[str]
+    qc: dict[str, Any]
+    params: dict[str, Any]
+    control: Any
+    resolution: dict[str, Any]
+    prepared: Any
+    signature: str | None
+    refine: bool | RefinementConfig
+    _rss_matrix_scale: float
+    design: Any = None
+    dynamic: Any = None
+
+
+# Both public fitters share input preparation and result assembly.
 def susie_suff_stat(
     XtX: ArrayLike,
     Xty: ArrayLike,
@@ -155,114 +194,51 @@ def susie_suff_stat(
     X_colmeans: ArrayLike | None = None,
     y_mean: float | None = None,
     L: int = 10,
-    scaled_prior_variance=0.2,
-    residual_variance=None,
-    estimate_residual_variance=True,
-    estimate_prior_variance=True,
-    estimate_prior_method="optim",
-    check_null_threshold=0.0,
-    prior_tol=1e-9,
-    r_tol=1e-8,
-    prior_weights=None,
-    null_weight=0.0,
-    standardize=True,
-    max_iter=100,
-    s_init=None,
-    coverage=0.95,
-    min_abs_corr=0.5,
-    tol=1e-4,
-    verbose=False,
-    track_fit=False,
-    check_input=False,
-    refine=False,
-    convergence=None,
-    retain_data=False,
-    check_prior=False,
-    n_purity: int | None = None,
+    scaled_prior_variance: float | ArrayLike = 0.2,
+    residual_variance: float | None = None,
+    estimate_residual_variance: bool = True,
+    estimate_prior_variance: bool = True,
+    estimate_prior_method: str = "optim",
+    check_null_threshold: float = 0.0,
+    prior_tol: float = 1e-9,
+    r_tol: float = 1e-8,
+    prior_weights: ArrayLike | None = None,
+    null_weight: float = 0.0,
+    standardize: bool = True,
+    max_iter: int = 100,
+    s_init: SusieResult | Mapping[str, Any] | None = None,
+    model_init: SusieResult | Mapping[str, Any] | None = None,
+    estimate_residual_method: str = "MoM",
+    residual_variance_lowerbound: float = 0.0,
+    residual_variance_upperbound: float | None = np.inf,
+    prior_variance_grid: ArrayLike | None = None,
+    mixture_weights: ArrayLike | None = None,
+    convergence_method: str | None = None,
+    alpha0: float | None = None,
+    beta0: float | None = None,
+    L_greedy: int | None = None,
+    greedy_lbf_cutoff: float = 0.1,
+    slot_prior: SlotPrior | Mapping[str, Any] | None = None,
+    median_abs_corr: float | None = None,
+    cs_extension_corr: float | None = None,
+    unmappable_effects: str = "none",
+    init_only: bool = False,
+    coverage: float | None = 0.95,
+    min_abs_corr: float | None = 0.5,
+    tol: float = 1e-4,
+    verbose: bool = False,
+    track_fit: bool | str = False,
+    check_input: bool = False,
+    refine: bool | RefinementConfig = False,
+    convergence: ConvergenceConfig | None = None,
+    retain_data: bool = False,
+    check_prior: bool = False,
+    n_purity: int | str | None = None,
     variant_ids: Sequence[str] | None = None,
     variant_metadata: Mapping[str, ArrayLike] | None = None,
-    maf=None,
-    maf_thresh=0.0,
-) -> SusieResult:
-    return _susie_suff_stat(
-        XtX,
-        Xty,
-        yty,
-        n,
-        X_colmeans=X_colmeans,
-        y_mean=y_mean,
-        L=L,
-        scaled_prior_variance=scaled_prior_variance,
-        residual_variance=residual_variance,
-        estimate_residual_variance=estimate_residual_variance,
-        estimate_prior_variance=estimate_prior_variance,
-        estimate_prior_method=estimate_prior_method,
-        check_null_threshold=check_null_threshold,
-        prior_tol=prior_tol,
-        r_tol=r_tol,
-        prior_weights=prior_weights,
-        null_weight=null_weight,
-        standardize=standardize,
-        max_iter=max_iter,
-        s_init=s_init,
-        coverage=coverage,
-        min_abs_corr=min_abs_corr,
-        tol=tol,
-        verbose=verbose,
-        track_fit=track_fit,
-        check_input=check_input,
-        refine=refine,
-        convergence=convergence,
-        retain_data=retain_data,
-        check_prior=check_prior,
-        n_purity=n_purity,
-        variant_ids=variant_ids,
-        variant_metadata=variant_metadata,
-        maf=maf,
-        maf_thresh=maf_thresh,
-    )
-
-
-def _susie_suff_stat(
-    XtX: ArrayLike,
-    Xty: ArrayLike,
-    yty: float,
-    n: float,
-    *,
-    X_colmeans: ArrayLike | None = None,
-    y_mean: float | None = None,
-    L: int = 10,
-    scaled_prior_variance=0.2,
-    residual_variance=None,
-    estimate_residual_variance=True,
-    estimate_prior_variance=True,
-    estimate_prior_method="optim",
-    check_null_threshold=0.0,
-    prior_tol=1e-9,
-    r_tol=1e-8,
-    prior_weights=None,
-    null_weight=0.0,
-    standardize=True,
-    max_iter=100,
-    s_init=None,
-    coverage=0.95,
-    min_abs_corr=0.5,
-    tol=1e-4,
-    verbose=False,
-    track_fit=False,
-    check_input=False,
-    refine=False,
-    convergence=None,
-    retain_data=False,
-    check_prior=False,
-    n_purity: int | None = None,
-    variant_ids: Sequence[str] | None = None,
-    variant_metadata: Mapping[str, ArrayLike] | None = None,
-    maf=None,
-    maf_thresh=0.0,
-    _rss_matrix_scale=1.0,
-    _rss_matrix_validated=False,
-) -> SusieResult:
+    maf: ArrayLike | None = None,
+    maf_thresh: float = 0.0,
+) -> SusieResult | SusieInputs:
     """Fit SuSiE to centered sufficient statistics.
 
     Parameters
@@ -339,7 +315,7 @@ def _susie_suff_stat(
     tol : float, default 1e-4
         ELBO tolerance; the default rule converges when 0 ≤ ΔELBO < tol.
     verbose : bool, default False
-        Must be False.
+        Log convergence and credible-set counts through the prusie logger.
     track_fit : bool or {'compact', 'dense'}, default False
         Record per-sweep convergence metrics. True or 'compact' stores exact
         distances and a thresholded alpha display; 'dense' also stores full
@@ -373,13 +349,37 @@ def _susie_suff_stat(
     variant_metadata : mapping of str to array_like, optional
         Length-p columns, for example chromosome or alleles, copied into the
         result.
+    model_init : SusieResult or mapping, optional
+        Initial working-coordinate posterior; s_init is a backwards-compatible alias.
+    estimate_residual_method : {'MoM', 'MLE', 'NIG'}, default 'MoM'
+        Residual-variance estimator or conjugate Normal-Inverse-Gamma model.
+    residual_variance_lowerbound, residual_variance_upperbound : float
+        Residual variance bounds. None for the upper bound means unbounded.
+    prior_variance_grid, mixture_weights : array_like, optional
+        Positive prior variances and normalized weights for a fixed Gaussian mixture.
+    alpha0, beta0 : float, optional
+        NIG hyperparameters, defaulting to 1/sqrt(n).
+    L_greedy : int, optional
+        Grow the component count by this increment until an empty effect appears.
+    greedy_lbf_cutoff : float, default 0.1
+        Log-Bayes-factor cutoff defining an empty effect for greedy growth.
+    slot_prior : SlotPrior or mapping, optional
+        Beta-Binomial or Gamma-Poisson effect-activity prior.
+    convergence_method : {'elbo', 'pip'}, optional
+        susieR stopping rule; pip checks component alpha and aggregate PIP changes
+        and detects cycles. Use convergence for the existing diagnostic controls.
+    median_abs_corr, cs_extension_corr : float, optional
+        Alternative CS purity threshold and correlation threshold for proxy extension.
+    init_only : bool, default False
+        Return validated data and parameters without fitting.
+    unmappable_effects : {'none'}, default 'none'
+        SuSiE-inf, SuSiE-ash and Mr.ASH are outside the supported model set.
     maf, maf_thresh : optional
-        Minor-allele-frequency filtering is not implemented; values other than
-        None and 0 raise NotImplementedError.
+        Retain variants whose supplied minor-allele frequency exceeds maf_thresh.
 
     Returns
     -------
-    SusieResult
+    SusieResult or SusieInputs
         Variational posterior (alpha, mu, mu2), Bayes factors, prior and
         residual variances, ELBO trace, PIPs, credible sets and run metadata.
 
@@ -390,8 +390,6 @@ def _susie_suff_stat(
         inconsistent initialization or a native numerical failure.
     TypeError
         ``s_init``, ``refine`` or ``convergence`` has an unsupported type.
-    NotImplementedError
-        ``verbose`` or MAF filtering is requested.
 
     Warns
     -----
@@ -427,13 +425,102 @@ def _susie_suff_stat(
     >>> fit.alpha.shape
     (1, 2)
     """
-    for name, requested in (
-        ("verbose", verbose),
-        ("maf", maf is not None or maf_thresh != 0),
-    ):
-        if requested:
-            raise NotImplementedError(f"{name} is not implemented")
+    return _fit(_prepare_suff_stat(**locals()))
+
+
+def _prepare_suff_stat(
+    XtX: ArrayLike,
+    Xty: ArrayLike,
+    yty: float,
+    n: float,
+    *,
+    X_colmeans: ArrayLike | None = None,
+    y_mean: float | None = None,
+    L: int = 10,
+    scaled_prior_variance: float | ArrayLike = 0.2,
+    residual_variance: float | None = None,
+    estimate_residual_variance: bool = True,
+    estimate_prior_variance: bool = True,
+    estimate_prior_method: str = "optim",
+    check_null_threshold: float = 0.0,
+    prior_tol: float = 1e-9,
+    r_tol: float = 1e-8,
+    prior_weights: ArrayLike | None = None,
+    null_weight: float = 0.0,
+    standardize: bool = True,
+    max_iter: int = 100,
+    s_init: SusieResult | Mapping[str, Any] | None = None,
+    model_init: SusieResult | Mapping[str, Any] | None = None,
+    estimate_residual_method: str = "MoM",
+    residual_variance_lowerbound: float = 0.0,
+    residual_variance_upperbound: float | None = np.inf,
+    prior_variance_grid: ArrayLike | None = None,
+    mixture_weights: ArrayLike | None = None,
+    convergence_method: str | None = None,
+    alpha0: float | None = None,
+    beta0: float | None = None,
+    L_greedy: int | None = None,
+    greedy_lbf_cutoff: float = 0.1,
+    slot_prior: SlotPrior | Mapping[str, Any] | None = None,
+    median_abs_corr: float | None = None,
+    cs_extension_corr: float | None = None,
+    unmappable_effects: str = "none",
+    init_only: bool = False,
+    coverage: float | None = 0.95,
+    min_abs_corr: float | None = 0.5,
+    tol: float = 1e-4,
+    verbose: bool = False,
+    track_fit: bool | str = False,
+    check_input: bool = False,
+    refine: bool | RefinementConfig = False,
+    convergence: ConvergenceConfig | None = None,
+    retain_data: bool = False,
+    check_prior: bool = False,
+    n_purity: int | str | None = None,
+    variant_ids: Sequence[str] | None = None,
+    variant_metadata: Mapping[str, ArrayLike] | None = None,
+    maf: ArrayLike | None = None,
+    maf_thresh: float = 0.0,
+    _rss_matrix_scale=1.0,
+    _rss_matrix_validated=False,
+    _design=None,
+    _dynamic=None,
+) -> _FitRequest:
+    """Validate a sufficient-statistics request for the shared fitting path."""
     collected = []
+    if model_init is not None and s_init is not None:
+        raise ValueError("Specify only model_init or its s_init alias")
+    s_init = model_init if model_init is not None else s_init
+    if unmappable_effects != "none":
+        raise ValueError("SuSiE-inf, SuSiE-ash and Mr.ASH are outside this implementation")
+    if estimate_residual_method not in ("MoM", "MLE", "NIG"):
+        raise ValueError("estimate_residual_method must be 'MoM', 'MLE', or 'NIG'")
+    if convergence_method not in (None, "elbo", "pip"):
+        raise ValueError("convergence_method must be 'elbo' or 'pip'")
+    lower = _scalar(residual_variance_lowerbound, "residual_variance_lowerbound")
+    upper = np.inf if residual_variance_upperbound is None else float(residual_variance_upperbound)
+    if np.isnan(upper) or upper < lower:
+        raise ValueError("residual_variance_upperbound must be at least the lower bound")
+    if prior_variance_grid is not None:
+        grid = _vector(prior_variance_grid, "prior_variance_grid")
+        mix = (
+            np.full(len(grid), 1 / len(grid))
+            if mixture_weights is None
+            else _vector(mixture_weights, "mixture_weights", len(grid))
+        )
+        if np.any(grid <= 0) or np.any(mix < 0) or abs(float(mix.sum()) - 1) >= 1e-8:
+            raise ValueError("prior_variance_grid must be positive and mixture_weights normalized")
+        prior_variance_grid, mixture_weights = grid, mix
+        estimate_prior_variance, estimate_prior_method = False, "fixed_mixture"
+    elif mixture_weights is not None:
+        raise ValueError("mixture_weights requires prior_variance_grid")
+    if slot_prior is not None:
+        if not isinstance(slot_prior, Mapping):
+            raise TypeError("slot_prior must be a SlotPrior or mapping")
+        slot_prior = dict(slot_prior)
+    if L_greedy is not None:
+        L_greedy = _integer(L_greedy, "L_greedy")
+    greedy_lbf_cutoff = _scalar(greedy_lbf_cutoff, "greedy_lbf_cutoff", lower=-np.inf)
     n = _scalar(n, "n", lower=1.0, strict=True)
     for name, value in (
         ("standardize", standardize),
@@ -449,7 +536,9 @@ def _susie_suff_stat(
     yty = _scalar(yty, "yty")
     Xty = _vector(Xty, "Xty") if check_input else _summary_vector(Xty, "Xty", collected)
     m = Xty.size
-    if _rss_matrix_validated:
+    if _design is not None:
+        XtX = None
+    elif _rss_matrix_validated:
         # Only susie_rss sets this flag, after validating every raw and scaled
         # matrix entry; direct susie_suff_stat calls always validate XtX here.
         assert isinstance(XtX, np.ndarray) and XtX.shape == (m, m) and XtX.dtype == np.float64
@@ -458,9 +547,39 @@ def _susie_suff_stat(
         if not symmetric:
             XtX = _symmetrize_matrix(XtX, "XtX", _rss_matrix_scale, collected)
             _rss_matrix_scale = 1.0
+    original_m = m
     ids, metadata = _metadata(variant_ids, variant_metadata, m)
+    if maf is not None:
+        frequencies = _vector(maf, "maf", m)
+        threshold = _scalar(maf_thresh, "maf_thresh")
+        if np.any((frequencies < 0) | (frequencies > 1)) or threshold > 1:
+            raise ValueError("maf and maf_thresh must lie in [0, 1]")
+        selected = np.flatnonzero(frequencies > threshold)
+        if not selected.size:
+            raise ValueError("MAF filtering removed every predictor")
+        if _design is not None:
+            _design = replace(
+                _design,
+                X=_design.X[:, selected],
+                means=_design.means[selected],
+                scales=_design.scales[selected],
+                diagonal=_design.diagonal[selected],
+            )
+        else:
+            XtX = XtX[np.ix_(selected, selected)]
+        Xty, ids = Xty[selected], ids[selected]
+        metadata = {key: value[selected] for key, value in metadata.items()}
+        if prior_weights is not None:
+            prior_weights = np.asarray(prior_weights)[selected]
+        if X_colmeans is not None and np.ndim(X_colmeans) != 0:
+            X_colmeans = np.asarray(X_colmeans)[selected]
+        m = len(selected)
+    elif maf_thresh != 0:
+        raise ValueError("maf_thresh requires maf")
     L, max_iter = _integer(L, "L"), _integer(max_iter, "max_iter")
-    tol = _scalar(1e-4 if tol is None else tol, "tol")
+    tol = _scalar(
+        (1e-6 if estimate_residual_method == "NIG" else 1e-4) if tol is None else tol, "tol"
+    )
     if np.ndim(prior_tol) != 0 or np.isnan(float(prior_tol)) or float(prior_tol) < 0:
         raise ValueError("prior_tol must be a nonnegative scalar")
     prior_tol = float(prior_tol)
@@ -475,17 +594,34 @@ def _susie_suff_stat(
         scaled_prior_variance = scaled_prior_variance.tolist()
     if yty == 0 and (np.any(Xty != 0) or residual_variance is None or estimate_residual_variance):
         raise ValueError("yty=0 requires Xty=0 and a fixed positive residual_variance")
+    response_variance = yty / (n - 1) if _design is None else _design.response_variance
+    if estimate_residual_method == "NIG":
+        alpha0 = _scalar(1 / np.sqrt(n) if alpha0 is None else alpha0, "alpha0", strict=True)
+        beta0 = _scalar(1 / np.sqrt(n) if beta0 is None else beta0, "beta0", strict=True)
+        estimate_residual_variance = True
+        if estimate_prior_variance:
+            estimate_prior_method = "EM"
     sigma2 = (
-        yty / (n - 1)
+        response_variance
         if residual_variance is None
         else _scalar(residual_variance, "residual_variance", strict=True)
     )
-    if estimate_prior_variance and estimate_prior_method not in ("optim", "EM", "simple"):
+    if estimate_prior_variance and estimate_prior_method not in (
+        "optim",
+        "EM",
+        "simple",
+        "fixed_mixture",
+    ):
         raise ValueError("estimate_prior_method must be 'optim', 'EM', or 'simple'")
-    for name, value in (("coverage", coverage), ("min_abs_corr", min_abs_corr)):
+    for name, value in (
+        ("coverage", coverage),
+        ("min_abs_corr", min_abs_corr),
+        ("median_abs_corr", median_abs_corr),
+        ("cs_extension_corr", cs_extension_corr),
+    ):
         if value is not None and (not np.isfinite(value) or not 0 <= value <= 1):
             raise ValueError(f"{name} must be in [0, 1]")
-    if n_purity is not None:
+    if n_purity is not None and n_purity != "auto":
         if (
             isinstance(n_purity, (bool, np.bool_))
             or not np.isscalar(n_purity)
@@ -497,10 +633,11 @@ def _susie_suff_stat(
         "matrix_symmetric": True,
         "psd_checked": bool(check_input),
         "input_columns": m,
-        "input_missing_policy": "susieR_zero_z_and_Xty",
+        "input_missing_policy": "zero",
+        "original_input_columns": original_m,
         "variant_ids_are_positional": variant_ids is None,
     }
-    if check_input:
+    if check_input and _design is None:
         eigenvalues, eigenvectors = np.linalg.eigh(
             XtX if _rss_matrix_scale == 1.0 else XtX * _rss_matrix_scale
         )
@@ -531,7 +668,8 @@ def _susie_suff_stat(
     if null_index is not None:
         # As in susieR: augment the raw weights, then normalize the whole vector.
         weights = np.r_[weights * (1 - null_weight), null_weight]
-        XtX = np.pad(XtX, ((0, 1), (0, 1)))
+        if _design is None:
+            XtX = np.pad(XtX, ((0, 1), (0, 1)))
         Xty = np.r_[Xty, 0.0]
     # susieR 0.16.6 normalizes default and supplied weights alike.
     weights /= math.fsum(weights)
@@ -545,15 +683,23 @@ def _susie_suff_stat(
     if means.shape != (p,):
         raise ValueError("X_colmeans must be scalar or have one value per predictor")
     y_mean_value = np.nan if y_mean is None else float(y_mean)
-    diagonal = XtX.diagonal().copy()
+    diagonal = XtX.diagonal().copy() if _design is None else _design.diagonal.copy()
+    if _design is not None and null_index is not None:
+        diagonal = np.r_[diagonal, 0.0]
     if _rss_matrix_scale != 1.0:
         diagonal *= _rss_matrix_scale
     scales = np.sqrt(diagonal / (n - 1)) if standardize else np.ones(p)
+    if _design is not None:
+        scales = _design.scales.copy()
+        if null_index is not None:
+            scales = np.r_[scales, 1.0]
     scales[scales == 0] = 1.0
     # Working crossproduct D⁻¹ XtX D⁻¹ in native column-major layout.
     inverse_scales = 1.0 / scales
-    matrix_operator = False
-    if matrix_operator:
+    matrix_operator = bool(getattr(_native, "MATRIX_IMPLICIT_SCALING", False))
+    if _design is not None:
+        crossproduct = None
+    elif matrix_operator:
         # The native operator applies the scalar and diagonal scales itself and
         # falls back to full materialization; pass the unscaled matrix.
         crossproduct = XtX.T
@@ -572,7 +718,8 @@ def _susie_suff_stat(
     crossresponse = np.ascontiguousarray(Xty / scales)
     options = dict(
         l=effective_L,
-        prior_variance=float(np.asarray(scaled_prior_variance).flat[0]) * (yty / (n - 1)),
+        prior_variance=float(np.asarray(scaled_prior_variance).flat[0])
+        * (1.0 if estimate_residual_method == "NIG" else response_variance),
         residual_variance=sigma2,
         prior_weights=weights,
         estimate_prior_variance=bool(estimate_prior_variance),
@@ -587,8 +734,19 @@ def _susie_suff_stat(
     )
     if isinstance(scaled_prior_variance, list):
         options["component_prior_variance"] = np.asarray(scaled_prior_variance[:effective_L]) * (
-            yty / (n - 1)
+            1.0 if estimate_residual_method == "NIG" else response_variance
         )
+    options.update(
+        estimate_residual_method=estimate_residual_method,
+        residual_variance_lowerbound=lower,
+        residual_variance_upperbound=upper,
+    )
+    if prior_variance_grid is not None:
+        options.update(prior_variance_grid=prior_variance_grid, mixture_weights=mixture_weights)
+    if estimate_residual_method == "NIG":
+        options.update(alpha0=alpha0, beta0=beta0)
+    if slot_prior is not None:
+        options["slot_prior"] = slot_prior
     if matrix_operator:
         options.update(
             matrix_global_scale=float(_rss_matrix_scale),
@@ -600,11 +758,17 @@ def _susie_suff_stat(
     )
     level = tracking_level(track_fit)
     options.update(control.options(), track_level=level)
+    if convergence_method is not None:
+        options["criterion"] = convergence_method
+        if convergence_method == "pip":
+            options.update(alpha_tol=tol, pip_tol=tol)
+    if slot_prior is not None or (estimate_residual_method == "NIG" and effective_L > 1):
+        options.update(criterion="pip", alpha_tol=tol, pip_tol=tol)
     # Only an owned snapshot can supply a stable identity for later reuse.
     # Ordinary fits do not retain caller buffers or scan an unused hash.
     signature = None
     prepared = None
-    if retain_data or level or refine is not False or s_init is not None:
+    if _design is None and (retain_data or level or refine is not False or s_init is not None):
         prepared = make_prepared(
             crossproduct,
             crossresponse,
@@ -633,13 +797,14 @@ def _susie_suff_stat(
         if len(initial_shape) == 2 and initial_shape[0] > effective_L:
             effective_L = initial_shape[0]
             options["l"] = effective_L
-            prepared = replace(
-                prepared, options=MappingProxyType({**prepared.options, "l": effective_L})
-            )
+            if prepared is not None:
+                prepared = replace(
+                    prepared, options=MappingProxyType({**prepared.options, "l": effective_L})
+                )
             _warn(f"Requested L={L} is smaller than model_init; using L={effective_L}.", collected)
         options.update(
             initial_options(
-                s_init,
+                _model_init_state(s_init),
                 ids=ids,
                 metadata=metadata,
                 scales=scales,
@@ -657,28 +822,6 @@ def _susie_suff_stat(
         # credible sets from the same owned data whose signature was recorded.
         crossproduct, crossresponse = prepared.matrix, prepared.response
         XtX = prepared.cs_matrix
-    native = _native.fit(crossproduct, crossresponse, yty, n, options)
-    for message in native["warnings"]:
-        _warn(message, collected)
-    if not native["converged"]:
-        _warn(
-            nonconvergence_message(native),
-            collected,
-        )
-    alpha, V = native["alpha"], native["V"]
-    cs_audit = []
-    sets = credible_sets(
-        alpha,
-        V,
-        XtX,
-        coverage=coverage,
-        min_abs_corr=min_abs_corr,
-        null_index=null_index,
-        n_purity=n_purity,
-        covariance_scales=np.sqrt(diagonal),
-        covariance_multiplier=_rss_matrix_scale,
-        audit=cs_audit,
-    )
     params = dict(
         L=L,
         effective_L=effective_L,
@@ -707,10 +850,156 @@ def _susie_suff_stat(
         track_fit=track_fit,
         convergence=control.options(),
         convergence_resolution=resolution,
+        convergence_method=convergence_method,
+        estimate_residual_method=estimate_residual_method,
+        residual_variance_lowerbound=lower,
+        residual_variance_upperbound=None if np.isinf(upper) else upper,
+        prior_variance_grid=prior_variance_grid,
+        mixture_weights=mixture_weights,
+        alpha0=alpha0,
+        beta0=beta0,
+        L_greedy=L_greedy,
+        greedy_lbf_cutoff=greedy_lbf_cutoff,
+        slot_prior=slot_prior,
+        median_abs_corr=median_abs_corr,
+        cs_extension_corr=cs_extension_corr,
+        verbose=verbose,
+        init_only=init_only,
+    )
+    return _FitRequest(
+        crossproduct=crossproduct,
+        crossresponse=crossresponse,
+        yty=yty,
+        n=n,
+        options=options,
+        XtX=XtX,
+        diagonal=diagonal,
+        scales=scales,
+        means=means,
+        y_mean_value=y_mean_value,
+        ids=ids,
+        metadata=metadata,
+        coverage=coverage,
+        min_abs_corr=min_abs_corr,
+        null_index=null_index,
+        n_purity=n_purity,
+        prior_tol=prior_tol,
+        collected=collected,
+        qc=qc,
+        params=params,
+        control=control,
+        resolution=resolution,
+        prepared=prepared,
+        signature=signature,
+        refine=refine,
+        _rss_matrix_scale=_rss_matrix_scale,
+        design=_design,
+        dynamic=_dynamic,
+    )
+
+
+def _fit(request: _FitRequest) -> SusieResult:
+    """Run the prepared model and assemble the common public result."""
+    crossproduct = request.crossproduct
+    crossresponse = request.crossresponse
+    yty = request.yty
+    n = request.n
+    options = request.options
+    XtX = request.XtX
+    diagonal = request.diagonal
+    scales = request.scales
+    means = request.means
+    y_mean_value = request.y_mean_value
+    ids = request.ids
+    metadata = request.metadata
+    coverage = request.coverage
+    min_abs_corr = request.min_abs_corr
+    null_index = request.null_index
+    n_purity = request.n_purity
+    prior_tol = request.prior_tol
+    collected = request.collected
+    qc = request.qc
+    params = request.params
+    control = request.control
+    resolution = request.resolution
+    prepared = request.prepared
+    signature = request.signature
+    refine = request.refine
+    _rss_matrix_scale = request._rss_matrix_scale
+    if params.get("init_only", False):
+        from .individual import SusieInputs
+
+        return SusieInputs(
+            data={
+                "XtX": XtX,
+                "Xty": crossresponse,
+                "yty": yty,
+                "n": n,
+                "X": None if request.design is None else request.design.X,
+            },
+            params=params.copy(),
+            _request=request,
+        )
+    if params.get("L_greedy") is not None:
+        return _fit_greedy(request)
+    if request.dynamic is not None:
+        from .rss_models import fit_dynamic
+
+        native = fit_dynamic(request)
+    elif request.design is None:
+        native = _native.fit(crossproduct, crossresponse, yty, n, options)
+    else:
+        design = request.design
+        arguments = (
+            np.ascontiguousarray(design.means),
+            np.ascontiguousarray(design.scales),
+            crossresponse,
+            yty,
+            n,
+            options,
+        )
+        from ._trend import TrendDesign
+
+        if isinstance(design.X, TrendDesign):
+            native = _native.fit_design_trend(design.X.n, design.X.order, *arguments)
+        elif hasattr(design.X, "indptr"):
+            native = _native.fit_design_csc(
+                design.X.data,
+                design.X.indices.astype(np.int64),
+                design.X.indptr.astype(np.int64),
+                design.X.shape[0],
+                *arguments,
+            )
+        else:
+            native = _native.fit_design_dense(design.X, *arguments)
+    for message in native["warnings"]:
+        _warn(message, collected)
+    if not native["converged"]:
+        _warn(
+            nonconvergence_message(native),
+            collected,
+        )
+    alpha, V = native["alpha"], native["V"]
+    cs_audit = []
+    sets = credible_sets(
+        alpha,
+        V,
+        XtX,
+        coverage=coverage,
+        min_abs_corr=min_abs_corr,
+        median_abs_corr=params.get("median_abs_corr"),
+        cs_extension_corr=params.get("cs_extension_corr"),
+        null_index=null_index,
+        n_purity=n_purity,
+        X=None if request.design is None else request.design.X,
+        covariance_scales=None if request.design is not None else np.sqrt(diagonal),
+        covariance_multiplier=_rss_matrix_scale,
+        audit=cs_audit,
     )
     intercept = y_mean_value - float(np.sum(means * np.sum(alpha * native["mu"], axis=0) / scales))
     summary, trace = convergence_summary(native, options, control)
     summary["config_resolution"] = resolution.copy()
+    summary["requested_criterion"] = options["criterion"]
     fit = SusieResult(
         variant_ids=ids,
         alpha=alpha,
@@ -720,7 +1009,13 @@ def _susie_suff_stat(
         lbf=native["lbf"],
         V=V,
         sigma2=native["sigma2"],
-        pip=marginal_pip(alpha, V, null_index=null_index, prior_tol=prior_tol),
+        pip=marginal_pip(
+            alpha,
+            V,
+            null_index=null_index,
+            prior_tol=prior_tol,
+            slot_weights=native.get("slot_weights"),
+        ),
         elbo=native["elbo"],
         niter=native["niter"],
         converged=native["converged"],
@@ -740,7 +1035,40 @@ def _susie_suff_stat(
         cs_audit=cs_audit,
         data_signature=signature,
         _prepared=prepared,
+        slot_weights=native.get("slot_weights"),
+        lbf_grid=native.get("lbf_grid"),
+        rv=native.get("rv"),
+        marginal_loglik=native.get("marginal_loglik"),
+        R_finite_diagnostics=native.get("R_finite_diagnostics", {}),
     )
+    if fit.R_finite_diagnostics:
+        if "R_bf_attenuation" in native:
+            from ._rss_qc import summarize_attenuation
+
+            summarize_attenuation(
+                fit, native["R_bf_attenuation"], request.dynamic["control"].sensitivity_threshold
+            )
+        else:
+            fit.R_finite_diagnostics["R_reliability_flag"] = bool(
+                fit.R_finite_diagnostics.get("artifact_flag", False)
+            )
+        if fit.R_finite_diagnostics["R_reliability_flag"]:
+            _warn(
+                "Fine-mapping is sensitive to LD-reference uncertainty; "
+                "inspect R_finite_diagnostics",
+                collected,
+            )
+    if request.design is not None and request.design.fitted_response:
+        fit.fitted = np.asarray(request.design.X @ fit.coef).ravel() + fit.intercept
+    if params.get("verbose"):
+        import logging
+
+        logging.getLogger("prusie").info(
+            "SuSiE: %d sweeps, converged=%s, %d credible sets",
+            fit.niter,
+            fit.converged,
+            len(fit.sets["cs"]),
+        )
     if refine is not False:
         if not isinstance(refine, (bool, RefinementConfig)):
             raise TypeError("refine must be False, True, or a RefinementConfig")
@@ -748,7 +1076,7 @@ def _susie_suff_stat(
     return fit
 
 
-susie_suff_stat.__doc__ = _susie_suff_stat.__doc__
+susie_suff_stat.__doc__ = _prepare_suff_stat.__doc__
 
 
 def susie_rss(
@@ -756,39 +1084,62 @@ def susie_rss(
     R: ArrayLike | None = None,
     n: float | None = None,
     *,
+    X: Any = None,
+    z_method: str = "wald",
+    maf: ArrayLike | None = None,
+    maf_thresh: float = 0.0,
+    R_finite: bool | float | Sequence[float] | None = None,
+    R_mismatch: str = "none",
+    control: RSSControl | Mapping[str, Any] | None = None,
     bhat: ArrayLike | None = None,
     shat: ArrayLike | None = None,
     var_y: float | None = None,
-    z_ld_weight=0.0,
-    estimate_residual_variance=False,
-    prior_variance=50.0,
-    check_prior=True,
-    L=10,
-    scaled_prior_variance=0.2,
-    residual_variance=None,
-    estimate_prior_variance=True,
-    estimate_prior_method="optim",
-    check_null_threshold=0.0,
-    prior_tol=1e-9,
-    r_tol=1e-8,
-    prior_weights=None,
-    null_weight=0.0,
-    standardize=True,
-    max_iter=50,
-    s_init=None,
-    coverage=0.95,
-    min_abs_corr=0.5,
-    tol=1e-4,
-    verbose=False,
-    track_fit=False,
-    check_input=False,
-    refine=False,
-    convergence=None,
-    retain_data=False,
-    n_purity: int | None = None,
+    z_ld_weight: float = 0.0,
+    estimate_residual_variance: bool = False,
+    prior_variance: float = 50.0,
+    check_prior: bool = True,
+    L: int = 10,
+    scaled_prior_variance: float | ArrayLike = 0.2,
+    residual_variance: float | None = None,
+    estimate_prior_variance: bool = True,
+    estimate_prior_method: str = "optim",
+    check_null_threshold: float = 0.0,
+    prior_tol: float = 1e-9,
+    r_tol: float = 1e-8,
+    prior_weights: ArrayLike | None = None,
+    null_weight: float = 0.0,
+    standardize: bool = True,
+    max_iter: int = 50,
+    s_init: SusieResult | Mapping[str, Any] | None = None,
+    model_init: SusieResult | Mapping[str, Any] | None = None,
+    estimate_residual_method: str = "MoM",
+    residual_variance_lowerbound: float = 0.0,
+    residual_variance_upperbound: float | None = np.inf,
+    prior_variance_grid: ArrayLike | None = None,
+    mixture_weights: ArrayLike | None = None,
+    convergence_method: str | None = None,
+    alpha0: float | None = None,
+    beta0: float | None = None,
+    L_greedy: int | None = None,
+    greedy_lbf_cutoff: float = 0.1,
+    slot_prior: SlotPrior | Mapping[str, Any] | None = None,
+    median_abs_corr: float | None = None,
+    cs_extension_corr: float | None = None,
+    unmappable_effects: str = "none",
+    init_only: bool = False,
+    coverage: float | None = 0.95,
+    min_abs_corr: float | None = 0.5,
+    tol: float = 1e-4,
+    verbose: bool = False,
+    track_fit: bool | str = False,
+    check_input: bool = False,
+    refine: bool | RefinementConfig = False,
+    convergence: ConvergenceConfig | None = None,
+    retain_data: bool = False,
+    n_purity: int | str | None = None,
     variant_ids: Sequence[str] | None = None,
     variant_metadata: Mapping[str, ArrayLike] | None = None,
-) -> SusieResult:
+) -> SusieResult | SusieInputs:
     """Fit SuSiE-RSS from marginal association statistics and signed LD.
 
     Parameters
@@ -814,7 +1165,7 @@ def susie_rss(
         the predictor crossproducts for original-scale effects. Without
         ``n``, it is validated and recorded but does not affect the fit.
     z_ld_weight : float, default 0
-        Must be 0; the earlier susieR LD modification is not implemented.
+        Legacy argument removed upstream in susieR 0.16.6; must be zero.
     estimate_residual_variance : bool, default False
         Estimate σ². Appropriate only for in-sample LD consistent with the
         summary statistics; requesting it issues a warning.
@@ -835,14 +1186,35 @@ def susie_rss(
         As in :func:`susie_suff_stat`.
     tol, verbose, track_fit, check_input, refine, convergence, retain_data
         As in :func:`susie_suff_stat`.
+    X : array_like or scipy.sparse matrix, optional
+        Reference genotypes instead of R. Centering/scaling and products remain
+        implicit; reference sample size may differ from n. Lists of LD or genotype
+        panels fit an adaptively weighted LD mixture and require n.
+    z_method : {'wald', 'score'}, default 'wald'
+        Apply the finite-n Wald-to-score adjustment or use scores directly.
+    R_finite : bool or float or sequence, optional
+        Finite LD reference sample size; True uses reference genotype row counts.
+    R_mismatch : {'none', 'eb', 'eb_mix', 'eb_ser_init', 'eb_force_init', 'eb_no_init'}
+        LD mismatch estimator and initialization mode.
+    control : RSSControl or mapping, optional
+        Mismatch-estimation and input-quality controls from susie_rss_control.
+    model_init, estimate_residual_method, prior_variance_grid, mixture_weights
+        As in :func:`susie_suff_stat`.
+    residual_variance_lowerbound, residual_variance_upperbound, alpha0, beta0
+        As in :func:`susie_suff_stat`.
+    L_greedy, greedy_lbf_cutoff, slot_prior, convergence_method, init_only
+        As in :func:`susie_suff_stat`.
+    median_abs_corr, cs_extension_corr, maf, maf_thresh, unmappable_effects
+        As in :func:`susie_suff_stat`.
     n_purity, variant_ids, variant_metadata
         As in :func:`susie_suff_stat`. All apply to the working sufficient
         statistics described in Notes.
 
     Returns
     -------
-    SusieResult
-        Posterior fit. ``params`` additionally records the input route
+    SusieResult or SusieInputs
+        Posterior fit, or prepared inputs when init_only=True. ``params`` also
+        records the input route
         (``input_kind``), the supplied n and var_y, and the effect scale
         (``effect_scale``: 'standardized', 'original' or 'noncentrality').
 
@@ -850,9 +1222,8 @@ def susie_rss(
     ------
     ValueError
         Ambiguous or incomplete input, an invalid correlation matrix,
-        invalid summary values, or invalid parameter ranges.
-    NotImplementedError
-        ``verbose`` or a nonzero ``z_ld_weight`` is requested.
+        invalid summary values, invalid parameter ranges, or a nonzero legacy
+        ``z_ld_weight`` absent from susieR 0.16.6.
 
     Warns
     -----
@@ -891,8 +1262,42 @@ def susie_rss(
     >>> fit.pip.shape
     (2,)
     """
+    if (R is None) == (X is None):
+        raise ValueError("Supply exactly one of R or X")
+    if z_method not in ("wald", "score"):
+        raise ValueError("z_method must be 'wald' or 'score'")
+    if R_mismatch not in ("none", "eb", "eb_mix", "eb_ser_init", "eb_force_init", "eb_no_init"):
+        raise ValueError("Unknown R_mismatch option")
+    rss_control = (
+        susie_rss_control()
+        if control is None
+        else (control if isinstance(control, RSSControl) else susie_rss_control(**dict(control)))
+    )
+    if control is not None:
+        check_input, check_prior, r_tol = (
+            rss_control.check_input,
+            rss_control.check_prior,
+            rss_control.r_tol,
+        )
+    panels = R if R is not None else X
+    multipanel = isinstance(panels, (list, tuple)) and len(panels) > 0 and np.ndim(panels[0]) == 2
+    if multipanel:
+        from .rss_models import prepare_multipanel
+
+        return prepare_multipanel(dict(locals()))
+    design_data = None
+    if R_finite is True:
+        if X is None:
+            raise ValueError("R_finite=True requires X; supply a numeric panel size with R")
+        R_finite = float(X.shape[0]) if hasattr(X, "shape") else float(len(X))
+    if R_finite is not None and R_finite is not False:
+        R_finite = _scalar(R_finite, "R_finite", strict=True)
+    else:
+        R_finite = None
     if z_ld_weight != 0:
-        raise NotImplementedError("Nonzero z_ld_weight is not implemented")
+        raise ValueError(
+            "z_ld_weight is absent from susieR 0.16.6; only legacy zero is accepted"
+        )
     if z is not None and (bhat is not None or shat is not None):
         raise ValueError("Provide either z or bhat/shat, not both")
     has_effects = z is None
@@ -911,6 +1316,37 @@ def susie_rss(
             raise ValueError("shat must be strictly positive without missing values")
         z = beta / se
     z = _summary_vector(z, "z")
+    if estimate_residual_method == "NIG" and n is None:
+        raise ValueError("NIG RSS fitting requires n")
+    if X is not None:
+        from .individual import _column_stats, _DesignData, _validated_design
+
+        raw_rows = X.shape[0] if hasattr(X, "shape") else len(X)
+        raw, _ = _validated_design(X, np.zeros(raw_rows), na_rm=False)
+        if raw.shape[1] != len(z):
+            raise ValueError("X must have one column per z-score")
+        raw_means, norm2 = _column_stats(raw)
+        target_norm = 1.0 if n is None else _scalar(n, "n", lower=1, strict=True) - 1
+        factor = np.sqrt(np.divide(target_norm, norm2, out=np.zeros_like(norm2), where=norm2 > 0))
+        if hasattr(raw, "multiply"):
+            normalized = raw.multiply(factor).tocsc()
+        else:
+            normalized = np.asfortranarray(raw * factor)
+        normalized_means = raw_means * factor
+        means = normalized_means
+        design_data = _DesignData(
+            normalized,
+            means,
+            np.ones(len(z)),
+            np.where(norm2 > 0, target_norm, 0),
+            1.0 if var_y is None else float(var_y),
+            False,
+        )
+        if has_effects and var_y is not None:
+            from .posterior import _design_correlation
+
+            R = _design_correlation(raw, np.arange(len(z)), np.arange(len(z)))
+            design_data = None
     prevalidated_scale = None
     if n is None:
         prevalidated_scale = 1.0
@@ -918,7 +1354,10 @@ def susie_rss(
         n = _scalar(n, "n", lower=1.0, strict=True)
         prevalidated_scale = n - 1
     extra_warnings = []
-    R, symmetric = _validated_matrix(R, "R", len(z), rss_scale=prevalidated_scale)
+    if design_data is None:
+        R, symmetric = _validated_matrix(R, "R", len(z), rss_scale=prevalidated_scale)
+    else:
+        R, symmetric = None, True
     rss_matrix_scale = 1.0
     if var_y is not None:
         var_y = _scalar(var_y, "var_y", strict=True)
@@ -934,7 +1373,7 @@ def susie_rss(
         n = _scalar(n, "n", lower=1.0, strict=True)
         with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
             denominator = z * z + n - 2
-            adj = (n - 1) / denominator
+            adj = (n - 1) / denominator if z_method == "wald" else np.ones_like(z)
             adjusted_z = np.sqrt(adj) * z
         if has_effects and var_y is not None:
             diagonal = var_y * adj / (se * se)
@@ -945,7 +1384,7 @@ def susie_rss(
             effective_var_y, scale_kind = var_y, "original"
         else:
             XtX, Xty = R, np.sqrt(n - 1) * adjusted_z
-            rss_matrix_scale = n - 1
+            rss_matrix_scale = n - 1 if design_data is None else 1.0
             effective_var_y, scale_kind = (
                 (1.0 if var_y is None else var_y),
                 "standardized",
@@ -966,7 +1405,21 @@ def susie_rss(
             ),
             extra_warnings,
         )
-    fit = _susie_suff_stat(
+    dynamic = None
+    if R_finite is not None or R_mismatch != "none":
+        dynamic = dict(
+            kind="uncertain",
+            reference_n=np.inf if R_finite is None else R_finite,
+            mismatch=R_mismatch,
+            control=rss_control,
+            z=adjusted_z.copy(),
+        )
+        if convergence is None:
+            convergence_method = "pip"
+    if dynamic is not None:
+        selected_z = adjusted_z if maf is None else adjusted_z[np.asarray(maf) > maf_thresh]
+        dynamic["z"] = np.r_[selected_z, 0.0] if null_weight > 0 else selected_z.copy()
+    request = _prepare_suff_stat(
         XtX,
         Xty,
         yty,
@@ -998,9 +1451,32 @@ def susie_rss(
         n_purity=n_purity,
         variant_ids=variant_ids,
         variant_metadata=variant_metadata,
+        model_init=model_init,
+        estimate_residual_method=estimate_residual_method,
+        residual_variance_lowerbound=residual_variance_lowerbound,
+        residual_variance_upperbound=residual_variance_upperbound,
+        prior_variance_grid=prior_variance_grid,
+        mixture_weights=mixture_weights,
+        convergence_method=convergence_method,
+        alpha0=alpha0,
+        beta0=beta0,
+        L_greedy=L_greedy,
+        greedy_lbf_cutoff=greedy_lbf_cutoff,
+        slot_prior=slot_prior,
+        median_abs_corr=median_abs_corr,
+        cs_extension_corr=cs_extension_corr,
+        unmappable_effects=unmappable_effects,
+        init_only=init_only,
         _rss_matrix_scale=rss_matrix_scale,
         _rss_matrix_validated=prevalidated_scale is not None,
+        _design=design_data,
+        _dynamic=dynamic,
+        maf=maf,
+        maf_thresh=maf_thresh,
     )
+    fit = _fit(request)
+    if init_only:
+        return fit
     fit.params.update(
         interface="susie_rss",
         input_n=n,
@@ -1009,6 +1485,82 @@ def susie_rss(
         effect_scale=scale_kind,
         prior_variance=prior_variance,
         z_ld_weight=0.0,
+        z_method=z_method,
+        R_finite=R_finite,
+        R_mismatch=R_mismatch,
+        control=dict(rss_control),
     )
     fit.warnings[:0] = extra_warnings
     return fit
+
+
+def _model_init_state(model: SusieResult | Mapping[str, Any]) -> dict[str, Any]:
+    """Extract initialization fields, clearing CS metadata as susieR does."""
+    if isinstance(model, Mapping):
+        return {**model, "sets": None}
+    return dict(
+        alpha=model.alpha,
+        mu=model.mu,
+        mu2=model.mu2,
+        V=model.V,
+        sigma2=model.sigma2,
+        variant_ids=model.variant_ids,
+        variant_metadata=model.variant_metadata,
+        scales=model.X_column_scale_factors,
+        null_index=model.null_index,
+        data_signature=model.data_signature,
+        sets=None,
+    )
+
+
+def _fit_greedy(request: _FitRequest) -> SusieResult:
+    """Grow L in fixed increments, matching susieR's workhorse outer loop."""
+    maximum, step = request.options["l"], request.params["L_greedy"]
+    current, previous, history = min(step, maximum), None, []
+    while True:
+        options = {
+            key: value for key, value in request.options.items() if not key.startswith("init_")
+        }
+        options["l"] = current
+        if "component_prior_variance" in options:
+            options["component_prior_variance"] = options["component_prior_variance"][:current]
+        if previous is not None:
+            options.update(
+                initial_options(
+                    _model_init_state(previous),
+                    ids=request.ids,
+                    metadata=request.metadata,
+                    scales=request.scales,
+                    null_index=request.null_index,
+                    signature=request.signature,
+                    L=current,
+                    weights=options["prior_weights"],
+                    estimate_prior_variance=options["estimate_prior_variance"],
+                    estimate_residual_variance=options["estimate_residual_variance"],
+                    prior_variance=options.get(
+                        "component_prior_variance", options["prior_variance"]
+                    ),
+                )
+            )
+        else:
+            for key, value in request.options.items():
+                if key.startswith("init_"):
+                    options[key] = value
+        params = {**request.params, "L_greedy": None, "effective_L": current}
+        previous = _fit(replace(request, options=options, params=params))
+        minimum = float(np.nanmin(previous.lbf))
+        action = (
+            "L_max reached"
+            if current >= maximum
+            else "saturated"
+            if minimum < request.params["greedy_lbf_cutoff"]
+            else "grow"
+        )
+        history.append(dict(L=current, min_lbf=minimum, action=action))
+        if action != "grow":
+            previous.params.update(L_greedy=step, greedy_history=history)
+            return previous
+        current = min(current + step, maximum)
+
+
+susie_ss = susie_suff_stat

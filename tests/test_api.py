@@ -141,10 +141,11 @@ def test_invalid_inputs_error(kwargs, match):
         susie_rss(**args)
 
 
-@pytest.mark.parametrize("option", ["verbose"])
-def test_unsupported_options_are_not_ignored(option):
-    with pytest.raises(NotImplementedError, match=option):
-        susie_rss([1.0, 0.0], np.eye(2), 100, **{option: True})
+def test_verbose_reports_fitting_result(caplog):
+    with caplog.at_level("INFO", logger="prusie"):
+        fit = susie_rss([1.0, 0.0], np.eye(2), 100, verbose=True)
+    assert "SuSiE:" in caplog.text
+    assert fit.niter > 0
 
 
 def test_no_r_executable_required():
@@ -208,3 +209,8 @@ def test_result_repr_only_reads_stored_shape_and_status():
     fit.convergence = {}
     assert "credible_sets=0" in repr(fit)
     assert "stop_reason='not_available'" in repr(fit)
+
+
+def test_legacy_nonzero_z_ld_weight_is_invalid():
+    with pytest.raises(ValueError, match="absent from susieR 0.16.6"):
+        susie_rss([1.0, 2.0], np.eye(2), n=100, z_ld_weight=0.1)
