@@ -107,7 +107,7 @@ def main():
         backend_order="Even case index: R then Python; odd: Python then R",
         primary=(
             "All timed, completed settings-matched pairs with valid times; "
-            "convergence, CS and PIP error do not select timing cases"
+            "convergence, CS and alpha error do not select timing cases"
         ),
         timing="Full public API; imports/input reads/exports/explicit GC excluded",
         memory=(
@@ -178,7 +178,7 @@ def main():
                 v.get("parameters") == case["parameters"] for v in measurements.values()
             ),
             measurement_status_ok=all(v.get("status") == "ok" for v in measurements.values()),
-            PIP_passed=agreement["passed"],
+            alpha_passed=agreement["passed"],
             numerical_errors=agreement["errors"],
             max_iter=case["parameters"]["max_iter"],
             niter={k: measurements[k, "validate"].get("niter") for k in ("R", "python")},
@@ -228,7 +228,7 @@ def main():
     ratios = np.asarray([r["speedup"] for r in primary])
     summary = dict(
         cases=len(rows),
-        agreement_passed=sum(r["PIP_passed"] for r in rows),
+        agreement_passed=sum(r["alpha_passed"] for r in rows),
         timing_primary_count=len(primary),
         wins=int(np.sum(ratios > 1)),
         ties=int(np.sum(ratios == 1)),
@@ -245,7 +245,7 @@ def main():
     print(json.dumps(summary, indent=2))
     return (
         0
-        if all(r["PIP_passed"] for r in rows) and all(c["exit_code"] == 0 for c in commands)
+        if all(r["alpha_passed"] for r in rows) and all(c["exit_code"] == 0 for c in commands)
         else 1
     )
 

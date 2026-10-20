@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare exported fits without conflating PIP agreement and other fields."""
+"""Compare complete component posteriors; retain other fields as diagnostics."""
 
 import argparse
 import json
@@ -28,11 +28,12 @@ def error(left, right):
 
 
 def compare(python, reference):
-    """PIP ≤1e-5/rtol0 + input/model/probability validity; retain all diagnostics."""
+    """Final alpha ≤1e-5/rtol0 in original row/order, plus basic validity."""
     result = dict(
         case_id=python.get("case_id"),
-        PIP_atol=1e-5,
-        PIP_rtol=0,
+        alpha_atol=1e-5,
+        alpha_rtol=0,
+        alpha_row_order="original; no permutation or component filtering",
         passed=False,
         errors={},
         failure=None,
@@ -51,6 +52,16 @@ def compare(python, reference):
     result["model_parameters_match"] = python["parameters"] == reference["parameters"]
     result["python_valid"] = bool(python["validity"]["passed"])
     result["R_valid"] = bool(reference["validity"]["passed"])
+    result["alpha_probabilities_valid"] = {}
+    for name, fit in (("python", a), ("R", b)):
+        values = np.asarray(fit["alpha"], dtype=float)
+        result["alpha_probabilities_valid"][name] = bool(
+            values.ndim == 2
+            and values.size
+            and np.isfinite(values).all()
+            and np.all((values >= 0) & (values <= 1))
+            and np.max(abs(values.sum(axis=1) - 1)) <= 1e-10
+        )
     result.update(
         niter_python=a["niter"],
         niter_R=b["niter"],
@@ -79,7 +90,7 @@ def compare(python, reference):
     result["credible_sets_by_original_component"] = records
     result["no_cs_python"] = not bool(ac)
     result["no_cs_R"] = not bool(bc)
-    e = result["errors"]["pip"]
+    e = result["errors"]["alpha"]
     result["passed"] = bool(
         e["shape_match"]
         and e.get("finite")
@@ -88,6 +99,7 @@ def compare(python, reference):
         and result["model_parameters_match"]
         and result["python_valid"]
         and result["R_valid"]
+        and all(result["alpha_probabilities_valid"].values())
     )
     return result
 

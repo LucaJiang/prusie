@@ -69,7 +69,7 @@ def test_component_return_order_is_not_relabeling():
     assert all(row["members_match"] for row in compared["credible_sets_by_original_component"])
 
 
-def test_pip_failure_and_intermediate_differences_remain_distinct():
+def test_alpha_gate_and_other_diagnostics_remain_distinct():
     reference = exported_record()
     actual = deepcopy(reference)
     actual["fit"]["lbf_variable"][0][0] += 0.25
@@ -79,7 +79,23 @@ def test_pip_failure_and_intermediate_differences_remain_distinct():
     assert diagnostic["errors"]["lbf_variable"]["max_abs_error"] > 0.2
     assert not diagnostic["credible_sets_by_original_component"][0]["members_match"]
     actual["fit"]["pip"][0] += 0.1
+    assert compare(actual, reference)["passed"]
+    # A row swap leaves the aggregate PIP unchanged, but cannot satisfy the
+    # component-order gate. Both rows remain valid probability distributions.
+    actual["fit"]["alpha"][0], actual["fit"]["alpha"][1] = (
+        actual["fit"]["alpha"][1],
+        actual["fit"]["alpha"][0],
+    )
     assert not compare(actual, reference)["passed"]
+
+
+def test_alpha_probability_validity_is_checked_independently():
+    reference = exported_record()
+    actual = deepcopy(reference)
+    actual["fit"]["alpha"][0][0] += 1e-7
+    result = compare(actual, reference)
+    assert result["errors"]["alpha"]["max_abs_error"] < 1e-5
+    assert not result["passed"]
 
 
 def test_invalid_probability_record_and_failed_backend_cannot_pass():

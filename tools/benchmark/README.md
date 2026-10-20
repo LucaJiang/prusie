@@ -6,21 +6,23 @@ jsonlite; retain package source provenance as well as its version.
 
 ## Independent toy example
 
-From the checkout, prepare a Linux high-resolution clock/BLAS probe outside
-measurement and run the comparison:
+From an installed checkout, one command prepares the probe and runs the comparison:
 
 ```sh
-mkdir -p benchmark-work
-cp tools/benchmark/blas_probe.c benchmark-work/
-(cd benchmark-work && R CMD SHLIB blas_probe.c -o blas_probe.so -ldl)
-python tools/benchmark/compare_r.py --rscript Rscript \
-  --blas-probe benchmark-work/blas_probe.so --output-dir benchmark-results
+python tools/benchmark/reproduce.py --rscript Rscript --r-build R \
+  --output-dir benchmark-work
 ```
+
+Use matching R/Rscript executables with the pinned susieR installation.
+All generated inputs, build files and records go below the new output directory.
+Add `--validation-only` to skip clocks, memory measurements and probe compilation;
+add `--panel regression` or `--panel scaling` for the other predefined panels.
+The individual preparation and fitting drivers remain available for advanced use.
 
 The default input is the independently generated 500-variant toy example
 in `src/prusie/data/toy`. Set `R_LIBS_USER` for your intended R library.
 The output directory must be new. `--validation-only` skips clocks and memory
-measurement and needs no BLAS probe. `--fixture regression` instead uses the
+measurement and needs no BLAS probe. `--panel regression` instead uses the
 older attributed fixture in `tests/fixtures/susier_regression`, whose existing
 inputs/references are unchanged. See its [provenance](../../tests/fixtures/susier_regression/README.md).
 
@@ -42,10 +44,8 @@ handshake is used only in fresh memory processes, never timed calls.
 ## Controlled dense scaling
 
 ```sh
-python tools/benchmark/prepare_scaling.py --output scaling-inputs
-python tools/benchmark/compare_r.py --rscript Rscript \
-  --blas-probe benchmark-work/blas_probe.so --case-manifest scaling-inputs/tasks.json \
-  --sample-rss --output-dir scaling-results
+python tools/benchmark/reproduce.py --rscript Rscript --r-build R \
+  --panel scaling --sample-rss --output-dir scaling-work
 ```
 
 The fixed sizes are 500, 1,000, 2,000, 4,000, 10,000 and 20,000 variants. Inputs
@@ -67,6 +67,11 @@ median-susieR/median-prusie ratios. Memory ratio is peak-susieR/peak-prusie;
 reduction is 1 − peak-prusie/peak-susieR.
 
 ## Portable single-case format
+
+For an independently frozen panel of portable cases, use the same command with
+`--case-manifest PATH/tasks.json`. The manifest is a JSON list of `case_path`
+records, resolved relative to that manifest. Inputs remain read-only; generated
+records go under `--output-dir`. Fix the full case panel before looking at results.
 
 `fine_mapping.py` and `fine_mapping.R` accept `--case CASE.json --mode
 validate|time|memory --output RECORD.json`. A case identifies signed float64 z,
@@ -102,8 +107,10 @@ files for matrices that are not bitwise symmetric.
 
 Validation exports alpha, moments, PIPs, natural-log BFs, variances, ELBO, KL and
 original CS component/member IDs, returned mass and purity.
-`compare_fits.py` checks PIP absolute error ≤1e-5,
-rtol=0, plus input/model/probability validity, and retains all other diagnostics.
+`compare_fits.py` checks complete final alpha matrices in their original component
+row order, with absolute error ≤1e-5 and rtol=0, plus input/model/probability
+validity. No component is filtered or permuted. Rows must sum to one within
+1e-10. PIP, CS and intermediate differences remain diagnostics.
 
 ## Retained-record analysis
 

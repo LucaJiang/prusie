@@ -86,7 +86,6 @@ def runtime_identity():
                 "OMP_NUM_THREADS",
                 "OPENBLAS_NUM_THREADS",
                 "MKL_NUM_THREADS",
-                "PRUSIE_SER_MATH",
             )
         },
     }
