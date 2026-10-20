@@ -128,7 +128,7 @@ class SusieResult:
     lbf_grid : ndarray, shape (L, q, k), or None
         Per-component, per-variant log Bayes factors for each mixture variance.
     rv : ndarray, shape (L,), or None
-        NIG residual-variance posterior modes for each single effect.
+        NIG residual-variance posterior means for each single effect.
     marginal_loglik : ndarray, shape (L,), or None
         Integrated NIG single-effect marginal log likelihoods.
     R_finite_diagnostics : dict
@@ -193,7 +193,14 @@ class SusieResult:
                 predictor_count=int(self.qc.get("input_columns", len(self.variant_ids))),
                 matrix_symmetric=bool(self.qc.get("matrix_symmetric", True)),
                 psd_checked=bool(self.qc.get("psd_checked", False)),
-                positional_variant_ids=bool(self.qc.get("variant_ids_are_positional", True)),
+                missing_summary_values=(
+                    "reject" if self.qc.get("input_missing_policy") == "reject" else "zero"
+                ),
+                positional_variant_ids=bool(
+                    self.qc.get(
+                        "variant_ids_are_positional", self.qc.get("variant_ids_positional", True)
+                    )
+                ),
                 minimum_eigenvalue=self.qc.get("minimum_eigenvalue"),
                 projection_squared_fraction=self.qc.get("projection_squared_fraction"),
             )

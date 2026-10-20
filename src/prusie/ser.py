@@ -177,7 +177,11 @@ def susie_ser(
         params={"method": "susie_ser", "n": n, "prior_weights": weights, "prior_tol": prior_tol},
         backend_version=_native.backend_version(),
         warnings=[],
-        qc={"p": p, "variant_ids_positional": variant_ids is None},
+        qc={
+            "p": p,
+            "variant_ids_positional": variant_ids is None,
+            "input_missing_policy": "reject" if errors is not None else "zero",
+        },
         variant_metadata={},
         X_column_scale_factors=scales,
         intercept=np.nan,

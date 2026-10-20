@@ -225,7 +225,7 @@ def susie_suff_stat(
     init_only: bool = False,
     coverage: float | None = 0.95,
     min_abs_corr: float | None = 0.5,
-    tol: float = 1e-4,
+    tol: float | None = 1e-4,
     verbose: bool = False,
     track_fit: bool | str = False,
     check_input: bool = False,
@@ -468,7 +468,7 @@ def _prepare_suff_stat(
     init_only: bool = False,
     coverage: float | None = 0.95,
     min_abs_corr: float | None = 0.5,
-    tol: float = 1e-4,
+    tol: float | None = 1e-4,
     verbose: bool = False,
     track_fit: bool | str = False,
     check_input: bool = False,
@@ -485,6 +485,7 @@ def _prepare_suff_stat(
     _rss_matrix_validated=False,
     _design=None,
     _dynamic=None,
+    _summary_missing_policy: str | None = None,
 ) -> _FitRequest:
     """Validate a sufficient-statistics request for the shared fitting path."""
     collected = []
@@ -633,7 +634,7 @@ def _prepare_suff_stat(
         "matrix_symmetric": True,
         "psd_checked": bool(check_input),
         "input_columns": m,
-        "input_missing_policy": "zero",
+        "input_missing_policy": _summary_missing_policy or ("reject" if check_input else "zero"),
         "original_input_columns": original_m,
         "variant_ids_are_positional": variant_ids is None,
     }
@@ -898,7 +899,7 @@ def _prepare_suff_stat(
     )
 
 
-def _fit(request: _FitRequest) -> SusieResult:
+def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
     """Run the prepared model and assemble the common public result."""
     crossproduct = request.crossproduct
     crossresponse = request.crossresponse
@@ -1076,9 +1077,6 @@ def _fit(request: _FitRequest) -> SusieResult:
     return fit
 
 
-susie_suff_stat.__doc__ = _prepare_suff_stat.__doc__
-
-
 def susie_rss(
     z: ArrayLike | None = None,
     R: ArrayLike | None = None,
@@ -1129,7 +1127,7 @@ def susie_rss(
     init_only: bool = False,
     coverage: float | None = 0.95,
     min_abs_corr: float | None = 0.5,
-    tol: float = 1e-4,
+    tol: float | None = 1e-4,
     verbose: bool = False,
     track_fit: bool | str = False,
     check_input: bool = False,
@@ -1469,6 +1467,7 @@ def susie_rss(
         _rss_matrix_validated=prevalidated_scale is not None,
         _design=design_data,
         _dynamic=dynamic,
+        _summary_missing_policy="reject" if has_effects else "zero",
         maf=maf,
         maf_thresh=maf_thresh,
     )
