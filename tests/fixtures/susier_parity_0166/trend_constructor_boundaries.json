@@ -1,0 +1,742 @@
+{
+  "reference": {
+    "version": "0.16.6",
+    "commit": "8e56a8e038e989856d106d9ca5175cc664fea9d2"
+  },
+  "input": {
+    "dataset": "N2finemapping",
+    "row_indices_0based": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199],
+    "response_column_0based": 0,
+    "auto_X_column_indices_0based": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  },
+  "scientific_fits": 0,
+  "ibss_update_guard_calls": 0,
+  "provenance": "Constructor/validation only. Any attempted ibss_fit was blocked by a process-local traced guard before executing its body. No alpha or timing cases added.",
+  "MAD_initial_params": {
+    "residual_variance": 1.42395963203409,
+    "estimate_residual_variance": false,
+    "standardize": false,
+    "L": 3,
+    "model_init": null
+  },
+  "cases": {
+    "trend_MAD_init_only": {
+      "status": "ok",
+      "structure": {
+        "class": ["list"],
+        "typeof": "list",
+        "length": 2,
+        "names": ["data", "params"],
+        "dim": null,
+        "fields": {
+          "data": {
+            "class": ["individual"],
+            "typeof": "list",
+            "length": 5,
+            "names": ["X", "y", "mean_y", "n", "p"],
+            "dim": null,
+            "fields": {
+              "X": {
+                "class": ["ngCMatrix"],
+                "typeof": "S4",
+                "length": 40000,
+                "names": null,
+                "dim": [200, 200]
+              },
+              "y": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 200,
+                "names": null,
+                "dim": null
+              },
+              "mean_y": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": -0.067044065570733
+              },
+              "n": {
+                "class": ["integer"],
+                "typeof": "integer",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 200
+              },
+              "p": {
+                "class": ["integer"],
+                "typeof": "integer",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 200
+              }
+            }
+          },
+          "params": {
+            "class": ["list"],
+            "typeof": "list",
+            "length": 36,
+            "names": ["L", "scaled_prior_variance", "residual_variance", "prior_weights", "null_weight", "estimate_residual_variance", "estimate_residual_method", "estimate_prior_variance", "estimate_prior_method", "prior_variance_grid", "mixture_weights", "unmappable_effects", "check_null_threshold", "prior_tol", "residual_variance_upperbound", "model_init", "coverage", "min_abs_corr", "median_abs_corr", "compute_univariate_zscore", "max_iter", "tol", "convergence_method", "verbose", "track_fit", "residual_variance_lowerbound", "refine", "n_purity", "cs_extension_corr", "n", "use_NIG", "intercept", "standardize", "slot_prior", "L_greedy", "greedy_lbf_cutoff"],
+            "dim": null,
+            "fields": {
+              "L": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 3
+              },
+              "scaled_prior_variance": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.2
+              },
+              "residual_variance": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "prior_weights": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 200,
+                "names": null,
+                "dim": null
+              },
+              "null_weight": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "estimate_residual_variance": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": true
+              },
+              "estimate_residual_method": {
+                "class": ["character"],
+                "typeof": "character",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "MoM"
+              },
+              "estimate_prior_variance": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": true
+              },
+              "estimate_prior_method": {
+                "class": ["character"],
+                "typeof": "character",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "optim"
+              },
+              "prior_variance_grid": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "mixture_weights": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "unmappable_effects": {
+                "class": ["character"],
+                "typeof": "character",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "none"
+              },
+              "check_null_threshold": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0
+              },
+              "prior_tol": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 1e-09
+              },
+              "residual_variance_upperbound": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "Inf"
+              },
+              "model_init": {
+                "class": ["list"],
+                "typeof": "list",
+                "length": 2,
+                "names": ["data", "params"],
+                "dim": null,
+                "fields": {
+                  "data": {
+                    "class": ["individual"],
+                    "typeof": "list",
+                    "length": 5,
+                    "names": ["X", "y", "mean_y", "n", "p"],
+                    "dim": null
+                  },
+                  "params": {
+                    "class": ["list"],
+                    "typeof": "list",
+                    "length": 36,
+                    "names": ["L", "scaled_prior_variance", "residual_variance", "prior_weights", "null_weight", "estimate_residual_variance", "estimate_residual_method", "estimate_prior_variance", "estimate_prior_method", "prior_variance_grid", "mixture_weights", "unmappable_effects", "check_null_threshold", "prior_tol", "residual_variance_upperbound", "model_init", "coverage", "min_abs_corr", "median_abs_corr", "compute_univariate_zscore", "max_iter", "tol", "convergence_method", "verbose", "track_fit", "residual_variance_lowerbound", "refine", "n_purity", "cs_extension_corr", "n", "use_NIG", "intercept", "standardize", "slot_prior", "L_greedy", "greedy_lbf_cutoff"],
+                    "dim": null
+                  }
+                }
+              },
+              "coverage": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.95
+              },
+              "min_abs_corr": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.5
+              },
+              "median_abs_corr": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "compute_univariate_zscore": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "max_iter": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 100
+              },
+              "tol": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.0001
+              },
+              "convergence_method": {
+                "class": ["character"],
+                "typeof": "character",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "elbo"
+              },
+              "verbose": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "track_fit": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "residual_variance_lowerbound": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.000123259415470169
+              },
+              "refine": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "n_purity": {
+                "class": ["character"],
+                "typeof": "character",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "auto"
+              },
+              "cs_extension_corr": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "n": {
+                "class": ["integer"],
+                "typeof": "integer",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 200
+              },
+              "use_NIG": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "intercept": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": true
+              },
+              "standardize": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "slot_prior": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "L_greedy": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "greedy_lbf_cutoff": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.1
+              }
+            }
+          }
+        }
+      }
+    },
+    "trend_noMAD_init_only": {
+      "status": "ok",
+      "structure": {
+        "class": ["list"],
+        "typeof": "list",
+        "length": 2,
+        "names": ["data", "params"],
+        "dim": null,
+        "fields": {
+          "data": {
+            "class": ["individual"],
+            "typeof": "list",
+            "length": 5,
+            "names": ["X", "y", "mean_y", "n", "p"],
+            "dim": null,
+            "fields": {
+              "X": {
+                "class": ["ngCMatrix"],
+                "typeof": "S4",
+                "length": 40000,
+                "names": null,
+                "dim": [200, 200]
+              },
+              "y": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 200,
+                "names": null,
+                "dim": null
+              },
+              "mean_y": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": -0.067044065570733
+              },
+              "n": {
+                "class": ["integer"],
+                "typeof": "integer",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 200
+              },
+              "p": {
+                "class": ["integer"],
+                "typeof": "integer",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 200
+              }
+            }
+          },
+          "params": {
+            "class": ["list"],
+            "typeof": "list",
+            "length": 36,
+            "names": ["L", "scaled_prior_variance", "residual_variance", "prior_weights", "null_weight", "estimate_residual_variance", "estimate_residual_method", "estimate_prior_variance", "estimate_prior_method", "prior_variance_grid", "mixture_weights", "unmappable_effects", "check_null_threshold", "prior_tol", "residual_variance_upperbound", "model_init", "coverage", "min_abs_corr", "median_abs_corr", "compute_univariate_zscore", "max_iter", "tol", "convergence_method", "verbose", "track_fit", "residual_variance_lowerbound", "refine", "n_purity", "cs_extension_corr", "n", "use_NIG", "intercept", "standardize", "slot_prior", "L_greedy", "greedy_lbf_cutoff"],
+            "dim": null,
+            "fields": {
+              "L": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 3
+              },
+              "scaled_prior_variance": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.2
+              },
+              "residual_variance": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "prior_weights": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 200,
+                "names": null,
+                "dim": null
+              },
+              "null_weight": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "estimate_residual_variance": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": true
+              },
+              "estimate_residual_method": {
+                "class": ["character"],
+                "typeof": "character",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "MoM"
+              },
+              "estimate_prior_variance": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": true
+              },
+              "estimate_prior_method": {
+                "class": ["character"],
+                "typeof": "character",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "optim"
+              },
+              "prior_variance_grid": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "mixture_weights": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "unmappable_effects": {
+                "class": ["character"],
+                "typeof": "character",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "none"
+              },
+              "check_null_threshold": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0
+              },
+              "prior_tol": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 1e-09
+              },
+              "residual_variance_upperbound": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "Inf"
+              },
+              "model_init": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "coverage": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.95
+              },
+              "min_abs_corr": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.5
+              },
+              "median_abs_corr": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "compute_univariate_zscore": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "max_iter": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 100
+              },
+              "tol": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.0001
+              },
+              "convergence_method": {
+                "class": ["character"],
+                "typeof": "character",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "elbo"
+              },
+              "verbose": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "track_fit": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "residual_variance_lowerbound": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.000123259415470169
+              },
+              "refine": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "n_purity": {
+                "class": ["character"],
+                "typeof": "character",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": "auto"
+              },
+              "cs_extension_corr": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "n": {
+                "class": ["integer"],
+                "typeof": "integer",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 200
+              },
+              "use_NIG": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "intercept": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": true
+              },
+              "standardize": {
+                "class": ["logical"],
+                "typeof": "logical",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": false
+              },
+              "slot_prior": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "L_greedy": {
+                "class": ["NULL"],
+                "typeof": "NULL",
+                "length": 0,
+                "names": null,
+                "dim": null
+              },
+              "greedy_lbf_cutoff": {
+                "class": ["numeric"],
+                "typeof": "double",
+                "length": 1,
+                "names": null,
+                "dim": null,
+                "value": 0.1
+              }
+            }
+          }
+        }
+      }
+    },
+    "trend_MAD_workhorse": {
+      "status": "R_ERROR",
+      "error": "model_init must be a 'susie' object",
+      "warnings": []
+    },
+    "auto_init_only": {
+      "status": "R_ERROR",
+      "error": "invalid 'times' argument",
+      "warnings": []
+    }
+  }
+}
