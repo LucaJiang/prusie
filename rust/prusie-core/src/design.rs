@@ -144,9 +144,11 @@ fn validate_design(
     Ok(())
 }
 
-/// Fit a dense individual-level design in working centered/scaled coordinates.
+/// Fit a dense Gram factor in working centered/scaled coordinates.
 /// `means` and `scales` describe the raw `ncol` columns. If Xty has one extra
 /// entry and `null_index == ncol`, it denotes a virtual all-zero null column.
+/// The likelihood sample size `n` may differ from the factor's `nrow`, as when
+/// reference genotypes provide an RSS Gram factor for a larger association study.
 #[allow(clippy::too_many_arguments)]
 pub fn fit_design_dense(
     values: &[f64],
@@ -162,9 +164,6 @@ pub fn fit_design_dense(
     control: &FitControl,
 ) -> Result<FitOutput, String> {
     validate_design(nrow, ncol, means, scales, xty.len(), options)?;
-    if n != nrow as f64 {
-        return Err("Individual-level sample size must equal the number of design rows".into());
-    }
     if nrow.checked_mul(ncol) != Some(values.len()) || !input_validation::all_finite(values) {
         return Err("Dense design must have nrow × ncol finite entries".into());
     }
@@ -186,6 +185,7 @@ pub fn fit_design_dense(
 
 /// Fit a canonical CSC design without constructing a dense design or Gram
 /// matrix. Each column's row indices must be strictly increasing and in range.
+/// The likelihood sample size `n` is independent of the number of factor rows.
 #[allow(clippy::too_many_arguments)]
 pub fn fit_design_csc(
     values: &[f64],
@@ -202,9 +202,6 @@ pub fn fit_design_csc(
     control: &FitControl,
 ) -> Result<FitOutput, String> {
     validate_design(nrow, ncol, means, scales, xty.len(), options)?;
-    if n != nrow as f64 {
-        return Err("Individual-level sample size must equal the number of design rows".into());
-    }
     if values.len() != indices.len()
         || indptr.len() != ncol + 1
         || indptr[0] != 0
@@ -241,6 +238,101 @@ pub fn fit_design_csc(
         fitted: vec![0.; nrow],
     };
     design.initialize_diagonal();
+    fit_operator(&mut design, xty, yty, n, options, control)
+}
+
+/// Structured trend-filtering design, X = (−upper-triangular-ones)^(order+1).
+struct TrendDesign<'a> {
+    order: usize,
+    means: &'a [f64],
+    scales: &'a [f64],
+    diagonal: Vec<f64>,
+    fitted: Vec<f64>,
+}
+
+impl GramOperator for TrendDesign<'_> {
+    fn diagonal(&self) -> &[f64] {
+        &self.diagonal
+    }
+    fn apply(&mut self, vector: &[f64], output: &mut [f64]) {
+        let n = self.means.len();
+        for (i, x) in self.fitted.iter_mut().enumerate() {
+            *x = vector[i] / self.scales[i];
+        }
+        for _ in 0..=self.order {
+            let mut total = 0.;
+            for x in self.fitted.iter_mut().rev() {
+                total += *x;
+                *x = -total;
+            }
+        }
+        let shift = sum((0..n).map(|j| self.means[j] * vector[j] / self.scales[j]));
+        for x in &mut self.fitted {
+            *x -= shift;
+        }
+        let fitted_sum = sum(self.fitted.iter().copied());
+        output[..n].copy_from_slice(&self.fitted);
+        for _ in 0..=self.order {
+            let mut total = 0.;
+            for x in &mut output[..n] {
+                total += *x;
+                *x = -total;
+            }
+        }
+        for (j, x) in output[..n].iter_mut().enumerate() {
+            *x = (*x - self.means[j] * fitted_sum) / self.scales[j];
+        }
+        output[n..].fill(0.);
+    }
+}
+
+/// Fit a trend-filtering design in O(n) storage, without constructing X or XᵀX.
+#[allow(clippy::too_many_arguments)]
+pub fn fit_design_trend(
+    nrow: usize,
+    order: usize,
+    means: &[f64],
+    scales: &[f64],
+    xty: &[f64],
+    yty: f64,
+    n: f64,
+    options: &FitOptions,
+    control: &FitControl,
+) -> Result<FitOutput, String> {
+    validate_design(nrow, nrow, means, scales, xty.len(), options)?;
+    if n != nrow as f64 {
+        return Err("Invalid trend-filtering sample size or order".into());
+    }
+    let mut sums = vec![1.; nrow];
+    let mut base = vec![1.0_f64; nrow];
+    for _ in 0..=order {
+        let mut total = 0.;
+        for x in &mut sums {
+            total += *x;
+            *x = -total;
+        }
+    }
+    for _ in 0..order {
+        let mut total = 0.;
+        for x in &mut base {
+            total += *x;
+            *x = total;
+        }
+    }
+    let mut norm = 0.;
+    let mut diagonal = vec![0.; xty.len()];
+    for j in 0..nrow {
+        norm += base[j].powi(2);
+        diagonal[j] =
+            ((norm - 2. * means[j] * sums[j] + n * means[j].powi(2)) / scales[j].powi(2)).max(0.);
+    }
+    let mut design = TrendDesign {
+        order,
+        means,
+        scales,
+        diagonal,
+        fitted: vec![0.; nrow],
+    };
     fit_operator(&mut design, xty, yty, n, options, control)
 }
 
@@ -296,6 +388,118 @@ mod tests {
                     }))
             }));
             assert!((av[j] - expected).abs() < 1e-12);
+        }
+    }
+
+    #[test]
+    fn rss_factor_sample_size_is_independent_of_reference_rows() {
+        use crate::options::PriorMethod;
+        let dense = [1., 0., 2., 0., 0., 3., 0., 4.];
+        let means = [0.75, 1.75];
+        let scales = [2., 0.5];
+        let gram: Vec<f64> = (0..4)
+            .map(|index| {
+                let (i, j) = (index % 2, index / 2);
+                sum((0..4).map(|row| {
+                    (dense[i * 4 + row] - means[i]) * (dense[j * 4 + row] - means[j])
+                        / (scales[i] * scales[j])
+                }))
+            })
+            .collect();
+        let options = FitOptions {
+            l: 2,
+            prior_variance: 0.2,
+            residual_variance: 1.,
+            prior_weights: vec![0.5; 2],
+            estimate_prior_variance: false,
+            estimate_prior_method: PriorMethod::None,
+            estimate_residual_variance: true,
+            check_null_threshold: 0.,
+            max_iter: 100,
+            tol: 1e-9,
+            check_prior: false,
+            prior_tol: 1e-9,
+            null_index: None,
+        };
+        let control = FitControl::default();
+        let xty = [1., -2.];
+        let expected =
+            crate::fit_controlled(&gram, &xty, 10., 17., &options, true, None, &control).unwrap();
+        let dense_result = fit_design_dense(
+            &dense, 4, 2, true, &means, &scales, &xty, 10., 17., &options, &control,
+        )
+        .unwrap();
+        let sparse_result = fit_design_csc(
+            &[1., 2., 3., 4.],
+            &[0, 2, 1, 3],
+            &[0, 2, 4],
+            4,
+            2,
+            &means,
+            &scales,
+            &xty,
+            10.,
+            17.,
+            &options,
+            &control,
+        )
+        .unwrap();
+        for actual in [dense_result, sparse_result] {
+            for (actual, expected) in actual.alpha.iter().zip(&expected.alpha) {
+                assert!((actual - expected).abs() <= 1e-12);
+            }
+            assert!((actual.sigma2 - expected.sigma2).abs() <= 1e-12);
+        }
+    }
+}
+
+#[cfg(test)]
+mod trend_tests {
+    use super::*;
+    #[test]
+    fn cumulative_operator_matches_independent_binomial_design() {
+        let n = 6;
+        let means = [0.2, -0.1, 0.3, 0.4, -0.5, 0.7];
+        let scales = [1., 2., 0.5, 3., 0.25, 1.5];
+        let vector = [1., -2., 3., 0.5, 0., -1.];
+        for order in 0..=3 {
+            let sign = if order % 2 == 0 { -1. } else { 1. };
+            let mut dense = vec![0.; n * n];
+            for j in 0..n {
+                for i in 0..=j {
+                    let mut choose = 1.;
+                    for k in 1..=order {
+                        choose *= (j - i + k) as f64 / k as f64;
+                    }
+                    dense[j * n + i] = sign * choose;
+                }
+            }
+            let mut expected = Design {
+                storage: Storage::Dense {
+                    values: &dense,
+                    column_major: true,
+                },
+                nrow: n,
+                ncol: n,
+                means: &means,
+                scales: &scales,
+                diagonal: vec![0.; n],
+                fitted: vec![0.; n],
+            };
+            let mut actual = TrendDesign {
+                order,
+                means: &means,
+                scales: &scales,
+                diagonal: vec![0.; n],
+                fitted: vec![0.; n],
+            };
+            let mut a = [0.; 6];
+            let mut b = [0.; 6];
+            actual.apply(&vector, &mut a);
+            expected.apply(&vector, &mut b);
+            for (a, b) in a.iter().zip(b) {
+                assert!((a - b).abs() < 1e-9, "{a} != {b}");
+            }
         }
     }
 }

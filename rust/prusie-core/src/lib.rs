@@ -14,7 +14,7 @@ mod ser;
 mod slot;
 mod types;
 
-pub use design::{fit_design_csc, fit_design_dense};
+pub use design::{fit_design_csc, fit_design_dense, fit_design_trend};
 pub use ibss::fit_controlled;
 pub use operator::MatrixScaling;
 pub use ser::ser_update;
