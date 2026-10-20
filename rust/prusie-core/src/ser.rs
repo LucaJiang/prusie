@@ -38,23 +38,6 @@ fn log_probabilities(v: f64, beta: &[f64], shat2: &[f64], prior: &[f64]) -> (Vec
     (bf, po)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn bayes_factor_matches_normal_density_ratio() {
-        let variance: f64 = 0.2;
-        let beta: [f64; 3] = [0.0, 0.7, -2.0];
-        let sampling: [f64; 3] = [0.4, 0.01, 0.25];
-        let (actual, _) = log_probabilities(variance, &beta, &sampling, &[0.0; 3]);
-        for j in 0..beta.len() {
-            let expected = 0.5 * (sampling[j].ln() - (sampling[j] + variance).ln())
-                + 0.5 * beta[j].powi(2) * (1.0 / sampling[j] - 1.0 / (sampling[j] + variance));
-            assert!((actual[j] - expected).abs() <= 2e-12);
-        }
-    }
-}
 
 fn log_sum_exp(x: &mut [f64]) -> f64 {
     log_sum_exp_at(x, None)
@@ -223,3 +206,22 @@ pub(crate) fn single_effect<'a>(
     posterior.v = v;
     Ok(posterior)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bayes_factor_matches_normal_density_ratio() {
+        let variance: f64 = 0.2;
+        let beta: [f64; 3] = [0.0, 0.7, -2.0];
+        let sampling: [f64; 3] = [0.4, 0.01, 0.25];
+        let (actual, _) = log_probabilities(variance, &beta, &sampling, &[0.0; 3]);
+        for j in 0..beta.len() {
+            let expected = 0.5 * (sampling[j].ln() - (sampling[j] + variance).ln())
+                + 0.5 * beta[j].powi(2) * (1.0 / sampling[j] - 1.0 / (sampling[j] + variance));
+            assert!((actual[j] - expected).abs() <= 2e-12);
+        }
+    }
+}
+

@@ -59,15 +59,20 @@ fn fit<'py>(
     n: f64,
     options: &Bound<'py, PyDict>,
 ) -> PyResult<Bound<'py, PyDict>> {
+    let estimate_prior_variance: bool = option(options, "estimate_prior_variance")?;
+    let method_name: String = option(options, "estimate_prior_method")?;
+    let prior_method = if estimate_prior_variance {
+        method_name.parse().map_err(PyValueError::new_err)?
+    } else {
+        solver::options::PriorMethod::None
+    };
     let settings = solver::FitOptions {
         l: option(options, "l")?,
         prior_variance: option(options, "prior_variance")?,
         residual_variance: option(options, "residual_variance")?,
         prior_weights: vector_option(options, "prior_weights")?,
-        estimate_prior_variance: option(options, "estimate_prior_variance")?,
-        estimate_prior_method: option::<String>(options, "estimate_prior_method")?
-            .parse()
-            .map_err(PyValueError::new_err)?,
+        estimate_prior_variance,
+        estimate_prior_method: prior_method,
         estimate_residual_variance: option(options, "estimate_residual_variance")?,
         check_null_threshold: option(options, "check_null_threshold")?,
         max_iter: option(options, "max_iter")?,
@@ -272,6 +277,7 @@ fn fit<'py>(
 fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     summary_helpers::register(module)?;
     prepare_helpers::register(module)?;
+    module.add("MATRIX_OPERATOR_VERSION", 1)?;
     module.add_function(wrap_pyfunction!(fit, module)?)?;
     module.add_function(wrap_pyfunction!(backend_version, module)?)?;
     module.add_function(wrap_pyfunction!(ser_math_backend, module)?)?;
