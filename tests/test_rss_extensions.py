@@ -215,3 +215,19 @@ def test_reliability_control_thresholds_only_change_flags():
     assert not ordinary.R_finite_diagnostics["artifact_flag"]
     assert flagged.R_finite_diagnostics["artifact_flag"]
     assert flagged.R_finite_diagnostics["R_reliability_flag"]
+
+
+def test_finite_reference_nig_residual_posterior_matches_R():
+    fixture = json.loads(
+        (
+            Path(__file__).parent / "fixtures/susier_parity_0166/nig_finite_interaction.json"
+        ).read_text()
+    )
+    case = fixture["cases"]["N2_finite_NIG"]
+    fit = prusie.susie_rss(**case["input"], **case["options"])
+    expected = case["reference"]
+    np.testing.assert_allclose(fit.alpha, expected["alpha"], atol=1e-5, rtol=0)
+    np.testing.assert_allclose(fit.sigma2, expected["sigma2"], atol=1e-10, rtol=0)
+    np.testing.assert_allclose(fit.elbo, expected["elbo"], atol=1e-8, rtol=0)
+    np.testing.assert_array_equal(fit.KL, np.zeros(fit.alpha.shape[0]))
+    assert "bf_attenuation" not in fit.R_finite_diagnostics

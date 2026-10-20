@@ -53,7 +53,8 @@ def susie_ser(
     null_weight : float, default 0
         Prior mass on a virtual null variant.
     estimate_prior_method : {'optim', 'simple'}, default 'optim'
-        Marginal-likelihood optimization or the largest marginal effect estimate.
+        Optimize the marginal likelihood, or compare the supplied prior variance
+        with zero using the null-model threshold.
     check_null_threshold, prior_tol : float
         Null-model evidence threshold and negligible prior-variance threshold.
     coverage : float, optional
@@ -76,7 +77,8 @@ def susie_ser(
     if z is None:
         if bhat is None or shat is None:
             raise ValueError("Supply z or both bhat and shat")
-        effects, errors = _vector(bhat, "bhat"), _vector(shat, "shat")
+        effects = _vector(bhat, "bhat")
+        errors = _vector(np.full_like(effects, shat) if np.ndim(shat) == 0 else shat, "shat")
         if effects.shape != errors.shape or np.any(errors <= 0):
             raise ValueError("bhat and positive shat must have identical shape")
         scores = effects / errors
@@ -116,13 +118,15 @@ def susie_ser(
         if errors is not None and var_y is not None:
             scales = np.sqrt(var_y * adjustment / errors**2 / (n - 1))
             response = scores * np.sqrt(adjustment) * var_y / errors / scales
-    weights = np.ones(p) if prior_weights is None else _vector(prior_weights, "prior_weights")
+    weights = (
+        np.full(p, 1 / p) if prior_weights is None else _vector(prior_weights, "prior_weights")
+    )
     if weights.shape != (p,) or np.any(weights < 0) or weights.sum() <= 0:
         raise ValueError("prior_weights must match z, be nonnegative and have positive sum")
     null_weight = _scalar(null_weight, "null_weight")
     if null_weight >= 1:
         raise ValueError("null_weight must be less than one")
-    weights = weights / weights.sum() * (1 - null_weight)
+    weights = weights * (1 - null_weight)
     null_index = p if null_weight > 0 else None
     if null_index is not None:
         diagonal, response, scales, weights = (
@@ -131,6 +135,7 @@ def susie_ser(
             np.r_[scales, 1],
             np.r_[weights, null_weight],
         )
+    weights = weights / weights.sum()
     settings = dict(
         l=1,
         prior_variance=initial,

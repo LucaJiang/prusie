@@ -351,13 +351,13 @@ def fit_dynamic(request: Any) -> dict[str, Any]:
                 )
                 / (2 * local_sigma * sampling)
             )
-        if (
-            count > 1
-            and settings.get("estimate_residual_method") == "NIG"
-            and settings.get("prior_variance_grid") is not None
-        ):
+        if count > 1 and settings.get("estimate_residual_method") == "NIG":
             kl[component] = 0.0
-        if inflation is not None and np.any(np.isfinite(inflation) & (inflation > 1)):
+        if (
+            settings.get("estimate_residual_method") != "NIG"
+            and inflation is not None
+            and np.any(np.isfinite(inflation) & (inflation > 1))
+        ):
             diagonal = np.diag(gram)
             with np.errstate(divide="ignore", invalid="ignore"):
                 sampling = sigma2 / diagonal
@@ -475,7 +475,26 @@ def fit_dynamic(request: Any) -> dict[str, Any]:
         new_bias = fit_bias()
         lambda_difference, bias = abs(new_bias - bias), new_bias
         er2 = _expected_residual(gram, response, yty, alpha, mu, mu2, slot)
-        if config["kind"] == "lambda":
+        if settings.get("estimate_residual_method") == "NIG":
+            if count == 1:
+                objective = marginal[0]
+            else:
+                # Expected Gaussian log likelihood under the conjugate residual
+                # posterior; this is the NIG diagnostic objective, not an ELBO.
+                a_post = (settings["alpha0"] + request.n) / 2
+                b_post = (settings["beta0"] + er2) / 2
+                sampling = np.ones(p) if final_inflation is None else final_inflation
+                diagonal = np.diag(gram)
+                scaled = variances[:, None] * diagonal
+                shrinkage = scaled / (scaled + sampling)
+                conditional = float(np.sum(alpha * shrinkage * sampling))
+                residual_fixed = er2 - b_post / (a_post - 1) * conditional
+                objective = (
+                    -request.n / 2 * np.log(2 * np.pi)
+                    - request.n / 2 * (np.log(b_post) - digamma(a_post))
+                    - 0.5 * (residual_fixed * a_post / b_post + conditional)
+                )
+        elif config["kind"] == "lambda":
             objective = constant - 0.5 * er2 - kl.sum()
         elif final_inflation is not None:
             am = alpha * mu
@@ -560,6 +579,10 @@ def fit_dynamic(request: Any) -> dict[str, Any]:
                 )
                 if objective_sigma(1 - ridge) < negative:
                     sigma2 = 1 - ridge
+            elif settings.get("estimate_residual_method") == "NIG":
+                # Mean of IG((alpha0+n)/2, (beta0+ER2)/2), as in
+                # susieR update_variance_components.default.
+                sigma2 = (settings["beta0"] + er2) / (settings["alpha0"] + request.n - 2)
             else:
                 sigma2 = er2 / request.n
             sigma2 = float(

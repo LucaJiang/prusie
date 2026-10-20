@@ -212,5 +212,11 @@ def test_result_repr_only_reads_stored_shape_and_status():
 
 
 def test_legacy_nonzero_z_ld_weight_is_invalid():
-    with pytest.raises(ValueError, match="absent from susieR 0.16.6"):
+    with pytest.raises(ValueError, match=r"absent from susieR 0\.16\.6"):
         susie_rss([1.0, 2.0], np.eye(2), n=100, z_ld_weight=0.1)
+
+
+@pytest.mark.parametrize("method", ["uniroot", "none"])
+def test_public_prior_method_rejects_internal_helper_choices(method):
+    with pytest.raises(ValueError, match="estimate_prior_method"):
+        susie_rss([3.0, 1.0], np.eye(2), n=100, estimate_prior_method=method)

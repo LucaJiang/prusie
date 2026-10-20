@@ -1295,9 +1295,7 @@ def susie_rss(
     else:
         R_finite = None
     if z_ld_weight != 0:
-        raise ValueError(
-            "z_ld_weight is absent from susieR 0.16.6; only legacy zero is accepted"
-        )
+        raise ValueError("z_ld_weight is absent from susieR 0.16.6; only legacy zero is accepted")
     if z is not None and (bhat is not None or shat is not None):
         raise ValueError("Provide either z or bhat/shat, not both")
     has_effects = z is None

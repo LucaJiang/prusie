@@ -1,0 +1,95 @@
+{
+  "reference": {
+    "version": "0.16.6",
+    "commit": "8e56a8e038e989856d106d9ca5175cc664fea9d2",
+    "license": "BSD-3-Clause"
+  },
+  "provenance": "Deterministic public SER input-validation boundary cases requested during semantic review; no data-generating or simulation procedure.",
+  "variant_ids": ["boundary_1", "boundary_2", "boundary_3"],
+  "cases": {
+    "scalar_shat": {
+      "input": {
+        "bhat": [0.2, -0.1, 0.05],
+        "shat": 0.1,
+        "n": 100,
+        "var_y": 1
+      },
+      "options": [],
+      "status": "ok",
+      "reference": {
+        "alpha": [
+          [0.568662428826011, 0.239741613628097, 0.191595957545892]
+        ],
+        "mu": [
+          [0.118682958697876, -0.0602338824977636, 0.0302316728691094]
+        ],
+        "mu2": [
+          [0.020139377652295, 0.00968185356776764, 0.00696768701147809]
+        ],
+        "V": [0.0151086312659375],
+        "sigma2": 1,
+        "pip": [0.568662428826011, 0.239741613628097, 0.191595957545892],
+        "elbo": [0.17194554017336],
+        "lbf": [0.17194554017336],
+        "lbf_variable": [
+          [0.706089492271288, -0.157635761345808, -0.381808727933451]
+        ],
+        "KL": [0.575931708294884],
+        "niter": 1,
+        "converged": true,
+        "null_index": 0,
+        "X_column_scale_factors": [0.990147542976674, 1.00503781525921, 1.00886654461064],
+        "sets": {
+          "cs": {
+            "L1": [1, 2, 3]
+          },
+          "coverage": 1,
+          "requested_coverage": 0.95
+        }
+      },
+      "messages": ["HINT: susie_ser() uses a one-effect credible-set model as in Maller et al. 2012. Because no LD reference is supplied, credible sets are reported without purity filtering; susie_ser() applies the attainable-coverage filter from SparsePro (Zhang et al. 2023). Set coverage = NULL to skip CS construction and silence this hint, or call susie_get_cs(fit, Xcorr = R, ...) afterward to apply a purity filter.\n"]
+    },
+    "raw_prior_weights_null": {
+      "input": {
+        "z": [3, 1, 0]
+      },
+      "options": {
+        "prior_weights": [2, 1, 1],
+        "null_weight": 0.2
+      },
+      "status": "ok",
+      "reference": {
+        "alpha": [
+          [0.970353861559761, 0.0139957788465433, 0.00898481596103093, 0.00666554363266488]
+        ],
+        "mu": [
+          [2.65931841646367, 0.886439472154558, 0, 0]
+        ],
+        "mu2": [
+          [7.95841391229743, 1.67221440994821, 0.886439472154558, 0]
+        ],
+        "V": [7.80587664545749],
+        "sigma2": 1,
+        "pip": [0.970353861559761, 0.0139957788465432, 0.00898481596103096],
+        "elbo": [2.17759067265017],
+        "lbf": [2.17759067265017],
+        "lbf_variable": [
+          [2.90126797508315, -0.644489913535079, -1.08770964961236, 0]
+        ],
+        "KL": [1.69933236662436],
+        "niter": 1,
+        "converged": true,
+        "null_index": 4,
+        "X_column_scale_factors": [1, 1, 1, 1],
+        "sets": {
+          "cs": {
+            "L1": 1
+          },
+          "coverage": 0.970353861559761,
+          "requested_coverage": 0.95
+        }
+      },
+      "messages": ["HINT: susie_ser() uses a one-effect credible-set model as in Maller et al. 2012. Because no LD reference is supplied, credible sets are reported without purity filtering; susie_ser() applies the attainable-coverage filter from SparsePro (Zhang et al. 2023). Set coverage = NULL to skip CS construction and silence this hint, or call susie_get_cs(fit, Xcorr = R, ...) afterward to apply a purity filter.\n"]
+    }
+  }
+}

@@ -65,3 +65,15 @@ def test_block_ascent_rejects_decreasing_mutating_callback():
     assert accepted.converged
     np.testing.assert_array_equal(accepted.alpha, original)
     np.testing.assert_array_equal(accepted.elbo, objective)
+
+
+@pytest.mark.parametrize("name", ["scalar_shat", "raw_prior_weights_null"])
+def test_ser_boundary_inputs_match_R(name):
+    fixture = json.loads((DIRECTORY / "ser_boundaries.json").read_text())
+    case = fixture["cases"][name]
+    fit = prusie.susie_ser(**case["input"], **(case["options"] or {}))
+    expected = case["reference"]
+    np.testing.assert_allclose(fit.alpha, expected["alpha"], atol=1e-5, rtol=0)
+    np.testing.assert_allclose(fit.V, expected["V"], atol=1e-7, rtol=0)
+    np.testing.assert_allclose(fit.mu, expected["mu"], atol=1e-7, rtol=0)
+    assert fit.null_index == (expected["null_index"] - 1 if expected["null_index"] else None)
