@@ -36,10 +36,10 @@ exclude = [
     "dev/**", "examples/**", "requirements-dev.lock",
 ]
 include = [
-    {path = "licenses/**", format = "sdist"},
+    {path = "licenses/**/*", format = "sdist"},
     {path = "rust-toolchain.toml", format = "sdist"},
     {path = "rustfmt.toml", format = "sdist"},
-    {path = "tests/**", format = "sdist"},
+    {path = "tests/**/*", format = "sdist"},
     {path = "CITATION.cff", format = "sdist"},
     {path = "CHANGELOG.md", format = "sdist"},
 ]
