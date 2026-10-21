@@ -79,28 +79,30 @@ pub(crate) fn multiply(matrix: ArrayView2<'_, f64>, vector: &[f64], output: &mut
     }
 }
 
-// Checking |x| ≤ 2 for every entry also establishes finiteness, because NaN and
-// infinities fail the ordered comparison. Combining eight checks with `&`
-// permits a SIMD evaluation.
+// The former raw-correlation certificate admitted |R| ≤ 2 and a ≤ 10⁹.
+// Parity preparation may already move a into the supplied matrix. Admit that
+// representation too: |M| ≤ 2 × 10⁹. With the factor bounds below, ordered
+// prepared-entry intermediates are bounded by 2 × 10¹⁸, 4 × 10¹⁸ and 8 × 10¹⁸.
+// Ordered comparisons also establish finiteness; `&` permits SIMD evaluation.
 #[inline(never)]
 // The explicit eight-element groups and the separately checked remainder are intended.
 #[allow(clippy::chunks_exact_to_as_chunks)]
 pub(crate) fn operator_entries_bounded(values: &[f64]) -> bool {
     let mut chunks = values.chunks_exact(8);
     for c in &mut chunks {
-        if !((c[0].abs() <= 2.)
-            & (c[1].abs() <= 2.)
-            & (c[2].abs() <= 2.)
-            & (c[3].abs() <= 2.)
-            & (c[4].abs() <= 2.)
-            & (c[5].abs() <= 2.)
-            & (c[6].abs() <= 2.)
-            & (c[7].abs() <= 2.))
+        if !((c[0].abs() <= 2e9)
+            & (c[1].abs() <= 2e9)
+            & (c[2].abs() <= 2e9)
+            & (c[3].abs() <= 2e9)
+            & (c[4].abs() <= 2e9)
+            & (c[5].abs() <= 2e9)
+            & (c[6].abs() <= 2e9)
+            & (c[7].abs() <= 2e9))
         {
             return false;
         }
     }
-    chunks.remainder().iter().all(|x| x.abs() <= 2.)
+    chunks.remainder().iter().all(|x| x.abs() <= 2e9)
 }
 
 /// Implicit working matrix Q = a D⁻¹ M D⁻¹, applied as a D⁻¹ (M (D⁻¹ v)). The
@@ -110,6 +112,25 @@ pub struct MatrixScaling<'a> {
     pub global: f64,
     pub inverse: &'a [f64],
     pub scales: &'a [f64],
+}
+
+/// A sufficient dispatch certificate, not an input restriction. It proves
+/// finite ordered prepared entries, not arbitrary dot-product intermediates.
+#[allow(clippy::manual_range_contains)]
+pub(crate) fn operator_scaling_bounded(
+    values: &[f64],
+    p: usize,
+    scaling: Option<&MatrixScaling<'_>>,
+) -> bool {
+    scaling.is_some_and(|scale| {
+        scale.global >= 1.
+            && scale.global <= 1e9
+            && scale.scales.len() == p
+            && scale.inverse.len() == p
+            && scale.scales.iter().all(|&x| x >= 0.5 && x <= 2.)
+            && scale.inverse.iter().all(|&x| x >= 0.5 && x <= 2.)
+            && operator_entries_bounded(values)
+    })
 }
 
 pub(crate) fn materialize_scaled(
@@ -371,14 +392,31 @@ mod tests {
     #[test]
     fn operator_entry_certificate_checks_every_chunk_tail_and_nonfinite() {
         let valid = [
-            -2., -0., 0., 2., 1., -1., 0.5, -0.5, 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+            -2e9,
+            -0.,
+            0.,
+            2e9,
+            799.,
+            -486018.,
+            0.5,
+            -0.5,
+            f64::from_bits(2e9_f64.to_bits() - 1),
+            -f64::from_bits(2e9_f64.to_bits() - 1),
+            f64::from_bits(2.0_f64.to_bits() + 1),
+            f64::from_bits(1),
+            -f64::from_bits(1),
+            1.,
+            1.,
+            1.,
+            1.,
         ];
         assert!(operator_entries_bounded(&valid));
         for bad in [
             f64::NAN,
             f64::INFINITY,
             f64::NEG_INFINITY,
-            f64::from_bits(2.0_f64.to_bits() + 1),
+            f64::from_bits(2e9_f64.to_bits() + 1),
+            -f64::from_bits(2e9_f64.to_bits() + 1),
         ] {
             for i in 0..valid.len() {
                 let mut values = valid;
@@ -386,5 +424,111 @@ mod tests {
                 assert!(!operator_entries_bounded(&values));
             }
         }
+    }
+
+    #[test]
+    fn scaling_certificate_preserves_factor_boundaries_and_dispatch_misses() {
+        let values = [486018.; 4];
+        let mut factors = MatrixScaling {
+            global: 1.,
+            inverse: &[0.5, 2.],
+            scales: &[2., 0.5],
+        };
+        assert!(operator_scaling_bounded(&values, 2, Some(&factors)));
+        factors.global = 1e9;
+        assert!(operator_scaling_bounded(&values, 2, Some(&factors)));
+        for global in [
+            0.,
+            -1.,
+            f64::NAN,
+            f64::INFINITY,
+            f64::from_bits(1.0_f64.to_bits() - 1),
+            f64::from_bits(1e9_f64.to_bits() + 1),
+        ] {
+            factors.global = global;
+            assert!(!operator_scaling_bounded(&values, 2, Some(&factors)));
+        }
+        factors.global = 1.;
+        for bad in [
+            0.,
+            -1.,
+            f64::NAN,
+            f64::INFINITY,
+            f64::from_bits(0.5_f64.to_bits() - 1),
+            f64::from_bits(2.0_f64.to_bits() + 1),
+        ] {
+            let changed = [bad, 1.];
+            assert!(!operator_scaling_bounded(
+                &values,
+                2,
+                Some(&MatrixScaling {
+                    inverse: &changed,
+                    ..factors
+                })
+            ));
+            assert!(!operator_scaling_bounded(
+                &values,
+                2,
+                Some(&MatrixScaling {
+                    scales: &changed,
+                    ..factors
+                })
+            ));
+        }
+        assert!(!operator_scaling_bounded(&values, 3, Some(&factors)));
+        assert!(!operator_scaling_bounded(&[2e9 + 1.; 4], 2, Some(&factors)));
+        assert!(!operator_scaling_bounded(&values, 2, None));
+    }
+
+    #[test]
+    fn newly_bounded_product_matches_an_independent_power_of_two_oracle() {
+        let values = [1073741824., 268435456., 536870912., 1073741824.];
+        let matrix = ArrayView2::from_shape((2, 2).f(), &values).unwrap();
+        let scaling = MatrixScaling {
+            global: 8.,
+            inverse: &[0.5, 2.],
+            scales: &[2., 0.5],
+        };
+        assert!(operator_scaling_bounded(&values, 2, Some(&scaling)));
+        let vector = [2., -3.];
+        let mut output = [0.; 2];
+        assert!(!scaled_multiply(
+            matrix,
+            &vector,
+            &mut output,
+            &scaling,
+            &mut [0.; 2]
+        ));
+        for i in 0..2 {
+            let expected: f64 = (0..2)
+                .map(|j| {
+                    (((values[j * 2 + i] * 8.) * scaling.inverse[j]) / scaling.scales[i])
+                        * vector[j]
+                })
+                .sum();
+            assert_eq!(output[i], expected);
+        }
+    }
+
+    #[test]
+    fn newly_bounded_product_retains_finite_materialized_fallback() {
+        let values = [1073741824.; 4]; // 2³⁰
+        let matrix = ArrayView2::from_shape((2, 2).f(), &values).unwrap();
+        let scaling = MatrixScaling {
+            global: 1.,
+            inverse: &[0.5; 2],
+            scales: &[2.; 2],
+        };
+        assert!(operator_scaling_bounded(&values, 2, Some(&scaling)));
+        let vector = [f64::MAX * 2.0_f64.powi(-29); 2];
+        let mut output = [0.; 2];
+        assert!(scaled_multiply(
+            matrix,
+            &vector,
+            &mut output,
+            &scaling,
+            &mut [0.; 2]
+        ));
+        assert_eq!(output, [f64::MAX; 2]);
     }
 }

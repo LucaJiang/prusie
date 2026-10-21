@@ -3,7 +3,7 @@ use crate::{
     diagnostics::{self, Diagnostics, FitControl, Snapshot, StopDecision},
     input_validation,
     numerical::{digamma, dot, sum},
-    operator::{materialize_scaled, operator_entries_bounded, DenseGram, GramOperator},
+    operator::{materialize_scaled, operator_scaling_bounded, DenseGram, GramOperator},
     options::{ConvergenceMethod, PriorMethod, ResidualMethod},
     residual::{expected_residual_sum_squares, ResidualScratch},
     ser::{single_effect, single_effect_mixture, SingleEffect},
@@ -85,16 +85,7 @@ pub fn fit_controlled(
     // and the implicit operator is safe; otherwise the full finiteness check
     // and the materialized matrix are used. Each bound is stated next to the
     // corresponding scale check.
-    #[allow(clippy::manual_range_contains)]
-    let operator_bounded = scaling.is_some_and(|scale| {
-        scale.global >= 1.
-            && scale.global <= 1e9
-            && scale.scales.len() == p
-            && scale.inverse.len() == p
-            && scale.scales.iter().all(|&x| x >= 0.5 && x <= 2.)
-            && scale.inverse.iter().all(|&x| x >= 0.5 && x <= 2.)
-            && operator_entries_bounded(xtx)
-    });
+    let operator_bounded = operator_scaling_bounded(xtx, p, scaling);
     if !n.is_finite()
         || n <= 1.0
         || !yty.is_finite()
@@ -130,7 +121,8 @@ pub fn fit_controlled(
     };
     // The bounds choose only how the arithmetic is carried out: outside them the
     // scaled matrix is materialized. Within them every prepared entry is at most
-    // 8 × 10⁹ in magnitude and cannot overflow.
+    // 8 × 10¹⁸ in magnitude and cannot overflow. Dot-product scratch/output
+    // checks and their materialization fallback remain necessary.
     let operator = if operator_bounded { scaling } else { None };
     let prepared;
     let matrix = if let Some(scale) = scaling.filter(|_| operator.is_none()) {
