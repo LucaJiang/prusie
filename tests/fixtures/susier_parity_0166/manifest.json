@@ -1,26 +1,81 @@
 {
-  "reference_version": "0.16.6",
-  "reference_commit": "8e56a8e038e989856d106d9ca5175cc664fea9d2",
-  "upstream_license": "BSD-3-Clause",
+  "adapter_invalid_attempts_preserved": 4,
+  "adapter_sources": {
+    "auxiliary_boundary_references.R": "023f559e69c805528f5c28335a88d4d94f7b039bb289e23c94672eff41d39684",
+    "combination_L1_reference.R": "66acf4223b2dcfe4b1f712471bc6f03152df128af17f4690fed7d2f462c7e4e5",
+    "combination_invalid_reference.R": "abef619bd88a0c3f0b468a0db0ea4cd373a3dad59b74bcf425ce2e59e3ba1532",
+    "combination_reference.R": "27615080322aaf628b7fe585fc891c18c6f10e574ebbd156f190b896af083c48",
+    "feature_references.R": "7b38e31827186a7a7a3d00058e04e4c37d67b3f691cf666a41a5ed28a8cbb4d7",
+    "feature_supplement.R": "1e44cb8856bee052bebc0b2efa0b8ec1e7a975d83f17761152f105c8a52140ec",
+    "getter_boundaries.R": "2dfebf9d398058b912562158f5166a210a22a2323d24586329639c277c9bb320",
+    "interaction_references.R": "5ebe0e4dd8dcf91711a44a7b115f35c9f4e95a0e8ba9e2b3cd9e4a6b6945eba8",
+    "list_references.R": "1827b1280f09668c1aa57c996ae2ed59395c95b6740c5e729cec27bf4297e8d8",
+    "operator_references.R": "51dd772ae95766b900f9286c61f42ecdd2bed42fd57e4548c06956318732156e",
+    "post_outcome_references.R": "5062b30326a9cd3fc17bf0d47370b6c93c1974911d56035be555ec3812153551",
+    "qc_references.R": "57cc6de29f146df874020b5306b95b7aeeacd070d84002a9b1ca771e98962991",
+    "ser_boundary_references.R": "1b753f83ad4e7b9ee8a323f31d06f8fd11d31ffccb3d4e08ceb437a011a5c175",
+    "ser_utilities_references.R": "92c6148e2b43c5cd27bcba46342337ee1560ede7c355a9d792fa6a3ed2f7902a",
+    "trend_constructor_boundaries.R": "341c9dd6dff6dbcab28b68a2c253577353c6b4aeaef0400741618b3d91c13457"
+  },
+  "auxiliary_post_outcome_cases": 8,
+  "diagnostic_repeated_exports_public": 2,
   "files": {
-    "README.md": "21c9bbdadd9b21d72a0cd5e9cd856b3ec125626e2fdaa1240edee245afbc7a00",
     "BSD-3-Clause.txt": "70a9800602db7ccce0b73299da6b7da566b9c114a27ed3d36bc3a64d8fede501",
     "LICENSE.BSD-3-Clause": "07cd2b1e331b328a0da14ec16bc3931f82721ee764672b39ba487808a41d3fd9",
-    "supplement.json": "31c68684d27300cbd7c39c4b00131e5c11839f9fdfe9886f30f0e277f893ec50",
+    "README.md": "21c9bbdadd9b21d72a0cd5e9cd856b3ec125626e2fdaa1240edee245afbc7a00",
+    "auxiliary_boundaries.json": "79a78672ac9ddef0cc48e1a1aa08400b4374f8f67792121d31ad58eda5b142e5",
+    "combination.json": "bdbc2500c1dd66e26338fc3564c6ffab8025c26c5c162d46a23c0c443e5683ae",
+    "combination_L1.json": "af2f18b2e29172bbf3b8f6b66be422a05b895620c3ac903f35d1436b5ed4ebd5",
+    "combination_invalid.json": "ba1f224f78d85b273d6fd941c34617036d6e6e7adc561466045c66a872efa3bd",
+    "getter_boundaries.json": "a3f9e81d6f48ee0e0f191ed5734348be13e3de4001ab9dc27c803bbe0262c2c5",
+    "lists.json": "0e263694022b22806c88a8df1bd981c04a7269ca1a906837306b050fd67d7826",
+    "nig_finite_interaction.json": "44041f8c792ffb1412f632199761c64936267ce833fc1ed3eb2e2cf7e06598d8",
+    "operator_inputs.json": "05b918aad6b1653edc1cf5a1e19033ef62fbf8bb50e8f5bcd5f8f1862a184cfe",
+    "post_outcome.json": "bbc4daf2d9a5a06bdfc2f6f815c92fb9f2e62b693e2967d20ed429111f69b75e",
+    "qc_public.json": "a96e1eb295c7f0b097417f03dc9269a0b60232bea75ae1d3c599a2b869cd075f",
     "reference.json": "43ce87016a2a541f9b5d8d9e8b20bc937b00c584791271846f3aa7c1a4c8ea66",
-    "lists.json": "0e263694022b22806c88a8df1bd981c04a7269ca1a906837306b050fd67d7826"
+    "ser_boundaries.json": "8541238999a8d35680d6f9c3814bd0fe4fff0027a73f6298d9b1a8330887be62",
+    "ser_utilities.json": "af5a803cded3a9aecaecc53d9e41009298518558573ef0a3901f5b3ea6b75e64",
+    "supplement.json": "31c68684d27300cbd7c39c4b00131e5c11839f9fdfe9886f30f0e277f893ec50",
+    "trend_constructor_boundaries.json": "2275241f36efc49f431c461d4f17a7586f5d6fcfb7b01667de9ee1551f0a87c5"
   },
+  "mixture_NIG_L1": "Actual R returned a finite posterior with NA diagnostic ELBO; preserved initial success record and full subsequent export.",
+  "nig_finite_interaction": "New licensed N2 interaction is validated in interactions panel; private EB interaction stays RUN-only.",
+  "nonfitting_auxiliary_boundaries": {
+    "alpha_panel_additions": 0,
+    "block_coordinate_ascent_cases": 6,
+    "scientific_fits": 0,
+    "symmetry_cases": 14
+  },
+  "nonfitting_getter_boundaries": {
+    "Python_comparisons": 11,
+    "R_calls": 11,
+    "R_list_prediction_rejection_preserved": true,
+    "R_valid_calls": 10,
+    "alpha_panel_additions": 0,
+    "ibss_update_guard_calls": 0,
+    "scientific_fits": 0,
+    "timing_panel_additions": 0
+  },
+  "nonfitting_trend_constructors": {
+    "alpha_panel_additions": 0,
+    "cases": 4,
+    "ibss_update_guard_calls": 0,
+    "scientific_fits": 0,
+    "timing_panel_additions": 0
+  },
+  "operator_expected_error_configurations": 2,
+  "operator_sparse_oracle": "3 CSC configurations use the corresponding valid dense pinned-R fit; upstream rejects sparse RSS X input.",
+  "reference_commit": "8e56a8e038e989856d106d9ca5175cc664fea9d2",
+  "reference_version": "0.16.6",
+  "ser_boundaries": "Scalar shat expansion and raw prior_weights combined with null_weight; two public pinned-R deterministic boundary configurations.",
   "source_datasets": {
     "FinemappingConvergence.RData": "8b9ac71cd119cd8e9818340fb1152e422d9b7eaefac747058d8087f6c0b5139b",
     "N2finemapping.RData": "8136ba7e7099cbfcd75e34a0817752af0a57f86883d02c2d636a68cb4fb8c1f1",
     "N3finemapping.RData": "23230f8d142e49a7b10c2f10b1e775593dea01d2d9237a64fe6421626997f6f0"
   },
-  "adapter_sources": {
-    "feature_references.R": "7b38e31827186a7a7a3d00058e04e4c37d67b3f691cf666a41a5ed28a8cbb4d7",
-    "feature_supplement.R": "1e44cb8856bee052bebc0b2efa0b8ec1e7a975d83f17761152f105c8a52140ec",
-    "list_references.R": "1827b1280f09668c1aa57c996ae2ed59395c95b6740c5e729cec27bf4297e8d8"
-  },
-  "valid_fitted_cases": 50,
-  "adapter_invalid_attempts_preserved": 4,
-  "stochastic_sampling": "No sample-byte equality claimed; posterior sampling uses independent NumPy and R RNGs."
+  "stochastic_sampling": "No sample-byte equality claimed; posterior sampling uses independent NumPy and R RNGs.",
+  "upstream_license": "BSD-3-Clause",
+  "upstream_operator_reference_rejections": 5,
+  "valid_fitted_cases": 70
 }
