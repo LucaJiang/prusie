@@ -11,7 +11,4 @@ target/
 *.orig
 *.rej
 
-example-results/
-benchmark-work/
-benchmark-results/
-/dev/
+dev/
