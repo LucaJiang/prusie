@@ -60,6 +60,7 @@ Crate sources are available at `https://crates.io/crates/NAME/VERSION`.
 | --- | --- | --- |
 | cfg-if | 1.0.5 | Copyright (c) 2014 Alex Crichton |
 | libc | 0.2.189 | Copyright (c) The Rust Project Developers |
+| libm | 0.2.15 | Copyright (c) 2018 Jorge Aparicio; math code derived from musl libc, Copyright © 2005–2020 Rich Felker et al., including portions Copyright © 1993, 2004 Sun Microsystems, © 2003–2011 David Schultz, © 2003–2009 Steven G. Kargl, © 2003–2009 Bruce D. Evans, © 2008 Stephen L. Moshier and © 2017–2018 Arm Limited; CORE-MATH routines under MIT |
 | matrixmultiply | 0.3.11 | Copyright (c) 2016–2023, 2026 Ulrik Sverdrup “bluss”; (c) 2018 R. Janis Goldschmidt; (c) 2021 DutchGhost and matrixmultiply authors |
 | memoffset | 0.9.1 | Copyright (c) 2017, 2020 Gilad Naaman; (c) 2020 Ralf Jung |
 | ndarray | 0.16.1 | Copyright (c) 2014–2024 Ulrik Sverdrup “bluss”, Jim Turner and ndarray developers |
@@ -209,14 +210,10 @@ included only in the repository and documentation site, not the wheel or sdist.
 The MIT notice, font copyrights and full OFL-1.1 terms are in
 [`docs/assets/katex/LICENSE`](https://github.com/LucaJiang/prusie/blob/main/docs/assets/katex/LICENSE).
 
-### libm 0.2.15
-
-The native solver uses rust-lang/libm for special functions in inverse-gamma and slot priors. Its MIT-compatible terms and retained upstream notices are included in `licenses/libm-0.2.15-LICENSE.txt`. The package license remains GPL-3.0-or-later.
-
 ## Sparse matrix comparison rules
 
-The sparse symmetry comparison in `src/prusie/utilities.py` adapts the comparison rules of Matrix 1.7-6. Copyright (c) 1999–2020 Douglas Bates and Martin Maechler; Copyright (c) 2021–2024 Douglas Bates, Martin Maechler and Mikael Jagan. Matrix's full license record, including GPL-3 terms for its R code, is retained in `licenses/Matrix-1.7-6-LICENCE.txt`. No compiled Matrix or SuiteSparse library is bundled or linked.
+The sparse symmetry comparison in `src/prusie/utilities.py` adapts the comparison rules of Matrix 1.7-6. Copyright (c) 1999–2020 Douglas Bates and Martin Maechler; Copyright (c) 2021–2024 Douglas Bates, Martin Maechler and Mikael Jagan. Matrix's R code is licensed under GPL-3, whose terms are in `LICENSE`. No compiled Matrix or SuiteSparse library is bundled or linked.
 
 ## Optional system vector mathematics
 
-On supported GNU/Linux x86-64 systems, the exponential helper can dynamically load GNU C Library `libmvec` symbols. The system library is optional and is not bundled; unavailable symbols, unsupported CPUs and nonstandard floating-point controls use the scalar fallback. The applicable LGPL-2.1-or-later terms and retained host copyright record are in `licenses/glibc-LGPL-2.1.txt` and `licenses/glibc-system-copyright.txt`. The copyright record's version wording does not identify the runtime library version.
+On supported GNU/Linux x86-64 systems, the exponential helper can dynamically load GNU C Library `libmvec` symbols. The system library is optional and is not bundled; unavailable symbols, unsupported CPUs and nonstandard floating-point controls use the scalar fallback. glibc is licensed under LGPL-2.1-or-later; prusie neither bundles nor statically links it.
