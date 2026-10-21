@@ -158,6 +158,7 @@ pub(crate) fn scaled_multiply(
 /// Matrix-free positive-semidefinite Gram operator used by IBSS.
 pub(crate) trait GramOperator {
     fn diagonal(&self) -> &[f64];
+    fn begin_sweep(&mut self, _iteration: usize) {}
     fn apply(&mut self, vector: &[f64], output: &mut [f64]);
 }
 
@@ -166,13 +167,61 @@ pub(crate) struct DenseGram<'a> {
     pub scaling: Option<&'a MatrixScaling<'a>>,
     pub diagonal: Vec<f64>,
     pub scratch: Vec<f64>,
+    pub exact: Option<crate::exact_columns::ExactColumns>,
+    pub discovery_checked: bool,
+    pub discovery_allowed: bool,
 }
 
 impl GramOperator for DenseGram<'_> {
     fn diagonal(&self) -> &[f64] {
         &self.diagonal
     }
+    fn begin_sweep(&mut self, iteration: usize) {
+        // Fits that stop in the first five sweeps never pay discovery/proof
+        // costs. These dominate short, weakly redundant profiles; waiting until
+        // a sixth sweep is actually required is independent of the final fit
+        // outcome. The full frozen panel must certify this amortization rule.
+        self.discovery_allowed = iteration >= 5;
+    }
     fn apply(&mut self, vector: &[f64], output: &mut [f64]) {
+        if self.discovery_allowed && (!self.discovery_checked || self.exact.is_some()) {
+            // Sparse products already skip exact zeros. Do not build or use a
+            // grouping plan when fewer than 1/8 of columns contribute.
+            let required = vector.len().div_ceil(8);
+            let dense = vector
+                .iter()
+                .filter(|&&value| value != 0.)
+                .take(required)
+                .count()
+                == required;
+            if dense {
+                if !self.discovery_checked {
+                    self.discovery_checked = true;
+                    self.exact = crate::exact_columns::ExactColumns::discover(self.matrix);
+                }
+                if let Some(exact) = &mut self.exact {
+                    if let Some(scale) = self.scaling {
+                        for ((value, &coefficient), &factor) in
+                            self.scratch.iter_mut().zip(vector).zip(scale.inverse)
+                        {
+                            *value = coefficient * factor;
+                        }
+                        if self.scratch.iter().all(|x| x.is_finite())
+                            && exact.apply(self.matrix, &self.scratch, output)
+                        {
+                            for (value, &denominator) in output.iter_mut().zip(scale.scales) {
+                                *value = (*value * scale.global) / denominator;
+                            }
+                            if output.iter().all(|x| x.is_finite()) {
+                                return;
+                            }
+                        }
+                    } else if exact.apply(self.matrix, vector, output) {
+                        return;
+                    }
+                }
+            }
+        }
         if let Some(scaling) = self.scaling {
             scaled_multiply(self.matrix, vector, output, scaling, &mut self.scratch);
         } else {
@@ -184,6 +233,94 @@ impl GramOperator for DenseGram<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn sparse_product_defers_discovery_until_a_later_dense_product() {
+        let values = [1.; 16 * 16];
+        let matrix = ArrayView2::from_shape((16, 16).f(), &values).unwrap();
+        let mut gram = DenseGram {
+            matrix,
+            scaling: None,
+            diagonal: vec![1.; 16],
+            scratch: vec![0.; 16],
+            exact: None,
+            discovery_checked: false,
+            discovery_allowed: false,
+        };
+        gram.begin_sweep(5);
+        let mut vector = [0.; 16];
+        vector[3] = 2.;
+        let mut output = [0.; 16];
+        gram.apply(&vector, &mut output);
+        assert_eq!(output, [2.; 16]);
+        assert!(!gram.discovery_checked);
+        gram.apply(&[1.; 16], &mut output);
+        assert_eq!(output, [16.; 16]);
+        assert!(gram.exact.is_some());
+    }
+
+    #[test]
+    fn overflowing_group_uses_a_finite_original_dense_result() {
+        let values = [0.25; 4];
+        let matrix = ArrayView2::from_shape((2, 2).f(), &values).unwrap();
+        let mut gram = DenseGram {
+            matrix,
+            scaling: None,
+            diagonal: vec![0.25; 2],
+            scratch: vec![0.; 2],
+            exact: None,
+            discovery_checked: false,
+            discovery_allowed: false,
+        };
+        gram.begin_sweep(5);
+        let mut output = [0.; 2];
+        gram.apply(&[f64::MAX, f64::MAX], &mut output);
+        assert!(gram.exact.is_some());
+        assert_eq!(output, [f64::MAX * 0.5; 2]);
+    }
+
+    #[test]
+    fn lazy_exact_product_preserves_independent_scaled_matrix_arithmetic() {
+        let x = [1., -1., 2., 1., -2., 0.];
+        let values: Vec<f64> = x
+            .iter()
+            .flat_map(|&b| x.iter().map(move |&a| a * b))
+            .collect();
+        let matrix = ArrayView2::from_shape((6, 6).f(), &values).unwrap();
+        let inverse = [1., 0.5, 2., 1., 0.5, 2.];
+        let scales = [1., 2., 0.5, 1., 2., 0.5];
+        let scaling = MatrixScaling {
+            global: 8.,
+            inverse: &inverse,
+            scales: &scales,
+        };
+        let vector = [2., -4., 8., 1., -2., 4.];
+        let expected: Vec<f64> = (0..6)
+            .map(|i| {
+                (0..6)
+                    .map(|j| ((matrix[(i, j)] * 8.) * inverse[j]) / scales[i] * vector[j])
+                    .sum()
+            })
+            .collect();
+        let mut gram = DenseGram {
+            matrix,
+            scaling: Some(&scaling),
+            diagonal: vec![0.; 6],
+            scratch: vec![0.; 6],
+            exact: None,
+            discovery_checked: false,
+            discovery_allowed: false,
+        };
+        let mut output = [0.; 6];
+        gram.begin_sweep(4);
+        gram.apply(&vector, &mut output);
+        assert!(!gram.discovery_checked);
+        assert_eq!(output.as_slice(), expected.as_slice());
+        gram.begin_sweep(5);
+        gram.apply(&vector, &mut output);
+        assert!(gram.discovery_checked && gram.exact.is_some());
+        assert_eq!(output.as_slice(), expected.as_slice());
+    }
+
     #[test]
     fn contiguous_matrix_product_matches_independent_integer_arithmetic() {
         // Exactly representable integer arithmetic supplies an independent answer.

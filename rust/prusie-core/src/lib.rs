@@ -1,6 +1,7 @@
 //! Gaussian SuSiE solver, independent of Python and its memory model.
 mod design;
 pub mod diagnostics;
+mod exact_columns;
 mod ibss;
 pub mod input_validation;
 pub mod model;

@@ -157,6 +157,9 @@ pub fn fit_controlled(
         scaling: operator,
         diagonal,
         scratch: vec![0.; p],
+        exact: None,
+        discovery_checked: false,
+        discovery_allowed: false,
     };
     fit_operator(&mut gram, xty, yty, n, options, control)
 }
@@ -352,6 +355,7 @@ pub(crate) fn fit_operator(
     let mut history: Vec<(Vec<f64>, Vec<f64>)> = Vec::new();
     let mut pip_history_seeded = false;
     for iteration in 0..options.max_iter {
+        gram.begin_sweep(iteration);
         for effect in 0..options.l {
             if slot_state.as_ref().is_some_and(|state| {
                 output.slot_weights.as_ref().expect("slot weights")[effect] < state.threshold
