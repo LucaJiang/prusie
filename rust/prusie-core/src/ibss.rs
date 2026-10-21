@@ -350,6 +350,7 @@ pub(crate) fn fit_operator(
     let mut previous_v: Option<Vec<f64>> = None;
     let mut previous_sigma2: Option<f64> = None;
     let mut history: Vec<(Vec<f64>, Vec<f64>)> = Vec::new();
+    let mut pip_history_seeded = false;
     for iteration in 0..options.max_iter {
         for effect in 0..options.l {
             if slot_state.as_ref().is_some_and(|state| {
@@ -543,10 +544,16 @@ pub(crate) fn fit_operator(
         output.niter = iteration + 1;
         let improvement = elbo - previous_elbo;
         let current_pip = fit_pip(&output.alpha, &output, p, options);
-        if control.criterion == ConvergenceMethod::Pip {
+        let pip_rule = diagnostics::uses_pip_rule(control, elbo);
+        if pip_rule && !pip_history_seeded && iteration > 0 {
+            // susieR seeds its PIP history at the first check from the previous
+            // alpha under the current prior variances; later entries keep the
+            // PIPs computed in their own sweep.
+            pip_history_seeded = true;
             if let Some(alpha) = &previous_alpha {
                 previous_pip = Some(fit_pip(alpha, &output, p, options));
             }
+            history.drain(..history.len().saturating_sub(1));
             for (alpha, pip) in &mut history {
                 *pip = fit_pip(alpha, &output, p, options);
             }
@@ -601,13 +608,18 @@ pub(crate) fn fit_operator(
             output.diagnostics.decrease_count += 1;
         }
         output.diagnostics.effective_criterion = control.criterion.as_str().into();
+        let (alpha_tol, pip_tol) = if pip_rule {
+            (options.tol, options.tol)
+        } else {
+            (control.alpha_tol, control.pip_tol)
+        };
         if let Some((lag, da, dp)) = diagnostics::detect_cycle(
             &output.alpha,
             &current_pip,
             &history,
             control.cycle_lag,
-            control.alpha_tol,
-            control.pip_tol,
+            alpha_tol,
+            pip_tol,
         ) {
             snapshot.cycle_lag = Some(lag);
             snapshot.cycle_alpha_distance = Some(da);
@@ -622,7 +634,7 @@ pub(crate) fn fit_operator(
             );
         }
         let (decision, fallback) = diagnostics::stopping_decision(control, &snapshot, options.tol);
-        if control.criterion == ConvergenceMethod::Pip && decision == StopDecision::Converged {
+        if pip_rule && decision == StopDecision::Converged {
             if let Some(lag) = snapshot.cycle_lag.filter(|&lag| lag > 1) {
                 let from = history.len().saturating_sub(lag - 1);
                 for (j, a) in output.alpha.iter_mut().enumerate() {

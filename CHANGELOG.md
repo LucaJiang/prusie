@@ -17,6 +17,12 @@
 - Keep post-analysis, convergence diagnostics, plotting and report interfaces.
 - Support `refine=True` for matrix-free, dynamic RSS, mixture, NIG, slot, greedy,
   PIP-stopping and nondefault credible-set models by susieR's refitting search.
+- Keep the PIP history of earlier sweeps when checking PIP-based convergence, as
+  susieR does; previously all history was recomputed with the current prior
+  variances, which could stop one sweep early.
+- Check sweeps whose ELBO is NaN with susieR's PIP rule (tolerance `tol`, cycle
+  averaging) unless a `ConvergenceConfig` is supplied, and skip the first sweep
+  and seed the PIP history as susieR does in dynamic RSS fits.
 
 ## 0.2.4.dev1 — post-analysis (unreleased)
 

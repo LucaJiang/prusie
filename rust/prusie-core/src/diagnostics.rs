@@ -22,6 +22,9 @@ pub struct FitControl {
     pub min_iter: usize,
     pub cycle_lag: usize,
     pub hard_exclusion: bool,
+    /// Under 'elbo', a sweep with a NaN objective uses susieR's 'pip' rule
+    /// (tolerance `tol`, cycle averaging) instead of `alpha_tol`/`pip_tol`.
+    pub nan_elbo_pip: bool,
 }
 impl Default for FitControl {
     fn default() -> Self {
@@ -36,6 +39,7 @@ impl Default for FitControl {
             min_iter: 2,
             cycle_lag: 5,
             hard_exclusion: false,
+            nan_elbo_pip: false,
         }
     }
 }
@@ -124,6 +128,7 @@ pub fn stopping_decision(
         return (StopDecision::Continue, false);
     }
     let fallback = control.criterion == ConvergenceMethod::Elbo && snapshot.elbo.is_nan();
+    let pip_rule = uses_pip_rule(control, snapshot.elbo);
     let posterior_stable = snapshot.delta_alpha.is_some_and(|d| d < control.alpha_tol)
         && snapshot.delta_pip.is_some_and(|d| d < control.pip_tol);
     let objective_stable =
@@ -131,7 +136,7 @@ pub fn stopping_decision(
     let converged = match control.criterion {
         ConvergenceMethod::AlphaPip => posterior_stable,
         ConvergenceMethod::Joint => objective_stable && posterior_stable,
-        ConvergenceMethod::Pip => {
+        _ if pip_rule => {
             snapshot.delta_pip.is_some_and(|d| d < tol)
                 && snapshot.delta_alpha.is_some_and(|d| d < tol)
         }
@@ -146,7 +151,7 @@ pub fn stopping_decision(
         && snapshot.cycle_lag.is_some_and(|lag| lag > 1)
     {
         return (
-            if control.criterion == ConvergenceMethod::Pip {
+            if pip_rule {
                 StopDecision::Converged
             } else {
                 StopDecision::Cycle
@@ -155,6 +160,13 @@ pub fn stopping_decision(
         );
     }
     (StopDecision::Continue, fallback)
+}
+
+/// Whether this sweep is judged by susieR's 'pip' rule: always under 'pip',
+/// and under 'elbo' with `nan_elbo_pip` when the objective is NaN.
+pub fn uses_pip_rule(control: &FitControl, elbo: f64) -> bool {
+    control.criterion == ConvergenceMethod::Pip
+        || (control.nan_elbo_pip && control.criterion == ConvergenceMethod::Elbo && elbo.is_nan())
 }
 
 pub fn distance(a: &[f64], b: &[f64]) -> f64 {
@@ -255,6 +267,32 @@ mod tests {
                 StopDecision::Converged
             );
         }
+    }
+    #[test]
+    fn nan_elbo_uses_the_susier_pip_rule_only_when_enabled() {
+        let mut control = FitControl::default();
+        let mut state = snapshot(f64::NAN, None);
+        state.delta_alpha = Some(5e-4);
+        state.delta_pip = Some(5e-4);
+        state.cycle_lag = None;
+        assert!(!uses_pip_rule(&control, state.elbo));
+        assert_eq!(
+            stopping_decision(&control, &state, 1e-3),
+            (StopDecision::Continue, true)
+        );
+        control.nan_elbo_pip = true;
+        assert!(uses_pip_rule(&control, state.elbo));
+        assert!(!uses_pip_rule(&control, -1.));
+        assert_eq!(
+            stopping_decision(&control, &state, 1e-3),
+            (StopDecision::Converged, true)
+        );
+        state.delta_alpha = Some(0.1);
+        state.cycle_lag = Some(2);
+        assert_eq!(
+            stopping_decision(&control, &state, 1e-3),
+            (StopDecision::Converged, true)
+        );
     }
     #[test]
     fn posterior_joint_and_fallback_have_distinct_success_rules() {

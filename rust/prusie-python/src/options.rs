@@ -83,6 +83,7 @@ pub(crate) fn parse(
     optional!("min_iter", min_iter);
     optional!("cycle_lag", cycle_lag);
     optional!("hard_exclusion", hard_exclusion);
+    optional!("nan_elbo_pip", nan_elbo_pip);
     if options.contains("init_alpha")? {
         control.initial = Some(solver::diagnostics::InitialState {
             alpha: vector_option(options, "init_alpha")?,

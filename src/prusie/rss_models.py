@@ -426,6 +426,7 @@ def fit_dynamic(request: Any) -> dict[str, Any]:
             ],
         )
 
+    pip_history_seeded = False
     for iteration in range(settings["max_iter"]):
         if config["kind"] == "lambda":
             gram, response, yty, constant = _lambda_quantities(
@@ -526,7 +527,21 @@ def fit_dynamic(request: Any) -> dict[str, Any]:
             slot_weights=slot,
         )
         criterion = settings["criterion"]
-        if criterion == "pip" or not np.isfinite(objective):
+        if (criterion == "pip" or not np.isfinite(objective)) and iteration > 0:
+            if not pip_history_seeded:
+                # susieR skips the first sweep and seeds its history from the
+                # previous alpha under the current prior variances.
+                pip_history_seeded = True
+                history_alpha = history_alpha[-1:]
+                history_pip = [
+                    marginal_pip(
+                        history_alpha[0],
+                        variances,
+                        null_index=request.null_index,
+                        prior_tol=settings["prior_tol"],
+                        slot_weights=slot,
+                    )
+                ]
             for lag in range(1, min(5, len(history_alpha)) + 1):
                 alpha_difference = float(np.max(np.abs(alpha - history_alpha[-lag])))
                 pip_difference = float(np.max(np.abs(current_pip - history_pip[-lag])))

@@ -826,6 +826,9 @@ def _prepare_suff_stat(
         options["criterion"] = convergence_method
         if convergence_method == "pip":
             options.update(alpha_tol=tol, pip_tol=tol)
+    if convergence is None and control.options() == ConvergenceConfig().options():
+        # susieR checks a sweep whose ELBO is NaN with its 'pip' rule.
+        options["nan_elbo_pip"] = True
     if slot_prior is not None or (estimate_residual_method == "NIG" and effective_L > 1):
         options.update(criterion="pip", alpha_tol=tol, pip_tol=tol)
     # Only an owned snapshot can supply a stable identity for later reuse.
