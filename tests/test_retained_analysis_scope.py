@@ -91,20 +91,28 @@ def forbid_scientific_native_calls(monkeypatch):
         monkeypatch.setattr(_native, name, fail)
 
 
+UNSUPPORTED_REQUESTS = {
+    "retain_data": {"retain_data": True},
+    "refinement_config": {"refine": prusie.RefinementConfig()},
+}
+
+
 @pytest.mark.parametrize(
     "kind,flag",
     [
         (kind, flag)
         for kind in UNSUPPORTED
-        for flag in ("retain_data", "refine")
+        for flag in UNSUPPORTED_REQUESTS
         if not (kind == "lambda" and flag == "retain_data")
-    ],
+    ]
+    + [("multipanel", "refine")],
 )
 def test_explicit_unsupported_request_fails_before_native(
     kind, flag, forbid_scientific_native_calls
 ):
+    request = UNSUPPORTED_REQUESTS.get(flag, {"refine": True})
     with pytest.raises(ValueError, match="Retained continuation/refinement is unavailable"):
-        call_fitter(kind, **{flag: True})
+        call_fitter(kind, **request)
 
 
 @pytest.mark.parametrize(
@@ -113,14 +121,14 @@ def test_explicit_unsupported_request_fails_before_native(
         (kind, flag)
         for kind in UNSUPPORTED
         if kind != "multipanel"
-        for flag in ("retain_data", "refine")
+        for flag in UNSUPPORTED_REQUESTS
         if not (kind == "lambda" and flag == "retain_data")
     ],
 )
 def test_init_only_prepares_before_enforcing_retained_analysis(
     kind, flag, forbid_scientific_native_calls
 ):
-    inputs = call_fitter(kind, init_only=True, **{flag: True})
+    inputs = call_fitter(kind, init_only=True, **UNSUPPORTED_REQUESTS[flag])
     assert isinstance(inputs, prusie.SusieInputs)
     assert inputs._request.prepared is None
     assert inputs._request.signature is None
@@ -197,3 +205,17 @@ def test_dynamic_rule_override_preserves_callers_requested_method():
     assert fit.convergence["requested_criterion"] == "pip"
     assert fit.convergence["requested_config"]["criterion"] == "pip"
     assert fit.convergence["legacy_requested_config"]["criterion"] == "elbo"
+
+
+@pytest.mark.filterwarnings("ignore:IBSS did not converge:RuntimeWarning")
+@pytest.mark.parametrize("kind", [kind for kind in UNSUPPORTED if kind != "multipanel"])
+def test_refine_true_refits_models_outside_the_retained_scope(kind):
+    fit = call_fitter(kind, refine=True, coverage=0.5, min_abs_corr=0.0)
+    assert isinstance(fit, prusie.SusieResult)
+    assert fit._prepared is None
+    assert np.isfinite(fit.alpha).all()
+    if fit.refinement_status == "not_executed":
+        assert not fit.sets["cs"]
+    else:
+        assert fit.refinement["method"] == "block_coordinate_ascent"
+        assert fit.refinement["total_fits"] % 2 == 0

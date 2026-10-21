@@ -189,10 +189,10 @@ def susie(
         Residual and single-effect prior controls.
     variant_ids, variant_metadata, retain_data, refine, unmappable_effects
         As in :func:`susie_suff_stat`; unmappable models are excluded.
-        Retained continuation/refinement is unavailable for matrix-free
-        designs: explicit ``retain_data=True`` or ``refine=True`` raises
-        ValueError before fitting. Default fitting and ``init_only`` remain
-        available, and no dense Gram is formed for post-analysis retention.
+        ``refine=True`` refits the model by credible-set block coordinate
+        ascent, as in susieR. Retained continuation is unavailable for
+        matrix-free designs: ``retain_data=True`` or a RefinementConfig raises
+        ValueError before fitting, and no dense Gram is formed.
 
     Returns
     -------

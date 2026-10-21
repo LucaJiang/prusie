@@ -308,10 +308,12 @@ materialized Gaussian sufficient-statistic and R-based RSS models using the
 default or <code>ConvergenceConfig</code> stopping controls. Matrix-free designs, dynamic
 RSS, mixture/NIG/slot models, susieR <code>pip</code> stopping, greedy component growth,
 <code>median_abs_corr</code> and <code>cs_extension_corr</code> are outside that scope.
-Explicit <code>retain_data=True</code> or <code>refine=True</code> requests for
-these combinations raise before fitting; ordinary fitting and tracking remain
-available without a retained snapshot. No dense Gram matrix is constructed to
-enable retention of a matrix-free design.</p>
+For these combinations, <code>refine=True</code> refits the model with susieR's
+credible-set block coordinate ascent (except multi-panel RSS) and records the
+search in <code>refinement</code>. Explicit <code>retain_data=True</code> or a <code>RefinementConfig</code>
+raises before fitting; ordinary fitting and tracking remain available without
+a retained snapshot. No dense Gram matrix is constructed to enable retention of
+a matrix-free design.</p>
 <p>For supported models, <code>retain_data=True</code> enables later continuation,
 refinement or objective evaluation. Tracking, initialization and refinement
 also retain inputs within this scope. A new fit with <code>model_init</code>/<code>s_init</code>

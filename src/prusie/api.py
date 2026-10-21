@@ -184,7 +184,8 @@ def _require_legacy_analysis(
             + ", ".join(limitations)
             + ". It supports static materialized Gaussian models with fixed L, "
             "ELBO or ConvergenceConfig stopping, and default median_abs_corr/"
-            "cs_extension_corr. Use retain_data=False and refine=False for fitting."
+            "cs_extension_corr. Use retain_data=False; for single-panel models, "
+            "refine=True (not a RefinementConfig) refits them as susieR does."
         )
 
 
@@ -367,11 +368,13 @@ def susie_suff_stat(
         eigenvalues exceed machine epsilon.
     refine : bool or RefinementConfig, default False
         Run the credible-set exclusion search; True uses its default
-        configuration. Supports static materialized Gaussian models with fixed
-        L, ELBO or ConvergenceConfig stopping, and default median_abs_corr and
-        cs_extension_corr. Matrix-free designs, mixture/NIG/slot models,
-        dynamic RSS and convergence_method='pip' are unavailable for refinement
-        and raise ValueError. These combinations remain a feature limitation.
+        configuration. For static materialized Gaussian models with fixed L,
+        ELBO or ConvergenceConfig stopping and default median_abs_corr and
+        cs_extension_corr, this is :func:`refine_fit`. For matrix-free designs,
+        mixture/NIG/slot models, dynamic RSS, L_greedy, convergence_method='pip'
+        or nondefault CS controls, ``refine=True`` refits the model as susieR
+        does (block coordinate ascent over credible sets) and records the search
+        in ``refinement``; a RefinementConfig is not available for these models.
     convergence : ConvergenceConfig, optional
         Stopping rule (ELBO, alpha/PIP or joint). Defaults to the ELBO rule,
         or to the controls recorded in ``s_init`` when it is a fit.
@@ -1033,7 +1036,13 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
         raise ValueError(
             "model_init must be a fitted SusieResult; prepared SusieInputs has no posterior state"
         )
-    _require_legacy_analysis(bool(params.get("retain_data")), refine, limitations)
+    # refine=True on these models uses the refitting search below; a
+    # RefinementConfig still requires the retained-analysis engine.
+    _require_legacy_analysis(
+        bool(params.get("retain_data")),
+        refine if isinstance(refine, RefinementConfig) else False,
+        limitations,
+    )
     if params.get("L_greedy") is not None:
         return _fit_greedy(request)
     if request.dynamic is not None:
@@ -1176,8 +1185,116 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
     if refine is not False:
         if not isinstance(refine, (bool, RefinementConfig)):
             raise TypeError("refine must be False, True, or a RefinementConfig")
-        fit = refine_fit(fit, refine if isinstance(refine, RefinementConfig) else None)
+        if limitations:
+            fit = _refine_by_refitting(request, fit)
+        else:
+            fit = refine_fit(fit, refine if isinstance(refine, RefinementConfig) else None)
     return fit
+
+
+def _refine_by_refitting(request: _FitRequest, model: SusieResult) -> SusieResult:
+    """Credible-set refinement by block coordinate ascent, as in susieR ``run_refine``.
+
+    For each credible set, refit with its members' prior weights set to zero,
+    then refit from that posterior with the original weights. The candidate
+    with the largest ELBO is accepted if it improves the objective by more than
+    ``tol``; the search stops when no candidate does or when the relative ELBO
+    change falls below ``tol``.
+    """
+    tol = float(request.params["tol"])
+    null_index = request.null_index
+    null_weight = float(request.params["null_weight"])
+    weights = np.asarray(request.options["prior_weights"], dtype=np.float64)
+    base = weights if null_index is None else np.delete(weights, null_index) / (1 - null_weight)
+
+    def full_weights(values: NDArray[np.float64]) -> NDArray[np.float64]:
+        if null_index is not None:
+            values = np.r_[values * (1 - null_weight), null_weight]
+        return values / values.sum()
+
+    def refit(prior_weights: NDArray[np.float64], init: SusieResult | None) -> SusieResult:
+        options = {k: v for k, v in request.options.items() if not k.startswith("init_")}
+        options.update(prior_weights=prior_weights, track_level=tracking_level(False))
+        if init is not None:
+            options.update(
+                initial_options(
+                    {"alpha": init.alpha, "mu": init.mu, "mu2": init.mu2},
+                    ids=request.ids,
+                    metadata=request.metadata,
+                    scales=request.scales,
+                    null_index=null_index,
+                    signature=None,
+                    L=options["l"],
+                    weights=prior_weights,
+                    estimate_prior_variance=options["estimate_prior_variance"],
+                    estimate_residual_variance=options["estimate_residual_variance"],
+                    prior_variance=options.get(
+                        "component_prior_variance", options["prior_variance"]
+                    ),
+                )
+            )
+        params = {
+            **request.params,
+            "prior_weights": prior_weights.tolist(),
+            "refine": False,
+            "track_fit": False,
+            "verbose": False,
+            "s_init": None if init is None else "posterior_state",
+        }
+        return _fit(
+            replace(
+                request,
+                options=options,
+                params=params,
+                refine=False,
+                collected=[],
+                qc=dict(request.qc),
+            )
+        )
+
+    if not model.sets["cs"]:
+        return model
+    history: list[dict[str, Any]] = []
+    total_fits, converged, stop_reason, accepted = 0, False, "max_iter", False
+    original_weights = full_weights(base)
+    for iteration in range(1, 101):
+        candidates = []
+        for members in model.sets["cs"]:
+            excluded = base.copy()
+            excluded[np.asarray(members, dtype=np.intp)] = 0.0
+            if not np.any(excluded):
+                break
+            explored = refit(full_weights(excluded), None)
+            candidates.append(refit(original_weights, explored))
+            total_fits += 2
+        current = float(model.elbo[-1])
+        if not candidates:
+            converged, stop_reason = True, "no_credible_sets"
+            break
+        objectives = [float(candidate.elbo[-1]) for candidate in candidates]
+        best = int(np.argmax(objectives))
+        history.append(dict(iteration=iteration, elbo=current, candidate_elbos=objectives))
+        if objectives[best] - current <= tol:
+            converged, stop_reason = True, "no_improvement"
+            break
+        change = objectives[best] - current
+        model, accepted = candidates[best], True
+        if change / max(1.0, abs(objectives[best])) < tol:
+            converged, stop_reason = True, "relative_elbo_change"
+            break
+    if accepted:
+        model.warnings[:0] = request.collected
+    model.params["refine"] = True
+    model.refinement = dict(
+        status="converged" if converged else "not_converged",
+        stop_reason=stop_reason,
+        method="block_coordinate_ascent",
+        history=history,
+        total_fits=total_fits,
+    )
+    if not converged:
+        _warn("Credible-set refinement did not converge in 100 iterations", model.warnings)
+    return model
 
 
 def susie_rss(

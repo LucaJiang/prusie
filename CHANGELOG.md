@@ -15,6 +15,8 @@
 - Validate complete final component alpha matrices against susieR 0.16.6;
   retain other model quantities as numerical diagnostics.
 - Keep post-analysis, convergence diagnostics, plotting and report interfaces.
+- Support `refine=True` for matrix-free, dynamic RSS, mixture, NIG, slot, greedy,
+  PIP-stopping and nondefault credible-set models by susieR's refitting search.
 
 ## 0.2.4.dev1 — post-analysis (unreleased)
 
