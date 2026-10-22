@@ -49,6 +49,13 @@ pub(crate) fn backend_name() -> &'static str {
     }
 }
 
+/// Sample caller FP controls once for a private synchronous SER search.
+#[cfg(all(has_vector_math, target_arch = "x86_64"))]
+pub(crate) fn group_fill_avx2_allowed() -> bool {
+    // SAFETY: the C helper only inspects the calling thread's FP controls.
+    backend() == 2 && unsafe { prusie_scalar_environment_required() } == 0
+}
+
 pub(crate) fn exp_shift(values: &mut [f64], maximum: f64) {
     #[cfg(has_vector_math)]
     {

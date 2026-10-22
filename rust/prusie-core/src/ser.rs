@@ -126,24 +126,217 @@ fn grouped_probabilities(
         lpo[j] = bf + log_prior[j];
     }
 }
-fn grouped_likelihood(
-    v: f64,
-    beta: &[f64],
-    log_prior: &[f64],
-    groups: &VarianceGroups,
-    scratch: &mut [f64],
-) -> f64 {
-    let (constant, scale) = groups.terms(v);
-    for j in 0..beta.len() {
-        let k = groups.indices[j];
-        let bf = if k == usize::MAX || !beta[j].is_finite() {
-            0.
-        } else {
-            constant[k] + 0.5 * beta[j].powi(2) * scale[k]
-        };
-        scratch[j] = bf + log_prior[j];
+// Four-wide objective arithmetic uses separate multiplies/adds (no FMA).
+// SAFETY: AVX2 must be available. Slices have equal length, terms.len() <= 16,
+// and each group is either usize::MAX or a valid terms index. Storage is Rust-owned.
+#[cfg(all(has_vector_math, target_arch = "x86_64"))]
+#[inline(never)]
+#[target_feature(enable = "avx2")]
+unsafe fn ser_group_fill_avx2(
+    half_beta_squared: &[f64],
+    groups: &[usize],
+    terms: &[(f64, f64, f64)],
+    prior: f64,
+    output: &mut [f64],
+) {
+    use std::arch::x86_64::*;
+    if terms.len() > 4 {
+        for ((&half, &group), value) in half_beta_squared.iter().zip(groups).zip(output) {
+            let bf = if group == usize::MAX {
+                0.0
+            } else {
+                let (constant, _, scale) = terms[group];
+                constant + half * scale
+            };
+            *value = bf + prior;
+        }
+        return;
     }
-    log_sum_exp(scratch)
+    let mut constants = [0.0_f64; 4];
+    let mut scales = [0.0_f64; 4];
+    for (j, &(constant, _, scale)) in terms.iter().enumerate() {
+        constants[j] = constant;
+        scales[j] = scale;
+    }
+    let constant_table = _mm256_castpd_si256(_mm256_loadu_pd(constants.as_ptr()));
+    let scale_table = _mm256_castpd_si256(_mm256_loadu_pd(scales.as_ptr()));
+    let prior4 = _mm256_set1_pd(prior);
+    let invalid_index = _mm256_set1_epi64x(-1);
+    let mut j = 0;
+    while j + 4 <= output.len() {
+        let group4 = _mm256_loadu_si256(groups.as_ptr().add(j).cast());
+        let invalid = _mm256_cmpeq_epi64(group4, invalid_index);
+        let indices = _mm256_andnot_si256(invalid, group4);
+        // A double occupies two adjacent 32-bit permutation entries.
+        let even = _mm256_slli_epi64::<1>(indices);
+        let odd = _mm256_add_epi64(even, _mm256_set1_epi64x(1));
+        let lanes = _mm256_or_si256(even, _mm256_slli_epi64::<32>(odd));
+        let constant = _mm256_castsi256_pd(_mm256_permutevar8x32_epi32(constant_table, lanes));
+        let scale = _mm256_castsi256_pd(_mm256_permutevar8x32_epi32(scale_table, lanes));
+        let half = _mm256_andnot_pd(
+            _mm256_castsi256_pd(invalid),
+            _mm256_loadu_pd(half_beta_squared.as_ptr().add(j)),
+        );
+        let bf = _mm256_add_pd(constant, _mm256_mul_pd(half, scale));
+        let bf = _mm256_andnot_pd(_mm256_castsi256_pd(invalid), bf);
+        _mm256_storeu_pd(output.as_mut_ptr().add(j), _mm256_add_pd(bf, prior4));
+        j += 4;
+    }
+    for ((&half, &group), value) in half_beta_squared[j..]
+        .iter()
+        .zip(&groups[j..])
+        .zip(&mut output[j..])
+    {
+        let bf = if group == usize::MAX {
+            0.0
+        } else {
+            let (constant, _, scale) = terms[group];
+            constant + half * scale
+        };
+        *value = bf + prior;
+    }
+}
+
+/// One scalar variance search reuses beta-dependent invariants. The storage is
+/// owned by this public fit and is refreshed before each component's search.
+/// Exact variance groups are unchanged; heterogeneous/exceptional inputs retain
+/// the scalar objective, without rounded or approximate grouping.
+struct SerObjective<'a> {
+    beta: &'a [f64],
+    shat2: &'a [f64],
+    log_prior: &'a [f64],
+    groups: Option<&'a VarianceGroups>,
+    half_beta_squared: &'a mut Vec<f64>,
+    group_maximum: [f64; 16],
+    uniform_log_prior: Option<f64>,
+    has_no_information: bool,
+    #[cfg(all(has_vector_math, target_arch = "x86_64"))]
+    group_fill_avx2: bool,
+}
+
+impl<'a> SerObjective<'a> {
+    fn new(beta: &'a [f64], sampling: &'a mut SerSampling, log_prior: &'a [f64]) -> Self {
+        let groups = sampling
+            .groups
+            .as_ref()
+            .filter(|_| beta.iter().all(|x| x.is_finite()));
+        let mut result = Self {
+            beta,
+            shat2: &sampling.shat2,
+            log_prior,
+            groups,
+            half_beta_squared: &mut sampling.half_beta_squared,
+            group_maximum: [0.; 16],
+            uniform_log_prior: None,
+            has_no_information: false,
+            #[cfg(all(has_vector_math, target_arch = "x86_64"))]
+            group_fill_avx2: crate::vector_math::group_fill_avx2_allowed(),
+        };
+        let Some(groups) = groups else {
+            return result;
+        };
+        result.half_beta_squared.clear();
+        result
+            .half_beta_squared
+            .extend(beta.iter().map(|&b| 0.5 * (b * b)));
+        result.uniform_log_prior = log_prior
+            .first()
+            .copied()
+            .filter(|&prior| log_prior.iter().all(|&x| x == prior));
+        if result.uniform_log_prior.is_some() {
+            for (&half, &group) in result.half_beta_squared.iter().zip(&groups.indices) {
+                if group == usize::MAX {
+                    result.has_no_information = true;
+                } else if !half.is_finite() {
+                    result.uniform_log_prior = None;
+                    break;
+                } else if half > result.group_maximum[group] {
+                    result.group_maximum[group] = half;
+                }
+            }
+        }
+        result
+    }
+
+    fn evaluate(&mut self, v: f64, scratch: &mut [f64]) -> f64 {
+        let Some(groups) = self.groups else {
+            return log_likelihood(v, self.beta, self.shat2, self.log_prior, scratch);
+        };
+        let mut terms = [(0., 0., 0.); 16];
+        for (&safe, term) in groups.variances.iter().zip(&mut terms) {
+            let denominator = safe * (v + safe);
+            *term = (-0.5 * (1. + v / safe).ln(), denominator, v / denominator);
+            // Preserve the original multiply-then-divide expression when
+            // distributing the division could lose a representable value.
+            if !denominator.is_finite() || !(term.2.is_normal() || (v == 0. && term.2 == 0.)) {
+                return log_likelihood(v, self.beta, self.shat2, self.log_prior, scratch);
+            }
+        }
+        let terms = &terms[..groups.variances.len()];
+        if v >= 0. {
+            if let Some(prior) = self.uniform_log_prior {
+                if v == 0. && prior.is_finite() {
+                    // Preserve the prior normalization's actual rounding.
+                    return prior + (self.beta.len() as f64).ln();
+                }
+                let mut largest = if self.has_no_information {
+                    prior
+                } else {
+                    f64::NEG_INFINITY
+                };
+                for (&half, &(constant, _, scale)) in self.group_maximum.iter().zip(terms) {
+                    largest = largest.max(constant + half * scale + prior);
+                }
+                #[cfg(all(has_vector_math, target_arch = "x86_64"))]
+                if terms.len() <= 4 && self.group_fill_avx2 {
+                    // SAFETY: runtime AVX2 and caller FP controls are checked
+                    // per search. Exact group indices and all slice lengths
+                    // come from this fit's validated sampling layout.
+                    unsafe {
+                        ser_group_fill_avx2(
+                            self.half_beta_squared,
+                            &groups.indices,
+                            terms,
+                            prior,
+                            scratch,
+                        );
+                    }
+                    return log_sum_exp_at(scratch, Some(largest));
+                }
+                for ((&half, &group), value) in self
+                    .half_beta_squared
+                    .iter()
+                    .zip(&groups.indices)
+                    .zip(scratch.iter_mut())
+                {
+                    let bf = if group == usize::MAX {
+                        0.
+                    } else {
+                        let (constant, _, scale) = terms[group];
+                        constant + half * scale
+                    };
+                    *value = bf + prior;
+                }
+                return log_sum_exp_at(scratch, Some(largest));
+            }
+        }
+        for (((&half, &group), &prior), value) in self
+            .half_beta_squared
+            .iter()
+            .zip(&groups.indices)
+            .zip(self.log_prior)
+            .zip(scratch.iter_mut())
+        {
+            let bf = if group == usize::MAX {
+                0.
+            } else {
+                let (constant, _, scale) = terms[group];
+                constant + half * scale
+            };
+            *value = bf + prior;
+        }
+        log_sum_exp(scratch)
+    }
 }
 
 /// Sampling variances are invariant between residual-variance updates.
@@ -151,6 +344,7 @@ pub(crate) struct SerSampling {
     sigma2: f64,
     pub(crate) shat2: Vec<f64>,
     groups: Option<VarianceGroups>,
+    half_beta_squared: Vec<f64>,
 }
 impl SerSampling {
     fn new(diagonal: &[f64], sigma2: f64) -> Self {
@@ -160,6 +354,7 @@ impl SerSampling {
             sigma2,
             shat2,
             groups,
+            half_beta_squared: Vec::new(),
         }
     }
 }
@@ -204,13 +399,19 @@ pub(crate) fn single_effect<'a>(
     {
         *sampling_cache = Some(SerSampling::new(diagonal, sigma2));
     }
-    let sampling = sampling_cache.as_ref().expect("sampling initialized");
-    let shat2 = &sampling.shat2;
+    let sampling = sampling_cache.as_mut().expect("sampling initialized");
+    // Fixed-V and EM never evaluate the scalar objective and pay no invariant
+    // preparation cost. No cache or fitted state survives this public call.
+    let mut context = if method != PriorMethod::None && method != PriorMethod::Em {
+        Some(SerObjective::new(betahat, sampling, log_prior))
+    } else {
+        None
+    };
     let mut likelihood = |v| {
-        if let Some(groups) = &sampling.groups {
-            return grouped_likelihood(v, betahat, log_prior, groups, likelihood_scratch);
-        }
-        log_likelihood(v, betahat, shat2, log_prior, likelihood_scratch)
+        context
+            .as_mut()
+            .expect("objective requested")
+            .evaluate(v, likelihood_scratch)
     };
     let mut v = v_init;
     let mut selected_likelihood = None;
@@ -232,6 +433,10 @@ pub(crate) fn single_effect<'a>(
             v = 0.0;
         }
     }
+    // End the objective's mutable storage borrow before posterior construction.
+    drop(likelihood);
+    drop(context);
+    let shat2 = &sampling.shat2;
     if let Some(groups) = &sampling.groups {
         grouped_probabilities(
             v,
@@ -565,6 +770,77 @@ fn log_probabilities(v: f64, beta: &[f64], shat2: &[f64], prior: &[f64]) -> (Vec
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn compare_objective(beta: &[f64], diagonal: &[f64], prior: &[f64]) {
+        let mut sampling = SerSampling::new(diagonal, 0.8);
+        let shat2 = sampling.shat2.clone();
+        let mut objective = SerObjective::new(beta, &mut sampling, prior);
+        for v in [0., 1e-12, 0.03, 0.7, 1000.] {
+            let mut scratch = vec![0.; beta.len()];
+            let actual = objective.evaluate(v, &mut scratch);
+            let expected = log_likelihood(v, beta, &shat2, prior, &mut scratch);
+            assert!(
+                (actual - expected).abs() <= 4e-12 * (1. + expected.abs()),
+                "V={v}, actual={actual}, expected={expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn objective_exact_groups_cover_uniform_weighted_and_scalar_paths() {
+        for groups in [1, 2, 4, 7, 17] {
+            let beta: Vec<f64> = (0..35).map(|j| (j as f64 - 15.) / 9.).collect();
+            let diagonal: Vec<f64> = (0..35).map(|j| 1. + (j % groups) as f64).collect();
+            let uniform = vec![-(35_f64).ln(); 35];
+            let weighted: Vec<f64> = (0..35)
+                .map(|j| {
+                    if j % 5 == 0 {
+                        f64::NEG_INFINITY
+                    } else {
+                        -3. - j as f64 / 50.
+                    }
+                })
+                .collect();
+            compare_objective(&beta, &diagonal, &uniform);
+            compare_objective(&beta, &diagonal, &weighted);
+        }
+    }
+
+    #[test]
+    fn objective_handles_no_information_and_resets_reused_beta_maxima() {
+        let diagonal = [2., 2., 0., 3., 3.];
+        let prior = [-2.; 5];
+        let strong = [10., -20., 0., -8., 4.];
+        let weak = [0., 0., 0., 0., 0.];
+        let mut sampling = SerSampling::new(&diagonal, 0.8);
+        for beta in [&strong, &weak, &strong, &weak] {
+            let shat2 = sampling.shat2.clone();
+            let mut objective = SerObjective::new(beta, &mut sampling, &prior);
+            assert!(objective.has_no_information);
+            let mut scratch = [0.; 5];
+            let actual = objective.evaluate(0.2, &mut scratch);
+            let expected = log_likelihood(0.2, beta, &shat2, &prior, &mut scratch);
+            assert!((actual - expected).abs() <= 2e-12);
+            assert_eq!(objective.evaluate(0., &mut scratch), -2. + 5_f64.ln());
+        }
+        compare_objective(&[1., f64::INFINITY, 0., -0.5, 0.7], &diagonal, &prior);
+    }
+
+    #[test]
+    fn objective_exceptional_coefficients_retain_scalar_expression() {
+        for diagonal in [[1e-200; 3], [1e200; 3]] {
+            let beta = [0., 0.5, 1.];
+            let prior = [-3.; 3];
+            compare_objective(&beta, &diagonal, &prior);
+        }
+        let beta = [1e155, 0., 1.];
+        let mut sampling = SerSampling::new(&[2.; 3], 0.8);
+        let mut objective = SerObjective::new(&beta, &mut sampling, &[-3.; 3]);
+        assert!(objective.uniform_log_prior.is_none());
+        // Overflowing squares must not take the uniform-null shortcut.
+        let mut scratch = [0.; 3];
+        assert!(objective.evaluate(0., &mut scratch).is_nan());
+    }
 
     #[test]
     fn bayes_factor_matches_normal_density_ratio() {
