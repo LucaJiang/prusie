@@ -119,8 +119,67 @@ fn prepare_crossproduct<'py>(
     }
 }
 
+/// Required parity averaging in tiles, with one output and no working p² copies.
+/// Separate ordered multiplies/add/divide preserve the Python preparation value.
+#[pyfunction]
+#[pyo3(signature = (matrix, scale=1.0))]
+fn symmetrize_matrix<'py>(
+    py: Python<'py>,
+    matrix: Bound<'py, PyArray2<f64>>,
+    scale: f64,
+) -> PyResult<Bound<'py, PyArray2<f64>>> {
+    crate::array_layout::ensure_layout(&matrix)?;
+    let matrix = matrix
+        .try_readonly()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = matrix.as_array();
+    let n = a.nrows();
+    if a.ncols() != n
+        || n.checked_mul(n)
+            .and_then(|v| v.checked_mul(8))
+            .filter(|&v| v <= isize::MAX as usize)
+            .is_none()
+    {
+        return Err(PyValueError::new_err(
+            "Matrix must be square with addressable storage",
+        ));
+    }
+    // SAFETY: dimension bytes were checked. Every output entry is written below
+    // before this private allocation is exposed; it cannot alias the input.
+    let output = unsafe { PyArray2::<f64>::new(py, [n, n], false) };
+    for i0 in (0..n).step_by(32) {
+        for j0 in (i0..n).step_by(32) {
+            for i in i0..(i0 + 32).min(n) {
+                for j in j0.max(i)..(j0 + 32).min(n) {
+                    let left = if scale == 1. {
+                        a[(i, j)]
+                    } else {
+                        a[(i, j)] * scale
+                    };
+                    let right = if scale == 1. {
+                        a[(j, i)]
+                    } else {
+                        a[(j, i)] * scale
+                    };
+                    let value = (left + right) / 2.;
+                    // SAFETY: both indices are in range, output is C ordered,
+                    // the GIL/input borrow stay live, and no entry is read.
+                    unsafe {
+                        output.data().add(i * n + j).write(value);
+                        if i != j {
+                            output.data().add(j * n + i).write(value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(output)
+}
+
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(preparation_simd_supported, module)?)?;
     module.add_function(wrap_pyfunction!(prepare_crossproduct, module)?)?;
+    module.add_function(wrap_pyfunction!(symmetrize_matrix, module)?)?;
     Ok(())
 }

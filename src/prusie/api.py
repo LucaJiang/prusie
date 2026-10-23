@@ -86,9 +86,7 @@ def _symmetrize_matrix(array, name, scale=1.0, collected=None):
     if collected is None:
         collected = []
     _warn(f"{name} is not symmetric; using ({name} + t({name}))/2.", collected)
-    with np.errstate(over="ignore", invalid="ignore"):
-        working = array if scale == 1.0 else array * scale
-        repaired = (working + working.T) / 2
+    repaired = _native.symmetrize_matrix(array, scale)
     _native.validate_matrix(repaired, name)
     return np.ascontiguousarray(repaired)
 
