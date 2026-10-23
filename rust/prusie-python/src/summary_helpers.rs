@@ -180,6 +180,7 @@ fn cs_pairwise_abs<'py>(
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(validate_matrix, module)?)?;
     module.add_function(wrap_pyfunction!(validate_rss_matrix, module)?)?;
+    module.add_function(wrap_pyfunction!(validate_and_repair_rss, module)?)?;
     module.add_function(wrap_pyfunction!(cs_pairwise_abs, module)?)?;
     module.add_function(wrap_pyfunction!(complete_finite_scan, module)?)?;
     Ok(())
@@ -430,4 +431,118 @@ unsafe fn exact_block4(base: *const f64, n: usize, i: usize, j: usize) -> bool {
         }
     }
     _mm_movemask_pd(valid) == 3
+}
+
+/// Validate raw/scaled RSS input and prepare an owned repair in the same general
+/// traversal. Return repair errors to Python so its warning still precedes them.
+#[pyfunction]
+fn validate_and_repair_rss<'py>(
+    py: Python<'py>,
+    array: Bound<'py, PyArray2<f64>>,
+    scale: f64,
+) -> PyResult<(bool, Option<Bound<'py, PyArray2<f64>>>, Option<String>)> {
+    ensure_layout(&array)?;
+    let input = array
+        .try_readonly()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+    let a = input.as_array();
+    let n = a.nrows();
+    if a.ncols() != n {
+        return Err(PyValueError::new_err("R must be square"));
+    }
+    #[cfg(target_arch = "x86_64")]
+    if scale.abs() <= f64::MAX * 0.5
+        && exact_contiguous_rss_proof(
+            a,
+            scale,
+            if n < 1024 {
+                1
+            } else {
+                prusie_core::num_threads()
+            },
+        )
+    {
+        return Ok((true, None, None));
+    }
+    if n.checked_mul(n)
+        .and_then(|v| v.checked_mul(8))
+        .filter(|&v| v <= isize::MAX as usize)
+        .is_none()
+    {
+        return Err(PyValueError::new_err(
+            "Matrix must be square with addressable storage",
+        ));
+    }
+    // SAFETY: shape/bytes are checked; the private output is completely written
+    // before exposure, cannot alias the caller, and is dropped on any error.
+    let repaired = unsafe { PyArray2::<f64>::new(py, [n, n], false) };
+    let values = a.as_slice_memory_order();
+    let row_major = a.strides() == [n as isize, 1];
+    let column_major = a.strides() == [1, n as isize];
+    let mut raw_finite = true;
+    let mut raw_nonnegative = true;
+    let mut scaled_finite = true;
+    let mut scaled_nonnegative = true;
+    let mut symmetric = true;
+    let mut repair_finite = true;
+    let mut repair_nonnegative = true;
+    const BLOCK: usize = 32;
+    for ii in (0..n).step_by(BLOCK) {
+        for jj in (ii..n).step_by(BLOCK) {
+            for i in ii..(ii + BLOCK).min(n) {
+                for j in jj.max(i)..(jj + BLOCK).min(n) {
+                    let (x, y) = match values {
+                        Some(v) if row_major => (v[i * n + j], v[j * n + i]),
+                        Some(v) if column_major => (v[j * n + i], v[i * n + j]),
+                        _ => (a[(i, j)], a[(j, i)]),
+                    };
+                    raw_finite &= x.is_finite() && y.is_finite();
+                    let sx = x * scale;
+                    let sy = y * scale;
+                    scaled_finite &= sx.is_finite() && sy.is_finite();
+                    symmetric &= sx == sy;
+                    let value = (sx + sy) / 2.;
+                    repair_finite &= value.is_finite();
+                    if i == j {
+                        raw_nonnegative &= x >= 0.;
+                        scaled_nonnegative &= sx >= 0.;
+                        repair_nonnegative &= value >= 0.;
+                    }
+                    // SAFETY: both indices are in range; every C-order output
+                    // element is written once, under the input borrow and GIL.
+                    unsafe {
+                        repaired.data().add(i * n + j).write(value);
+                        if i != j {
+                            repaired.data().add(j * n + i).write(value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Preserve raw validation before scaled validation, then the warning and
+    // repair validation. Do not report repair overflow on a symmetric input.
+    if !raw_finite {
+        return Err(PyValueError::new_err("R must contain only finite values"));
+    }
+    if !raw_nonnegative {
+        return Err(PyValueError::new_err("R diagonal must be nonnegative"));
+    }
+    if !scaled_finite {
+        return Err(PyValueError::new_err("XtX must contain only finite values"));
+    }
+    if !scaled_nonnegative {
+        return Err(PyValueError::new_err("XtX diagonal must be nonnegative"));
+    }
+    if symmetric {
+        return Ok((true, None, None));
+    }
+    let error = if !repair_finite {
+        Some("XtX must contain only finite values".into())
+    } else if !repair_nonnegative {
+        Some("XtX diagonal must be nonnegative".into())
+    } else {
+        None
+    };
+    Ok((false, Some(repaired), error))
 }

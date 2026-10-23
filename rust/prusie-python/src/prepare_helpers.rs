@@ -190,7 +190,8 @@ fn symmetrize_matrix<'py>(
     }
     if negative_diagonal {
         return Err(PyValueError::new_err(format!(
-            "{} diagonal must be nonnegative", name.unwrap_or("XtX")
+            "{} diagonal must be nonnegative",
+            name.unwrap_or("XtX")
         )));
     }
     Ok(output)

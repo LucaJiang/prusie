@@ -8,10 +8,11 @@ native IBSS solver and assembles a :class:`~prusie.result.SusieResult`.
 from __future__ import annotations
 
 import math
+import re
 import warnings as warning_module
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
-from types import MappingProxyType
+from types import BuiltinFunctionType, MappingProxyType
 from typing import Any
 
 import numpy as np
@@ -31,6 +32,52 @@ from .individual import SusieInputs
 from .posterior import credible_sets, marginal_pip
 from .refinement import RefinementConfig, initial_options, make_prepared, refine_fit
 from .result import SusieResult
+
+_DEFAULT_WARNING_CALL = warning_module.warn
+_DEFAULT_WARNING_SINK = warning_module._showwarnmsg_impl
+_DEFAULT_SHOWWARNMSG = warning_module._showwarnmsg
+_FUSED_RSS_DTYPE = np.dtype(np.float64)
+
+
+def _ordinary_warning_filters():
+    # Matching a custom pattern or checking a category with a custom metaclass
+    # can run Python before repair, even when the warning sink only records.
+    filters = warning_module.filters
+    if type(filters) is not list:
+        return False
+    for entry in filters:
+        if type(entry) is not tuple or len(entry) != 5:
+            return False
+        action, message, category, module, lineno = entry
+        if (
+            type(action) is not str
+            or (message is not None and type(message) not in (str, re.Pattern))
+            or type(category) is not type
+            or (module is not None and type(module) not in (str, re.Pattern))
+            or type(lineno) is not int
+        ):
+            return False
+    return True
+
+
+def _ordinary_warning_sink():
+    if not _ordinary_warning_filters():
+        return False
+    sink = warning_module._showwarnmsg_impl
+    recording = (
+        type(sink) is BuiltinFunctionType
+        and type(getattr(sink, "__self__", None)) is list
+        and getattr(sink, "__name__", None) == "append"
+    )
+    # Display and formatting can invoke stream, codec or source-loader hooks.
+    # Fuse only for builtin list recording; displayed warnings keep the
+    # original validate -> warn -> repair order.
+    return (
+        warning_module.warn is _DEFAULT_WARNING_CALL
+        and warning_module._showwarnmsg is _DEFAULT_SHOWWARNMSG
+        and warning_module.showwarning is warning_module._showwarning_orig
+        and recording
+    )
 
 
 def _vector(value: ArrayLike, name: str, size: int | None = None) -> NDArray[np.float64]:
@@ -82,10 +129,14 @@ def _validated_matrix(
     return np.ascontiguousarray(array), symmetric
 
 
-def _symmetrize_matrix(array, name, scale=1.0, collected=None):
+def _symmetrize_matrix(array, name, scale=1.0, collected=None, *, _prepared=None, _repair_error=None):
     if collected is None:
         collected = []
     _warn(f"{name} is not symmetric; using ({name} + t({name}))/2.", collected)
+    if _prepared is not None:
+        if _repair_error is not None:
+            raise ValueError(_repair_error)
+        return _prepared
     repaired = _native.symmetrize_matrix(array, scale, name)
     return np.ascontiguousarray(repaired)
 
@@ -1577,8 +1628,37 @@ def susie_rss(
         n = _scalar(n, "n", lower=1.0, strict=True)
         prevalidated_scale = n - 1
     extra_warnings = []
+    repaired_rss = None
+    repair_error = None
+    # Keep warning/numeric conversion callbacks on the original validate-then-
+    # repair path: they may intentionally mutate the caller's matrix between
+    # the validation and the warning. Ordinary warning recording is side-effect
+    # free with respect to that matrix and can use the fused owned preparation.
+    # Conversion and comparison hooks can change the warning configuration or
+    # matrix after validation. Only already suitable arrays and builtin option
+    # strings can be prepared before the intervening scalar/vector arithmetic.
+    fused_rss = (
+        n is not None
+        and var_y is None
+        and type(R) is np.ndarray
+        and R.dtype is _FUSED_RSS_DTYPE
+        and R.flags.c_contiguous
+        and R.flags.aligned
+        and type(z_method) is str
+        and _ordinary_warning_sink()
+    )
     if design_data is None:
-        R, symmetric = _validated_matrix(R, "R", len(z), rss_scale=prevalidated_scale)
+        if prevalidated_scale is None or not fused_rss:
+            R, symmetric = _validated_matrix(R, "R", len(z), rss_scale=prevalidated_scale)
+        else:
+            R = np.asarray(R, dtype=np.float64)
+            if R.shape != (len(z), len(z)):
+                raise ValueError(f"R must have shape ({len(z)}, {len(z)})")
+            R = native_array(R)
+            symmetric, repaired_rss, repair_error = _native.validate_and_repair_rss(
+                R, prevalidated_scale
+            )
+            R = np.ascontiguousarray(R)
     else:
         R, symmetric = None, True
     rss_matrix_scale = 1.0
@@ -1618,7 +1698,15 @@ def susie_rss(
             standardize,
         )
     if prevalidated_scale is not None and not symmetric:
-        XtX = _symmetrize_matrix(XtX, "XtX", rss_matrix_scale, extra_warnings)
+        if fused_rss:
+            # Keep the original helper stack depth for module-based warning
+            # filters and the original warning-before-repair-error priority.
+            XtX = _symmetrize_matrix(
+                XtX, "XtX", rss_matrix_scale, extra_warnings,
+                _prepared=repaired_rss, _repair_error=repair_error,
+            )
+        else:
+            XtX = _symmetrize_matrix(XtX, "XtX", rss_matrix_scale, extra_warnings)
         rss_matrix_scale = 1.0
     if estimate_residual_variance:
         _warn(
