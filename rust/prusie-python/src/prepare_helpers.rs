@@ -122,11 +122,12 @@ fn prepare_crossproduct<'py>(
 /// Required parity averaging in tiles, with one output and no working p² copies.
 /// Separate ordered multiplies/add/divide preserve the Python preparation value.
 #[pyfunction]
-#[pyo3(signature = (matrix, scale=1.0))]
+#[pyo3(signature = (matrix, scale=1.0, name=None))]
 fn symmetrize_matrix<'py>(
     py: Python<'py>,
     matrix: Bound<'py, PyArray2<f64>>,
     scale: f64,
+    name: Option<&str>,
 ) -> PyResult<Bound<'py, PyArray2<f64>>> {
     crate::array_layout::ensure_layout(&matrix)?;
     let matrix = matrix
@@ -147,21 +148,34 @@ fn symmetrize_matrix<'py>(
     // SAFETY: dimension bytes were checked. Every output entry is written below
     // before this private allocation is exposed; it cannot alias the input.
     let output = unsafe { PyArray2::<f64>::new(py, [n, n], false) };
+    // Public callers request the same validation that previously followed repair.
+    // Keep the private unchecked utility for ordered-arithmetic diagnostics.
+    let mut negative_diagonal = false;
+    let contiguous = a.as_slice_memory_order();
+    let row_major = a.strides() == [n as isize, 1];
+    let column_major = a.strides() == [1, n as isize];
     for i0 in (0..n).step_by(32) {
         for j0 in (i0..n).step_by(32) {
             for i in i0..(i0 + 32).min(n) {
                 for j in j0.max(i)..(j0 + 32).min(n) {
-                    let left = if scale == 1. {
-                        a[(i, j)]
-                    } else {
-                        a[(i, j)] * scale
+                    let (x, y) = match contiguous {
+                        Some(values) if row_major => (values[i * n + j], values[j * n + i]),
+                        Some(values) if column_major => (values[j * n + i], values[i * n + j]),
+                        _ => (a[(i, j)], a[(j, i)]),
                     };
-                    let right = if scale == 1. {
-                        a[(j, i)]
-                    } else {
-                        a[(j, i)] * scale
-                    };
+                    let left = if scale == 1. { x } else { x * scale };
+                    let right = if scale == 1. { y } else { y * scale };
                     let value = (left + right) / 2.;
+                    if let Some(name) = name {
+                        if !value.is_finite() {
+                            return Err(PyValueError::new_err(format!(
+                                "{name} must contain only finite values"
+                            )));
+                        }
+                        // Report a negative diagonal only after every entry has
+                        // passed finiteness, matching validate_matrix priority.
+                        negative_diagonal |= i == j && value < 0.;
+                    }
                     // SAFETY: both indices are in range, output is C ordered,
                     // the GIL/input borrow stay live, and no entry is read.
                     unsafe {
@@ -173,6 +187,11 @@ fn symmetrize_matrix<'py>(
                 }
             }
         }
+    }
+    if negative_diagonal {
+        return Err(PyValueError::new_err(format!(
+            "{} diagonal must be nonnegative", name.unwrap_or("XtX")
+        )));
     }
     Ok(output)
 }
