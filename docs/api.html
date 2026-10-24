@@ -127,6 +127,10 @@ nested preparation; use <code>use_mad=False</code> for a directly reusable <code
 <td>Maximum number of effects, capped at the internal predictor count; RSS-lambda uses retained variants after MAF filtering, excluding any null column (<code>L=None</code> is an alias for 10)</td>
 </tr>
 <tr>
+<td><code>n_threads=1</code></td>
+<td>Per-fit native thread limit, an integer from 1 to 32; small kernels stay serial</td>
+</tr>
+<tr>
 <td><code>scaled_prior_variance=0.2</code></td>
 <td>Gaussian initial variance relative to outcome variance; NIG slab variance relative to residual variance; scalar or length-L vector</td>
 </tr>
@@ -211,6 +215,20 @@ SER updates; it enables residual estimation and uses posterior stopping when
 L &gt; 1. Slot priors also select
 posterior stopping. Use fixed residual variance with external LD unless
 estimation is justified.</p>
+<p><code>n_threads</code> is accepted by <code>susie</code>, <code>susie_suff_stat</code>, <code>susie_rss</code> and
+<code>susie_rss_lambda</code>, and the requested value is recorded in <code>fit.params</code>.
+The current parallel kernels are dense Gram-matrix products, including proved
+exact-class compact products. They use a private pool for the fit and fixed
+output partitions. Component updates remain sequential. Validation, design-matrix
+operators and dynamic RSS likelihoods remain serial in this implementation;
+requesting more threads does not imply a speedup for those stages or models.
+Small matrices and compact products with fewer than 1024 rows remain serial.
+The process-wide BLAS, OpenMP and Rayon configuration is unchanged.</p>
+<p>The default is explicitly one native thread. Environment-only requests through
+<code>PRUSIE_NUM_THREADS</code> no longer select public fitting parallelism; pass
+<code>n_threads=4</code>, for example. Booleans and floating-point values are not thread
+counts. Determinism is defined for the same input and requested thread count;
+numerical equality between different thread counts is reported, not guaranteed.</p>
 <p>For RSS, <code>z_method="wald"</code> or <code>"score"</code> selects the working statistic;
 <code>R_mismatch</code> and <code>R_finite</code> control reference mismatch and finite-reference
 adjustments. <code>susie_rss_control(...)</code> creates a validated control object for

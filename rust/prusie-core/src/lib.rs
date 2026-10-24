@@ -10,6 +10,7 @@ mod numerical;
 mod operator;
 mod optimizer;
 pub mod options;
+mod parallel;
 mod residual;
 mod ser;
 mod slot;

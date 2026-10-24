@@ -12,6 +12,8 @@ pub struct InitialState {
 }
 #[derive(Clone)]
 pub struct FitControl {
+    /// Per-fit data-parallel kernel count; IBSS components remain sequential.
+    pub n_threads: usize,
     pub initial: Option<InitialState>,
     pub model: crate::model::ModelOptions,
     pub component_prior_variance: Option<Vec<f64>>,
@@ -29,6 +31,7 @@ pub struct FitControl {
 impl Default for FitControl {
     fn default() -> Self {
         Self {
+            n_threads: 1,
             initial: None,
             model: crate::model::ModelOptions::default(),
             component_prior_variance: None,

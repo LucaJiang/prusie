@@ -200,6 +200,7 @@ impl ExactColumns {
         matrix: ArrayView2<'_, f64>,
         vector: &[f64],
         output: &mut [f64],
+        pool: Option<&rayon::ThreadPool>,
     ) -> bool {
         self.sums.fill(0.);
         self.corrections.fill(0.);
@@ -224,7 +225,12 @@ impl ExactColumns {
             let groups = self.representatives.len();
             let reduced =
                 ArrayView2::from_shape((groups, groups).f(), compact).expect("compact dimensions");
-            super::operator::multiply(reduced, &self.sums, &mut self.compact_product);
+            super::operator::multiply_with_pool(
+                reduced,
+                &self.sums,
+                &mut self.compact_product,
+                pool,
+            );
             for (out, &(g, sign)) in output.iter_mut().zip(&self.assignments) {
                 *out = sign * self.compact_product[g];
             }
@@ -232,7 +238,7 @@ impl ExactColumns {
             for (g, &j) in self.representatives.iter().enumerate() {
                 self.coefficients[j] = self.sums[g];
             }
-            super::operator::multiply(matrix, &self.coefficients, output);
+            super::operator::multiply_with_pool(matrix, &self.coefficients, output, pool);
         }
         output.iter().all(|x| x.is_finite())
     }
@@ -242,11 +248,60 @@ impl ExactColumns {
 mod tests {
     use super::*;
 
+    #[test]
+    fn parallel_stored_compact_product_keeps_grouped_parent_bits() {
+        let groups = 1025;
+        let p = 2 * groups;
+        // Exact signed pairs exercise a compact dimension above the fixed
+        // scheduling floor, including static chunk tails.
+        let values: Vec<f64> = (0..p * p)
+            .map(|k| {
+                let (i, j) = (k % p, k / p);
+                if i / 2 == j / 2 {
+                    if (i + j) % 2 == 0 {
+                        1.
+                    } else {
+                        -1.
+                    }
+                } else {
+                    0.
+                }
+            })
+            .collect();
+        let matrix = ArrayView2::from_shape((p, p).f(), &values).unwrap();
+        let vector: Vec<f64> = (0..p)
+            .map(|j| {
+                if j % 7 == 0 {
+                    -0.
+                } else {
+                    (j % 19) as f64 / 32. - 0.25
+                }
+            })
+            .collect();
+        let mut plan = ExactColumns::discover(matrix).unwrap();
+        assert_eq!(plan.representatives.len(), groups);
+        assert!(plan.compact.is_some());
+        let mut expected = vec![0.; p];
+        assert!(plan.apply(matrix, &vector, &mut expected, None));
+        let expected: Vec<_> = expected.iter().map(|x| x.to_bits()).collect();
+        for threads in [2, 4] {
+            let pool = crate::parallel::pool(threads, p).unwrap().unwrap();
+            for _ in 0..2 {
+                let mut actual = vec![f64::NAN; p];
+                assert!(plan.apply(matrix, &vector, &mut actual, Some(&pool)));
+                assert_eq!(
+                    actual.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                    expected
+                );
+            }
+        }
+    }
+
     fn compare(matrix: ArrayView2<'_, f64>, vector: &[f64], expected_two_way: bool) {
         let mut plan = ExactColumns::discover(matrix).expect("exact redundancy");
         assert_eq!(plan.compact.is_some(), expected_two_way);
         let mut result = vec![0.; matrix.nrows()];
-        assert!(plan.apply(matrix, vector, &mut result));
+        assert!(plan.apply(matrix, vector, &mut result, None));
         for i in 0..matrix.nrows() {
             let expected: f64 = (0..matrix.ncols())
                 .map(|j| matrix[(i, j)] * vector[j])
@@ -305,6 +360,6 @@ mod tests {
         let values = [1., 1., 1., 1.];
         let matrix = ArrayView2::from_shape((2, 2).f(), &values).unwrap();
         let mut plan = ExactColumns::discover(matrix).unwrap();
-        assert!(!plan.apply(matrix, &[f64::MAX, f64::MAX], &mut [0.; 2]));
+        assert!(!plan.apply(matrix, &[f64::MAX, f64::MAX], &mut [0.; 2], None));
     }
 }

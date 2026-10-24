@@ -48,6 +48,7 @@ def susie_rss_lambda(
     coverage: float | None = 0.95,
     min_abs_corr: float | None = 0.5,
     max_iter: int = 50,
+    n_threads: int = 1,
     L_greedy: int | None = None,
     greedy_lbf_cutoff: float = 0.1,
     tol: float = 1e-3,
@@ -94,6 +95,9 @@ def susie_rss_lambda(
         Intercept returned with coefficient estimates.
     check_R, check_z : bool
         Check LD positive semidefiniteness and z-score projection, respectively.
+    n_threads : int, default 1
+        Per-fit native thread limit from 1 to 32. This dynamic likelihood is
+        currently serial; the requested limit is retained in result params.
     **options
         Other options have the same meaning as in :func:`susie_rss`.
         ``refine=True`` refits the model by credible-set block coordinate
@@ -208,6 +212,7 @@ def susie_rss_lambda(
         coverage=coverage,
         min_abs_corr=min_abs_corr,
         max_iter=max_iter,
+        n_threads=n_threads,
         L_greedy=L_greedy,
         greedy_lbf_cutoff=greedy_lbf_cutoff,
         tol=tol,

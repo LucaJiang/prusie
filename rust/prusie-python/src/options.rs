@@ -60,6 +60,19 @@ pub(crate) fn parse(
         null_index: option(options, "null_index")?,
     };
     let mut control = solver::diagnostics::FitControl::default();
+    if let Some(value) = options.get_item("n_threads")? {
+        if value.is_instance_of::<pyo3::types::PyBool>() {
+            return Err(PyValueError::new_err(
+                "n_threads must be an integer between 1 and 32",
+            ));
+        }
+        control.n_threads = value.extract()?;
+        if !(1..=32).contains(&control.n_threads) {
+            return Err(PyValueError::new_err(
+                "n_threads must be an integer between 1 and 32",
+            ));
+        }
+    }
     macro_rules! optional {
         ($key:literal, $field:ident) => {
             if let Some(value) = options.get_item($key)? {

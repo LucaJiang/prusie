@@ -129,6 +129,7 @@ def susie(
     compute_univariate_zscore: bool = False,
     na_rm: bool = False,
     max_iter: int = 100,
+    n_threads: int = 1,
     L_greedy: int | None = None,
     greedy_lbf_cutoff: float = 0.1,
     tol: float | None = None,
@@ -183,6 +184,9 @@ def susie(
         Initialization, greedy component growth and optional slot-activity prior.
     tol, convergence_method, convergence, max_iter, track_fit, verbose
         Fitting convergence and logging controls.
+    n_threads : int, default 1
+        Per-fit native thread limit from 1 to 32. Design-matrix operators are
+        currently serial; the requested limit is retained in result params.
     coverage, min_abs_corr, median_abs_corr, cs_extension_corr, n_purity
         Credible-set controls; correlations are computed only as needed.
     alpha0, beta0, residual_variance_upperbound, check_null_threshold, prior_tol
@@ -249,6 +253,7 @@ def susie(
         "coverage",
         "min_abs_corr",
         "max_iter",
+        "n_threads",
         "L_greedy",
         "greedy_lbf_cutoff",
         "tol",

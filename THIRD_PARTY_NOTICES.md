@@ -59,6 +59,10 @@ Crate sources are available at `https://crates.io/crates/NAME/VERSION`.
 | Crate | Version | Copyright / authors |
 | --- | --- | --- |
 | cfg-if | 1.0.5 | Copyright (c) 2014 Alex Crichton |
+| crossbeam-deque | 0.8.8 | Copyright (c) 2019 The Crossbeam Project Developers |
+| crossbeam-epoch | 0.9.21 | Copyright (c) 2019 The Crossbeam Project Developers |
+| crossbeam-utils | 0.8.23 | Copyright (c) 2019 The Crossbeam Project Developers |
+| either | 1.19.0 | Copyright (c) 2015 |
 | libc | 0.2.189 | Copyright (c) The Rust Project Developers |
 | libm | 0.2.15 | Copyright (c) 2018 Jorge Aparicio; math code derived from musl libc, Copyright © 2005–2020 Rich Felker et al., including portions Copyright © 1993, 2004 Sun Microsystems, © 2003–2011 David Schultz, © 2003–2009 Steven G. Kargl, © 2003–2009 Bruce D. Evans, © 2008 Stephen L. Moshier and © 2017–2018 Arm Limited; CORE-MATH routines under MIT |
 | matrixmultiply | 0.3.11 | Copyright (c) 2016–2023, 2026 Ulrik Sverdrup “bluss”; (c) 2018 R. Janis Goldschmidt; (c) 2021 DutchGhost and matrixmultiply authors |
@@ -71,6 +75,8 @@ Crate sources are available at `https://crates.io/crates/NAME/VERSION`.
 | once_cell | 1.21.4 | The once_cell developers |
 | pyo3, pyo3-ffi | 0.23.5 | Copyright (c) 2023–present PyO3 Project and Contributors; (c) 2017 Daniel Grunwald |
 | rawpointer | 0.2.1 | Copyright (c) 2015; Copyright 2016–2019 bluss and rawpointer developers |
+| rayon | 1.11.0 | Copyright (c) 2010 The Rust Project Developers |
+| rayon-core | 1.13.0 | Copyright (c) 2010 The Rust Project Developers |
 | rustc-hash | 2.1.3 | The rustc-hash developers |
 | unindent | 0.2.4 | The unindent developers |
 

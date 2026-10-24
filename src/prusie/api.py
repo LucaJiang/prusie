@@ -114,7 +114,7 @@ def _validated_matrix(
     if rss_scale is None:
         symmetric = _native.validate_matrix(array, name, correlation, scale)
     else:
-        symmetric = _native.validate_rss_matrix(array, rss_scale)
+        symmetric = _native.validate_rss_matrix(array, rss_scale, proof_threads=1)
     # native_array has already ensured alignment and element-compatible strides;
     # any copy made here is C-ordered, matching the public input orientation.
     return np.ascontiguousarray(array), symmetric
@@ -156,6 +156,17 @@ def _integer(value: int, name: str) -> int:
         or value < 1
     ):
         raise ValueError(f"{name} must be a positive integer")
+    return int(value)
+
+
+def _thread_count(value: int) -> int:
+    """Resolve a per-call thread request without changing process-wide state."""
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, (int, np.integer))
+        or not 1 <= value <= 32
+    ):
+        raise ValueError("n_threads must be an integer between 1 and 32")
     return int(value)
 
 
@@ -287,6 +298,7 @@ def susie_suff_stat(
     null_weight: float = 0.0,
     standardize: bool = True,
     max_iter: int = 100,
+    n_threads: int = 1,
     s_init: SusieResult | Mapping[str, Any] | None = None,
     model_init: SusieResult | Mapping[str, Any] | None = None,
     estimate_residual_method: str = "MoM",
@@ -378,6 +390,11 @@ def susie_suff_stat(
         Scale predictors to unit sample variance, d_j = (XᵀX_jj/(n - 1))^½.
     max_iter : int, default 100
         Maximum number of iterative Bayesian stepwise selection (IBSS) sweeps.
+    n_threads : int, default 1
+        Per-fit native thread limit from 1 to 32. Dense Gram products can use
+        fixed output partitions; component updates remain sequential. Small
+        kernels and validation remain serial. Process-wide thread settings
+        are unchanged; pass this option instead of PRUSIE_NUM_THREADS.
     s_init : SusieResult or mapping, optional
         Working-coordinate posterior state; may initialize a new data set.
         A mapping needs ``alpha``, ``mu`` and ``mu2``. Supplied variant IDs,
@@ -540,6 +557,7 @@ def _prepare_suff_stat(
     null_weight: float = 0.0,
     standardize: bool = True,
     max_iter: int = 100,
+    n_threads: int = 1,
     s_init: SusieResult | Mapping[str, Any] | None = None,
     model_init: SusieResult | Mapping[str, Any] | None = None,
     estimate_residual_method: str = "MoM",
@@ -614,6 +632,7 @@ def _prepare_suff_stat(
         L_greedy = _integer(L_greedy, "L_greedy")
     greedy_lbf_cutoff = _scalar(greedy_lbf_cutoff, "greedy_lbf_cutoff", lower=-np.inf)
     n = _scalar(n, "n", lower=1.0, strict=True)
+    n_threads = _thread_count(n_threads)
     for name, value in (
         ("standardize", standardize),
         ("estimate_prior_variance", estimate_prior_variance),
@@ -832,6 +851,7 @@ def _prepare_suff_stat(
         estimate_residual_variance=bool(estimate_residual_variance),
         check_null_threshold=check_null_threshold,
         max_iter=max_iter,
+        n_threads=n_threads,
         tol=tol,
         check_prior=bool(check_prior),
         prior_tol=prior_tol,
@@ -954,6 +974,7 @@ def _prepare_suff_stat(
         null_weight=null_weight,
         standardize=bool(standardize),
         max_iter=max_iter,
+        n_threads=n_threads,
         tol=tol,
         coverage=coverage,
         min_abs_corr=min_abs_corr,
@@ -1370,6 +1391,7 @@ def susie_rss(
     null_weight: float = 0.0,
     standardize: bool = True,
     max_iter: int = 50,
+    n_threads: int = 1,
     s_init: SusieResult | Mapping[str, Any] | None = None,
     model_init: SusieResult | Mapping[str, Any] | None = None,
     estimate_residual_method: str = "MoM",
@@ -1435,6 +1457,8 @@ def susie_rss(
         See :func:`susie_suff_stat`.
     max_iter : int, default 50
         Maximum number of IBSS sweeps.
+    n_threads : int, default 1
+        Per-fit native thread limit from 1 to 32, as in :func:`susie_suff_stat`.
 
     Other Parameters
     ----------------
@@ -1659,7 +1683,7 @@ def susie_rss(
                 raise ValueError(f"R must have shape ({len(z)}, {len(z)})")
             R = native_array(R)
             symmetric, repaired_rss, repair_error = _native.validate_and_repair_rss(
-                R, prevalidated_scale
+                R, prevalidated_scale, proof_threads=1
             )
             R = np.ascontiguousarray(R)
     else:
@@ -1751,6 +1775,7 @@ def susie_rss(
         null_weight=null_weight,
         standardize=effective_standardize,
         max_iter=max_iter,
+        n_threads=n_threads,
         s_init=s_init,
         coverage=coverage,
         min_abs_corr=min_abs_corr,

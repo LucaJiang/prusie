@@ -341,6 +341,17 @@ credible set qualifies, the set collections are empty and PIPs are still
 returned. PIPs use effects with $V_\ell>$ `prior_tol`; credible sets use
 $V_\ell>10^{-9}$.
 
+## Native threading
+
+Dense Gram products may partition output rows among a private per-fit native
+thread pool when `n_threads > 1`. Each output coordinate retains its ordered
+source-column accumulation; IBSS still updates effects sequentially. Pool
+creation is skipped for one thread and small matrices. Kernel dispatch requires
+at least 1024 output rows and 1,048,576 matrix entries. Exact-class compact
+products use the same rule based on their proved dimension. Public validation
+is serial and does not consult a process-global thread count. No global Rayon
+pool or BLAS thread setting is modified.
+
 ## Numerical reproducibility
 
 Agreement with susieR is validated with relative tolerance zero: complete final

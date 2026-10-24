@@ -79,6 +79,103 @@ pub(crate) fn multiply(matrix: ArrayView2<'_, f64>, vector: &[f64], output: &mut
     }
 }
 
+/// The existing ordered four-column arithmetic on one disjoint output range.
+#[inline(always)]
+fn multiply_columns_range(
+    values: &[f64],
+    rows: usize,
+    vector: &[f64],
+    start: usize,
+    output: &mut [f64],
+) {
+    output.fill(0.);
+    let end = start + output.len();
+    let mut columns = [0usize; 4];
+    let mut weights = [0.; 4];
+    let mut count = 0;
+    for (j, &weight) in vector.iter().enumerate() {
+        if weight == 0. {
+            continue;
+        }
+        columns[count] = j;
+        weights[count] = weight;
+        count += 1;
+        if count == 4 {
+            let a = &values[columns[0] * rows + start..columns[0] * rows + end];
+            let b = &values[columns[1] * rows + start..columns[1] * rows + end];
+            let c = &values[columns[2] * rows + start..columns[2] * rows + end];
+            let d = &values[columns[3] * rows + start..columns[3] * rows + end];
+            for (i, result) in output.iter_mut().enumerate() {
+                *result += a[i] * weights[0];
+                *result += b[i] * weights[1];
+                *result += c[i] * weights[2];
+                *result += d[i] * weights[3];
+            }
+            count = 0;
+        }
+    }
+    for k in 0..count {
+        let column = &values[columns[k] * rows + start..columns[k] * rows + end];
+        for (result, &value) in output.iter_mut().zip(column) {
+            *result += value * weights[k];
+        }
+    }
+}
+
+// SAFETY: callers establish AVX2 before using this otherwise bounds-checked
+// kernel on an immutable input slice and a disjoint output chunk.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn multiply_columns_range_avx2(
+    values: &[f64],
+    rows: usize,
+    vector: &[f64],
+    start: usize,
+    output: &mut [f64],
+) {
+    multiply_columns_range(values, rows, vector, start, output);
+}
+
+pub(crate) fn multiply_with_pool(
+    matrix: ArrayView2<'_, f64>,
+    vector: &[f64],
+    output: &mut [f64],
+    pool: Option<&rayon::ThreadPool>,
+) {
+    let Some(pool) = pool.filter(|_| crate::parallel::applicable(matrix.nrows(), matrix.ncols()))
+    else {
+        multiply(matrix, vector, output);
+        return;
+    };
+    if matrix.t().is_standard_layout() {
+        let values = matrix.as_slice_memory_order().expect("contiguous columns");
+        let rows = matrix.nrows();
+        crate::parallel::rows(pool, output, |start, chunk| {
+            #[cfg(target_arch = "x86_64")]
+            if std::is_x86_feature_detected!("avx2") {
+                // SAFETY: runtime detection guards this target-feature call;
+                // static chunking supplies nonoverlapping writable output.
+                unsafe {
+                    multiply_columns_range_avx2(values, rows, vector, start, chunk);
+                }
+                return;
+            }
+            multiply_columns_range(values, rows, vector, start, chunk);
+        });
+    } else {
+        crate::parallel::rows(pool, output, |start, chunk| {
+            chunk.fill(0.);
+            for (j, &coefficient) in vector.iter().enumerate() {
+                if coefficient != 0. {
+                    for (i, value) in chunk.iter_mut().enumerate() {
+                        *value += matrix[(start + i, j)] * coefficient;
+                    }
+                }
+            }
+        });
+    }
+}
+
 // The former raw-correlation certificate admitted |R| ≤ 2 and a ≤ 10⁹.
 // Parity preparation may already move a into the supplied matrix. Admit that
 // representation too: |M| ≤ 2 × 10⁹. With the factor bounds below, ordered
@@ -148,6 +245,7 @@ pub(crate) fn materialize_scaled(
     values
 }
 
+#[cfg(test)]
 pub(crate) fn scaled_multiply(
     matrix: ArrayView2<'_, f64>,
     vector: &[f64],
@@ -155,11 +253,22 @@ pub(crate) fn scaled_multiply(
     scaling: &MatrixScaling<'_>,
     scratch: &mut [f64],
 ) -> bool {
+    scaled_multiply_with_pool(matrix, vector, output, scaling, scratch, None)
+}
+
+pub(crate) fn scaled_multiply_with_pool(
+    matrix: ArrayView2<'_, f64>,
+    vector: &[f64],
+    output: &mut [f64],
+    scaling: &MatrixScaling<'_>,
+    scratch: &mut [f64],
+    pool: Option<&rayon::ThreadPool>,
+) -> bool {
     for ((x, &v), &factor) in scratch.iter_mut().zip(vector).zip(scaling.inverse) {
         *x = v * factor;
     }
     if scratch.iter().all(|x| x.is_finite()) {
-        multiply(matrix, scratch, output);
+        multiply_with_pool(matrix, scratch, output, pool);
         for (x, &scale) in output.iter_mut().zip(scaling.scales) {
             *x = (*x * scaling.global) / scale;
         }
@@ -172,7 +281,7 @@ pub(crate) fn scaled_multiply(
     let values = materialize_scaled(matrix, scaling);
     let p = matrix.nrows();
     let prepared = ArrayView2::from_shape((p, p).f(), &values).expect("prepared dimensions");
-    multiply(prepared, vector, output);
+    multiply_with_pool(prepared, vector, output, pool);
     true
 }
 
@@ -187,6 +296,7 @@ pub(crate) trait GramOperator {
 }
 
 pub(crate) struct DenseGram<'a> {
+    pub pool: Option<&'a rayon::ThreadPool>,
     pub matrix: ArrayView2<'a, f64>,
     pub scaling: Option<&'a MatrixScaling<'a>>,
     pub diagonal: Vec<f64>,
@@ -242,7 +352,7 @@ impl GramOperator for DenseGram<'_> {
                         *value = coefficient * factor;
                     }
                     if self.scratch.iter().all(|x| x.is_finite())
-                        && exact.apply(self.matrix, &self.scratch, output)
+                        && exact.apply(self.matrix, &self.scratch, output, self.pool)
                     {
                         for (value, &denominator) in output.iter_mut().zip(scale.scales) {
                             *value = (*value * scale.global) / denominator;
@@ -251,15 +361,22 @@ impl GramOperator for DenseGram<'_> {
                             return;
                         }
                     }
-                } else if exact.apply(self.matrix, vector, output) {
+                } else if exact.apply(self.matrix, vector, output, self.pool) {
                     return;
                 }
             }
         }
         if let Some(scaling) = self.scaling {
-            scaled_multiply(self.matrix, vector, output, scaling, &mut self.scratch);
+            scaled_multiply_with_pool(
+                self.matrix,
+                vector,
+                output,
+                scaling,
+                &mut self.scratch,
+                self.pool,
+            );
         } else {
-            multiply(self.matrix, vector, output);
+            multiply_with_pool(self.matrix, vector, output, self.pool);
         }
         if dense && !self.discovery_checked {
             // Rent is paid only after a real dense product. The threshold is
@@ -272,6 +389,84 @@ impl GramOperator for DenseGram<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parallel_factored_overflow_retains_materialized_fallback_bits() {
+        let p = 1025;
+        let values = vec![0.25; p * p];
+        let matrix = ArrayView2::from_shape((p, p).f(), &values).unwrap();
+        let factors = vec![2.; p];
+        let scaling = MatrixScaling {
+            global: 1.,
+            inverse: &factors,
+            scales: &factors,
+        };
+        let mut vector = vec![-0.; p];
+        vector[0] = f64::MAX;
+        vector[1] = -f64::MAX;
+        vector[2] = f64::from_bits(1);
+        let mut expected = vec![0.; p];
+        let mut scratch = vec![0.; p];
+        scaled_multiply(matrix, &vector, &mut expected, &scaling, &mut scratch);
+        assert!(!scratch[0].is_finite());
+        assert!(expected.iter().all(|x| x.is_finite()));
+        let expected: Vec<_> = expected.iter().map(|x| x.to_bits()).collect();
+        for threads in [2, 4] {
+            let pool = crate::parallel::pool(threads, p).unwrap().unwrap();
+            let mut actual = vec![f64::NAN; p];
+            scaled_multiply_with_pool(
+                matrix,
+                &vector,
+                &mut actual,
+                &scaling,
+                &mut scratch,
+                Some(&pool),
+            );
+            assert_eq!(
+                actual.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn static_parallel_row_chunks_match_serial_bits_in_both_layouts() {
+        let p = 1025;
+        let values: Vec<f64> = (0..p * p)
+            .map(|k| ((k * 13 + k / p * 7) % 103) as f64 / 128. - 0.25)
+            .collect();
+        let vector: Vec<f64> = (0..p)
+            .map(|j| {
+                if j % 7 == 0 {
+                    -0.
+                } else {
+                    (j % 31) as f64 / 32. - 0.5
+                }
+            })
+            .collect();
+        for column_major in [false, true] {
+            let matrix = if column_major {
+                ArrayView2::from_shape((p, p).f(), &values).unwrap()
+            } else {
+                ArrayView2::from_shape((p, p), &values).unwrap()
+            };
+            let mut expected = vec![0.; p];
+            multiply(matrix, &vector, &mut expected);
+            let expected: Vec<_> = expected.iter().map(|x| x.to_bits()).collect();
+            for threads in [2, 4] {
+                let pool = crate::parallel::pool(threads, p).unwrap().unwrap();
+                assert_eq!(pool.current_num_threads(), threads);
+                for _ in 0..2 {
+                    let mut actual = vec![f64::NAN; p];
+                    multiply_with_pool(matrix, &vector, &mut actual, Some(&pool));
+                    assert_eq!(
+                        actual.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                        expected
+                    );
+                }
+            }
+        }
+    }
     #[test]
     fn failed_screen_and_failed_proof_never_retry() {
         for p in [16usize, 64] {
@@ -281,6 +476,7 @@ mod tests {
             }
             let ones = vec![1.; p * p];
             let mut gram = DenseGram {
+                pool: None,
                 matrix: ArrayView2::from_shape((p, p).f(), &values).unwrap(),
                 scaling: None,
                 diagonal: vec![1.; p],
@@ -310,6 +506,7 @@ mod tests {
     fn sparse_calls_do_not_sample_or_accrue_rent() {
         let values = [1.; 256];
         let mut gram = DenseGram {
+            pool: None,
             matrix: ArrayView2::from_shape((16, 16).f(), &values).unwrap(),
             scaling: None,
             diagonal: vec![1.; 16],
@@ -335,6 +532,7 @@ mod tests {
         let values = [1.; 16 * 16];
         let matrix = ArrayView2::from_shape((16, 16).f(), &values).unwrap();
         let mut gram = DenseGram {
+            pool: None,
             matrix,
             scaling: None,
             diagonal: vec![1.; 16],
@@ -361,6 +559,7 @@ mod tests {
         let values = [0.25; 4];
         let matrix = ArrayView2::from_shape((2, 2).f(), &values).unwrap();
         let mut gram = DenseGram {
+            pool: None,
             matrix,
             scaling: None,
             diagonal: vec![0.25; 2],
@@ -401,6 +600,7 @@ mod tests {
             })
             .collect();
         let mut gram = DenseGram {
+            pool: None,
             matrix,
             scaling: Some(&scaling),
             diagonal: vec![0.; 6],

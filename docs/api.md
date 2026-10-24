@@ -59,6 +59,7 @@ Warning filters, including `error`, and warning recording are supported. Callbac
 | Option | Meaning |
 | --- | --- |
 | `L=10` | Maximum number of effects, capped at the internal predictor count; RSS-lambda uses retained variants after MAF filtering, excluding any null column (`L=None` is an alias for 10) |
+| `n_threads=1` | Per-fit native thread limit, an integer from 1 to 32; small kernels stay serial |
 | `scaled_prior_variance=0.2` | Gaussian initial variance relative to outcome variance; NIG slab variance relative to residual variance; scalar or length-L vector |
 | `residual_variance=None` | Initial or fixed residual variance; defaults to the working outcome variance |
 | `estimate_prior_variance=True` | Update component prior variances |
@@ -89,6 +90,22 @@ SER updates; it enables residual estimation and uses posterior stopping when
 L > 1. Slot priors also select
 posterior stopping. Use fixed residual variance with external LD unless
 estimation is justified.
+
+`n_threads` is accepted by `susie`, `susie_suff_stat`, `susie_rss` and
+`susie_rss_lambda`, and the requested value is recorded in `fit.params`.
+The current parallel kernels are dense Gram-matrix products, including proved
+exact-class compact products. They use a private pool for the fit and fixed
+output partitions. Component updates remain sequential. Validation, design-matrix
+operators and dynamic RSS likelihoods remain serial in this implementation;
+requesting more threads does not imply a speedup for those stages or models.
+Small matrices and compact products with fewer than 1024 rows remain serial.
+The process-wide BLAS, OpenMP and Rayon configuration is unchanged.
+
+The default is explicitly one native thread. Environment-only requests through
+`PRUSIE_NUM_THREADS` no longer select public fitting parallelism; pass
+`n_threads=4`, for example. Booleans and floating-point values are not thread
+counts. Determinism is defined for the same input and requested thread count;
+numerical equality between different thread counts is reported, not guaranteed.
 
 For RSS, `z_method="wald"` or `"score"` selects the working statistic;
 `R_mismatch` and `R_finite` control reference mismatch and finite-reference

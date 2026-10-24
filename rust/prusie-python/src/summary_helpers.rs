@@ -436,10 +436,12 @@ unsafe fn exact_block4(base: *const f64, n: usize, i: usize, j: usize) -> bool {
 /// Validate raw/scaled RSS input and prepare an owned repair in the same general
 /// traversal. Return repair errors to Python so its warning still precedes them.
 #[pyfunction]
+#[pyo3(signature = (array, scale, proof_threads=1))]
 fn validate_and_repair_rss<'py>(
     py: Python<'py>,
     array: Bound<'py, PyArray2<f64>>,
     scale: f64,
+    proof_threads: usize,
 ) -> PyResult<(bool, Option<Bound<'py, PyArray2<f64>>>, Option<String>)> {
     ensure_layout(&array)?;
     let input = array
@@ -452,15 +454,7 @@ fn validate_and_repair_rss<'py>(
     }
     #[cfg(target_arch = "x86_64")]
     if scale.abs() <= f64::MAX * 0.5
-        && exact_contiguous_rss_proof(
-            a,
-            scale,
-            if n < 1024 {
-                1
-            } else {
-                prusie_core::num_threads()
-            },
-        )
+        && exact_contiguous_rss_proof(a, scale, if n < 1024 { 1 } else { proof_threads })
     {
         return Ok((true, None, None));
     }

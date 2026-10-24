@@ -144,7 +144,9 @@ pub fn fit_controlled(
     if diagonal.iter().any(|&d| d < 0.0) {
         return Err("XtX diagonal cannot be negative".into());
     }
+    let pool = crate::parallel::pool(control.n_threads, p)?;
     let mut gram = DenseGram {
+        pool: pool.as_ref(),
         matrix,
         scaling: operator,
         diagonal,
@@ -893,6 +895,66 @@ mod tests {
             prior_tol: 1e-9,
             null_index: None,
         }
+    }
+
+    #[test]
+    fn stored_dense_parallel_fit_keeps_all_result_bits_and_inputs() {
+        let p = 1024;
+        let matrix: Vec<f64> = (0..p * p)
+            .map(|k| if k / p == k % p { 20. } else { 0.125 })
+            .collect();
+        let xty: Vec<f64> = (0..p).map(|j| (j % 37) as f64 / 16. - 1.).collect();
+        let original: Vec<_> = matrix.iter().map(|x| x.to_bits()).collect();
+        let mut settings = options(p);
+        settings.l = 2;
+        settings.max_iter = 3;
+        let parent = fit_controlled(
+            &matrix,
+            &xty,
+            99.,
+            100.,
+            &settings,
+            true,
+            None,
+            &FitControl::default(),
+        )
+        .unwrap();
+        for threads in [2, 4] {
+            let control = FitControl {
+                n_threads: threads,
+                ..FitControl::default()
+            };
+            let actual =
+                fit_controlled(&matrix, &xty, 99., 100., &settings, true, None, &control).unwrap();
+            for (a, b) in [
+                (&actual.alpha, &parent.alpha),
+                (&actual.mu, &parent.mu),
+                (&actual.mu2, &parent.mu2),
+                (&actual.lbf_variable, &parent.lbf_variable),
+                (&actual.lbf, &parent.lbf),
+                (&actual.v, &parent.v),
+                (&actual.kl, &parent.kl),
+                (&actual.elbo, &parent.elbo),
+                (&actual.xtxr, &parent.xtxr),
+            ] {
+                assert_eq!(
+                    a.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                    b.iter().map(|x| x.to_bits()).collect::<Vec<_>>()
+                );
+            }
+            assert_eq!(actual.sigma2.to_bits(), parent.sigma2.to_bits());
+            assert_eq!(actual.niter, parent.niter);
+            assert_eq!(actual.converged, parent.converged);
+            assert_eq!(actual.warnings, parent.warnings);
+            assert_eq!(
+                actual.diagnostics.exact_activation,
+                parent.diagnostics.exact_activation
+            );
+        }
+        assert_eq!(
+            matrix.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+            original
+        );
     }
 
     #[test]
