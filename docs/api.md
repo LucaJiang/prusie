@@ -107,6 +107,54 @@ The default is explicitly one native thread. Environment-only requests through
 counts. Determinism is defined for the same input and requested thread count;
 numerical equality between different thread counts is reported, not guaranteed.
 
+## Optional LD workspace
+
+`susie_rss(..., overwrite_ld=False)` preserves caller arrays by default. The
+explicit `True` option can use R and its external aliases as destructive
+workspace, avoiding an owned full repair matrix when scaled asymmetry needs
+repair. It accepts only Python `bool` or NumPy `bool_` values.
+
+The option requires ordinary single-panel `z`, `R`, and provided `n`, with
+`var_y=None`. R must be a plain, aligned, writable native float64 NumPy array
+with ordinary positive C-order strides and NumPy-owned heap storage. Reshape
+views of such an owner are supported. Array subclasses, memory maps and views
+of them, external buffers, readonly, F-order or strided arrays are rejected.
+Other arguments must use plain scalars or flat nonobject numeric/string vectors
+and plain metadata dictionaries; custom conversion/warning hooks and any
+overlap with R, including nested or zero-dimensional views, are rejected before
+writes. External aliases that are not arguments are consumed with R and must
+not be accessed concurrently.
+The option requires standard warning display or plain-list recording through
+`warnings.catch_warnings(record=True)`; custom warning dispatch/display and
+`logging.captureWarnings` are unsupported. Ordinary warning-as-error filters
+remain supported. `R_finite` must be `None` or the plain Python value `False`;
+the NumPy boolean scalar is outside this narrow support boundary.
+
+This option excludes reference `X`, `bhat`/`shat`, finite-reference/mismatch or
+control objects, MAF filtering, null-weight augmentation, mixture/slot/NIG
+models, residual estimation methods other than MoM, greedy fitting, proxy extension, warm starts, explicit convergence
+objects, `check_input=True`, tracking, retained data, refinement and
+`init_only=True`. Ordinary Gaussian controls, prior weights, standardization,
+basic CS/purity options and `n_threads` remain available. Unsupported opt-in
+requests raise before writes; use `overwrite_ld=False` for the other routes.
+
+The native helper records its actual action in `fit.qc['ld_overwrite']`, with
+the original RSS scale n−1:
+
+| Action | State of R after a successful call |
+| --- | --- |
+| `ordered_scaled_xtx` | Both orientations contain `(Rij*(n−1) + Rji*(n−1))/2` in float64, in that operation order |
+| `symmetric_no_write` | Original bytes retained after the complete exact-symmetry proof |
+| `no_witness_eager_no_write` | Original bytes retained; original owned preparation was used because no finite scaled-asymmetry witness exists |
+
+`fit.params['overwrite_ld']` records the requested flag. A consumed matrix is
+scaled XtX, so reload the original LD before a later fit. **After writes begin,
+an error or a warning promoted to an exception can leave R and its aliases
+changed.** There is no rollback guarantee. This includes later matrix/fit/option
+validation failures; no result metadata is available on an aborted call.
+Default calls and every other API argument retain their original preservation
+contract.
+
 For RSS, `z_method="wald"` or `"score"` selects the working statistic;
 `R_mismatch` and `R_finite` control reference mismatch and finite-reference
 adjustments. `susie_rss_control(...)` creates a validated control object for

@@ -44,4 +44,6 @@ mod tests {
 }
 
 mod rss_pairs_owned;
-pub use rss_pairs_owned::{rss_pair_validation_owned, RssPairLayout, RssPairValidation};
+pub use rss_pairs_owned::{
+    rss_pair_validation_in_place, rss_pair_validation_owned, RssPairLayout, RssPairValidation,
+};

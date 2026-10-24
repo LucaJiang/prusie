@@ -25,6 +25,7 @@
 <ul>
 <li><a href="#fitting-entry-points">Fitting entry points</a></li>
 <li><a href="#shared-fitting-options">Shared fitting options</a></li>
+<li><a href="#optional-ld-workspace">Optional LD workspace</a></li>
 <li><a href="#susieresult">SusieResult</a></li>
 <li><a href="#posterior-and-model-helpers">Posterior and model helpers</a></li>
 <li><a href="#load_example">load_example</a></li>
@@ -229,6 +230,64 @@ The process-wide BLAS, OpenMP and Rayon configuration is unchanged.</p>
 <code>n_threads=4</code>, for example. Booleans and floating-point values are not thread
 counts. Determinism is defined for the same input and requested thread count;
 numerical equality between different thread counts is reported, not guaranteed.</p>
+<h2 id="optional-ld-workspace">Optional LD workspace</h2>
+<p><code>susie_rss(..., overwrite_ld=False)</code> preserves caller arrays by default. The
+explicit <code>True</code> option can use R and its external aliases as destructive
+workspace, avoiding an owned full repair matrix when scaled asymmetry needs
+repair. It accepts only Python <code>bool</code> or NumPy <code>bool_</code> values.</p>
+<p>The option requires ordinary single-panel <code>z</code>, <code>R</code>, and provided <code>n</code>, with
+<code>var_y=None</code>. R must be a plain, aligned, writable native float64 NumPy array
+with ordinary positive C-order strides and NumPy-owned heap storage. Reshape
+views of such an owner are supported. Array subclasses, memory maps and views
+of them, external buffers, readonly, F-order or strided arrays are rejected.
+Other arguments must use plain scalars or flat nonobject numeric/string vectors
+and plain metadata dictionaries; custom conversion/warning hooks and any
+overlap with R, including nested or zero-dimensional views, are rejected before
+writes. External aliases that are not arguments are consumed with R and must
+not be accessed concurrently.
+The option requires standard warning display or plain-list recording through
+<code>warnings.catch_warnings(record=True)</code>; custom warning dispatch/display and
+<code>logging.captureWarnings</code> are unsupported. Ordinary warning-as-error filters
+remain supported. <code>R_finite</code> must be <code>None</code> or the plain Python value <code>False</code>;
+the NumPy boolean scalar is outside this narrow support boundary.</p>
+<p>This option excludes reference <code>X</code>, <code>bhat</code>/<code>shat</code>, finite-reference/mismatch or
+control objects, MAF filtering, null-weight augmentation, mixture/slot/NIG
+models, residual estimation methods other than MoM, greedy fitting, proxy extension, warm starts, explicit convergence
+objects, <code>check_input=True</code>, tracking, retained data, refinement and
+<code>init_only=True</code>. Ordinary Gaussian controls, prior weights, standardization,
+basic CS/purity options and <code>n_threads</code> remain available. Unsupported opt-in
+requests raise before writes; use <code>overwrite_ld=False</code> for the other routes.</p>
+<p>The native helper records its actual action in <code>fit.qc['ld_overwrite']</code>, with
+the original RSS scale n−1:</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Action</th>
+<th>State of R after a successful call</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ordered_scaled_xtx</code></td>
+<td>Both orientations contain <code>(Rij*(n−1) + Rji*(n−1))/2</code> in float64, in that operation order</td>
+</tr>
+<tr>
+<td><code>symmetric_no_write</code></td>
+<td>Original bytes retained after the complete exact-symmetry proof</td>
+</tr>
+<tr>
+<td><code>no_witness_eager_no_write</code></td>
+<td>Original bytes retained; original owned preparation was used because no finite scaled-asymmetry witness exists</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>fit.params['overwrite_ld']</code> records the requested flag. A consumed matrix is
+scaled XtX, so reload the original LD before a later fit. <strong>After writes begin,
+an error or a warning promoted to an exception can leave R and its aliases
+changed.</strong> There is no rollback guarantee. This includes later matrix/fit/option
+validation failures; no result metadata is available on an aborted call.
+Default calls and every other API argument retain their original preservation
+contract.</p>
 <p>For RSS, <code>z_method="wald"</code> or <code>"score"</code> selects the working statistic;
 <code>R_mismatch</code> and <code>R_finite</code> control reference mismatch and finite-reference
 adjustments. <code>susie_rss_control(...)</code> creates a validated control object for

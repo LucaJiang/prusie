@@ -366,6 +366,45 @@ complete-alpha tolerance above, not bitwise equality. The compile-time
 uses the existing scalar fallback. It leaves model settings unchanged and makes
 no promise of identical floating-point results across platforms. There is no
 runtime environment switch selecting an experimental numerical algorithm.
+## Dense storage and matrix products
+
+Ordinary RSS validation owns its repair and leaves the caller unchanged.
+The explicit `susie_rss(overwrite_ld=True)` storage option first performs the
+same complete exact-symmetry proof. If it fails, a read-only search must find
+finite raw/scaled terms with unequal scaled values before any store. With no
+witness, the unchanged owned helper is used and R remains untouched. Otherwise
+the read borrow ends and one NumPy mutable borrow, under the GIL, supplies a
+paired repair traversal. A complete SSE2 tile loads both original orientations
+before any tile store; scalar tails load each original pair before either
+store. No immutable Rust slice aliases the mutable buffer, and no full backup
+or repaired matrix is allocated by this destructive path.
+
+The traversal independently derives the same raw/scaled/repair predicates and
+ordered `(x*s + y*s)/2` values as owned preparation. Raw validation errors keep
+their priority, then the original Python symmetry warning precedes deferred
+repair errors. The mutable borrow ends before warning dispatch. The actual
+native action controls the matrix representation: consumed R is scaled XtX
+with global scale 1; no-write paths keep raw R and scale n−1. Original sample
+size and all model settings are retained. Diagonal preparation, ordinary stored
+products and both native purity loops use that same matrix and scale. The
+option's support, alias exclusions and destructive-on-failure contract are
+documented in [the API](api.md#optional-ld-workspace).
+
+<!-- calculated:memory:start -->
+At $p=5000$, $8p^2=200,000,000$ bytes, or approximately **190.7 MiB**.
+<!-- calculated:memory:end -->
+
+The dense operator applies diagonal scaling implicitly, avoiding a separate
+scaled matrix when the factors permit safe evaluation. Its products use a four-column kernel
+with runtime-checked AVX2 support and a portable fallback. Gaussian single-effect
+updates reuse groups of equal sampling variance. Default optimizations are
+selected using numerical validation and lower median complete-call runtime on
+a strict majority of a fixed case panel; this does not imply every input is faster.
+There are no environment variables for selecting alternative mathematical paths.
+Use the per-fit `n_threads` parameter for native product parallelism. Its default
+is one, and public validation remains serial regardless of `PRUSIE_NUM_THREADS`.
+Component updates are sequential. The primary comparisons use one numerical
+thread throughout.
 
 ## Reference source mapping
 

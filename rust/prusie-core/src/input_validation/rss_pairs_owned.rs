@@ -34,7 +34,6 @@ impl Default for RssPairValidation {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
 impl RssPairValidation {
     #[inline]
     fn pair(&mut self, x: f64, y: f64, scale: f64, diagonal: bool) -> f64 {
@@ -276,6 +275,163 @@ unsafe fn pair_tile4(
     }
 }
 
+/// Destructively validate and repair one uniquely borrowed C-order RSS buffer.
+/// Every original unordered pair is loaded before either result is stored.
+/// The caller must establish a finite scaled-asymmetry witness before choosing
+/// this function: symmetric inputs must retain their original unscaled bytes.
+/// This function independently computes every flag and does not trust a prior
+/// validation result. Invalid dimensions return None before any write.
+pub fn rss_pair_validation_in_place(
+    values: &mut [f64],
+    n: usize,
+    scale: f64,
+) -> Option<RssPairValidation> {
+    if n == 0
+        || n.checked_mul(n) != Some(values.len())
+        || values.len() > isize::MAX as usize / std::mem::size_of::<f64>()
+    {
+        return None;
+    }
+    let base = values.as_mut_ptr();
+    let mut result = RssPairValidation::default();
+    // SAFETY: base derives from the only mutable slice, dimensions are checked,
+    // and no shared slice or additional mutable reference is constructed.
+    unsafe {
+        for i in 0..n {
+            let raw = *base.add(i * n + i);
+            *base.add(i * n + i) = result.pair(raw, raw, scale, true);
+        }
+        #[cfg(target_arch = "x86_64")]
+        let mut masks = {
+            use std::arch::x86_64::*;
+            PairMasks {
+                raw: _mm_castsi128_pd(_mm_set1_epi64x(-1)),
+                scaled: _mm_castsi128_pd(_mm_set1_epi64x(-1)),
+                symmetric: _mm_castsi128_pd(_mm_set1_epi64x(-1)),
+                repair: _mm_castsi128_pd(_mm_set1_epi64x(-1)),
+            }
+        };
+        for ii in (0..n).step_by(32) {
+            for jj in (ii..n).step_by(32) {
+                for i in (ii..(ii + 32).min(n)).step_by(4) {
+                    for j in (jj.max(i)..(jj + 32).min(n)).step_by(4) {
+                        #[cfg(target_arch = "x86_64")]
+                        if j > i && i + 4 <= n && j + 4 <= n {
+                            pair_tile4_in_place(base, n, i, j, scale, &mut masks);
+                            continue;
+                        }
+                        for row in i..(i + 4).min(n) {
+                            for column in j.max(row + 1)..(j + 4).min(n) {
+                                let x = *base.add(row * n + column);
+                                let y = *base.add(column * n + row);
+                                let value = result.pair(x, y, scale, false);
+                                *base.add(row * n + column) = value;
+                                *base.add(column * n + row) = value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #[cfg(target_arch = "x86_64")]
+        {
+            use std::arch::x86_64::*;
+            result.raw_finite &= _mm_movemask_pd(masks.raw) == 3;
+            result.scaled_finite &= _mm_movemask_pd(masks.scaled) == 3;
+            result.symmetric &= _mm_movemask_pd(masks.symmetric) == 3;
+            result.repair_finite &= _mm_movemask_pd(masks.repair) == 3;
+        }
+    }
+    Some(result)
+}
+
+// SAFETY: base addresses a live uniquely borrowed n*n f64 buffer; both transposed 4*4
+// blocks beginning at (i,j) and (j,i) are complete and in bounds; SSE2 exists.
+#[cfg(target_arch = "x86_64")]
+#[inline]
+unsafe fn pair_tile4_in_place(
+    base: *mut f64,
+    n: usize,
+    i: usize,
+    j: usize,
+    scale: f64,
+    masks: &mut PairMasks,
+) {
+    use std::arch::x86_64::*;
+    let abs_mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7fff_ffff_ffff_ffff));
+    let finite_bound = _mm_set1_pd(f64::MAX);
+    let scale = _mm_set1_pd(scale);
+    let two = _mm_set1_pd(2.);
+    let mut tile = [[_mm_setzero_pd(); 2]; 4];
+    for half in [0, 2] {
+        let b0 = _mm_loadu_pd(base.add(j * n + i + half));
+        let b1 = _mm_loadu_pd(base.add((j + 1) * n + i + half));
+        let b2 = _mm_loadu_pd(base.add((j + 2) * n + i + half));
+        let b3 = _mm_loadu_pd(base.add((j + 3) * n + i + half));
+        let columns = [
+            (_mm_unpacklo_pd(b0, b1), _mm_unpacklo_pd(b2, b3)),
+            (_mm_unpackhi_pd(b0, b1), _mm_unpackhi_pd(b2, b3)),
+        ];
+        for (offset, (low, high)) in columns.into_iter().enumerate() {
+            let row = i + half + offset;
+            let left = [
+                _mm_loadu_pd(base.add(row * n + j)),
+                _mm_loadu_pd(base.add(row * n + j + 2)),
+            ];
+            for (column, (physical_x, physical_y)) in left.into_iter().zip([low, high]).enumerate()
+            {
+                let (x, y) = (physical_x, physical_y);
+                masks.raw = _mm_and_pd(
+                    masks.raw,
+                    _mm_and_pd(
+                        _mm_cmple_pd(_mm_and_pd(x, abs_mask), finite_bound),
+                        _mm_cmple_pd(_mm_and_pd(y, abs_mask), finite_bound),
+                    ),
+                );
+                let sx = _mm_mul_pd(x, scale);
+                let sy = _mm_mul_pd(y, scale);
+                masks.scaled = _mm_and_pd(
+                    masks.scaled,
+                    _mm_and_pd(
+                        _mm_cmple_pd(_mm_and_pd(sx, abs_mask), finite_bound),
+                        _mm_cmple_pd(_mm_and_pd(sy, abs_mask), finite_bound),
+                    ),
+                );
+                masks.symmetric = _mm_and_pd(masks.symmetric, _mm_cmpeq_pd(sx, sy));
+                // Preserve both scaled terms and the parent's ordered average.
+                let repaired = _mm_div_pd(_mm_add_pd(sx, sy), two);
+                tile[half + offset][column] = repaired;
+                masks.repair = _mm_and_pd(
+                    masks.repair,
+                    _mm_cmple_pd(_mm_and_pd(repaired, abs_mask), finite_bound),
+                );
+            }
+        }
+    }
+    // All original terms in BOTH orientations have been loaded before the
+    // first write. Complete paired tiles cannot overlap another visited pair.
+    for (row, values) in tile.iter().enumerate() {
+        _mm_storeu_pd(base.add((i + row) * n + j), values[0]);
+        _mm_storeu_pd(base.add((i + row) * n + j + 2), values[1]);
+    }
+    // Store the same repaired bits to the transposed lower tile. Each pair
+    // contains two adjacent low-row coordinates in one high output row.
+    for half in [0, 2] {
+        for columns in [0, 1] {
+            let a = tile[half][columns];
+            let b = tile[half + 1][columns];
+            _mm_storeu_pd(
+                base.add((j + 2 * columns) * n + i + half),
+                _mm_unpacklo_pd(a, b),
+            );
+            _mm_storeu_pd(
+                base.add((j + 2 * columns + 1) * n + i + half),
+                _mm_unpackhi_pd(a, b),
+            );
+        }
+    }
+}
+
 #[cfg(all(test, target_arch = "x86_64"))]
 mod tests {
     use super::*;
@@ -339,6 +495,56 @@ mod tests {
             values.iter().map(|x| x.to_bits()).collect::<Vec<_>>()
         );
     }
+    #[test]
+    fn destructive_tiles_match_independent_ordered_oracle_at_all_boundaries() {
+        for n in [
+            1, 2, 3, 4, 5, 7, 8, 9, 15, 16, 17, 31, 32, 33, 63, 64, 65, 67, 129,
+        ] {
+            let mut values: Vec<f64> = (0..n * n)
+                .map(|k| {
+                    if k / n == k % n {
+                        1.
+                    } else {
+                        ((k * 17 + k / n * 11) % 67) as f64 / 128. - 0.25
+                    }
+                })
+                .collect();
+            for index in [0, n * n / 2, n * n - 1] {
+                let old = values[index];
+                for raw in [
+                    old,
+                    -0.,
+                    0.,
+                    f64::from_bits(1),
+                    f64::MAX,
+                    f64::MIN,
+                    f64::INFINITY,
+                    f64::NAN,
+                ] {
+                    values[index] = raw;
+                    for scale in [0., -0., 1., -1., 99., f64::MAX, f64::from_bits(1)] {
+                        let (expected, repair) = oracle(&values, n, scale, RssPairLayout::C);
+                        let mut actual = values.clone();
+                        let flags = rss_pair_validation_in_place(&mut actual, n, scale).unwrap();
+                        assert_eq!(flags, expected, "n={n},index={index},scale={scale}");
+                        if expected.raw_finite && expected.scaled_finite {
+                            assert_eq!(
+                                actual.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                                repair.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                                "n={n},index={index},scale={scale}"
+                            );
+                        }
+                    }
+                }
+                values[index] = old;
+            }
+        }
+        let mut invalid = [1.; 15];
+        assert!(rss_pair_validation_in_place(&mut invalid, 4, 99.).is_none());
+        assert_eq!(invalid, [1.; 15]);
+        assert!(rss_pair_validation_in_place(&mut [], 0, 99.).is_none());
+    }
+
     #[test]
     fn owned_tiles_match_scalar_flags_bits_and_write_every_cell_once() {
         for n in [

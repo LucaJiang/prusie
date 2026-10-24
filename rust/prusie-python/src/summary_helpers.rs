@@ -1,7 +1,9 @@
 //! Matrix validation and credible-set purity with bounded additional memory.
 //!
 //! NumPy arrays are borrowed only while the GIL is held and are never
-//! modified. C-ordered, F-ordered and strided layouts are accepted.
+//! modified by default. The explicit overwrite helper instead holds one write
+//! borrow for its destructive traversal. C/F/strided layouts remain accepted
+//! by the ordinary nonmutating helpers.
 use crate::array_layout::ensure_layout;
 use numpy::{IntoPyArray, PyArray1, PyArray2, PyArrayMethods, PyUntypedArrayMethods};
 use pyo3::exceptions::PyValueError;
@@ -181,6 +183,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(validate_matrix, module)?)?;
     module.add_function(wrap_pyfunction!(validate_rss_matrix, module)?)?;
     module.add_function(wrap_pyfunction!(validate_and_repair_rss, module)?)?;
+    module.add_function(wrap_pyfunction!(validate_and_overwrite_rss, module)?)?;
     module.add_function(wrap_pyfunction!(cs_pairwise_abs, module)?)?;
     module.add_function(wrap_pyfunction!(complete_finite_scan, module)?)?;
     Ok(())
@@ -570,4 +573,118 @@ fn validate_and_repair_rss<'py>(
         None
     };
     Ok((false, Some(repaired), error))
+}
+
+/// Explicit destructive RSS storage option. Python rejects unsupported input
+/// owners, aliases and hooks before this entry; native layout/borrow/dimension
+/// checks remain independent. The GIL is held for every proof and write.
+#[pyfunction]
+#[pyo3(signature = (array, scale, proof_threads=1))]
+fn validate_and_overwrite_rss<'py>(
+    py: Python<'py>,
+    array: Bound<'py, PyArray2<f64>>,
+    scale: f64,
+    proof_threads: usize,
+) -> PyResult<(
+    bool,
+    Option<Bound<'py, PyArray2<f64>>>,
+    Option<String>,
+    &'static str,
+)> {
+    ensure_layout(&array)?;
+    // Read the C-API writeability flag directly, without invoking Python hooks.
+    // SAFETY: Bound<PyArray2<f64>> retains the live PyArrayObject under the GIL.
+    if unsafe { (*array.as_array_ptr()).flags & numpy::npyffi::NPY_ARRAY_WRITEABLE == 0 } {
+        return Err(PyValueError::new_err("overwrite_ld requires writable R"));
+    }
+    if !array.is_c_contiguous() {
+        return Err(PyValueError::new_err(
+            "overwrite_ld requires C-contiguous R",
+        ));
+    }
+    let witness = {
+        // This read borrow and every view/slice derived from it END before a
+        // mutable borrow is requested. No Python callback runs between phases.
+        let input = array
+            .try_readonly()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let a = input.as_array();
+        let n = a.nrows();
+        if n == 0
+            || a.ncols() != n
+            || n.checked_mul(n)
+                .and_then(|v| v.checked_mul(8))
+                .filter(|&v| v <= isize::MAX as usize)
+                .is_none()
+        {
+            return Err(PyValueError::new_err(
+                "R must be square with addressable storage",
+            ));
+        }
+        #[cfg(target_arch = "x86_64")]
+        if scale.abs() <= f64::MAX * 0.5 && exact_contiguous_rss_proof(a, scale, proof_threads) {
+            return Ok((true, None, None, "symmetric_no_write"));
+        }
+        let values = input
+            .as_slice()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let mut witness = false;
+        'rows: for i in 0..n {
+            for j in (i + 1)..n {
+                let x = values[i * n + j];
+                let y = values[j * n + i];
+                let sx = x * scale;
+                let sy = y * scale;
+                if x.is_finite() && y.is_finite() && sx.is_finite() && sy.is_finite() && sx != sy {
+                    witness = true;
+                    break 'rows;
+                }
+            }
+        }
+        witness
+    };
+    if !witness {
+        // Speculative averages can overflow even for a valid scaled-symmetric
+        // input. Keep the original owned helper and its untouched-caller rules.
+        let (symmetric, repaired, error) =
+            validate_and_repair_rss(py, array, scale, proof_threads)?;
+        return Ok((symmetric, repaired, error, "no_witness_eager_no_write"));
+    }
+    let flags = {
+        let mut input = array
+            .try_readwrite()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        let n = input.shape()[0];
+        let values = input
+            .as_slice_mut()
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        prusie_core::input_validation::rss_pair_validation_in_place(values, n, scale)
+            .ok_or_else(|| PyValueError::new_err("R must be square with addressable storage"))?
+    };
+    // Complete independent flags, in the parent's exact error priority. Caller
+    // storage may already be consumed when an invalid input is discovered.
+    if !flags.raw_finite {
+        return Err(PyValueError::new_err("R must contain only finite values"));
+    }
+    if !flags.raw_nonnegative {
+        return Err(PyValueError::new_err("R diagonal must be nonnegative"));
+    }
+    if !flags.scaled_finite {
+        return Err(PyValueError::new_err("XtX must contain only finite values"));
+    }
+    if !flags.scaled_nonnegative {
+        return Err(PyValueError::new_err("XtX diagonal must be nonnegative"));
+    }
+    debug_assert!(
+        !flags.symmetric,
+        "An independently finite scaled witness cannot be symmetric"
+    );
+    let error = if !flags.repair_finite {
+        Some("XtX must contain only finite values".into())
+    } else if !flags.repair_nonnegative {
+        Some("XtX diagonal must be nonnegative".into())
+    } else {
+        None
+    };
+    Ok((false, Some(array), error, "ordered_scaled_xtx"))
 }

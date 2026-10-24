@@ -71,6 +71,86 @@ def _ordinary_warning_sink():
     )
 
 
+def _overwrite_prepare(arguments):
+    from ._overwrite import prepare
+
+    if not _ordinary_overwrite_warning_sink():
+        raise ValueError("overwrite_ld requires ordinary warning handling without custom hooks")
+    state = prepare(arguments)
+    _thread_count(arguments["n_threads"])
+    L = _integer(arguments["L"], "L")
+    _integer(arguments["max_iter"], "max_iter")
+    # Reject inexpensive matrix-independent errors before taking workspace.
+    # These checks use the ordinary rules without normalizing weights twice.
+    _scalar(arguments["n"], "n", lower=1.0, strict=True)
+    for name in ("r_tol", "residual_variance_lowerbound"):
+        _scalar(arguments[name], name)
+    _scalar(1e-4 if arguments["tol"] is None else arguments["tol"], "tol")
+    for name in ("greedy_lbf_cutoff", "check_null_threshold"):
+        _scalar(arguments[name], name, lower=-np.inf)
+    prior_tol = float(arguments["prior_tol"])
+    if np.isnan(prior_tol) or prior_tol < 0:
+        raise ValueError("prior_tol must be a nonnegative scalar")
+    lower = arguments["residual_variance_lowerbound"]
+    upper = arguments["residual_variance_upperbound"]
+    if upper is not None and (np.isnan(upper) or upper < lower):
+        raise ValueError("residual_variance_upperbound must be at least the lower bound")
+    if arguments["residual_variance"] is not None:
+        _scalar(arguments["residual_variance"], "residual_variance", strict=True)
+    for name in ("coverage", "min_abs_corr"):
+        value = arguments[name]
+        if value is not None and (not np.isfinite(value) or not 0 <= value <= 1):
+            raise ValueError(f"{name} must be in [0, 1]")
+    value = arguments["scaled_prior_variance"]
+    if np.ndim(value) == 0:
+        _scalar(value, "scaled_prior_variance")
+    elif np.any(_vector(value, "scaled_prior_variance", L) < 0):
+        raise ValueError("scaled_prior_variance must be nonnegative")
+    weights = arguments["prior_weights"]
+    if weights is not None:
+        weights = _vector(weights, "prior_weights", arguments["R"].shape[0])
+        if np.any(weights < 0) or not np.isfinite(weights.sum()) or weights.sum() <= 0:
+            raise ValueError("prior_weights must be nonnegative with a finite positive sum")
+    if arguments["estimate_prior_variance"] and arguments["estimate_prior_method"] not in (
+        "optim", "EM", "simple", "fixed_mixture"
+    ):
+        raise ValueError("estimate_prior_method must be 'optim', 'EM', or 'simple'")
+    value = arguments["n_purity"]
+    if value is not None and value != "auto" and not np.isfinite(value):
+        raise ValueError("n_purity must be a finite number or None")
+    _metadata(arguments["variant_ids"], arguments["variant_metadata"], arguments["R"].shape[0])
+    return state
+
+
+def _ordinary_overwrite_warning_sink():
+    """Admit the standard dispatcher/display or plain-list warning recording."""
+    import _warnings
+    from types import BuiltinMethodType, FunctionType
+
+    def standard(function, name):
+        return (type(function) is FunctionType
+                and function.__globals__ is vars(warning_module)
+                and function.__code__.co_name == name
+                and function.__code__.co_filename == warning_module._showwarning_orig.__code__.co_filename)
+
+    implementation = warning_module._showwarnmsg_impl
+    recording = (type(implementation) is BuiltinMethodType
+                 and type(implementation.__self__) is list
+                 and implementation.__name__ == "append")
+    return (_ordinary_warning_sink()
+            and warning_module.warn is _warnings.warn
+            and warning_module.showwarning is warning_module._showwarning_orig
+            and standard(warning_module.showwarning, "showwarning")
+            and standard(warning_module._showwarnmsg, "_showwarnmsg")
+            and (standard(implementation, "_showwarnmsg_impl") or recording))
+
+
+def _overwrite_recheck(state):
+    from ._overwrite import recheck
+
+    recheck(state)
+
+
 def _vector(value: ArrayLike, name: str, size: int | None = None) -> NDArray[np.float64]:
     array = np.asarray(value, dtype=np.float64)
     if array.ndim != 1 or array.size == 0:
@@ -1392,6 +1472,7 @@ def susie_rss(
     standardize: bool = True,
     max_iter: int = 50,
     n_threads: int = 1,
+    overwrite_ld: bool = False,
     s_init: SusieResult | Mapping[str, Any] | None = None,
     model_init: SusieResult | Mapping[str, Any] | None = None,
     estimate_residual_method: str = "MoM",
@@ -1433,6 +1514,16 @@ def susie_rss(
         Signed LD correlation matrix in the variant and effect-allele order of
         the summary statistics. Singular matrices are accepted; no ridge or
         eigenvalue adjustment is applied.
+    overwrite_ld : bool, default False
+        Allow R and its external aliases to be consumed as workspace. Supported
+        only for plain writable native float64 C-order NumPy-owned R with
+        ordinary z/R/n inputs and no retained/advanced model options. A finite
+        scaled-asymmetry witness enables ordered in-place symmetrization into
+        XtX; exact-symmetric and no-witness inputs stay unchanged. Unsupported
+        storage, options, custom hooks and overlaps with other arguments raise
+        before writes. Once writes begin, later errors or warning-as-error may
+        leave R changed. Reload the original LD before another call, including
+        after an aborted call. The default never overwrites caller arrays.
     n : float, optional
         Sample size of the association study; must exceed one. If omitted, the
         large-sample likelihood of susieR is used (XᵀX = R, Xᵀy = z, yᵀy = 1,
@@ -1549,6 +1640,15 @@ def susie_rss(
     >>> fit.pip.shape
     (2,)
     """
+    if type(overwrite_ld) not in (bool, np.bool_):
+        raise ValueError("overwrite_ld must be bool or numpy.bool_")
+    overwrite_ld = bool(overwrite_ld)
+    if overwrite_ld:
+        # Snapshot exactly the public arguments before coercion can hide aliases.
+        overwrite_state = _overwrite_prepare(locals())
+    else:
+        # The default path performs no argument snapshot or alias traversal.
+        overwrite_state = None
     requested_convergence_method = convergence_method
     if (R is None) == (X is None):
         raise ValueError("Supply exactly one of R or X")
@@ -1675,6 +1775,8 @@ def susie_rss(
         and _ordinary_warning_sink()
     )
     if design_data is None:
+        if overwrite_ld and (prevalidated_scale is None or not fused_rss):
+            raise ValueError("overwrite_ld requires the ordinary contiguous z/R/n route")
         if prevalidated_scale is None or not fused_rss:
             R, symmetric = _validated_matrix(R, "R", len(z), rss_scale=prevalidated_scale)
         else:
@@ -1682,9 +1784,15 @@ def susie_rss(
             if R.shape != (len(z), len(z)):
                 raise ValueError(f"R must have shape ({len(z)}, {len(z)})")
             R = native_array(R)
-            symmetric, repaired_rss, repair_error = _native.validate_and_repair_rss(
-                R, prevalidated_scale, proof_threads=1
-            )
+            if overwrite_ld:
+                _overwrite_recheck(overwrite_state)
+                symmetric, repaired_rss, repair_error, overwrite_action = _native.validate_and_overwrite_rss(
+                    R, prevalidated_scale, proof_threads=1
+                )
+            else:
+                symmetric, repaired_rss, repair_error = _native.validate_and_repair_rss(
+                    R, prevalidated_scale, proof_threads=1
+                )
             R = np.ascontiguousarray(R)
     else:
         R, symmetric = None, True
@@ -1814,7 +1922,8 @@ def susie_rss(
         maf=maf,
         maf_thresh=maf_thresh,
     )
-    request = replace(request, requested_convergence_method=requested_convergence_method)
+    request = replace(request, requested_convergence_method=requested_convergence_method,
+                      params={**request.params, "overwrite_ld": overwrite_ld})
     fit = _fit(request)
     if init_only:
         return fit
@@ -1831,6 +1940,11 @@ def susie_rss(
         R_mismatch=R_mismatch,
         control=dict(rss_control),
     )
+    if overwrite_ld:
+        fit.qc["ld_overwrite"] = dict(
+            action=overwrite_action,
+            original_rss_scale=prevalidated_scale,
+        )
     fit.warnings[:0] = extra_warnings
     return fit
 
