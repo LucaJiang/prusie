@@ -480,34 +480,65 @@ fn validate_and_repair_rss<'py>(
     let mut symmetric = true;
     let mut repair_finite = true;
     let mut repair_nonnegative = true;
-    const BLOCK: usize = 32;
-    for ii in (0..n).step_by(BLOCK) {
-        for jj in (ii..n).step_by(BLOCK) {
-            for i in ii..(ii + BLOCK).min(n) {
-                for j in jj.max(i)..(jj + BLOCK).min(n) {
-                    let (x, y) = match values {
-                        Some(v) if row_major => (v[i * n + j], v[j * n + i]),
-                        Some(v) if column_major => (v[j * n + i], v[i * n + j]),
-                        _ => (a[(i, j)], a[(j, i)]),
-                    };
-                    raw_finite &= x.is_finite() && y.is_finite();
-                    let sx = x * scale;
-                    let sy = y * scale;
-                    scaled_finite &= sx.is_finite() && sy.is_finite();
-                    symmetric &= sx == sy;
-                    let value = (sx + sy) / 2.;
-                    repair_finite &= value.is_finite();
-                    if i == j {
-                        raw_nonnegative &= x >= 0.;
-                        scaled_nonnegative &= sx >= 0.;
-                        repair_nonnegative &= value >= 0.;
-                    }
-                    // SAFETY: both indices are in range; every C-order output
-                    // element is written once, under the input borrow and GIL.
-                    unsafe {
-                        repaired.data().add(i * n + j).write(value);
-                        if i != j {
-                            repaired.data().add(j * n + i).write(value);
+    let paired = values
+        .filter(|_| row_major || column_major)
+        .and_then(|values| {
+            let layout = if row_major {
+                prusie_core::input_validation::RssPairLayout::C
+            } else {
+                prusie_core::input_validation::RssPairLayout::F
+            };
+            // SAFETY: the checked private NumPy allocation has exactly n*n cells,
+            // cannot alias the held input borrow, and is not exposed. MaybeUninit
+            // permits writes without forming f64 references over unwritten cells.
+            let output = unsafe {
+                std::slice::from_raw_parts_mut(
+                    repaired.data().cast::<std::mem::MaybeUninit<f64>>(),
+                    n * n,
+                )
+            };
+            prusie_core::input_validation::rss_pair_validation_owned(
+                values, n, scale, layout, output,
+            )
+        });
+    if let Some(flags) = paired {
+        raw_finite = flags.raw_finite;
+        raw_nonnegative = flags.raw_nonnegative;
+        scaled_finite = flags.scaled_finite;
+        scaled_nonnegative = flags.scaled_nonnegative;
+        symmetric = flags.symmetric;
+        repair_finite = flags.repair_finite;
+        repair_nonnegative = flags.repair_nonnegative;
+    } else {
+        const BLOCK: usize = 32;
+        for ii in (0..n).step_by(BLOCK) {
+            for jj in (ii..n).step_by(BLOCK) {
+                for i in ii..(ii + BLOCK).min(n) {
+                    for j in jj.max(i)..(jj + BLOCK).min(n) {
+                        let (x, y) = match values {
+                            Some(v) if row_major => (v[i * n + j], v[j * n + i]),
+                            Some(v) if column_major => (v[j * n + i], v[i * n + j]),
+                            _ => (a[(i, j)], a[(j, i)]),
+                        };
+                        raw_finite &= x.is_finite() && y.is_finite();
+                        let sx = x * scale;
+                        let sy = y * scale;
+                        scaled_finite &= sx.is_finite() && sy.is_finite();
+                        symmetric &= sx == sy;
+                        let value = (sx + sy) / 2.;
+                        repair_finite &= value.is_finite();
+                        if i == j {
+                            raw_nonnegative &= x >= 0.;
+                            scaled_nonnegative &= sx >= 0.;
+                            repair_nonnegative &= value >= 0.;
+                        }
+                        // SAFETY: both indices are in range; every C-order output
+                        // element is written once, under the input borrow and GIL.
+                        unsafe {
+                            repaired.data().add(i * n + j).write(value);
+                            if i != j {
+                                repaired.data().add(j * n + i).write(value);
+                            }
                         }
                     }
                 }
