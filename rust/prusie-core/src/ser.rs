@@ -30,6 +30,24 @@ fn log_probabilities_into(
     }
 }
 
+/// Sum nonnegative exponentiated likelihood weights by a balanced tree.
+/// Scratch is overwritten before every objective evaluation; signed KL and
+/// residual sums and posterior normalization retain compensated accumulation.
+fn positive_pairwise_sum(values: &mut [f64]) -> f64 {
+    let mut length = values.len();
+    while length > 1 {
+        let pairs = length / 2;
+        for j in 0..pairs {
+            values[j] = values[2 * j] + values[2 * j + 1];
+        }
+        if length % 2 != 0 {
+            values[pairs] = values[length - 1];
+        }
+        length = pairs + length % 2;
+    }
+    values.first().copied().unwrap_or(0.0)
+}
+
 fn log_sum_exp(x: &mut [f64]) -> f64 {
     log_sum_exp_at(x, None)
 }
@@ -38,7 +56,7 @@ fn log_sum_exp_at(x: &mut [f64], known_maximum: Option<f64>) -> f64 {
     let largest =
         known_maximum.unwrap_or_else(|| x.iter().copied().fold(f64::NEG_INFINITY, f64::max));
     crate::vector_math::exp_shift(x, largest);
-    largest + sum(x.iter().copied()).ln()
+    largest + positive_pairwise_sum(x).ln()
 }
 
 fn log_likelihood(
