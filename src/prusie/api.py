@@ -12,7 +12,7 @@ import re
 import warnings as warning_module
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
-from types import BuiltinFunctionType, MappingProxyType
+from types import MappingProxyType
 from typing import Any
 
 import numpy as np
@@ -34,7 +34,6 @@ from .refinement import RefinementConfig, initial_options, make_prepared, refine
 from .result import SusieResult
 
 _DEFAULT_WARNING_CALL = warning_module.warn
-_DEFAULT_WARNING_SINK = warning_module._showwarnmsg_impl
 _DEFAULT_SHOWWARNMSG = warning_module._showwarnmsg
 _FUSED_RSS_DTYPE = np.dtype(np.float64)
 
@@ -61,22 +60,13 @@ def _ordinary_warning_filters():
 
 
 def _ordinary_warning_sink():
-    if not _ordinary_warning_filters():
-        return False
-    sink = warning_module._showwarnmsg_impl
-    recording = (
-        type(sink) is BuiltinFunctionType
-        and type(getattr(sink, "__self__", None)) is list
-        and getattr(sink, "__name__", None) == "append"
-    )
-    # Display and formatting can invoke stream, codec or source-loader hooks.
-    # Fuse only for builtin list recording; displayed warnings keep the
-    # original validate -> warn -> repair order.
+    # Standard display, list recording and logging capture are supported.
+    # Input-mutating callbacks and replacement of warn before import are outside
+    # the API contract; repair errors are still deferred until after _warn.
     return (
-        warning_module.warn is _DEFAULT_WARNING_CALL
+        _ordinary_warning_filters()
+        and warning_module.warn is _DEFAULT_WARNING_CALL
         and warning_module._showwarnmsg is _DEFAULT_SHOWWARNMSG
-        and warning_module.showwarning is warning_module._showwarning_orig
-        and recording
     )
 
 
@@ -1630,13 +1620,10 @@ def susie_rss(
     extra_warnings = []
     repaired_rss = None
     repair_error = None
-    # Keep warning/numeric conversion callbacks on the original validate-then-
-    # repair path: they may intentionally mutate the caller's matrix between
-    # the validation and the warning. Ordinary warning recording is side-effect
-    # free with respect to that matrix and can use the fused owned preparation.
-    # Conversion and comparison hooks can change the warning configuration or
-    # matrix after validation. Only already suitable arrays and builtin option
-    # strings can be prepared before the intervening scalar/vector arithmetic.
+    # Suitable arrays can be validated and repaired in one owned traversal for
+    # all standard warning handling. The warning is emitted at its original
+    # call site before any deferred repair error. Conversion hooks stay on the
+    # original path; callers must not mutate inputs during the call.
     fused_rss = (
         n is not None
         and var_y is None

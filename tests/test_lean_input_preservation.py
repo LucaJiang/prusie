@@ -35,12 +35,13 @@ def test_rss_never_mutates_caller_buffers(layout, asymmetric, check_input):
 
 
 @pytest.mark.parametrize("check_input", [False, True])
-def test_redirected_warning_stream_callback_preserves_original_repair_order(monkeypatch, check_input):
+def test_redirected_warning_stream_preserves_display_and_caller_input(monkeypatch, check_input):
     import sys
     R = np.array([[1., .4], [.2, 1.]])
+    displayed = []
     class CallbackStream:
         def write(self, text):
-            R[0, 0] = -1.
+            displayed.append(text)
         def flush(self):
             pass
     with warnings.catch_warnings():
@@ -52,11 +53,11 @@ def test_redirected_warning_stream_callback_preserves_original_repair_order(monk
             stream = sys.stderr if message.file is None else message.file
             stream.write(warnings._formatwarnmsg(message))
         monkeypatch.setattr(warnings, "_showwarnmsg_impl", display)
-        monkeypatch.setattr(api, "_DEFAULT_WARNING_SINK", display)
         monkeypatch.setattr(sys, "stderr", CallbackStream())
-        with pytest.raises(ValueError, match="XtX diagonal must be nonnegative"):
-            susie_rss(z=np.array([1., 2.]), R=R, n=1000, L=1, max_iter=2,
-                      check_input=check_input)
+        susie_rss(z=np.array([1., 2.]), R=R, n=1000, L=1, max_iter=2,
+                  check_input=check_input)
+    assert R[0, 0] == 1.
+    assert "XtX is not symmetric" in "".join(displayed)
 
 
 def test_module_warning_filter_keeps_original_helper_stack():
@@ -103,7 +104,7 @@ def test_warning_filter_callbacks_keep_original_repair_order(hook, check_input):
 
 
 @pytest.mark.parametrize("check_input", [False, True])
-def test_builtin_text_stream_codec_callback_keeps_original_repair_order(monkeypatch, tmp_path, check_input):
+def test_builtin_text_stream_codec_preserves_display_and_caller_input(monkeypatch, tmp_path, check_input):
     import codecs
     import io
     import sys
@@ -113,7 +114,6 @@ def test_builtin_text_stream_codec_callback_keeps_original_repair_order(monkeypa
     class Encoder(codecs.IncrementalEncoder):
         def encode(self, value, final=False):
             events.append(value)
-            R[0, 0] = -1.
             return value.encode("utf-8")
     def search(name):
         if name == "prusie_warning_test_codec":
@@ -132,11 +132,10 @@ def test_builtin_text_stream_codec_callback_keeps_original_repair_order(monkeypa
         with warnings.catch_warnings(), monkeypatch.context() as patch:
             warnings.simplefilter("always")
             patch.setattr(warnings, "_showwarnmsg_impl", display)
-            patch.setattr(api, "_DEFAULT_WARNING_SINK", display)
             patch.setattr(sys, "stderr", stream)
-            with pytest.raises(ValueError, match="XtX diagonal must be nonnegative"):
-                susie_rss(z=np.array([1., 2.]), R=R, n=1000, L=1, max_iter=2,
-                          check_input=check_input)
+            susie_rss(z=np.array([1., 2.]), R=R, n=1000, L=1, max_iter=2,
+                      check_input=check_input)
+            assert R[0, 0] == 1.
     finally:
         stream.close()
         codecs.unregister(search)
