@@ -9,8 +9,29 @@ use std::sync::OnceLock;
 unsafe extern "C" {
     fn prusie_vector_init() -> i32;
     fn prusie_scalar_environment_required() -> i32;
+    fn prusie_fp_control_fingerprint() -> u64;
     fn prusie_exp_shift_sse2(values: *mut f64, count: usize, maximum: f64);
     fn prusie_exp_shift_avx2(values: *mut f64, count: usize, maximum: f64);
+}
+
+/// Read-only Linux GNU x86-64 control snapshot. Sticky status is not a control.
+/// Unknown targets stay on their existing preparation/solver entry points.
+pub(crate) fn fp_control_fingerprint() -> Option<u64> {
+    #[cfg(has_vector_math)]
+    {
+        // SAFETY: this takes no pointers and only reads current-thread controls.
+        Some(unsafe { prusie_fp_control_fingerprint() })
+    }
+    #[cfg(not(has_vector_math))]
+    {
+        None
+    }
+}
+
+pub(crate) fn standard_fp_control_fingerprint() -> Option<u64> {
+    // FE_TONEAREST is zero on the linked Linux GNU target; the C snapshot also
+    // requires all exception masks, no FTZ/DAZ and canonical x87 controls.
+    fp_control_fingerprint().filter(|&value| value == 0x0000_0000_1f80_037f)
 }
 
 #[cfg(has_vector_math)]

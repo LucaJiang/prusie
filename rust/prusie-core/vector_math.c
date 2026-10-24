@@ -6,6 +6,7 @@
 #include <immintrin.h>
 #include <fenv.h>
 #include <dlfcn.h>
+#include <stdint.h>
 
 typedef double pair_double __attribute__((vector_size(16)));
 typedef double quad_double __attribute__((vector_size(32)));
@@ -25,6 +26,16 @@ static int scalar_environment_required(void) {
 /* Read-only diagnostic; the hot kernels keep their inline static check. */
 int prusie_scalar_environment_required(void) {
     return scalar_environment_required();
+}
+
+/* Read controls only: sticky exception status is deliberately not included.
+ * The linked target is Linux GNU x86-64. No control register is written. */
+uint64_t prusie_fp_control_fingerprint(void) {
+    unsigned short x87_control;
+    __asm__ volatile("fnstcw %0" : "=m" (x87_control));
+    return ((uint64_t)(unsigned int)fegetround() << 32)
+        | ((uint64_t)(_mm_getcsr() & 0xffc0u) << 16)
+        | (uint64_t)x87_control;
 }
 
 /* Called exactly once by Rust OnceLock. The optional system library and

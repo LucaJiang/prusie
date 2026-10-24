@@ -8,6 +8,7 @@ mod array_layout;
 use prusie_core as solver;
 mod design;
 mod diagnostic_helpers;
+mod executor;
 mod options;
 mod output;
 mod prepare_helpers;
@@ -31,6 +32,36 @@ fn fit<'py>(
     yty: f64,
     n: f64,
     options: &Bound<'py, PyDict>,
+) -> PyResult<Bound<'py, PyDict>> {
+    fit_impl(py, xtx, xty, yty, n, options, None)
+}
+
+#[pyfunction]
+fn _fit_with_executor<'py>(
+    py: Python<'py>,
+    xtx: &Bound<'py, PyArray2<f64>>,
+    xty: &Bound<'py, PyArray1<f64>>,
+    yty: f64,
+    n: f64,
+    options: &Bound<'py, PyDict>,
+    executor: &Bound<'py, executor::FitExecutor>,
+) -> PyResult<Bound<'py, PyDict>> {
+    let result = fit_impl(py, xtx, xty, yty, n, options, Some(executor));
+    if result.is_err() {
+        executor::close_after_error(executor);
+    }
+    result
+}
+
+#[allow(clippy::too_many_arguments)]
+fn fit_impl<'py>(
+    py: Python<'py>,
+    xtx: &Bound<'py, PyArray2<f64>>,
+    xty: &Bound<'py, PyArray1<f64>>,
+    yty: f64,
+    n: f64,
+    options: &Bound<'py, PyDict>,
+    executor: Option<&Bound<'py, executor::FitExecutor>>,
 ) -> PyResult<Bound<'py, PyDict>> {
     let (settings, control) = options::parse(options)?;
     // Python numeric/sequence conversion can execute callbacks. Finish every
@@ -141,28 +172,58 @@ fn fit<'py>(
     let values = matrix
         .as_slice_memory_order()
         .ok_or_else(|| PyValueError::new_err("Matrix must be contiguous"))?;
-    let output = solver::fit_controlled(
-        values,
-        xty.as_slice()?,
-        yty,
-        n,
-        &settings,
-        matrix.t().is_standard_layout(),
-        scaling.as_ref(),
-        &control,
-    )
-    .map_err(PyValueError::new_err)?;
+    let output = if let Some(executor) = executor {
+        // No Python conversion runs while the owner is borrowed. The core
+        // independently validates all inputs and selects/reuses the pool only
+        // at its original post-validation point; it joins on every exit.
+        let mut owner = executor.try_borrow_mut()?;
+        // Context origin/count/phase errors are deferred to the original core
+        // pool point, after its dimensions/n/yty/factors/diagonal validation.
+        let result = solver::fit_controlled_with_executor(
+            values,
+            xty.as_slice()?,
+            yty,
+            n,
+            &settings,
+            matrix.t().is_standard_layout(),
+            scaling.as_ref(),
+            &control,
+            &mut owner.inner,
+        );
+        owner.core_finished();
+        match result {
+            Err(error) => return Err(PyValueError::new_err(error)),
+            Ok(output) => {
+                owner.healthy()?;
+                output
+            }
+        }
+    } else {
+        solver::fit_controlled(
+            values,
+            xty.as_slice()?,
+            yty,
+            n,
+            &settings,
+            matrix.t().is_standard_layout(),
+            scaling.as_ref(),
+            &control,
+        )
+        .map_err(PyValueError::new_err)?
+    };
     output::fit_result(py, output, p, control.track)
 }
 
 #[pymodule]
 fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    executor::register(module)?;
     summary_helpers::register(module)?;
     prepare_helpers::register(module)?;
     design::register(module)?;
     ser::register(module)?;
     module.add("MATRIX_OPERATOR_VERSION", 1)?;
     module.add_function(wrap_pyfunction!(fit, module)?)?;
+    module.add_function(wrap_pyfunction!(_fit_with_executor, module)?)?;
     module.add_function(wrap_pyfunction!(backend_version, module)?)?;
     module.add_function(wrap_pyfunction!(ser_math_backend, module)?)?;
     Ok(())

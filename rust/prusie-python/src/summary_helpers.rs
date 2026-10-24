@@ -183,6 +183,10 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(validate_matrix, module)?)?;
     module.add_function(wrap_pyfunction!(validate_rss_matrix, module)?)?;
     module.add_function(wrap_pyfunction!(validate_and_repair_rss, module)?)?;
+    module.add_function(wrap_pyfunction!(
+        _validate_and_repair_rss_with_executor,
+        module
+    )?)?;
     module.add_function(wrap_pyfunction!(validate_and_overwrite_rss, module)?)?;
     module.add_function(wrap_pyfunction!(cs_pairwise_abs, module)?)?;
     module.add_function(wrap_pyfunction!(complete_finite_scan, module)?)?;
@@ -573,6 +577,140 @@ fn validate_and_repair_rss<'py>(
         None
     };
     Ok((false, Some(repaired), error))
+}
+
+/// Preparation-only executor entry. The original helper above remains the
+/// authoritative serial fallback, including its independent validation flags.
+#[pyfunction]
+fn _validate_and_repair_rss_with_executor<'py>(
+    py: Python<'py>,
+    array: Bound<'py, PyArray2<f64>>,
+    scale: f64,
+    executor: &Bound<'py, crate::executor::FitExecutor>,
+) -> PyResult<(bool, Option<Bound<'py, PyArray2<f64>>>, Option<String>)> {
+    let result = parallel_repair_impl(py, array, scale, executor);
+    if result.is_err() {
+        crate::executor::close_after_error(executor);
+    }
+    result
+}
+
+fn parallel_repair_impl<'py>(
+    py: Python<'py>,
+    array: Bound<'py, PyArray2<f64>>,
+    scale: f64,
+    executor: &Bound<'py, crate::executor::FitExecutor>,
+) -> PyResult<(bool, Option<Bound<'py, PyArray2<f64>>>, Option<String>)> {
+    use prusie_core::input_validation::RssPairLayout;
+    use prusie_core::PreparationAttempt;
+
+    // This inner scope ends every source/output borrow and executor lease
+    // before serial fallback. Aborted work has already joined in the core;
+    // its possibly partial private output is dropped here, never exposed.
+    let attempt = (|| {
+        ensure_layout(&array)?;
+        let input = array
+            .try_readonly()
+            .map_err(|error| PyValueError::new_err(error.to_string()))?;
+        let a = input.as_array();
+        let n = a.nrows();
+        if a.ncols() != n {
+            return Err(PyValueError::new_err("R must be square"));
+        }
+        if n.checked_mul(n)
+            .and_then(|values| values.checked_mul(8))
+            .filter(|&bytes| bytes <= isize::MAX as usize)
+            .is_none()
+        {
+            return Err(PyValueError::new_err(
+                "Matrix must be square with addressable storage",
+            ));
+        }
+        if !a.is_standard_layout() || a.strides() != [n as isize, 1] {
+            return Ok(None);
+        }
+        let Some(values) = a.as_slice_memory_order() else {
+            return Ok(None);
+        };
+        // No option extraction or conversion runs under this lease. The output
+        // allocation stays on this caller; workers are strictly Python-free.
+        // Architecture/control admission and every worker check are read-only.
+        let mut owner = executor.try_borrow_mut()?;
+        owner.preparation_lease()?;
+        let threads = owner.threads;
+        if !owner.inner.begin_preparation(threads, n) {
+            owner.healthy()?;
+            return Ok(None);
+        }
+        if scale.abs() <= f64::MAX * 0.5 {
+            match owner
+                .inner
+                .exact_rss_proof(values, n, scale, RssPairLayout::C)
+            {
+                PreparationAttempt::Complete(true) => {
+                    owner.healthy()?;
+                    return Ok(Some((true, None, None)));
+                }
+                PreparationAttempt::Complete(false) => {}
+                PreparationAttempt::NotApplicable | PreparationAttempt::Aborted => {
+                    owner.healthy()?;
+                    return Ok(None);
+                }
+            }
+        }
+        // SAFETY: checked square/address bounds, private NumPy allocation, no
+        // caller alias. Only MaybeUninit references cover unwritten cells. The
+        // core's rank writer initializes each cell once and joins before return.
+        let repaired = unsafe { PyArray2::<f64>::new(py, [n, n], false) };
+        let output = unsafe {
+            std::slice::from_raw_parts_mut(
+                repaired.data().cast::<std::mem::MaybeUninit<f64>>(),
+                n * n,
+            )
+        };
+        let flags = match owner
+            .inner
+            .validate_rss_owned(values, n, scale, RssPairLayout::C, output)
+        {
+            PreparationAttempt::Complete(flags) => flags,
+            PreparationAttempt::NotApplicable | PreparationAttempt::Aborted => {
+                owner.healthy()?;
+                return Ok(None);
+            }
+        };
+        owner.healthy()?;
+        // Same seven independent predicates and priority as the untouched
+        // serial helper: raw, scaled, symmetric, then deferred repair errors.
+        if !flags.raw_finite {
+            return Err(PyValueError::new_err("R must contain only finite values"));
+        }
+        if !flags.raw_nonnegative {
+            return Err(PyValueError::new_err("R diagonal must be nonnegative"));
+        }
+        if !flags.scaled_finite {
+            return Err(PyValueError::new_err("XtX must contain only finite values"));
+        }
+        if !flags.scaled_nonnegative {
+            return Err(PyValueError::new_err("XtX diagonal must be nonnegative"));
+        }
+        if flags.symmetric {
+            return Ok(Some((true, None, None)));
+        }
+        let error = if !flags.repair_finite {
+            Some("XtX must contain only finite values".into())
+        } else if !flags.repair_nonnegative {
+            Some("XtX diagonal must be nonnegative".into())
+        } else {
+            None
+        };
+        Ok(Some((false, Some(repaired), error)))
+    })();
+    match attempt? {
+        Some(output) => Ok(output),
+        // Construction/FP admission or a recoverable joined task panic uses
+        // the complete original validator. Never route to legacy helper workers.
+        None => validate_and_repair_rss(py, array, scale, 1),
+    }
 }
 
 /// Explicit destructive RSS storage option. Python rejects unsupported input

@@ -96,7 +96,12 @@ struct OwnedRepair<'a> {
     #[cfg(test)]
     writes: Option<&'a mut [usize]>,
 }
-impl OwnedRepair<'_> {
+trait RepairWriter {
+    fn scalar(&mut self, index: usize, value: f64);
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn pair(&mut self, index: usize, value: std::arch::x86_64::__m128d);
+}
+impl RepairWriter for OwnedRepair<'_> {
     fn scalar(&mut self, index: usize, value: f64) {
         self.values[index].write(value);
         #[cfg(test)]
@@ -186,6 +191,219 @@ fn contiguous_pairs(
     result
 }
 
+// Each rank owns one disjoint set of *cells*, not a contiguous output slice.
+// No mutable f64/slice reference is formed through this raw capability.
+struct RankRepair<'a> {
+    base: *mut MaybeUninit<f64>,
+    n: usize,
+    rank: usize,
+    threads: usize,
+    _borrow: std::marker::PhantomData<&'a mut [MaybeUninit<f64>]>,
+    #[cfg(test)]
+    writes: Option<&'a [std::sync::atomic::AtomicUsize]>,
+}
+// SAFETY: constructor validates the full unique output borrow and makes exactly
+// one non-cloneable capability per rank. Rank r alone writes unordered pairs
+// whose lower-coordinate macroblock row is congruent to r modulo threads. Each
+// capability moves to one blocking job; all jobs finish before borrow release.
+unsafe impl Send for RankRepair<'_> {}
+impl RankRepair<'_> {
+    fn owns(&self, index: usize) -> bool {
+        index < self.n * self.n
+            && ((index / self.n).min(index % self.n) / 32) % self.threads == self.rank
+    }
+}
+impl RepairWriter for RankRepair<'_> {
+    fn scalar(&mut self, index: usize, value: f64) {
+        debug_assert!(self.owns(index));
+        // SAFETY: the static upper-block traversal proves this bounded cell is
+        // owned only by this rank, while the unique output borrow remains live.
+        unsafe {
+            self.base.add(index).write(MaybeUninit::new(value));
+        }
+        #[cfg(test)]
+        if let Some(writes) = self.writes {
+            writes[index].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn pair(&mut self, index: usize, value: std::arch::x86_64::__m128d) {
+        debug_assert!(self.owns(index) && self.owns(index + 1));
+        std::arch::x86_64::_mm_storeu_pd(self.base.add(index).cast::<f64>(), value);
+        #[cfg(test)]
+        if let Some(writes) = self.writes {
+            writes[index].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            writes[index + 1].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+}
+
+pub(crate) fn rss_pairs_parallel(
+    pool: &rayon::ThreadPool,
+    values: &[f64],
+    n: usize,
+    scale: f64,
+    layout: RssPairLayout,
+    output: &mut [MaybeUninit<f64>],
+) -> Option<RssPairValidation> {
+    rss_pairs_parallel_impl(
+        pool,
+        values,
+        n,
+        scale,
+        layout,
+        output,
+        #[cfg(test)]
+        None,
+        #[cfg(test)]
+        None,
+    )
+}
+
+fn rss_pairs_parallel_impl(
+    pool: &rayon::ThreadPool,
+    values: &[f64],
+    n: usize,
+    scale: f64,
+    layout: RssPairLayout,
+    output: &mut [MaybeUninit<f64>],
+    #[cfg(test)] writes: Option<&[std::sync::atomic::AtomicUsize]>,
+    #[cfg(test)] panic_rank: Option<usize>,
+) -> Option<RssPairValidation> {
+    if n < 4
+        || n.checked_mul(n) != Some(values.len())
+        || values.len() != output.len()
+        || values.len() > isize::MAX as usize / std::mem::size_of::<f64>()
+    {
+        return None;
+    }
+    #[cfg(target_arch = "x86_64")]
+    {
+        use rayon::prelude::*;
+        let threads = pool.current_num_threads().min(n.div_ceil(32).max(1));
+        let base = output.as_mut_ptr();
+        let jobs: Vec<_> = (0..threads)
+            .map(|rank| RankRepair {
+                base,
+                n,
+                rank,
+                threads,
+                _borrow: std::marker::PhantomData,
+                #[cfg(test)]
+                writes,
+            })
+            .collect();
+        let flags: Vec<_> = pool.install(|| {
+            jobs.into_par_iter()
+                .map(|output| {
+                    #[cfg(test)]
+                    let mut output = output;
+                    let rank = output.rank;
+                    #[cfg(test)]
+                    if panic_rank == Some(rank) {
+                        output.scalar(rank * 32 * n + rank * 32, 0.);
+                        panic!("injected scoped repair task failure");
+                    }
+                    contiguous_pairs_rank(values, n, scale, layout, output, rank, threads)
+                })
+                .collect()
+        });
+        Some(
+            flags
+                .into_iter()
+                .fold(RssPairValidation::default(), |mut total, rank| {
+                    total.raw_finite &= rank.raw_finite;
+                    total.raw_nonnegative &= rank.raw_nonnegative;
+                    total.scaled_finite &= rank.scaled_finite;
+                    total.scaled_nonnegative &= rank.scaled_nonnegative;
+                    total.symmetric &= rank.symmetric;
+                    total.repair_finite &= rank.repair_finite;
+                    total.repair_nonnegative &= rank.repair_nonnegative;
+                    total
+                }),
+        )
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        let _ = (pool, scale, layout);
+        None
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+fn contiguous_pairs_rank(
+    values: &[f64],
+    n: usize,
+    scale: f64,
+    layout: RssPairLayout,
+    mut output: RankRepair<'_>,
+    rank: usize,
+    threads: usize,
+) -> RssPairValidation {
+    use std::arch::x86_64::*;
+    let mut result = RssPairValidation::default();
+    for i in (rank * 32..n)
+        .step_by(threads * 32)
+        .flat_map(|start| start..(start + 32).min(n))
+    {
+        let raw = values[i * n + i];
+        let value = result.pair(raw, raw, scale, true);
+        output.scalar(i * n + i, value);
+    }
+    // SAFETY: SSE2 is part of x86-64. Every full paired tile below has four
+    // complete rows and columns inside the validated n*n immutable slice.
+    unsafe {
+        let mut masks = PairMasks {
+            raw: _mm_castsi128_pd(_mm_set1_epi64x(-1)),
+            scaled: _mm_castsi128_pd(_mm_set1_epi64x(-1)),
+            symmetric: _mm_castsi128_pd(_mm_set1_epi64x(-1)),
+            repair: _mm_castsi128_pd(_mm_set1_epi64x(-1)),
+        };
+        const BLOCK: usize = 32;
+        for ii in (rank * BLOCK..n).step_by(BLOCK * threads) {
+            for jj in (ii..n).step_by(BLOCK) {
+                for i in (ii..(ii + BLOCK).min(n)).step_by(4) {
+                    for j in (jj.max(i)..(jj + BLOCK).min(n)).step_by(4) {
+                        if j > i && i + 4 <= n && j + 4 <= n {
+                            pair_tile4(
+                                values.as_ptr(),
+                                n,
+                                i,
+                                j,
+                                scale,
+                                layout,
+                                &mut masks,
+                                &mut output,
+                            );
+                        } else {
+                            for row in i..(i + 4).min(n) {
+                                for column in j.max(row + 1)..(j + 4).min(n) {
+                                    let (x, y) = match layout {
+                                        RssPairLayout::C => {
+                                            (values[row * n + column], values[column * n + row])
+                                        }
+                                        RssPairLayout::F => {
+                                            (values[column * n + row], values[row * n + column])
+                                        }
+                                    };
+                                    let value = result.pair(x, y, scale, false);
+                                    output.scalar(row * n + column, value);
+                                    output.scalar(column * n + row, value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        result.raw_finite &= _mm_movemask_pd(masks.raw) == 3;
+        result.scaled_finite &= _mm_movemask_pd(masks.scaled) == 3;
+        result.symmetric &= _mm_movemask_pd(masks.symmetric) == 3;
+        result.repair_finite &= _mm_movemask_pd(masks.repair) == 3;
+    }
+    result
+}
+
 #[cfg(target_arch = "x86_64")]
 struct PairMasks {
     raw: std::arch::x86_64::__m128d,
@@ -206,7 +424,7 @@ unsafe fn pair_tile4(
     scale: f64,
     layout: RssPairLayout,
     masks: &mut PairMasks,
-    output: &mut OwnedRepair<'_>,
+    output: &mut impl RepairWriter,
 ) {
     use std::arch::x86_64::*;
     let abs_mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7fff_ffff_ffff_ffff));
@@ -435,6 +653,192 @@ unsafe fn pair_tile4_in_place(
 #[cfg(all(test, target_arch = "x86_64"))]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parallel_owned_tiles_match_parent_bits_flags_and_unique_writes() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        for threads in [2, 4] {
+            let pool = rayon::ThreadPoolBuilder::new()
+                .num_threads(threads)
+                .build()
+                .unwrap();
+            for n in [4, 5, 31, 32, 33, 34, 35, 63, 64, 65, 66, 67, 129] {
+                let mut values: Vec<f64> = (0..n * n)
+                    .map(|k| {
+                        if k / n == k % n {
+                            1.
+                        } else {
+                            ((k * 17 + k / n * 11) % 67) as f64 / 128. - 0.25
+                        }
+                    })
+                    .collect();
+                for (index, value) in [
+                    (1, -0.),
+                    (n, 0.),
+                    (n + 2, f64::from_bits(1)),
+                    (2 * n + 1, -f64::from_bits(1)),
+                    (n * n - 2, f64::MAX),
+                ] {
+                    values[index] = value;
+                }
+                let before: Vec<_> = values.iter().map(|x| x.to_bits()).collect();
+                for layout in [RssPairLayout::C, RssPairLayout::F] {
+                    for scale in [
+                        0.,
+                        -0.,
+                        1.,
+                        -1.,
+                        99.,
+                        f64::MAX,
+                        f64::MIN_POSITIVE,
+                        f64::from_bits(1),
+                        f64::INFINITY,
+                        f64::NAN,
+                    ] {
+                        let mut parent = vec![MaybeUninit::uninit(); n * n];
+                        let expected =
+                            rss_pair_validation_owned(&values, n, scale, layout, &mut parent)
+                                .unwrap();
+                        let mut actual = vec![MaybeUninit::uninit(); n * n];
+                        let writes: Vec<_> = (0..n * n).map(|_| AtomicUsize::new(0)).collect();
+                        let flags = rss_pairs_parallel_impl(
+                            &pool,
+                            &values,
+                            n,
+                            scale,
+                            layout,
+                            &mut actual,
+                            Some(&writes),
+                            None,
+                        )
+                        .unwrap();
+                        assert_eq!(flags, expected, "n={n}, threads={threads}, scale={scale}");
+                        assert!(
+                            writes
+                                .iter()
+                                .all(|count| count.load(Ordering::Relaxed) == 1),
+                            "n={n}, threads={threads}"
+                        );
+                        // SAFETY: successful complete traversals initialize every
+                        // cell; the independent counts additionally verify this.
+                        assert_eq!(
+                            actual
+                                .iter()
+                                .map(|x| unsafe { x.assume_init() }.to_bits())
+                                .collect::<Vec<_>>(),
+                            parent
+                                .iter()
+                                .map(|x| unsafe { x.assume_init() }.to_bits())
+                                .collect::<Vec<_>>(),
+                            "n={n}, threads={threads}, scale={scale}"
+                        );
+                    }
+                }
+                assert_eq!(
+                    values.iter().map(|x| x.to_bits()).collect::<Vec<_>>(),
+                    before
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn parallel_owned_nonfinite_priorities_and_dimensions_match_parent() {
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(4)
+            .build()
+            .unwrap();
+        let n = 67;
+        let mut values = vec![0.125; n * n];
+        for i in 0..n {
+            values[i * n + i] = 1.;
+        }
+        for index in [0, 1, 32 * n + 33, 33 * n + 32, n * n - 1] {
+            let old = values[index];
+            for bad in [
+                -1.,
+                f64::NAN,
+                f64::INFINITY,
+                f64::NEG_INFINITY,
+                f64::MAX,
+                f64::from_bits(0x7ff0_0000_0000_0001),
+            ] {
+                values[index] = bad;
+                for scale in [99., f64::MAX, f64::MIN_POSITIVE] {
+                    for layout in [RssPairLayout::C, RssPairLayout::F] {
+                        let mut parent = vec![MaybeUninit::uninit(); n * n];
+                        let expected =
+                            rss_pair_validation_owned(&values, n, scale, layout, &mut parent)
+                                .unwrap();
+                        let mut actual = vec![MaybeUninit::uninit(); n * n];
+                        let flags =
+                            rss_pairs_parallel(&pool, &values, n, scale, layout, &mut actual)
+                                .unwrap();
+                        assert_eq!(flags, expected);
+                        assert_eq!(
+                            actual
+                                .iter()
+                                .map(|x| unsafe { x.assume_init() }.to_bits())
+                                .collect::<Vec<_>>(),
+                            parent
+                                .iter()
+                                .map(|x| unsafe { x.assume_init() }.to_bits())
+                                .collect::<Vec<_>>()
+                        );
+                    }
+                }
+            }
+            values[index] = old;
+        }
+        let mut untouched = [MaybeUninit::new(0.375); 15];
+        assert!(
+            rss_pairs_parallel(&pool, &[1.; 16], 4, 99., RssPairLayout::C, &mut untouched)
+                .is_none()
+        );
+        assert!(untouched
+            .iter()
+            .all(|value| unsafe { value.assume_init() } == 0.375));
+    }
+
+    #[test]
+    fn parallel_owned_scoped_panic_finishes_writers_without_exposing_output() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let n = 67;
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(4)
+            .build()
+            .unwrap();
+        let values = vec![0.25; n * n];
+        let writes: Vec<_> = (0..n * n).map(|_| AtomicUsize::new(0)).collect();
+        let mut output = vec![MaybeUninit::uninit(); n * n];
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            rss_pairs_parallel_impl(
+                &pool,
+                &values,
+                n,
+                99.,
+                RssPairLayout::C,
+                &mut output,
+                Some(&writes),
+                Some(1),
+            )
+        }));
+        assert!(result.is_err());
+        assert!(writes
+            .iter()
+            .all(|count| count.load(Ordering::Relaxed) <= 1));
+        assert!(
+            writes
+                .iter()
+                .map(|count| count.load(Ordering::Relaxed))
+                .sum::<usize>()
+                < n * n
+        );
+        // Drop incomplete storage without f64 exposure; the blocking collect
+        // joined every scoped writer before unwinding reached this caller.
+        drop(output);
+        assert_eq!(pool.broadcast(|_| 1).len(), 4);
+    }
     fn oracle(
         values: &[f64],
         n: usize,

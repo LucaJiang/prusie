@@ -348,9 +348,50 @@ thread pool when `n_threads > 1`. Each output coordinate retains its ordered
 source-column accumulation; IBSS still updates effects sequentially. Pool
 creation is skipped for one thread and small matrices. Kernel dispatch requires
 at least 1024 output rows and 1,048,576 matrix entries. Exact-class compact
-products use the same rule based on their proved dimension. Public validation
-is serial and does not consult a process-global thread count. No global Rayon
-pool or BLAS thread setting is modified.
+products use the same rule based on their proved dimension. Public default-one
+validation is serial and does not consult a process-global thread count. No
+global Rayon pool or BLAS thread setting is modified.
+
+Ordinary plain C-order z/R/n RSS calls can share a private execution owner for
+the sufficient exact-symmetry proof, complete owned paired validation/repair,
+and the native solver. This optional preparation route requires a plain integer
+count greater than one, p ≥ 1024, scalar Gaussian controls and standard warning
+handling. Other input types, advanced models, filtering/augmentation, explicit
+prior weights, tracking, retained/refitted/prepared routes and destructive LD
+workspace calls keep their ordinary preparation. These fallbacks still use the
+requested solver count; they do not become single-thread fits.
+
+The owner is a local resource of one `susie_rss` invocation. Dedicated private
+arguments carry it through the helper and native fitting entry; it is absent
+from option dictionaries, prepared requests, results and serialization. All
+argument conversion and array checks finish before native borrowing. Static
+upper macroblock-row jobs own each unordered pair, write both owned output
+positions once and preserve the separate scaled terms and ordered average.
+Every job finishes before the caller reads or releases the owned output. Workers
+never call Python or acquire the GIL. The calling thread emits the original
+warning before any deferred repair error, at its existing stack depth.
+
+On Linux x86_64, early reuse requires nearest rounding, masked exceptions,
+FTZ/DAZ disabled and the canonical x87 control word. Read-only probes inspect
+the caller and every worker. Unknown/nonstandard controls use ordinary
+preparation; no floating controls are set. At the original solver pool-selection
+point, after its unchanged validation/materialization, controls and execution
+ownership are checked again. Matching controls reuse the pool. Changed controls
+terminate and join it before a same-count replacement starts under the current
+caller controls. This rare branch has two sequential worker generations and
+one execution owner, with no overlap. Sticky exception status flags can accrue
+on different threads; equality of the entire floating environment is not a
+result contract. Custom hooks depending on those flags retain the parent route.
+
+The new owner retains all worker JoinHandles and joins them on success, failure
+or explicit close. A public `finally` also covers preparation/warning failures;
+a saved traceback retains only an inert closed wrapper. Construction/admission
+failure uses ordinary preparation and preserves the solver's original error
+point. A recoverable joined task panic discards its private partial output and
+runs the complete serial helper. Actual join/unrecoverable failure cannot return
+a valid posterior. Original solver-only fallback entries retain their existing
+Rayon pool lifecycle; dropping those pools signals termination and is not a
+claim that all worker threads have already joined.
 
 ## Numerical reproducibility
 
@@ -401,8 +442,9 @@ updates reuse groups of equal sampling variance. Default optimizations are
 selected using numerical validation and lower median complete-call runtime on
 a strict majority of a fixed case panel; this does not imply every input is faster.
 There are no environment variables for selecting alternative mathematical paths.
-Use the per-fit `n_threads` parameter for native product parallelism. Its default
-is one, and public validation remains serial regardless of `PRUSIE_NUM_THREADS`.
+Use the per-fit `n_threads` parameter for native product parallelism and eligible
+RSS preparation. Its default is one, and public thread selection remains
+independent of `PRUSIE_NUM_THREADS`.
 Component updates are sequential. The primary comparisons use one numerical
 thread throughout.
 

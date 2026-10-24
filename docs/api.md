@@ -93,19 +93,36 @@ estimation is justified.
 
 `n_threads` is accepted by `susie`, `susie_suff_stat`, `susie_rss` and
 `susie_rss_lambda`, and the requested value is recorded in `fit.params`.
-The current parallel kernels are dense Gram-matrix products, including proved
-exact-class compact products. They use a private pool for the fit and fixed
-output partitions. Component updates remain sequential. Validation, design-matrix
-operators and dynamic RSS likelihoods remain serial in this implementation;
-requesting more threads does not imply a speedup for those stages or models.
+The parallel kernels include dense Gram-matrix products and proved exact-class
+compact products. Eligible ordinary `susie_rss(z, R, n)` calls also share one
+private executor between exact input validation, owned symmetry repair and the
+solver. Each matrix entry and output coordinate keeps its ordered arithmetic;
+component updates remain sequential. Design-matrix operators, dynamic RSS
+likelihoods and other preparation routes retain their ordinary implementation.
 Small matrices and compact products with fewer than 1024 rows remain serial.
 The process-wide BLAS, OpenMP and Rayon configuration is unchanged.
+
+Parallel preparation requires a plain Python integer count, p ≥ 1024, a plain
+aligned C-order float64 LD array, provided n, ordinary scalar Gaussian controls
+and standard warning handling. It excludes `overwrite_ld=True`, reference X,
+effect/SE input, known var_y, finite-panel/mismatch controls, MAF/null augmentation,
+prior weights or vector prior variance, mixture/slot/NIG models, custom conversion
+or warning hooks, tracking, retained data, initialization and refinement. Such
+calls retain their previous preparation and requested solver thread count.
+NumPy integer counts are accepted, but retain ordinary serial preparation.
+Nonstandard floating-control modes also retain the ordinary preparation path.
+Requesting more threads does not imply a speedup for every stage or input.
 
 The default is explicitly one native thread. Environment-only requests through
 `PRUSIE_NUM_THREADS` no longer select public fitting parallelism; pass
 `n_threads=4`, for example. Booleans and floating-point values are not thread
 counts. Determinism is defined for the same input and requested thread count;
 numerical equality between different thread counts is reported, not guaranteed.
+Eligible preparation workers are joined before return or exception. One executor
+normally serves preparation and fitting; if caller floating controls change
+between them, its workers are joined before a replacement starts at the solver's
+ordinary pool-selection point. Numerical determinism does not promise equality
+of thread-local sticky floating-point exception flags.
 
 ## Optional LD workspace
 

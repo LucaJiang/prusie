@@ -73,6 +73,72 @@ pub fn fit_controlled(
     scaling: Option<&MatrixScaling<'_>>,
     control: &FitControl,
 ) -> Result<FitOutput, String> {
+    fit_controlled_inner(
+        xtx,
+        xty,
+        yty,
+        n,
+        options,
+        column_major,
+        scaling,
+        control,
+        crate::parallel::pool,
+    )
+}
+
+/// The admitted RSS binding supplies its local executor separately from model
+/// options. All parsing/input checks precede the same pool-selection position.
+#[allow(clippy::too_many_arguments)]
+pub fn fit_controlled_with_executor(
+    xtx: &[f64],
+    xty: &[f64],
+    yty: f64,
+    n: f64,
+    options: &FitOptions,
+    column_major: bool,
+    scaling: Option<&MatrixScaling<'_>>,
+    control: &FitControl,
+    executor: &mut crate::FitExecutor,
+) -> Result<FitOutput, String> {
+    struct CloseOnExit<'a>(&'a mut crate::FitExecutor);
+    impl Drop for CloseOnExit<'_> {
+        fn drop(&mut self) {
+            self.0.close();
+        }
+    }
+    let cleanup = CloseOnExit(executor);
+    let result = fit_controlled_inner(
+        xtx,
+        xty,
+        yty,
+        n,
+        options,
+        column_major,
+        scaling,
+        control,
+        |threads, p| cleanup.0.core_pool(threads, p),
+    );
+    cleanup.0.close();
+    // Cleanup never replaces a primary input/algorithm error. Conversely a
+    // worker join failure must not accompany a successful posterior.
+    result.and_then(|output| match cleanup.0.failure() {
+        Some(error) => Err(error.into()),
+        None => Ok(output),
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn fit_controlled_inner<P: std::borrow::Borrow<rayon::ThreadPool>>(
+    xtx: &[f64],
+    xty: &[f64],
+    yty: f64,
+    n: f64,
+    options: &FitOptions,
+    column_major: bool,
+    scaling: Option<&MatrixScaling<'_>>,
+    control: &FitControl,
+    make_pool: impl FnOnce(usize, usize) -> Result<Option<P>, String>,
+) -> Result<FitOutput, String> {
     let p = xty.len();
     if p == 0
         || p.checked_mul(p) != Some(xtx.len())
@@ -144,9 +210,9 @@ pub fn fit_controlled(
     if diagonal.iter().any(|&d| d < 0.0) {
         return Err("XtX diagonal cannot be negative".into());
     }
-    let pool = crate::parallel::pool(control.n_threads, p)?;
+    let pool = make_pool(control.n_threads, p)?;
     let mut gram = DenseGram {
-        pool: pool.as_ref(),
+        pool: pool.as_ref().map(std::borrow::Borrow::borrow),
         matrix,
         scaling: operator,
         diagonal,

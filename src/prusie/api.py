@@ -1120,7 +1120,7 @@ def _prepare_suff_stat(
     )
 
 
-def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
+def _fit(request: _FitRequest, *, _executor=None) -> SusieResult | SusieInputs:
     """Run the prepared model and assemble the common public result."""
     limitations = tuple(
         dict.fromkeys(
@@ -1195,7 +1195,12 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
 
         native = fit_dynamic(request)
     elif request.design is None:
-        native = _native.fit(crossproduct, crossresponse, yty, n, options)
+        if _executor is None:
+            native = _native.fit(crossproduct, crossresponse, yty, n, options)
+        else:
+            native = _native._fit_with_executor(
+                crossproduct, crossresponse, yty, n, options, _executor
+            )
     else:
         design = request.design
         arguments = (
@@ -1550,6 +1555,9 @@ def susie_rss(
         Maximum number of IBSS sweeps.
     n_threads : int, default 1
         Per-fit native thread limit from 1 to 32, as in :func:`susie_suff_stat`.
+        Eligible plain C-order z/R/n calls also share that private executor for
+        exact validation and owned symmetry repair when p ≥ 1024. Default one
+        and advanced/overwrite routes retain their ordinary preparation.
 
     Other Parameters
     ----------------
@@ -1625,7 +1633,8 @@ def susie_rss(
     a warning and internal averaging of XtX with its transpose, matching the
     dense numeric path. The bhat/shat/var_y route always averages its reconstructed
     XtX. Nonfinite inputs and averaging overflow are rejected. Input arrays
-    remain unchanged. If R is an external reference panel, its agreement with the study
+    remain unchanged with ``overwrite_ld=False``. If R is an external reference panel,
+    its agreement with the study
     LD is a modeling assumption that this function does not test.
 
     References
@@ -1774,179 +1783,209 @@ def susie_rss(
         and type(z_method) is str
         and _ordinary_warning_sink()
     )
-    if design_data is None:
-        if overwrite_ld and (prevalidated_scale is None or not fused_rss):
-            raise ValueError("overwrite_ld requires the ordinary contiguous z/R/n route")
-        if prevalidated_scale is None or not fused_rss:
-            R, symmetric = _validated_matrix(R, "R", len(z), rss_scale=prevalidated_scale)
+    _executor = None
+    try:
+        if design_data is None:
+            if overwrite_ld and (prevalidated_scale is None or not fused_rss):
+                raise ValueError("overwrite_ld requires the ordinary contiguous z/R/n route")
+            if prevalidated_scale is None or not fused_rss:
+                R, symmetric = _validated_matrix(R, "R", len(z), rss_scale=prevalidated_scale)
+            else:
+                R = np.asarray(R, dtype=np.float64)
+                if R.shape != (len(z), len(z)):
+                    raise ValueError(f"R must have shape ({len(z)}, {len(z)})")
+                R = native_array(R)
+                if overwrite_ld:
+                    _overwrite_recheck(overwrite_state)
+                    symmetric, repaired_rss, repair_error, overwrite_action = _native.validate_and_overwrite_rss(
+                        R, prevalidated_scale, proof_threads=1
+                    )
+                else:
+                    # Default/small requests do not import the admission helper or
+                    # inspect hooks/FP controls. NumPy integer requests retain their
+                    # original serial preparation and ordinary core thread request.
+                    if type(n_threads) is int and 2 <= n_threads <= 32 and len(z) >= 1024:
+                        from ._execution import create_executor
+
+                        _executor = create_executor(locals())
+                    if _executor is None:
+                        symmetric, repaired_rss, repair_error = _native.validate_and_repair_rss(
+                            R, prevalidated_scale, proof_threads=1
+                        )
+                    else:
+                        symmetric, repaired_rss, repair_error = _native._validate_and_repair_rss_with_executor(
+                            R, prevalidated_scale, _executor
+                        )
+                        if not _executor.has_started:
+                            # Initial architecture/FP admission failed. Keep the
+                            # entire parent's native fit, including its pool timing.
+                            from ._execution import close_executor
+
+                            close_executor(_executor)
+                            _executor = None
+                R = np.ascontiguousarray(R)
         else:
-            R = np.asarray(R, dtype=np.float64)
-            if R.shape != (len(z), len(z)):
-                raise ValueError(f"R must have shape ({len(z)}, {len(z)})")
-            R = native_array(R)
-            if overwrite_ld:
-                _overwrite_recheck(overwrite_state)
-                symmetric, repaired_rss, repair_error, overwrite_action = _native.validate_and_overwrite_rss(
-                    R, prevalidated_scale, proof_threads=1
+            R, symmetric = None, True
+        rss_matrix_scale = 1.0
+        if var_y is not None:
+            var_y = _scalar(var_y, "var_y", strict=True)
+        if n is None:
+            _warn(
+                ("n is missing: using the upstream large-sample noncentrality-parameter likelihood"),
+                extra_warnings,
+            )
+            XtX, Xty, yty, effective_n = R, z, 1.0, 2.0
+            effective_scaled_prior, effective_standardize = prior_variance, False
+            scale_kind = "noncentrality"
+        else:
+            n = _scalar(n, "n", lower=1.0, strict=True)
+            with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+                denominator = z * z + n - 2
+                adj = (n - 1) / denominator if z_method == "wald" else np.ones_like(z)
+                adjusted_z = np.sqrt(adj) * z
+            if has_effects and var_y is not None:
+                diagonal = var_y * adj / (se * se)
+                sd = np.sqrt(diagonal)
+                XtX = (R * sd[:, None]).T * sd[:, None]
+                XtX = (XtX + XtX.T) / 2
+                Xty = adjusted_z * np.sqrt(adj) * var_y / se
+                effective_var_y, scale_kind = var_y, "original"
+            else:
+                XtX, Xty = R, np.sqrt(n - 1) * adjusted_z
+                rss_matrix_scale = n - 1 if design_data is None else 1.0
+                effective_var_y, scale_kind = (
+                    (1.0 if var_y is None else var_y),
+                    "standardized",
+                )
+            yty, effective_n = (n - 1) * effective_var_y, n
+            effective_scaled_prior, effective_standardize = (
+                scaled_prior_variance,
+                standardize,
+            )
+        if prevalidated_scale is not None and not symmetric:
+            if fused_rss:
+                # Keep the original helper stack depth for module-based warning
+                # filters and the original warning-before-repair-error priority.
+                XtX = _symmetrize_matrix(
+                    XtX, "XtX", rss_matrix_scale, extra_warnings,
+                    _prepared=repaired_rss, _repair_error=repair_error,
                 )
             else:
-                symmetric, repaired_rss, repair_error = _native.validate_and_repair_rss(
-                    R, prevalidated_scale, proof_threads=1
-                )
-            R = np.ascontiguousarray(R)
-    else:
-        R, symmetric = None, True
-    rss_matrix_scale = 1.0
-    if var_y is not None:
-        var_y = _scalar(var_y, "var_y", strict=True)
-    if n is None:
-        _warn(
-            ("n is missing: using the upstream large-sample noncentrality-parameter likelihood"),
-            extra_warnings,
-        )
-        XtX, Xty, yty, effective_n = R, z, 1.0, 2.0
-        effective_scaled_prior, effective_standardize = prior_variance, False
-        scale_kind = "noncentrality"
-    else:
-        n = _scalar(n, "n", lower=1.0, strict=True)
-        with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
-            denominator = z * z + n - 2
-            adj = (n - 1) / denominator if z_method == "wald" else np.ones_like(z)
-            adjusted_z = np.sqrt(adj) * z
-        if has_effects and var_y is not None:
-            diagonal = var_y * adj / (se * se)
-            sd = np.sqrt(diagonal)
-            XtX = (R * sd[:, None]).T * sd[:, None]
-            XtX = (XtX + XtX.T) / 2
-            Xty = adjusted_z * np.sqrt(adj) * var_y / se
-            effective_var_y, scale_kind = var_y, "original"
-        else:
-            XtX, Xty = R, np.sqrt(n - 1) * adjusted_z
-            rss_matrix_scale = n - 1 if design_data is None else 1.0
-            effective_var_y, scale_kind = (
-                (1.0 if var_y is None else var_y),
-                "standardized",
+                XtX = _symmetrize_matrix(XtX, "XtX", rss_matrix_scale, extra_warnings)
+            rss_matrix_scale = 1.0
+        if estimate_residual_variance:
+            _warn(
+                (
+                    "Estimating residual variance requires in-sample LD consistent "
+                    "with the summary statistics"
+                ),
+                extra_warnings,
             )
-        yty, effective_n = (n - 1) * effective_var_y, n
-        effective_scaled_prior, effective_standardize = (
-            scaled_prior_variance,
-            standardize,
-        )
-    if prevalidated_scale is not None and not symmetric:
-        if fused_rss:
-            # Keep the original helper stack depth for module-based warning
-            # filters and the original warning-before-repair-error priority.
-            XtX = _symmetrize_matrix(
-                XtX, "XtX", rss_matrix_scale, extra_warnings,
-                _prepared=repaired_rss, _repair_error=repair_error,
+        dynamic = None
+        if R_finite is not None or R_mismatch != "none":
+            dynamic = dict(
+                kind="uncertain",
+                reference_n=np.inf if R_finite is None else R_finite,
+                mismatch=R_mismatch,
+                control=rss_control,
+                z=adjusted_z.copy(),
             )
+            if convergence is None:
+                convergence_method = "pip"
+        if dynamic is not None:
+            selected_z = adjusted_z if maf is None else adjusted_z[np.asarray(maf) > maf_thresh]
+            dynamic["z"] = np.r_[selected_z, 0.0] if null_weight > 0 else selected_z.copy()
+        request = _prepare_suff_stat(
+            XtX,
+            Xty,
+            yty,
+            effective_n,
+            L=L,
+            scaled_prior_variance=effective_scaled_prior,
+            residual_variance=residual_variance,
+            estimate_residual_variance=estimate_residual_variance,
+            estimate_prior_variance=estimate_prior_variance,
+            estimate_prior_method=estimate_prior_method,
+            check_null_threshold=check_null_threshold,
+            prior_tol=prior_tol,
+            r_tol=r_tol,
+            prior_weights=prior_weights,
+            null_weight=null_weight,
+            standardize=effective_standardize,
+            max_iter=max_iter,
+            n_threads=n_threads,
+            s_init=s_init,
+            coverage=coverage,
+            min_abs_corr=min_abs_corr,
+            tol=tol,
+            verbose=verbose,
+            track_fit=track_fit,
+            check_input=check_input,
+            refine=refine,
+            convergence=convergence,
+            retain_data=retain_data,
+            check_prior=check_prior,
+            n_purity=n_purity,
+            variant_ids=variant_ids,
+            variant_metadata=variant_metadata,
+            model_init=model_init,
+            estimate_residual_method=estimate_residual_method,
+            residual_variance_lowerbound=residual_variance_lowerbound,
+            residual_variance_upperbound=residual_variance_upperbound,
+            prior_variance_grid=prior_variance_grid,
+            mixture_weights=mixture_weights,
+            convergence_method=convergence_method,
+            alpha0=alpha0,
+            beta0=beta0,
+            L_greedy=L_greedy,
+            greedy_lbf_cutoff=greedy_lbf_cutoff,
+            slot_prior=slot_prior,
+            median_abs_corr=median_abs_corr,
+            cs_extension_corr=cs_extension_corr,
+            unmappable_effects=unmappable_effects,
+            init_only=init_only,
+            _rss_matrix_scale=rss_matrix_scale,
+            _rss_matrix_validated=prevalidated_scale is not None,
+            _design=design_data,
+            _dynamic=dynamic,
+            _summary_missing_policy="reject" if has_effects else "zero",
+            maf=maf,
+            maf_thresh=maf_thresh,
+        )
+        request = replace(request, requested_convergence_method=requested_convergence_method,
+                          params={**request.params, "overwrite_ld": overwrite_ld})
+        if _executor is None:
+            fit = _fit(request)
         else:
-            XtX = _symmetrize_matrix(XtX, "XtX", rss_matrix_scale, extra_warnings)
-        rss_matrix_scale = 1.0
-    if estimate_residual_variance:
-        _warn(
-            (
-                "Estimating residual variance requires in-sample LD consistent "
-                "with the summary statistics"
-            ),
-            extra_warnings,
+            fit = _fit(request, _executor=_executor)
+        if init_only:
+            return fit
+        fit.params.update(
+            interface="susie_rss",
+            input_n=n,
+            input_kind="bhat_shat" if has_effects else "z",
+            input_var_y=var_y,
+            effect_scale=scale_kind,
+            prior_variance=prior_variance,
+            z_ld_weight=0.0,
+            z_method=z_method,
+            R_finite=R_finite,
+            R_mismatch=R_mismatch,
+            control=dict(rss_control),
         )
-    dynamic = None
-    if R_finite is not None or R_mismatch != "none":
-        dynamic = dict(
-            kind="uncertain",
-            reference_n=np.inf if R_finite is None else R_finite,
-            mismatch=R_mismatch,
-            control=rss_control,
-            z=adjusted_z.copy(),
-        )
-        if convergence is None:
-            convergence_method = "pip"
-    if dynamic is not None:
-        selected_z = adjusted_z if maf is None else adjusted_z[np.asarray(maf) > maf_thresh]
-        dynamic["z"] = np.r_[selected_z, 0.0] if null_weight > 0 else selected_z.copy()
-    request = _prepare_suff_stat(
-        XtX,
-        Xty,
-        yty,
-        effective_n,
-        L=L,
-        scaled_prior_variance=effective_scaled_prior,
-        residual_variance=residual_variance,
-        estimate_residual_variance=estimate_residual_variance,
-        estimate_prior_variance=estimate_prior_variance,
-        estimate_prior_method=estimate_prior_method,
-        check_null_threshold=check_null_threshold,
-        prior_tol=prior_tol,
-        r_tol=r_tol,
-        prior_weights=prior_weights,
-        null_weight=null_weight,
-        standardize=effective_standardize,
-        max_iter=max_iter,
-        n_threads=n_threads,
-        s_init=s_init,
-        coverage=coverage,
-        min_abs_corr=min_abs_corr,
-        tol=tol,
-        verbose=verbose,
-        track_fit=track_fit,
-        check_input=check_input,
-        refine=refine,
-        convergence=convergence,
-        retain_data=retain_data,
-        check_prior=check_prior,
-        n_purity=n_purity,
-        variant_ids=variant_ids,
-        variant_metadata=variant_metadata,
-        model_init=model_init,
-        estimate_residual_method=estimate_residual_method,
-        residual_variance_lowerbound=residual_variance_lowerbound,
-        residual_variance_upperbound=residual_variance_upperbound,
-        prior_variance_grid=prior_variance_grid,
-        mixture_weights=mixture_weights,
-        convergence_method=convergence_method,
-        alpha0=alpha0,
-        beta0=beta0,
-        L_greedy=L_greedy,
-        greedy_lbf_cutoff=greedy_lbf_cutoff,
-        slot_prior=slot_prior,
-        median_abs_corr=median_abs_corr,
-        cs_extension_corr=cs_extension_corr,
-        unmappable_effects=unmappable_effects,
-        init_only=init_only,
-        _rss_matrix_scale=rss_matrix_scale,
-        _rss_matrix_validated=prevalidated_scale is not None,
-        _design=design_data,
-        _dynamic=dynamic,
-        _summary_missing_policy="reject" if has_effects else "zero",
-        maf=maf,
-        maf_thresh=maf_thresh,
-    )
-    request = replace(request, requested_convergence_method=requested_convergence_method,
-                      params={**request.params, "overwrite_ld": overwrite_ld})
-    fit = _fit(request)
-    if init_only:
+        if overwrite_ld:
+            fit.qc["ld_overwrite"] = dict(
+                action=overwrite_action,
+                original_rss_scale=prevalidated_scale,
+            )
+        fit.warnings[:0] = extra_warnings
         return fit
-    fit.params.update(
-        interface="susie_rss",
-        input_n=n,
-        input_kind="bhat_shat" if has_effects else "z",
-        input_var_y=var_y,
-        effect_scale=scale_kind,
-        prior_variance=prior_variance,
-        z_ld_weight=0.0,
-        z_method=z_method,
-        R_finite=R_finite,
-        R_mismatch=R_mismatch,
-        control=dict(rss_control),
-    )
-    if overwrite_ld:
-        fit.qc["ld_overwrite"] = dict(
-            action=overwrite_action,
-            original_rss_scale=prevalidated_scale,
-        )
-    fit.warnings[:0] = extra_warnings
-    return fit
+
+    finally:
+        if _executor is not None:
+            from ._execution import close_executor
+
+            close_executor(_executor)
 
 
 def _model_init_state(model: SusieResult | Mapping[str, Any]) -> dict[str, Any]:

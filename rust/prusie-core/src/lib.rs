@@ -2,6 +2,7 @@
 mod design;
 pub mod diagnostics;
 mod exact_columns;
+mod execution;
 mod ibss;
 pub mod input_validation;
 pub mod model;
@@ -18,7 +19,8 @@ mod types;
 mod vector_math;
 
 pub use design::{fit_design_csc, fit_design_dense, fit_design_trend};
-pub use ibss::fit_controlled;
+pub use execution::{FitExecutor, PreparationAttempt};
+pub use ibss::{fit_controlled, fit_controlled_with_executor};
 pub use operator::MatrixScaling;
 pub use ser::ser_update;
 pub use types::{FitOptions, FitOutput, SerOutput};

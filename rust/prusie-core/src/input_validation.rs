@@ -44,6 +44,9 @@ mod tests {
 }
 
 mod rss_pairs_owned;
+mod rss_proof;
+pub(crate) use rss_pairs_owned::rss_pairs_parallel;
 pub use rss_pairs_owned::{
     rss_pair_validation_in_place, rss_pair_validation_owned, RssPairLayout, RssPairValidation,
 };
+pub(crate) use rss_proof::rss_proof_parallel;
