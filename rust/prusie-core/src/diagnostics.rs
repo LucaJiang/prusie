@@ -73,6 +73,7 @@ pub struct Snapshot {
 }
 #[derive(Default)]
 pub struct Diagnostics {
+    pub exact_activation: Option<(Option<usize>, Option<usize>, Option<usize>, usize)>,
     pub trace: Vec<Snapshot>,
     pub last: Option<Snapshot>,
     pub stop_reason: String,

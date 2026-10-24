@@ -151,7 +151,7 @@ pub fn fit_controlled(
         scratch: vec![0.; p],
         exact: None,
         discovery_checked: false,
-        discovery_allowed: false,
+        activation: Default::default(),
     };
     fit_operator(&mut gram, xty, yty, n, options, control)
 }
@@ -759,6 +759,7 @@ pub(crate) fn fit_operator(
             options.null_index,
         ),
     );
+    output.diagnostics.exact_activation = gram.exact_diagnostics();
     Ok(output)
 }
 

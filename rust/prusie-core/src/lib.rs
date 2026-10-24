@@ -38,3 +38,5 @@ pub fn num_threads() -> usize {
 pub fn ser_math_backend() -> &'static str {
     vector_math::backend_name()
 }
+
+mod activation;

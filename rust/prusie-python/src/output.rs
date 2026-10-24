@@ -12,6 +12,7 @@ pub(crate) fn fit_result<'py>(
 ) -> PyResult<Bound<'py, PyDict>> {
     let l = output.v.len();
     let result = PyDict::new(py);
+    result.set_item("exact_activation", output.diagnostics.exact_activation)?;
     result.set_item(
         "diagnostics",
         diagnostic_helpers::export(py, &output.diagnostics, l, p, track)?,

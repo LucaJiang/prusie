@@ -59,11 +59,18 @@ pub(crate) struct ExactColumns {
 }
 
 impl ExactColumns {
+    pub(crate) fn groups(&self) -> usize {
+        self.representatives.len()
+    }
+
     /// The sampled signatures give a lower bound on exact class count. This
     /// cheap rejection avoids a full proof when even 1/8 column savings cannot
     /// occur. Collisions can cause extra proof work, never a false relation.
-    fn may_reduce(matrix: ArrayView2<'_, f64>) -> bool {
+    pub(crate) fn sampled_groups(matrix: ArrayView2<'_, f64>) -> Option<usize> {
         let rows = matrix.nrows();
+        if rows == 0 || matrix.ncols() < 2 || !matrix.t().is_standard_layout() {
+            return None;
+        }
         let mut unique = HashSet::new();
         for column in matrix
             .as_slice_memory_order()
@@ -76,16 +83,19 @@ impl ExactColumns {
                 .map_or(1., |x| if x < 0. { -1. } else { 1. });
             unique.insert(signature(column, sign, true));
             if unique.len() * 8 > matrix.ncols() * 7 {
-                return false;
+                return None;
             }
         }
-        true
+        Some(unique.len())
     }
 
     pub(crate) fn discover(matrix: ArrayView2<'_, f64>) -> Option<Self> {
         let rows = matrix.nrows();
         let columns = matrix.ncols();
-        if rows == 0 || columns < 2 || !matrix.t().is_standard_layout() || !Self::may_reduce(matrix)
+        if rows == 0
+            || columns < 2
+            || !matrix.t().is_standard_layout()
+            || Self::sampled_groups(matrix).is_none()
         {
             return None;
         }
