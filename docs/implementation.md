@@ -438,9 +438,10 @@ At $p=5000$, $8p^2=200,000,000$ bytes, or approximately **190.7 MiB**.
 The dense operator applies diagonal scaling implicitly, avoiding a separate
 scaled matrix when the factors permit safe evaluation. Its products use a four-column kernel
 with runtime-checked AVX2 support and a portable fallback. Gaussian single-effect
-updates reuse groups of equal sampling variance. Default optimizations are
-selected using numerical validation and lower median complete-call runtime on
-a strict majority of a fixed case panel; this does not imply every input is faster.
+updates reuse groups of equal sampling variance. Runtime and memory use depend
+on input size, exact matrix structure, iteration count and requested threads.
+Reducing temporary storage need not reduce runtime, and parallelism does not
+make every input faster.
 There are no environment variables for selecting alternative mathematical paths.
 Use the per-fit `n_threads` parameter for native product parallelism and eligible
 RSS preparation. Its default is one, and public thread selection remains
