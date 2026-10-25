@@ -6,7 +6,9 @@ import json
 import os
 import pickle
 import platform
+import re
 import sys
+import time
 import warnings
 from pathlib import Path
 
@@ -35,6 +37,153 @@ def native_options(p, count=4):
 
 def task_ids():
     return {int(path.name) for path in Path("/proc/self/task").iterdir()}
+
+
+def parse_task_stat(raw):
+    """Parse identity/exit flags without assuming comm contains no spaces or ')'."""
+    first, last = raw.index("("), raw.rindex(")")
+    fields = raw[last + 1:].split()
+    return dict(tid=int(raw[:first].strip()), comm=raw[first + 1:last],
+                state=fields[0], flags=int(fields[6]), starttime=int(fields[19]),
+                raw_stat=raw)
+
+
+def read_task_record(tid):
+    try:
+        return parse_task_stat(Path(f"/proc/self/task/{tid}/stat").read_text())
+    except FileNotFoundError:
+        # Listing a task and opening stat are separate procfs observations.
+        return None
+
+
+def worker_identity(record):
+    return record["tid"], record["starttime"], record["comm"]
+
+
+def capture_worker_records(tids):
+    records = {tid: read_task_record(tid) for tid in sorted(tids)}
+    assert all(record is not None for record in records.values()), records
+    for tid, record in records.items():
+        assert record["tid"] == tid, records
+        assert re.fullmatch(r"prusie-kernel-\d+", record["comm"]), records
+    return records
+
+
+def assert_worker_tasks_disappear(tids, known=None, *, read=None, now=None, pause=None):
+    """Allow only an already-exiting, same-identity kernel teardown tail.
+
+    A successful join can precede removal from /proc/self/task. No readable
+    live worker gets a grace period: every sample must already have PF_EXITING.
+    Known identities are captured before close where the test has access to
+    the started owner. Public exception tests first observe identities after
+    close, so they additionally require the native kernel-worker name.
+    """
+    read = read_task_record if read is None else read
+    now = time.monotonic if now is None else now
+    pause = time.sleep if pause is None else pause
+    pending = set(tids)
+    identities = {} if known is None else {
+        tid: worker_identity(record) for tid, record in known.items()}
+    assert known is None or set(known) == pending
+    started = now()
+    history = []
+    while pending:
+        for tid in sorted(pending):
+            record = read(tid)
+            history.append((now() - started, tid, record))
+            if record is None:
+                pending.remove(tid)
+                continue
+            assert record["tid"] == tid, history
+            assert re.fullmatch(r"prusie-kernel-\d+", record["comm"]), history
+            identity = worker_identity(record)
+            assert identity == identities.setdefault(tid, identity), history
+            assert record["flags"] & 0x4, history  # Linux PF_EXITING.
+        if pending:
+            remaining = 1.0 - (now() - started)
+            assert remaining > 0, ("exiting tasks remain after 1 s", history)
+            pause(min(0.001, remaining))
+
+
+def observer_record(**updates):
+    record = dict(tid=123, starttime=456, comm="prusie-kernel-0", flags=0x4,
+                  state="R", raw_stat="deterministic observer fixture")
+    record.update(updates)
+    return record
+
+
+def unexpected_observer_pause(duration):
+    # This exception must escape pytest.raises(AssertionError): a regressed
+    # rejection guard should fail the test, not loop on its constant clock.
+    raise RuntimeError(f"observer unexpectedly waited {duration} s for an invalid task")
+
+
+def test_task_stat_parser_preserves_identity_and_exit_flags():
+    fields = ["R"] + ["0"] * 19
+    fields[6], fields[19] = "4194372", "456"
+    raw = "123 (name with ) and spaces) " + " ".join(fields)
+    record = parse_task_stat(raw)
+    assert worker_identity(record) == (123, 456, "name with ) and spaces")
+    assert record["flags"] & 0x4 and record["state"] == "R"
+    assert record["raw_stat"] == raw
+
+
+@pytest.mark.parametrize("record", [
+    observer_record(flags=0), observer_record(tid=124),
+    observer_record(comm="unrelated-worker"),
+])
+def test_teardown_observer_rejects_live_or_unowned_tasks_without_waiting(record):
+    with pytest.raises(AssertionError):
+        assert_worker_tasks_disappear({123}, read=lambda tid: record,
+                                      now=lambda: 0., pause=unexpected_observer_pause)
+
+
+@pytest.mark.parametrize("updates", [{"starttime": 457}, {"comm": "prusie-kernel-1"}])
+def test_teardown_observer_rejects_known_identity_changes_without_waiting(updates):
+    with pytest.raises(AssertionError):
+        assert_worker_tasks_disappear({123}, {123: observer_record()},
+                                      read=lambda tid: observer_record(**updates),
+                                      now=lambda: 0., pause=unexpected_observer_pause)
+
+
+@pytest.mark.parametrize("updates", [{"starttime": 457}, {"flags": 0}])
+def test_teardown_observer_rejects_changed_or_live_task_after_exiting_sample(updates):
+    records = iter([observer_record(), observer_record(**updates)])
+    pauses = []
+    with pytest.raises(AssertionError):
+        assert_worker_tasks_disappear({123}, read=lambda tid: next(records),
+                                      now=lambda: 0., pause=pauses.append)
+    assert pauses == [0.001]
+
+
+@pytest.mark.parametrize("known", [None, {123: observer_record()}])
+def test_teardown_observer_accepts_only_exiting_tail_then_disappearance(known):
+    records = iter([observer_record(), None])
+    pauses = []
+    assert_worker_tasks_disappear({123}, known, read=lambda tid: next(records),
+                                  now=lambda: 0., pause=pauses.append)
+    assert pauses == [0.001]
+
+
+def test_teardown_observer_accepts_listed_then_absent_without_inventing_flags():
+    pauses = []
+    assert_worker_tasks_disappear({123}, read=lambda tid: None,
+                                  now=lambda: 0., pause=pauses.append)
+    assert pauses == []
+
+
+def test_teardown_observer_rejects_persistent_exiting_task_at_fixed_deadline():
+    clock, pauses = [0.], []
+
+    def advance(duration):
+        pauses.append(duration)
+        clock[0] += duration
+
+    with pytest.raises(AssertionError, match="remain after 1 s"):
+        assert_worker_tasks_disappear({123}, read=lambda tid: observer_record(),
+                                      now=lambda: clock[0], pause=advance)
+    assert clock[0] == 1.0
+    assert 0 < len(pauses) <= 1001 and max(pauses) <= 0.001
 
 
 def bits_equal(actual, expected):
@@ -188,8 +337,9 @@ def test_native_helper_workers_are_joined_before_close_returns():
     assert owner.has_started
     own_workers = task_ids() - before
     assert len(own_workers) == 4
+    identities = capture_worker_records(own_workers)
     owner.close()
-    assert not (own_workers & task_ids())
+    assert_worker_tasks_disappear(own_workers, identities)
 
 
 @pytest.mark.parametrize("count", [2, 4, 8])
@@ -240,6 +390,7 @@ def test_private_native_failure_does_not_leave_helper_workers(problem):
     owner = _native._new_fit_executor(4)
     _native._validate_and_repair_rss_with_executor(matrix, 1., owner)
     own_workers = task_ids() - before if before else set()
+    identities = capture_worker_records(own_workers) if before else None
     options = native_options(1025)
     if problem == "parse":
         del options["l"]
@@ -253,7 +404,7 @@ def test_private_native_failure_does_not_leave_helper_workers(problem):
         _native._fit_with_executor(matrix, scores, 999., 1000., options, owner)
     owner.close()
     if before:
-        assert not (own_workers & task_ids())
+        assert_worker_tasks_disappear(own_workers, identities)
 
 
 def test_public_warning_error_closes_owner_without_replacing_primary(monkeypatch):
@@ -279,7 +430,7 @@ def test_public_warning_error_closes_owner_without_replacing_primary(monkeypatch
     assert exception.value.__traceback__ is not None
     owners[0].close()
     if before:
-        assert not (task_ids() - before)
+        assert_worker_tasks_disappear(task_ids() - before)
 
 
 def test_late_public_validation_error_closes_started_owner(monkeypatch):
@@ -300,7 +451,7 @@ def test_late_public_validation_error_closes_started_owner(monkeypatch):
     assert len(owners) == 1
     owners[0].close()
     if before:
-        assert not (task_ids() - before)
+        assert_worker_tasks_disappear(task_ids() - before)
 
 
 def test_parallel_and_parent_warning_stacks_use_the_same_original_callsite():
@@ -353,13 +504,14 @@ def test_nonstandard_rounding_keeps_parent_and_changed_controls_replace_workers(
         _native._validate_and_repair_rss_with_executor(matrix, 1., owner)
         assert owner.has_started
         early_workers = task_ids() - before
+        identities = capture_worker_records(early_workers)
         assert library.fesetround(0x400) == 0
         options = native_options(1025)
         expected = _native.fit(matrix, scores, 999., 1000., options)
         actual = _native._fit_with_executor(matrix, scores, 999., 1000., options, owner)
         bits_equal(actual, expected)
         assert library.fegetround() == 0x400
-        assert not (early_workers & task_ids())
+        assert_worker_tasks_disappear(early_workers, identities)
     finally:
         try:
             owner.close()

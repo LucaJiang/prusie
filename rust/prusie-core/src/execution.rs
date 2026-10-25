@@ -402,6 +402,49 @@ impl Drop for FitExecutor {
 mod tests {
     use super::*;
     use crate::{diagnostics::FitControl, options::PriorMethod, FitOptions, FitOutput};
+
+    struct PoolTlsCompletion {
+        mask: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        bit: usize,
+    }
+
+    impl Drop for PoolTlsCompletion {
+        fn drop(&mut self) {
+            self.mask
+                .fetch_or(self.bit, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+
+    std::thread_local! {
+        static POOL_TLS_COMPLETION: std::cell::RefCell<Option<PoolTlsCompletion>> =
+            const { std::cell::RefCell::new(None) };
+    }
+
+    fn mark_actual_pool_tls(
+        owner: &FitExecutor,
+        mask: &std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        threads: usize,
+    ) {
+        let pool = owner.pool.as_ref().unwrap().get();
+        assert_eq!(pool.current_num_threads(), threads);
+        let mut indices = pool.broadcast(|context| {
+            let index = context.index();
+            POOL_TLS_COMPLETION.with(|slot| {
+                let mut slot = slot.borrow_mut();
+                assert!(slot.is_none());
+                *slot = Some(PoolTlsCompletion {
+                    mask: std::sync::Arc::clone(mask),
+                    bit: 1 << index,
+                });
+            });
+            index
+        });
+        indices.sort_unstable();
+        assert_eq!(indices, (0..threads).collect::<Vec<_>>());
+        // Installing a value is distinct from destroying worker-local storage.
+        assert_eq!(mask.load(std::sync::atomic::Ordering::SeqCst), 0);
+    }
+
     unsafe extern "C" {
         fn fegetround() -> i32;
         fn fesetround(mode: i32) -> i32;
@@ -479,6 +522,42 @@ mod tests {
             actual.diagnostics.exact_activation,
             parent.diagnostics.exact_activation
         );
+    }
+
+    #[test]
+    fn executor_close_waits_for_actual_pool_tls_destructors_after_every_join() {
+        use std::sync::{atomic::AtomicUsize, atomic::Ordering, Arc};
+
+        let mut owner = executor(4);
+        let completed = Arc::new(AtomicUsize::new(0));
+        mark_actual_pool_tls(&owner, &completed, 4);
+        owner.close();
+        assert_eq!(completed.load(Ordering::SeqCst), 0xf);
+        assert_eq!(owner.phase, Phase::Closed);
+        assert!(owner.pool.is_none());
+        assert!(owner.failure().is_none());
+        owner.close();
+        assert_eq!(completed.load(Ordering::SeqCst), 0xf);
+        assert!(owner.failure().is_none());
+
+        // Fail the first join, before the real pool handles, and still require
+        // every actual worker's TLS destruction before close returns.
+        let mut owner = executor(2);
+        let completed = Arc::new(AtomicUsize::new(0));
+        mark_actual_pool_tls(&owner, &completed, 2);
+        owner.pool.as_mut().unwrap().workers.insert(
+            0,
+            thread::spawn(|| panic!("injected first-handle join failure")),
+        );
+        owner.close();
+        assert_eq!(completed.load(Ordering::SeqCst), 0x3);
+        assert_eq!(owner.phase, Phase::Closed);
+        assert!(owner.pool.is_none());
+        let failure = owner.failure().unwrap().to_owned();
+        assert_eq!(failure, "A per-fit kernel worker failed while joining");
+        owner.close();
+        assert_eq!(completed.load(Ordering::SeqCst), 0x3);
+        assert_eq!(owner.failure(), Some(failure.as_str()));
     }
 
     #[test]
