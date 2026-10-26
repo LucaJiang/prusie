@@ -1,14 +1,17 @@
 """Packaged toy examples for offline use and installation checks."""
 
+from __future__ import annotations
+
 import hashlib
 import io
 import json
 from importlib.resources import files
+from typing import Any
 
 import numpy as np
 
 
-def load_example():
+def load_example() -> dict[str, Any]:
     """Load the packaged 500-variant synthetic toy example.
 
     Returns
@@ -57,7 +60,7 @@ def load_example():
     return dict(inputs=inputs, parameters=metadata["parameters"].copy(), metadata=metadata)
 
 
-def load_convergence_example():
+def load_convergence_example() -> dict[str, Any]:
     """Load the 200-variant sufficient statistics of the susieR convergence toy example.
 
     Returns

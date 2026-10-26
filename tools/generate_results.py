@@ -17,7 +17,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "tools/benchmark"))
+sys.path.insert(0, str(ROOT / "tools/benchmark/_internal"))
 from render_tables import render  # noqa: E402 - Local benchmark tools.
 from summary import FIELDS, paired, summarize  # noqa: E402 - Local tool path must be set first.
 

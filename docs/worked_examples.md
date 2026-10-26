@@ -143,7 +143,7 @@ fragment requires the problem fit's posterior `summary` and aligned LD matrix
 distinct detail views:
 
 ```python
-from prusie.plots import plot_signal
+from prusie.viz import plot_signal
 
 singleton = plot_signal(summary, variant_id="33", R=R,
                         layout="compact", ld_measure="r2")

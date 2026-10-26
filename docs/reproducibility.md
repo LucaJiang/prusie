@@ -22,10 +22,8 @@ comparison figures. It leaves the dev2 source records unchanged. To redraw the
 dev2 figures:
 
 ```sh
-python tools/benchmark/plot_current.py \
-  --real docs/assets/benchmark/real_summary.json \
-  --scaling docs/assets/benchmark/scaling_summary.json \
-  --output output/benchmark-figures
+python tools/benchmark/reproduce.py --render-records \
+  --output-dir output/benchmark-figures
 ```
 
 Records contain case/backend statuses, repeats, numerical comparisons and
@@ -88,8 +86,7 @@ format. Write new references to a new output directory.
 
 ## Real GWAS and eQTL inputs
 
-The [data recipes](real_data.md) identify the GWAS and eQTL source pages,
-access conditions and preprocessing. The measurements use one FinnGen R10
+The measurements use one FinnGen R10
 study and one BLUEPRINT monocyte eQTL dataset across 100 windows, representing
 83 genes. They use external FIN/EUR reference LD and share study participants
 across loci.

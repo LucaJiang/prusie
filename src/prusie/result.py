@@ -8,6 +8,8 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from ._types import CredibleSetAudit, FitParameters, InputChecks, RetainedInputs
+
 
 @dataclass(frozen=True)
 class InputQuality:
@@ -85,13 +87,13 @@ class SusieResult:
         minimum, mean and median absolute pairwise correlation.
     null_index : int or None
         Column index of the null variant, if included.
-    params : dict
+    params : FitParameters
         Resolved fitting options and normalized prior weights.
     backend_version : str
         Native backend and reference identifiers.
     warnings : list of str
         Messages also emitted as ``RuntimeWarning``.
-    qc : dict
+    qc : InputChecks
         Input checks performed for this call.
     variant_metadata : dict of str to ndarray
         Caller-supplied length-p columns.
@@ -110,7 +112,7 @@ class SusieResult:
         Per-sweep metrics when ``track_fit`` was requested.
     refinement : dict
         Record of an explicit refinement search, if any.
-    cs_audit : list of dict
+    cs_audit : list of CredibleSetAudit
         Decisions taken while constructing each candidate credible set.
     data_signature : str or None
         SHA-256 digest of the owned input snapshot, used to validate warm
@@ -150,10 +152,10 @@ class SusieResult:
     converged: bool
     sets: dict[str, Any]
     null_index: int | None
-    params: dict[str, Any]
+    params: FitParameters
     backend_version: str
     warnings: list[str]
-    qc: dict[str, Any]
+    qc: InputChecks
     variant_metadata: dict[str, np.ndarray]
     X_column_scale_factors: np.ndarray
     intercept: float
@@ -166,7 +168,7 @@ class SusieResult:
             status="not_executed", stop_reason="not_requested", history=[], total_fits=0
         )
     )
-    cs_audit: list[dict[str, Any]] = field(default_factory=list)
+    cs_audit: list[CredibleSetAudit] = field(default_factory=list)
     data_signature: str | None = None
     input_quality: InputQuality | None = None
     fitted: NDArray[np.float64] | None = None
@@ -176,7 +178,7 @@ class SusieResult:
     rv: NDArray[np.float64] | None = None
     marginal_loglik: NDArray[np.float64] | None = None
     R_finite_diagnostics: dict[str, Any] = field(default_factory=dict)
-    _prepared: Any = field(default=None, repr=False, compare=False)
+    _prepared: RetainedInputs | None = field(default=None, repr=False, compare=False)
     _input_quality_export: dict[str, Any] | None = field(
         default=None, init=False, repr=False, compare=False
     )

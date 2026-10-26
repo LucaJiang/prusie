@@ -5,25 +5,31 @@ of the stage-A fit, which uses a modified prior, is recorded but never used to
 select a solution.
 """
 
+from __future__ import annotations
+
 import copy
 import hashlib
 import math
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from types import MappingProxyType
+from typing import Any
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 
 from . import _native
 from .diagnostics import (
+    ConvergenceConfig,
     convergence_summary,
     nonconvergence_message,
     resolve_convergence,
     tracking_level,
 )
 from .posterior import credible_sets, marginal_pip
+from .result import SusieResult
 
 
 def _readonly(value):
@@ -56,7 +62,16 @@ def _hash_float64_c_order(h, value):
             h.update(memoryview(chunk).cast("B"))
 
 
-def data_signature(matrix, response, yty, n, scales, multiplier, ids, metadata):
+def data_signature(
+    matrix: ArrayLike,
+    response: ArrayLike,
+    yty: float,
+    n: float,
+    scales: ArrayLike,
+    multiplier: float,
+    ids: Sequence[str],
+    metadata: Mapping[str, ArrayLike],
+) -> str:
     """SHA-256 digest of the working inputs, variant IDs and allele labels."""
     h = hashlib.sha256()
     for a in (matrix, response, np.asarray([yty, n, multiplier]), scales):
@@ -76,22 +91,22 @@ def data_signature(matrix, response, yty, n, scales, multiplier, ids, metadata):
 class PreparedData:
     """Read-only working inputs and scales shared by all candidate fits."""
 
-    matrix: np.ndarray
-    response: np.ndarray
+    matrix: NDArray[np.float64]
+    response: NDArray[np.float64]
     yty: float
     n: float
-    options: dict
-    cs_matrix: np.ndarray
-    diagonal: np.ndarray
-    scales: np.ndarray
-    means: np.ndarray
+    options: Mapping[str, Any]
+    cs_matrix: NDArray[np.float64]
+    diagonal: NDArray[np.float64]
+    scales: NDArray[np.float64]
+    means: NDArray[np.float64]
     y_mean: float
     matrix_scale: float
-    variant_ids: np.ndarray
-    alleles: dict
+    variant_ids: NDArray[np.str_]
+    alleles: Mapping[str, ArrayLike]
 
     @cached_property
-    def signature(self):
+    def signature(self) -> str:
         """Hash the owned snapshot once, never mutable caller buffers."""
         return data_signature(
             self.matrix,
@@ -105,7 +120,7 @@ class PreparedData:
         )
 
     @cached_property
-    def _working_matrix(self):
+    def _working_matrix(self) -> NDArray[np.float64]:
         """Working crossproduct, materialized only for objective evaluation."""
         if "matrix_global_scale" in self.options:
             q = (
@@ -116,26 +131,26 @@ class PreparedData:
             return q
         return self.matrix
 
-    def working_matrix(self):
+    def working_matrix(self) -> NDArray[np.float64]:
         """Return the working crossproduct D⁻¹ XtX D⁻¹ (cached, read-only)."""
         return self._working_matrix
 
 
 def make_prepared(
-    matrix,
-    response,
-    yty,
-    n,
-    options,
-    cs_matrix,
-    diagonal,
-    scales,
-    means,
-    y_mean,
-    matrix_scale,
-    ids,
-    metadata,
-):
+    matrix: ArrayLike,
+    response: ArrayLike,
+    yty: float,
+    n: float,
+    options: Mapping[str, Any],
+    cs_matrix: ArrayLike,
+    diagonal: ArrayLike,
+    scales: ArrayLike,
+    means: ArrayLike,
+    y_mean: float,
+    matrix_scale: float,
+    ids: Sequence[str],
+    metadata: Mapping[str, ArrayLike],
+) -> PreparedData:
     """Snapshot the prepared inputs of a fit as read-only arrays."""
     o = {
         k: (_readonly(v) if isinstance(v, np.ndarray) else copy.deepcopy(v))
@@ -178,21 +193,21 @@ def _matching_data_signatures(left, right):
 
 
 def initial_options(
-    s_init,
+    s_init: SusieResult | Mapping[str, Any] | None,
     *,
-    ids,
-    metadata,
-    scales,
-    null_index,
-    signature,
-    L,
-    weights,
-    estimate_prior_variance,
-    estimate_residual_variance,
-    reset_variances=False,
-    prior_variance=0.2,
-    require_same_data=False,
-):
+    ids: Sequence[str],
+    metadata: Mapping[str, ArrayLike],
+    scales: ArrayLike,
+    null_index: int | None,
+    signature: str | None,
+    L: int,
+    weights: ArrayLike,
+    estimate_prior_variance: bool,
+    estimate_residual_variance: bool,
+    reset_variances: bool = False,
+    prior_variance: float = 0.2,
+    require_same_data: bool = False,
+) -> dict[str, Any]:
     """Validate a working-coordinate initial posterior and return native options.
 
     The first min(L, L_init) effects are used; remaining rows start at the
@@ -298,7 +313,13 @@ def _validate_labels(fit, data):
             raise ValueError("Posterior allele direction differs from prepared data")
 
 
-def evaluate_objective(fit, data=None, *, prior_weights=None, hard_exclusion=False):
+def evaluate_objective(
+    fit: SusieResult,
+    data: PreparedData | None = None,
+    *,
+    prior_weights: ArrayLike | None = None,
+    hard_exclusion: bool = False,
+) -> dict[str, Any]:
     """Recompute the ELBO of the complete posterior state after final trimming.
 
     Parameters
@@ -465,7 +486,7 @@ class RefinementConfig:
     inner_tol: float = 1e-4
     candidate_budget: int | None = None
 
-    def validate(self):
+    def validate(self) -> None:
         """Raise ValueError if any setting is out of range."""
         for key in ("max_rounds", "max_iter"):
             v = getattr(self, key)
@@ -580,7 +601,14 @@ def _run(
     return result
 
 
-def continue_fit(fit, *, max_iter=100, tol=None, track_fit=False, convergence=None):
+def continue_fit(
+    fit: SusieResult,
+    *,
+    max_iter: int = 100,
+    tol: float | None = None,
+    track_fit: bool | str = False,
+    convergence: ConvergenceConfig | None = None,
+) -> SusieResult:
     """Run further IBSS sweeps starting from the posterior of a fit.
 
     Parameters
@@ -639,7 +667,12 @@ def _brief(fit, objective=None):
     )
 
 
-def refine_fit(fit, config=None, *, convergence=None):
+def refine_fit(
+    fit: SusieResult,
+    config: RefinementConfig | None = None,
+    *,
+    convergence: ConvergenceConfig | None = None,
+) -> SusieResult:
     """Search for a higher-objective solution by excluding credible sets.
 
     Each round fixes the incumbent and its credible sets. For each set, stage

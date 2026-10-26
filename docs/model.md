@@ -1,13 +1,19 @@
 # Statistical model
 
-Fine-mapping aims to identify the variants in a region that affect a trait
-when nearby variants are correlated, so that several variants can explain much
-the same association signal. SuSiE represents multiple effects and quantifies,
-for each effect, the uncertainty about which variant carries it. prusie fits
-the Gaussian SuSiE model to individual data, association summary statistics and
-signed LD, or centered sufficient statistics. The equations below first describe
-the ordinary Gaussian-prior model; additional supported options are described
-under [model options](#additional-model-options).
+Fine-mapping aims to identify variants that affect a trait, but linkage
+disequilibrium (LD) can make several nearby variants consistent with the same
+association signal. prusie uses SuSiE (Sum of Single Effects) to model multiple
+effects while quantifying uncertainty about which variants carry them.
+
+SuSiE is a Bayesian variable selection model for linear regression with Gaussian
+errors. It represents the vector of variant effects as a sum of single-effect
+components, each with at most one nonzero effect.
+
+prusie can fit this model using individual-level data, sufficient statistics
+computed from centered data, or association summary statistics together with an
+LD correlation matrix. The sections below develop the model with Gaussian effect
+priors, starting with the data and notation; [additional model options](#additional-model-options)
+are introduced later.
 
 ## Data, notation and scale
 
@@ -27,16 +33,29 @@ prior effect variance $V_\ell$ (written $\sigma_0^2$ in some references), and
 $\pi_j$ is the prior probability that it is located at variant $j$. prusie uses
 the same prior weights for all single effects.
 
-By default, predictors are standardized by their sample standard deviations
-$d_j=\sqrt{Q_{jj}/(n-1)}$. Inference then uses
+With `standardize=True` (the default), each centered predictor column is
+divided by its sample standard deviation
+$d_j=\sqrt{Q_{jj}/(n-1)}$. Each nonconstant column then has unit sample
+variance, while the response remains in its supplied units. For a constant
+column, the divisor is set to one to avoid division by zero. With
+`standardize=False`, all divisors are one and the predictor units are unchanged.
+
+The corresponding sufficient statistics used for fitting are
 $\mathbf D^{-1}\mathbf Q\mathbf D^{-1}$ and $\mathbf D^{-1}\mathbf g$, where
-$\mathbf D=\operatorname{diag}(d_1,\ldots,d_p)$; the response scale is not
-changed. A zero predictor scale is replaced by one. In the updates below,
-$\mathbf Q$ and $\mathbf g$ denote these **working** sufficient statistics.
-With `standardize=False` the supplied predictor scale is used. `coef` returns
-the posterior mean on the input scale by dividing by the stored predictor
-scales. Centering and any covariate adjustment must already be consistent
-across the supplied summaries; covariates are not fitted.
+$\mathbf D=\operatorname{diag}(d_1,\ldots,d_p)$. In the regression and updates below,
+the predictor matrix is on this **working scale**, and
+$\mathbf Q$ and $\mathbf g$ denote the working sufficient statistics.
+
+Effect estimates are computed on the working predictor scale. The `coef`
+property divides each posterior mean coefficient by its stored predictor scale
+factor to express the effect per unit of the input predictor. For summary-statistic
+inputs, these units depend on how the regression quantities are constructed;
+see [From summaries to working sufficient statistics](#from-summaries-to-working-sufficient-statistics).
+
+Standardization is separate from centering and covariate adjustment. Supplied
+summary statistics and sufficient statistics must already reflect consistent
+centering and any covariate adjustment; the fitting routines do not estimate
+additional covariate effects.
 
 ## A sum of single effects
 
@@ -50,27 +69,36 @@ $$
 \end{aligned}
 $$
 
-Each single effect is located at one variant and has a Gaussian effect size:
+Each single effect, indexed by $\ell=1,\ldots,L$, is located at one variant
+and has a Gaussian effect size:
 
 $$
 \begin{aligned}
 \gamma_\ell&\sim\operatorname{Categorical}(\pi_1,\ldots,\pi_p),\\
-a_\ell&\sim N(0,V_\ell),
-&\mathbf b_\ell&=a_\ell\mathbf e_{\gamma_\ell}.
+a_\ell&\sim N(0,V_\ell),\\
+\mathbf b_\ell&=a_\ell\mathbf e_{\gamma_\ell}.
 \end{aligned}
 $$
 
-Here $\mathbf e_j$ is the $j$th standard basis vector. The location
-$\gamma_\ell$ indicates *which* variant carries the effect and $a_\ell$ its
-size. The default prior is uniform, $\pi_j=1/p$; `prior_weights` sets other
-values. `scaled_prior_variance` gives the initial $V_\ell$ relative to
-$s_y/(n-1)$.
+For component $\ell$, $\gamma_\ell$ selects a variant from $1,\ldots,p$, and
+$a_\ell$ is its effect size. The vector $\mathbf e_j$ has a one in position
+$j$ and zeros elsewhere, so $\mathbf b_\ell$ places the effect at the selected
+variant and assigns zero to every other variant.
 
-$L$ is an upper bound on the number of effects. Several single effects can be
-located at the same variant, and an estimated $V_\ell=0$ removes an effect. The
-number of reported credible sets depends in addition on posterior mass, LD
-purity and the removal of duplicate sets. $L$, the number of causal variants
-and the number of credible sets are therefore different quantities.
+The prior probability of selecting variant $j$ is $\pi_j$. By default, all
+variants are equally likely ($\pi_j=1/p$); `prior_weights` allows unequal
+probabilities. The effect-size prior is centered at zero with variance
+$V_\ell$. In this Gaussian model, its initial value is `scaled_prior_variance`
+times the response sample variance $s_y/(n-1)$. This parameter defaults to
+0.2 and accepts either a shared value or a separate value for each component.
+
+$L$ sets the maximum number of single-effect components available to the model.
+A component with $V_\ell=0$ contributes no effect, and several components can
+select the same variant. Choosing $L$ therefore does not assume that exactly
+$L$ distinct variants affect the trait. Credible sets summarize uncertainty
+about component locations; sets from inactive components or with low LD purity
+are excluded by default, and duplicate sets are removed. The number of reported
+credible sets therefore need not equal $L$ or the number of causal variants.
 
 ## Single-effect posteriors and effect means
 
@@ -92,16 +120,19 @@ M^{(2)}_{\ell j}&=\mathbb E_q[a_\ell^2\mid\gamma_\ell=j]
 \end{aligned}
 $$
 
-`alpha`, `mu` and `mu2` correspond to $\alpha$, $\mu$ and $M^{(2)}$; in the
-API and results, single effects are also called components and are indexed by
-`component_id`. `mu2` includes the conditional posterior variance
-$\tau_{\ell j}^2$; it is neither the square of `mu` nor a variance. The
-posterior mean of effect $\ell$ is
-$\mathbf m_\ell=\boldsymbol\alpha_\ell\odot\boldsymbol\mu_\ell$ and the total
-posterior mean is $\mathbf m=\sum_\ell\mathbf m_\ell$. A large conditional mean
-does not imply a large posterior mean when the variant has a small inclusion
-probability. `coef` reports $m_j/d_j$ on the input predictor scale. The
-response and coefficient units of each RSS input route are given below.
+The result arrays `alpha`, `mu` and `mu2` store the inclusion probabilities,
+conditional posterior means and conditional posterior second moments defined
+above. Rows correspond to single-effect components and columns to variants;
+$\tau_{\ell j}^2$ denotes the conditional posterior variance.
+
+The posterior mean contribution of component $\ell$ is obtained by weighting
+its conditional means by the inclusion probabilities:
+$\mathbf m_\ell=\boldsymbol\alpha_\ell\odot\boldsymbol\mu_\ell$, where
+$\odot$ denotes elementwise multiplication. Summing over components gives the
+total posterior mean $\mathbf m=\sum_\ell\mathbf m_\ell$. The `coef` property
+returns $m_j/d_j$ on the input predictor scale. For RSS fits, the units depend
+on the input route, as described under
+[From summaries to working sufficient statistics](#from-summaries-to-working-sufficient-statistics).
 
 ## One single-effect regression
 
@@ -111,14 +142,15 @@ fixed and
 $$
 \begin{aligned}
 \mathbf r_\ell&=\mathbf g-\mathbf Q\sum_{k\ne\ell}\mathbf m_k,\\
-\widehat b_{\ell j}&=r_{\ell j}/Q_{jj},
-&s_j^2&=\sigma^2/Q_{jj}.
+\widehat b_{\ell j}&=r_{\ell j}/Q_{jj},\\
+s_j^2&=\sigma^2/Q_{jj}.
 \end{aligned}
 $$
 
-$\mathbf r_\ell$ is a **crossproduct residual** of length $p$: the
-crossproduct of $\mathbf X$ with the individual-level residual, not the
-residual of length $n$ itself. For $Q_{jj}>0$, the Gaussian single-effect
+The **crossproduct residual** $\mathbf r_\ell$ contains one entry per variant.
+Each entry $r_{\ell j}$ is the inner product of predictor column $j$ with the
+response residual after subtracting the posterior mean contributions of all
+components except $\ell$. For $Q_{jj}>0$, the Gaussian single-effect
 regression (SER) gives, for each variant, the Bayes factor of a nonzero effect
 with prior $N(0,V_\ell)$ against no effect:
 
@@ -135,29 +167,35 @@ $$
 \begin{aligned}
 \alpha_{\ell j}&=\frac{\pi_j\mathrm{BF}_{\ell j}}
 {\sum_k\pi_k\mathrm{BF}_{\ell k}},\\
-\mu_{\ell j}&=\frac{V_\ell}{V_\ell+s_j^2}\widehat b_{\ell j},
-&\tau_{\ell j}^2&=\frac{V_\ell s_j^2}{V_\ell+s_j^2}.
+\mu_{\ell j}&=\frac{V_\ell}{V_\ell+s_j^2}\widehat b_{\ell j},\\
+\tau_{\ell j}^2&=\frac{V_\ell s_j^2}{V_\ell+s_j^2}.
 \end{aligned}
 $$
 
-The posterior mean shrinks the marginal estimate towards zero, the more so the
-larger its sampling variance relative to the prior variance. For fixed prior
-and residual variances, the prior weights affect the probability of each
-location; posterior probability can remain spread over correlated variants
-with similar evidence. These formulas describe
-the case of a positive prior variance; the smoothing of the prior weights and
-the treatment of columns without information are described under
-[Inputs](inputs.md#priors-and-zero-information-columns). `lbf_variable` stores
-the log Bayes factors of the variants before prior weighting; `lbf` stores the
-log of the prior-weighted average Bayes factor of each effect.
+The probabilities $\alpha_{\ell j}$ describe uncertainty about the effect's
+location, combining the prior weights with evidence from the current residual.
+Correlated variants with similar evidence can share the posterior probability.
+Conditional on selecting variant $j$, the posterior mean $\mu_{\ell j}$ shrinks
+its residual-based estimate $\widehat b_{\ell j}$ toward zero. Shrinkage is
+stronger when the sampling variance $s_j^2$ is large relative to the prior
+variance $V_\ell$.
+
+`lbf_variable` stores $\log\mathrm{BF}_{\ell j}$ for each variant before prior
+weighting. `lbf` stores $\log\sum_j\pi_j\mathrm{BF}_{\ell j}$ for each component,
+summarizing its evidence after averaging over the possible variant locations.
+
+These formulas assume $V_\ell>0$ and $Q_{jj}>0$.
+[Inputs](inputs.md#priors-and-zero-information-columns) describes how prusie
+smooths prior weights and handles columns without information.
 
 ## Sequential IBSS and variance estimation
 
-Iterative Bayesian stepwise selection (IBSS) applies the SER to each effect in
-turn. At a cold start, all posterior means are zero, each alpha row is uniform
-and the variances take their initial values. Within a sweep, each effect is updated
-using the current means of all other effects, including those already updated
-in the same sweep:
+Iterative Bayesian stepwise selection (IBSS) updates one single-effect component
+at a time. A **sweep** is one pass through all components. Each update uses the
+latest posterior means of the other components: those already updated in the
+current sweep and those still carrying their values from the previous sweep.
+At a cold start, the posterior means are zero, each row of `alpha` is uniform,
+and the prior and residual variances take their initial values.
 
 ```text
 initialize component means, variances and their matrix products
@@ -169,184 +207,295 @@ for each sweep, up to max_iter:
         store the component evidence, KL and new matrix product
     if requested: check prior variance using the current residual variance
     evaluate expected residual sum of squares and ELBO
-    record diagnostics and check the requested stopping rule
-    if success, an eligible cycle stop, or numerical failure: stop
-    if requested: update residual variance for the next sweep
+    record diagnostics and apply the stopping rule
+    if converged, an eligible cycle stop, or numerical failure: stop
+    if requested: update residual variance
 trim components below prior_tol and construct summaries
 ```
 
-With a finite ELBO and the default rule, convergence can first be declared
-after `min_iter` sweeps (two by default); repeated posterior states are only
-recorded as diagnostics. [Convergence and refinement](post_analysis.md#convergence-diagnostics)
-gives the exact objective condition and the exceptional stops.
+### Prior variance estimation
 
-With `estimate_prior_method="optim"`, each update maximizes the SER log marginal
-likelihood $\log\sum_j\pi_j\mathrm{BF}_{\ell j}(V)$ over $\log V$ by Brent's
-method, using the smoothed prior weights. The maximizer is compared first with
-the current variance and then with $V=0$: $V$ is set to zero unless its log
-marginal likelihood exceeds that at $V=0$ by more than `check_null_threshold`.
-`simple` makes only this comparison with zero, at the current $V$.
+When `estimate_prior_variance=True`, the prior variance is estimated within
+each component update. `estimate_prior_method` selects the procedure:
 
-`EM` first computes the posterior at the current $V_\ell$ and then sets
-$V_\ell\leftarrow\sum_j\alpha_{\ell j}M^{(2)}_{\ell j}$ for the next update,
-without the comparison with zero. The stored Bayes factors and KL refer to
-that posterior. With `estimate_prior_variance=False`, the initial $V$ is kept
-and neither estimation nor the comparison with zero is applied; the final
-trimming of small variances still applies.
+- **`optim`** maximizes the SER log marginal likelihood
+  $\log\sum_j\pi_j\mathrm{BF}_{\ell j}(V)$ over $\log V\in[-30,15]$ using
+  Brent's method and the smoothed prior weights. The candidate replaces the
+  current variance only if its log marginal likelihood is at least as large.
+  The selected variance is then compared with zero: it is retained only if
+  its log marginal likelihood exceeds that at $V=0$ by more than
+  `check_null_threshold`; otherwise it is set to zero.
+- **`simple`** compares the current variance with zero using the same
+  `check_null_threshold` rule, without searching for a new positive variance.
+- **`EM`** first computes the posterior using the current $V_\ell$, then sets
+  $V_\ell\leftarrow\sum_j\alpha_{\ell j}M^{(2)}_{\ell j}$ for the next
+  update of that component. The stored Bayes factors and KL divergence refer to the
+  posterior computed before this variance update. EM does not perform the
+  comparison with zero.
 
-The variational objective (evidence lower bound, ELBO) is the expected log
-likelihood minus the divergence of the approximation from the prior:
+With `estimate_prior_variance=False`, the supplied initial prior variances are
+kept during fitting. Final trimming of variances below `prior_tol` still applies.
+
+### ELBO and residual variance
+
+After each sweep, IBSS computes the expected residual sum of squares (ER2) and
+the evidence lower bound (ELBO). ER2 averages the squared residual over the
+posterior, accounting for uncertainty in the effects;
+[Optimization](optimization.md#retained-component-products) describes its
+calculation from `mu2` and the stored matrix products. The ELBO combines the
+expected log likelihood with a penalty for divergence from the prior:
 
 $$
 \mathcal L(q)=\mathbb E_q[\log p(\mathbf y\mid\mathbf b,\sigma^2)]
 -\sum_{\ell=1}^{L}\operatorname{KL}\{q_\ell(\mathbf b_\ell)\|p_\ell(\mathbf b_\ell)\}.
 $$
 
-The Gaussian expected log likelihood requires the expected residual sum of
-squares (ER2), which accounts for posterior uncertainty in the effects;
-[Implementation](implementation.md#retained-component-products) derives it
-from `mu2` and the stored matrix products. The ELBO is recorded at the current
-$\sigma^2$, **before** any residual-variance update. If the fit has not stopped
-and Gaussian residual variance is estimated, it is updated as
-$\sigma^2\leftarrow\mathrm{ER2}/n$,
-also after the last permitted sweep. A fit that reaches the iteration limit can
-therefore return a `sigma2` that differs from the value used for its last ELBO;
-a converged fit omits this update. The final trimming recomputes neither the
-ELBO nor the fitted crossproduct. [Results](results.md#iterations-and-finalization)
-summarizes the stopping rule, the NaN fallback and the returned quantities.
+The ELBO is evaluated at the current $\sigma^2$, and the stopping rule is
+checked before updating residual variance. If the stopping check does not
+terminate the fit and `estimate_residual_variance=True`, the ordinary Gaussian
+model updates $\sigma^2\leftarrow\mathrm{ER2}/n$, constrained by
+`residual_variance_lowerbound` and `residual_variance_upperbound`.
+
+This update also runs after the last permitted sweep if the stopping check has
+not terminated the fit. Consequently, a fit that reaches `max_iter` can return
+a `sigma2` different from the value used for its last ELBO; a converged fit
+skips the update. Final trimming of small prior variances leaves the recorded
+ELBO and fitted crossproduct unchanged.
+[Results](results.md#iterations-and-finalization) explains these returned quantities.
+
+### Stopping rules
+
+The first sweep has no preceding state, so every rule is first evaluated after
+the second sweep (`min_iter`, default 2). The default ELBO rule
+(`convergence_method="elbo"`) declares convergence when
+
+$$
+0\le\mathcal L^{(t)}-\mathcal L^{(t-1)}<\mathtt{tol}.
+$$
+
+A decrease does not satisfy it, and repeated posterior states are recorded only
+as diagnostics.
+
+The PIP rule follows susieR and requires both
+
+$$
+\max_{\ell,j}\bigl|\alpha^{(t)}_{\ell j}-\alpha^{(t-1)}_{\ell j}\bigr|<\mathtt{tol}
+\quad\text{and}\quad
+\max_j\bigl|\mathrm{PIP}^{(t)}_j-\mathrm{PIP}^{(t-1)}_j\bigr|<\mathtt{tol}.
+$$
+
+Each PIP uses the components whose $V_\ell$ exceeds `prior_tol` in the sweep in
+which the PIP was computed; as in susieR, the state preceding the first check is
+evaluated with the variances current at that check. If the condition fails but
+alpha and PIP both match the state $k$ sweeps earlier within `tol`, for some
+$2\le k\le5$, the fit is declared converged and alpha is replaced by the average
+of the $k$ states in the cycle. The PIP rule is used:
+
+- with `convergence_method="pip"`;
+- for slot-activity priors and for NIG with more than one effect;
+- by `susie_rss` with `R_finite` or `R_mismatch`, unless a `convergence`
+  configuration is supplied, and always by multi-panel RSS;
+- for a sweep whose ELBO is NaN under the default ELBO rule, when no
+  `convergence` configuration is supplied.
+
+An infinite ELBO raises an error. A `ConvergenceConfig` passed as `convergence`
+selects the ELBO, `alpha_pip` or `joint` rule, with separate `alpha_tol` and
+`pip_tol` (default `1e-4`), and can raise `min_iter` or lower the cycle lag.
+For `R_finite`, `R_mismatch` and multi-panel fits it must keep the default
+`min_iter` and cycle lag, and with `R_finite` or `R_mismatch` it can select only
+the ELBO rule; other settings raise `ValueError`.
+[Convergence and refinement](post_analysis.md#convergence-diagnostics) describes
+these rules and the recorded diagnostics.
+
+### Defaults by entry point
+
+| Argument | `susie` | `susie_suff_stat` | `susie_rss` | `susie_rss_lambda` |
+| --- | --- | --- | --- | --- |
+| `L` | 10 | 10 | 10 | 10 |
+| Initial prior variance | `scaled_prior_variance=0.2` | `scaled_prior_variance=0.2` | `scaled_prior_variance=0.2`; `prior_variance=50` without `n` | `prior_variance=50` |
+| `estimate_residual_variance` | `True` | `True` | `False` | `False` |
+| `estimate_residual_method` | `"MoM"` | `"MoM"` | `"MoM"` | `"MLE"` only |
+| `residual_variance_lowerbound` | $\widehat{\operatorname{var}}(y)/10^4$ | 0 | 0 | 0 |
+| `standardize` | `True` | `True` | `True`; off without `n` | off (no argument) |
+| `max_iter` | 100 | 100 | 50 | 50 |
+| `tol` | `None`: `1e-4`, or `1e-6` with NIG | `1e-4` | `1e-4` | `1e-3` |
+| Stopping rule | ELBO | ELBO | ELBO; PIP as listed above | ELBO |
+| `check_prior` | off (no argument) | `False` | `True` | `True` |
+
+All four use `estimate_prior_variance=True`, `estimate_prior_method="optim"`,
+`null_weight=0`, `prior_tol=1e-9`,
+`check_null_threshold=0`, `coverage=0.95` and `min_abs_corr=0.5`. `L` is capped
+at the number of columns, including any null column, except that
+`susie_rss_lambda` caps it at the retained variant count after MAF filtering,
+excluding the null column. For RSS-lambda, explicit `L=None` remains an alias
+for 10, and explicit positive integer values are capped at that same count.
+Passing `tol=None` to
+`susie_suff_stat` or `susie_rss` also selects `1e-6` with NIG and `1e-4`
+otherwise. `susie_auto` runs staged `susie` fits with `init_tol=1` and
+`max_iter=100` per stage, then a final fit with `tol=0.01`.
 
 ## From summaries to working sufficient statistics
 
-Given centered sufficient statistics, the Gaussian likelihood depends on the
-data only through $\mathbf Q$, $\mathbf g$, $s_y$ and $n$, so individual-level
-data are not needed; `susie_suff_stat` uses these quantities directly. SuSiE-RSS
-constructs working sufficient statistics from marginal association statistics
-and LD. When the LD and the summary statistics come from the same samples and
-preprocessing, this can recover the regression quantities; an external LD
-reference provides only an approximation to the correlation in the study.
+The Gaussian likelihood depends on the data through $\mathbf Q$, $\mathbf g$,
+$s_y$ and $n$. `susie_suff_stat` accepts these quantities directly.
+`susie_rss` constructs them from association summary statistics and LD, allowing
+the same regression model to be fitted when individual-level data are
+unavailable. The construction depends on which summaries are supplied and
+determines the units of the returned effects. The quantities below are
+constructed before the optional predictor standardization described above.
 
 ### Known sample size and Wald z statistics
 
-For the default response scale, prusie applies the finite-sample Wald/PVE
-adjustment and constructs
+With z-scores and a known sample size $n$, the default `z_method="wald"`
+converts the marginal Wald statistics to the regression scale using
+
+$$
+\widetilde z_j=z_j\sqrt{\frac{n-1}{z_j^2+n-2}}.
+$$
+
+This adjustment accounts for the residual variance used in the denominator of
+a univariate Wald statistic. When `var_y` is omitted, the response is assigned
+unit sample variance and the working quantities are
 
 $$
 \begin{aligned}
-\widetilde z_j&=z_j\sqrt{\frac{n-1}{z_j^2+n-2}},\\
-\mathbf Q&=(n-1)\mathbf R,
-&\mathbf g&=\sqrt{n-1}\,\widetilde{\mathbf z},
-&s_y&=n-1.
+\mathbf Q&=(n-1)\mathbf R,\\
+\mathbf g&=\sqrt{n-1}\,\widetilde{\mathbf z},\\
+s_y&=n-1.
 \end{aligned}
 $$
 
-The adjustment relates a univariate Wald statistic, whose denominator uses a
-residual variance estimate, to a crossproduct on the standardized-response
-scale. Large Wald statistics shrink appreciably; for small effects and large
-$n$, the factor is close to one. Supplying $n$ determines this conversion and
-the crossproduct scale. For example, $n=100$ and $z=5$ give the following
-script-checked values:
-
-<!-- calculated:wald:start -->
-The adjusted statistic is **4.485750** and the working crossproduct is **44.632647** (with $Q_{jj}=99$ for unit LD diagonal).
-<!-- calculated:wald:end -->
-
-`bhat/shat` without `var_y` follows this same route after forming
-$z_j=\widehat\beta_j/\operatorname{SE}_j$. Its returned coefficients therefore
-use the standardized working scale, even though the input estimates originally
-had trait-specific units.
+With `z_method="score"`, the supplied statistics are used directly,
+$\widetilde z_j=z_j$. Supplying `bhat` and `shat` without `var_y` also uses
+this construction after forming $z_j=\widehat\beta_j/\operatorname{SE}_j$.
+The returned coefficients are therefore on the standardized working scale;
+the units of the original effect estimates are not recovered from their ratio.
 
 ### Effect estimates, standard errors and phenotype variance
 
-When `bhat`, `shat`, `n` and `var_y` are all supplied, write
-$A_j=(n-1)/(z_j^2+n-2)$ and $v_y=\mathtt{var\_y}$. The reconstruction is
+Supplying `bhat`, `shat`, `n` and `var_y` together provides the information
+needed to reconstruct the original regression scale. Write
+$v_y=\mathtt{var\_y}$ and $A_j=(n-1)/(z_j^2+n-2)$ for Wald statistics
+($A_j=1$ for score statistics). The reconstructed predictor sum of squares is
+
+$$
+h_j=\frac{v_y A_j}{\operatorname{SE}_j^2}.
+$$
+
+The sufficient statistics are then
 
 $$
 \begin{aligned}
-h_j&=\frac{v_y A_j}{\operatorname{SE}_j^2},\\
 Q_{jk}&=\sqrt{h_j}\,R_{jk}\sqrt{h_k},\\
-g_j&=\frac{\widetilde z_j\sqrt{A_j}\,v_y}{\operatorname{SE}_j},
-&s_y&=(n-1)v_y.
+g_j&=\frac{\widetilde z_j\sqrt{A_j}\,v_y}{\operatorname{SE}_j},\\
+s_y&=(n-1)v_y.
 \end{aligned}
 $$
 
-The constructed crossproduct is averaged with its transpose to remove rounding
-asymmetry. Subsequent predictor standardization uses these reconstructed
-diagonals. `coef` reverses that standardization and has the original predictor
-and phenotype units under the supplied marginal-regression assumptions. `mu`
-and `mu2` remain on the fitted predictor scale.
+prusie averages the reconstructed matrix with its transpose to remove rounding
+asymmetry. If predictor standardization is enabled, it uses the reconstructed
+diagonal entries. `coef` reverses this standardization and returns effects per
+original predictor unit in the original phenotype units, under the supplied
+marginal-regression assumptions. `mu` and `mu2` remain on the working predictor
+scale used during fitting.
 
-With **z, `var_y` and known n**, the current interface keeps
-$\mathbf Q=(n-1)\mathbf R$ and
-$\mathbf g=\sqrt{n-1}\,\widetilde{\mathbf z}$, but sets
-$s_y=(n-1)v_y$. This matches the pinned constructor: it changes response
-sum of squares, default residual variance and initial prior variance without
-reconstructing predictor scales or multiplying $\mathbf g$ by
-$\sqrt{v_y}$. These coefficients are defined by those working quantities;
-use the effect-estimate route when original-scale reconstruction is needed.
+Supplying **z, `var_y` and n** without `bhat` and `shat` uses a different
+construction:
+
+$$
+\begin{aligned}
+\mathbf Q&=(n-1)\mathbf R,\\
+\mathbf g&=\sqrt{n-1}\,\widetilde{\mathbf z},\\
+s_y&=(n-1)v_y.
+\end{aligned}
+$$
+
+Here `var_y` changes the response sum of squares and the initial residual and
+prior variances. It does not reconstruct predictor scales or rescale
+$\mathbf g$ by $\sqrt{v_y}$. To obtain coefficients on the original regression
+scale, supply the effect estimates and standard errors along with `n` and
+`var_y`.
 
 ### Missing sample size
 
-When $n$ is omitted, prusie uses the noncentrality-parameter likelihood with
-$\mathbf Q=\mathbf R$, $\mathbf g=\mathbf z$, $s_y=1$ and internal $n=2$.
-Predictor standardization is disabled, and `prior_variance` initializes $V$
-(default 50). `bhat/shat` supplies z in exactly the same way. A supplied
-`var_y` is checked for validity and recorded but does not alter these working
-quantities. `coef` then describes noncentrality effects, rather than effects
-per original genotype/phenotype unit. A warning records this missing-n path.
+Without $n$, prusie uses a large-sample likelihood for noncentrality parameters.
+The working quantities are
+
+$$
+\begin{aligned}
+\mathbf Q&=\mathbf R,\\
+\mathbf g&=\mathbf z,\\
+s_y&=1.
+\end{aligned}
+$$
+
+The internal calculation uses $n=2$ as a placeholder for this likelihood.
+Predictor standardization is disabled, and `prior_variance` sets the initial
+effect variance (default 50). If `bhat` and `shat` are supplied, their ratio
+provides the z-scores. A supplied `var_y` is validated and recorded but does not
+change these quantities. Returned coefficients describe noncentrality effects;
+original genotype and phenotype units cannot be recovered through this route.
+prusie issues a warning when the sample size is omitted.
 
 ### Interpreting the LD approximation
 
-LD is signed correlation $r$, aligned to the same variants and effect alleles
-as the summaries; [Inputs](inputs.md#variant-order-and-alleles) gives the required
-transformations. Residual-variance estimation relies on in-sample LD consistent
-with the summaries. With an external panel, RSS defaults to fixed variance so
-that sampling noise or mismatch in LD is not interpreted as residual variance.
-The approximation still depends on ancestry, sample size and data preparation.
-For case-control GWAS, prusie uses the Gaussian summary approximation to the
-association statistics; it does not interpret the binary phenotype as a fitted
-individual-level Gaussian response. Quantitative eQTL summaries use their
-reported regression scale and sample size.
+$\mathbf R$ must contain signed correlations for the same variants, in the same
+order and with the same effect-allele orientation as the association summaries.
+[Inputs](inputs.md#variant-order-and-alleles) describes the required alignment.
+With LD from the study samples and matching regression preprocessing, the
+reconstruction can recover the individual-level regression quantities. With an
+external LD panel, it is an approximation whose accuracy depends on ancestry,
+reference sample size and data preparation.
+
+Residual-variance estimation relies on LD consistent with the association
+study. Sampling noise or mismatch in a reference panel can affect that estimate.
+`susie_rss` defaults to `estimate_residual_variance=False` and warns when
+estimation is requested.
+
+For case-control GWAS, RSS applies a Gaussian approximation to the association
+statistics. Quantitative eQTL summaries use their reported regression scale and
+sample size.
 
 ## PIP and credible sets
 
-For active components $\mathcal A$, the variational marginal inclusion
-probability is
+The marginal posterior inclusion probability (PIP) summarizes evidence for a
+variant across the single-effect components. Let $\mathcal A$ contain the
+components with $V_\ell>\mathtt{prior\_tol}$. Under the variational approximation,
+the probability that at least one active component selects variant $j$ is
 
 $$
 \mathrm{PIP}_j=1-\prod_{\ell\in\mathcal A}(1-\alpha_{\ell j}).
 $$
 
-The product is the approximate probability that no active component selects
-variant $j$. Each alpha row sums to one, whereas the sum of PIPs over variants
-can exceed one because the model allows multiple effects. Consider two active
-components with alpha rows $(0.8,0.15,0.05)$ and $(0.1,0.8,0.1)$:
+The product is the probability that all active components select other
+variants. Thus, $\alpha_{\ell j}$ describes the location of one component,
+while $\mathrm{PIP}_j$ combines evidence across components. Each row of
+$\alpha$ sums to one; PIPs can sum to more than one because several variants
+may contribute to the trait.
 
-<!-- calculated:pip:start -->
-The resulting PIPs are **(0.82, 0.83, 0.145)**, whose sum is 1.795.
-<!-- calculated:pip:end -->
+A credible set $C_\ell$ summarizes uncertainty about the location of component
+$\ell$. Variants are ranked by decreasing $\alpha_{\ell j}$ and added until
+their cumulative posterior probability reaches `coverage` (default 0.95):
 
-A component credible set accumulates variants in decreasing alpha order until
-its mass reaches `coverage`. For alpha $(0.50,0.48,0.02)$ and a requested mass
-of 0.95, the two leading variants are selected:
+$$
+q_\ell(\gamma_\ell\in C_\ell)
+=\sum_{j\in C_\ell}\alpha_{\ell j}
+\geq\mathtt{coverage}.
+$$
 
-<!-- calculated:cs:start -->
-The actual posterior mass is **0.98**. If the two variants have signed correlation $r=-0.9$, the minimum, mean and median absolute pairwise correlation are all **0.9**, so the set passes <code>min_abs_corr=0.5</code>.
-<!-- calculated:cs:end -->
+Adding the last variant can take the accumulated probability above the target.
+The returned posterior mass records this attained value. It describes the
+selected set under the fitted model; repeated-sampling coverage describes how
+often sets contain a true effect across repeated datasets and is assessed
+through calibration.
 
-The selected mass is the component posterior probability assigned to those
-members; the requested mass is the selection target. Purity summarizes absolute
-pairwise LD inside the selected set. Here either of two highly correlated
-variants could carry the effect, so their joint mass is high even though
-neither is individually well localized. Repeated-sampling coverage is the
-frequency with which constructed sets contain a true effect over repeated
-datasets; it is a calibration property, distinct from the mass computed for
-this fit. [Results](results.md#credible-set-fields) describes activity thresholds,
-stable ordering, deduplication and returned component IDs.
-
-The arithmetic examples here and on the implementation page are generated and
-checked by [model_examples.py](https://github.com/LucaJiang/prusie/blob/main/tools/model_examples.py).
-They illustrate probability and linear algebra; the separately fitted
-[500-variant toy example](example.md) demonstrates the complete API.
+Credible sets are also screened for component activity, duplicate membership
+and LD purity. Purity summarizes the absolute pairwise correlations among set
+members. By default, the minimum absolute correlation must be at least 0.5
+(`min_abs_corr=0.5`). A set of strongly correlated variants can have high
+posterior mass while leaving uncertainty about which member carries the
+effect. [Results](results.md#credible-set-fields) describes the activity
+thresholds, ordering, filtering options and returned component IDs.
 
 ## Additional model options
 
@@ -358,62 +507,104 @@ w_k\geq0,\quad\sum_k w_k=1.
 $$
 
 `prior_variance_grid` supplies positive $v_k$ and `mixture_weights` supplies
-$w_k$. The SER integrates over the grid and returns posterior mixture moments;
-it does not optimize one scalar variance in place of the mixture.
+$w_k$ (equal weights by default). The SER integrates over the grid and returns
+posterior mixture moments; it does not optimize one scalar variance in place of
+the mixture, and the returned `V` is the weighted mean variance $\sum_k w_kv_k$.
 
 `estimate_residual_method="NIG"` uses the conjugate Normal–Inverse-Gamma
 formulation, with $\sigma^2\sim\operatorname{IG}(\alpha_0/2,\beta_0/2)$ and
 effect variance proportional to $\sigma^2$. Both hyperparameters must be
 positive; their default is $1/\sqrt n$. This integrates residual variance
-instead of the ordinary plug-in Gaussian SER. When combined with a fixed
-mixture prior, Gaussian mixture SER takes precedence, while NIG still controls
-the outer residual-variance updates. `"MoM"` and `"MLE"`
-retain Gaussian SER updates and select the residual update rule. Residual
-lower and upper bounds constrain these updates.
-For NIG, the residual update is the inverse-gamma posterior mean,
-$\sigma^2\leftarrow(\beta_0+\mathrm{ER2})/(\alpha_0+n-2)$.
+instead of the ordinary plug-in Gaussian SER. With NIG, residual variance is
+always estimated, an estimated prior variance uses `EM`, `scaled_prior_variance`
+is not multiplied by $s_y/(n-1)$, and the returned `V` is multiplied by each
+component's residual-variance estimate. `susie_rss` requires `n` for NIG. When
+combined with a fixed mixture prior, Gaussian mixture SER takes precedence,
+while NIG still controls the outer residual-variance updates. For NIG, the
+residual update is the inverse-gamma posterior mean,
+$\sigma^2\leftarrow(\beta_0+\mathrm{ER2})/(\alpha_0+n-2)$. `"MoM"` (the default)
+and `"MLE"` retain the Gaussian SER and both use
+$\sigma^2\leftarrow\mathrm{ER2}/n$; `susie_rss_lambda` accepts only `"MLE"` and
+maximizes its likelihood over $\sigma^2$ numerically. Residual lower and upper
+bounds constrain these updates.
 
-`slot_prior_betabinom` and `slot_prior_poisson` place hierarchical priors on
-effect activity. The posterior activity probability $c_\ell$ weights each
-component's contribution, so its fitted mean becomes
-$c_\ell\boldsymbol\alpha_\ell\odot\boldsymbol\mu_\ell$.
-These models use posterior convergence checks because the ordinary Gaussian
-ELBO is not their fitting objective. NIG with multiple effects also uses
-posterior stopping. `convergence_method="pip"` follows susieR's joint
-alpha/PIP change and lagged-cycle rule; it is distinct from the existing
-configurable convergence diagnostics.
+`slot_prior` accepts `slot_prior_betabinom()` or `slot_prior_poisson(C)`, which
+place hierarchical priors on effect activity. The posterior activity probability
+$c_\ell$ weights each component's contribution, so its fitted mean becomes
+$c_\ell\boldsymbol\alpha_\ell\odot\boldsymbol\mu_\ell$. These models, and NIG
+with more than one effect, use the PIP stopping rule because the ordinary
+Gaussian ELBO is not their fitting objective.
 
-For summary statistics, `z_method="score"` changes the working statistic.
-`R_mismatch` and `R_finite` specify explicit reference-mismatch and finite-LD
-models; `susie_rss_lambda` instead fits a regularized LD likelihood. These
-options change the likelihood and should be selected for the analysis design,
-rather than as numerical remedies for misaligned alleles or variants.
+For summary statistics, `z_method="score"` uses the supplied statistics without
+the finite-sample Wald adjustment. `R_finite` gives the sample size of a finite
+LD reference (`True` uses the rows of reference `X`), and `R_mismatch`
+(`"eb"`, `"eb_mix"`, `"eb_ser_init"`, `"eb_force_init"` or `"eb_no_init"`)
+estimates reference mismatch, with controls from `susie_rss_control`.
+`susie_rss_lambda` instead fits the covariance $\sigma^2\mathbf R+\lambda\mathbf I$,
+with $\lambda$ given or estimated through `lambda_`. These options change the
+likelihood and should be selected for the analysis design, rather than as
+numerical remedies for misaligned alleles or variants.
 
-Automatic and greedy effect-count fitting follow their respective likelihood
-and Bayes-factor rules. Trend filtering uses cumulative predictor columns
-applied by an implicit operator. SuSiE-inf, SuSiE-ash and Mr.ASH are not
-implemented.
+`susie_auto` doubles $L$ from `L_init=1` until some estimated $V_\ell$ is zero
+or $L$ exceeds `L_max=512`. `L_greedy` grows $L$ in steps of `L_greedy`,
+warm-starting each fit from the previous one, until the smallest component log
+Bayes factor falls below `greedy_lbf_cutoff` (default 0.1) or the requested $L$
+is reached. `susie_trendfilter` uses cumulative predictor columns applied by an
+implicit operator. SuSiE-inf, SuSiE-ash and Mr.ASH are not implemented;
+`unmappable_effects` accepts only `"none"`.
 
 ## Computational compatibility
 
-The default path follows the Gaussian SuSiE model and pinned susieR 0.16.6
-semantics. It uses mathematically equivalent float64 formulas, without reproducing
-R's operation order, long-double reductions or log/exp round trips.
+The numerical reference for the core fitting routines is susieR 0.16.6,
+commit `8e56a8e038e989856d106d9ca5175cc664fea9d2`. prusie implements the
+Gaussian SuSiE model described above using float64 arithmetic in Python and
+Rust. Its [computational optimizations](optimization.md) reuse intermediate
+quantities, reduce matrix traversals and regroup arithmetic without changing
+the statistical model. Floating-point summation order and math-library
+implementations can differ from R, so agreement is assessed numerically;
+bitwise equality is not required.
 
-Numerical validation compares every entry of the complete final component alpha
-matrix with the same arguments and verified variant order: absolute error at most
-`1e-5`, relative tolerance zero. Inactive components and components without credible
-sets remain in that comparison. Alpha rows must be finite probabilities summing
-to one within `1e-10`. PIP, credible sets, moments, variances, objectives and
-convergence metadata are retained as diagnostics rather than alpha acceptance criteria.
-Near a component-activity threshold, small differences can still change marginal
-PIP or credible-set summaries. Fitting thresholds are not changed to conceal this.
+A comparison uses the same inputs, verified variant order and matched fitting
+settings, including $L$, prior weights, variance estimation, standardization
+and stopping rules. The current acceptance criterion applies to the complete
+final matrix of component posterior probabilities, $\boldsymbol\alpha$.
+Let $\alpha^{\mathrm P}_{\ell j}$ and $\alpha^{\mathrm R}_{\ell j}$ be the
+values returned by prusie and susieR for component $\ell$ and variant $j$.
+Their **absolute error** is
 
-Default-path optimizations must also improve median complete-call runtime on a
-strict majority of the fixed comparison panel against their own parent.
-Historical measurements describe their recorded source revision; they do not
-benchmark an unmeasured revision. See [implementation](implementation.md) and
-[numerical accuracy](numerical_accuracy.md).
+$$
+e^{\mathrm{abs}}_{\ell j}
+=\left|\alpha^{\mathrm P}_{\ell j}-\alpha^{\mathrm R}_{\ell j}\right|.
+$$
+
+The comparison passes the numerical criterion when
+
+$$
+\max_{\ell,j} e^{\mathrm{abs}}_{\ell j}\le10^{-5}.
+$$
+
+This uses `atol=1e-5` and `rtol=0`: every entry has the same absolute-error
+allowance, independent of the magnitude of the reference value.
+
+Both matrices must have the same shape, with component rows and variant columns
+in their original order. The comparison includes inactive components and
+components without credible sets; no rows are omitted or permuted to improve
+agreement. Each alpha matrix must also contain finite probabilities in $[0,1]$,
+with every row summing to one within `1e-10`.
+
+Marginal PIPs, credible sets, posterior moments, variances, Bayes factors, ELBOs
+and convergence metadata are recorded as additional diagnostics. They are not
+required to be identical by this alpha criterion. In particular, small numerical
+differences near a component-activity or credible-set threshold can change the
+reported summaries. The fitting thresholds and stopping tolerances remain those
+specified for the comparison.
+
+The [numerical accuracy](numerical_accuracy.md) page reports the tested
+configurations and recorded results. Agreement on those cases does not establish
+agreement for every input, model option or platform. Refinement has additional
+search controls and
+[documented differences from susieR](post_analysis.md#refinement-compared-with-susier);
+core-fit agreement alone does not establish refinement equivalence.
 
 ## Methods and implementation references
 
@@ -427,8 +618,12 @@ Effects” model*](https://doi.org/10.1371/journal.pgen.1010299).
 For the executed path, read
 [api.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py)
 (`susie_rss`, `susie_suff_stat`),
+[individual.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/individual.py)
+(`susie`),
 [solver crate](https://github.com/LucaJiang/prusie/tree/main/rust/prusie-core/src)
-(`single_effect`, `fit_layout_operator_controlled`) and
-[posterior.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/posterior.py).
+(`fit_controlled` and `fit_operator` in `ibss.rs`, `single_effect` in `ser.rs`)
+and
+[posterior.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/posterior.py)
+(`marginal_pip`, `credible_sets`).
 The [reference mapping](implementation.md#reference-source-mapping) identifies
 corresponding functions at the pinned susieR commit.

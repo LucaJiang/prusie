@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Calculate the small probability/matrix examples for the documentation."""
+"""Calculate the small matrix and numerical examples for the documentation."""
 
 from __future__ import annotations
 
@@ -13,19 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def calculate():
-    alpha = np.array([[0.8, 0.15, 0.05], [0.1, 0.8, 0.1]])
-    pip = 1 - np.prod(1 - alpha, axis=0)
-    # Independent rational arithmetic checks the probability example.
+    # High-precision arithmetic checks the log-sum-exp example.
     with localcontext() as ctx:
         ctx.prec = 60
         D = Decimal
-        exact_pip = [
-            D(1) - (D(1) - D(a)) * (D(1) - D(b))
-            for a, b in [("0.8", "0.1"), ("0.15", "0.8"), ("0.05", "0.1")]
-        ]
         lse = D(1000) + (D(1) + (-D(1)).exp()).ln()
         probability = D(1) / (D(1) + (-D(1)).exp())
-    np.testing.assert_allclose(pip, list(map(float, exact_pip)), atol=2e-16, rtol=0)
     Q = np.array([[2.0, 1.0], [1.0, 2.0]])
     g = np.array([1.0, 0.8])
     m1, m2, new_m1 = np.array([0.1, 0.0]), np.array([0.0, 0.2]), np.array([0.2, 0.1])
@@ -48,13 +41,6 @@ def calculate():
         rtol=0,
     )
     return dict(
-        pip=pip.tolist(),
-        cs_mass=float(np.array([0.50, 0.48]).sum()),
-        cs_min_abs_corr=0.9,
-        wald_z=5.0,
-        wald_n=100,
-        wald_adjusted=float(5 * np.sqrt(99 / 123)),
-        wald_g=float(np.sqrt(99) * 5 * np.sqrt(99 / 123)),
         cache=dict(
             u1=u1.tolist(),
             u2=u2.tolist(),
@@ -84,22 +70,6 @@ def snippets(x):
         return "(" + ", ".join(f"{v:g}" for v in a) + ")"
 
     return {
-        "wald": (
-            f"The adjusted statistic is **{x['wald_adjusted']:.6f}"
-            f"** and the working crossproduct is "
-            f"**{x['wald_g']:.6f}"
-            f"** (with $Q_{{jj}}=99$ for unit LD diagonal).\n"
-        ),
-        "pip": (f"The resulting PIPs are **{vec(x['pip'])}**, whose sum is {sum(x['pip']):g}.\n"),
-        "cs": (
-            f"The actual posterior mass is **{x['cs_mass']:.2f}"
-            f"**. If the two variants have signed "
-            f"correlation $r=-{x['cs_min_abs_corr']:g}"
-            f"$, the minimum, mean and median absolute "
-            f"pairwise "
-            f"correlation are all **{x['cs_min_abs_corr']:g}"
-            f"**, so the set passes <code>min_abs_corr=0.5</code>.\n"
-        ),
         "cache": (
             f"The products are $\\mathbf u_1={vec(c['u1'])}"
             f"^T$ and "
@@ -141,8 +111,8 @@ def build():
     values = calculate()
     text = snippets(values)
     for name, keys in [
-        ("model.md", ["wald", "pip", "cs"]),
-        ("implementation.md", ["cache", "ser", "memory", "logsum"]),
+        ("implementation.md", ["logsum"]),
+        ("optimization.md", ["cache", "ser", "memory"]),
     ]:
         path = ROOT / "docs" / name
         updated = path.read_text()
@@ -156,7 +126,7 @@ def build():
             _, after = remainder.split(end)
             updated = before + start + "\n" + text[key] + end + after
         path.write_text(updated)
-    print("Generated explanatory probability and matrix calculations")
+    print("Generated explanatory matrix and numerical calculations")
 
 
 if __name__ == "__main__":

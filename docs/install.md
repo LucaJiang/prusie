@@ -30,6 +30,16 @@ the pinned Rust toolchain with your usual Rust installer before building. The
 extension does not require a BLAS development library. The portable scalar
 solver requires no system vector-math library.
 
+To build without the optional GNU/Linux vector-math shim, enable the compile-time
+`portable-math` feature:
+
+```sh
+python -m pip install . --config-settings=build-args="--features portable-math"
+```
+
+This selects the existing scalar fallback; it is not a bitwise cross-platform
+reproducibility guarantee. See [numerical reproducibility](implementation.md#numerical-reproducibility).
+
 ## Use a prebuilt wheel
 
 The [v0.2.3rc6 prerelease](https://github.com/LucaJiang/prusie/releases/tag/v0.2.3rc6)
@@ -48,9 +58,8 @@ distribution requires the build toolchain above. The API documented here
 requires a build of this source revision. The version and platform tags of a wheel identify
 its code and supported environment.
 
-Earlier snapshots had local installation checks with Python 3.10–3.13.
-The current refactor is validated on Linux x86-64 with CPython 3.12;
-other interpreter/platform combinations have not been retested for this revision.
+The CI matrix includes CPython 3.10–3.13 on Linux and CPython 3.12 on macOS and
+Windows, plus a Linux `portable-math` build.
 See [contributing](contributing.md) for package validation commands.
 
 ## Optional analysis tools
@@ -65,6 +74,8 @@ The analysis extra adds Matplotlib and SciPy. Ordinary dense Gaussian fitting
 needs only NumPy; sparse input, dynamic RSS and posterior outcome configurations
 also use SciPy. Reports are written for offline reading, and figures and diagnostics
 are computed only when requested.
+Plotting functions live in `prusie.viz`; reports live in `prusie.report`.
+These modules are loaded on demand rather than by `import prusie`.
 
 ## Run the installed example
 

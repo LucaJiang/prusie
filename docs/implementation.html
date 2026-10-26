@@ -17,115 +17,567 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html" aria-current="page">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
-<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html" aria-current="page">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
-<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="implementation.md">Markdown source</a></div>
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#solver-structure">Solver structure</a></li>
-<li><a href="#retained-component-products">Retained component products</a></li>
-<li><a href="#single-effect-arithmetic">Single-effect arithmetic</a></li>
-<li><a href="#dense-storage-and-matrix-products">Dense storage and matrix products</a></li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#fitting-routes">Fitting routes</a></li>
+<li><a href="#call-paths">Call paths</a><ul>
+<li><a href="#susie_rss">susie_rss</a></li>
+<li><a href="#susie">susie</a></li>
+<li><a href="#inside-the-native-fit">Inside the native fit</a></li>
+<li><a href="#refinement-continuation-and-warm-starts">Refinement, continuation and warm starts</a></li>
+</ul>
+</li>
+<li><a href="#pseudocode">Pseudocode</a><ul>
+<li><a href="#preparation">Preparation</a></li>
+<li><a href="#ibss">IBSS</a></li>
+<li><a href="#single-effect-regression">Single-effect regression</a></li>
+<li><a href="#stopping-rule">Stopping rule</a></li>
+</ul>
+</li>
+<li><a href="#boundaries-and-exceptions">Boundaries and exceptions</a><ul>
+<li><a href="#errors">Errors</a></li>
+<li><a href="#input-checks">Input checks</a></li>
+<li><a href="#numerical-safeguards">Numerical safeguards</a></li>
+<li><a href="#convergence-outcomes">Convergence outcomes</a></li>
+<li><a href="#trimming-and-output-shapes">Trimming and output shapes</a></li>
+</ul>
+</li>
+<li><a href="#numerical-reproducibility">Numerical reproducibility</a></li>
 <li><a href="#reference-source-mapping">Reference source mapping</a></li>
 </ul>
 </div>
 </details><h1 id="implementation">Implementation</h1>
-<p>Python prepares the model, validates aligned inputs and assembles the result.
-A thin PyO3 crate checks NumPy metadata and converts options to typed Rust enums.
-The solver crate has no Python dependency. It performs sequential IBSS, single-effect
-regression (SER), variance estimation and objective evaluation.</p>
-<h2 id="solver-structure">Solver structure</h2>
-<p>The Cargo workspace contains <code>rust/prusie-core</code> and <code>rust/prusie-python</code>.
-Within the solver, <code>ibss.rs</code> controls component updates; <code>ser.rs</code> evaluates
-single-effect posteriors; <code>optimizer.rs</code> implements the one-dimensional prior-variance
-search; <code>residual.rs</code> computes expected residual sums of squares. <code>operator.rs</code>
-handles crossproducts and <code>design.rs</code> applies individual-level design matrices.
-The binding crate owns NumPy borrowing, Python option parsing and result conversion.</p>
-<p>Individual-level fits apply dense or sparse design matrices directly, without
-constructing a predictor-by-predictor Gram matrix. Centering and scaling are
-represented by column means and scales. Sparse input remains sparse. Ordinary
-single-panel RSS fits with reference <code>X</code> also use this representation. RSS routes
-that reconstruct a known response scale from <code>bhat</code>, <code>shat</code> and <code>var_y</code>, apply
-finite-reference or mismatch corrections, combine reference panels, or use
-<code>susie_rss_lambda</code> construct dense predictor-by-predictor correlation matrices.
-Dense sufficient-statistic and LD inputs retain their dense representation.</p>
-<h2 id="retained-component-products">Retained component products</h2>
-<p>Write <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="bold">m</mi><mi mathvariant="normal">ℓ</mi></msub><mo>=</mo><msub><mi mathvariant="bold-italic">α</mi><mi mathvariant="normal">ℓ</mi></msub><mo>⊙</mo><msub><mi mathvariant="bold-italic">μ</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">\mathbf m_\ell=\boldsymbol\alpha_\ell\odot\boldsymbol\mu_\ell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5944em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol">α</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⊙</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6886em;vertical-align:-0.2441em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol">μ</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.242em;"><span style="top:-2.4559em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2441em;"><span></span></span></span></span></span></span></span></span></span></span>,
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="bold">u</mi><mi mathvariant="normal">ℓ</mi></msub><mo>=</mo><mi mathvariant="bold">Q</mi><msub><mi mathvariant="bold">m</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">\mathbf u_\ell=\mathbf Q\mathbf m_\ell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5944em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathbf">u</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8805em;vertical-align:-0.1944em;"></span><span class="mord mathbf">Q</span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span> and
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">f</mi><mo>=</mo><msub><mo>∑</mo><mi mathvariant="normal">ℓ</mi></msub><msub><mi mathvariant="bold">u</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">\mathbf f=\sum_\ell\mathbf u_\ell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathbf" style="margin-right:0.10903em;">f</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0497em;vertical-align:-0.2997em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1864em;"><span style="top:-2.4003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2997em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathbf">u</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span>. A component update uses</p>
-<div aria-label="Mathematical formula; scroll horizontally if needed" class="arithmatex" role="region" tabindex="0"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi mathvariant="bold">r</mi><mi mathvariant="normal">ℓ</mi></msub><mo>=</mo><mi mathvariant="bold">g</mi><mo>−</mo><mo stretchy="false">(</mo><mi mathvariant="bold">f</mi><mo>−</mo><msub><mi mathvariant="bold">u</mi><mi mathvariant="normal">ℓ</mi></msub><mo stretchy="false">)</mo><mo separator="true">,</mo><mspace width="2em"/><mi mathvariant="bold">f</mi><mo>←</mo><mi mathvariant="bold">f</mi><mo>−</mo><msub><mi mathvariant="bold">u</mi><mi mathvariant="normal">ℓ</mi></msub><mo>+</mo><mi mathvariant="bold">Q</mi><msubsup><mi mathvariant="bold">m</mi><mi mathvariant="normal">ℓ</mi><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">w</mi></mrow></msubsup><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">
-\mathbf r_\ell=\mathbf g-(\mathbf f-\mathbf u_\ell),\qquad
-\mathbf f\leftarrow\mathbf f-\mathbf u_\ell+\mathbf Q\mathbf m_\ell^{\mathrm{new}}.
-</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5944em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathbf">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.1944em;"></span><span class="mord mathbf" style="margin-right:0.01597em;">g</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathbf" style="margin-right:0.10903em;">f</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathbf">u</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mpunct">,</span><span class="mspace" style="margin-right:2em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathbf" style="margin-right:0.10903em;">f</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">←</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord mathbf" style="margin-right:0.10903em;">f</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathbf">u</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.9614em;vertical-align:-0.247em;"></span><span class="mord mathbf">Q</span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.7144em;"><span style="top:-2.453em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathrm mtight" style="margin-right:0.01389em;">new</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.247em;"><span></span></span></span></span></span></span><span class="mord">.</span></span></span></span></span></div>
-<p>Retaining each component product costs <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>L</mi><mi>p</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(Lp)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mord mathnormal">p</span><span class="mclose">)</span></span></span></span></span> storage and avoids recalculating
-its old contribution. A dense sweep still needs <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>L</mi><msup><mi>p</mi><mn>2</mn></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(Lp^2)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0641em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord mathnormal">L</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span> work. For example,
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">Q</mi><mo>=</mo><mo stretchy="false">(</mo><mo stretchy="false">(</mo><mn>2</mn><mo separator="true">,</mo><mn>1</mn><mo stretchy="false">)</mo><mo separator="true">,</mo><mo stretchy="false">(</mo><mn>1</mn><mo separator="true">,</mo><mn>2</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathbf Q=((2,1),(1,2))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8805em;vertical-align:-0.1944em;"></span><span class="mord mathbf">Q</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">((</span><span class="mord">2</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mclose">)</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">2</span><span class="mclose">))</span></span></span></span></span>, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">g</mi><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo separator="true">,</mo><mn>0.8</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathbf g=(1,0.8)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6389em;vertical-align:-0.1944em;"></span><span class="mord mathbf" style="margin-right:0.01597em;">g</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.8</span><span class="mclose">)</span></span></span></span></span>,
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="bold">m</mi><mn>1</mn></msub><mo>=</mo><mo stretchy="false">(</mo><mn>0.1</mn><mo separator="true">,</mo><mn>0</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathbf m_1=(0.1,0)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5944em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">0.1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0</span><span class="mclose">)</span></span></span></span></span> and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="bold">m</mi><mn>2</mn></msub><mo>=</mo><mo stretchy="false">(</mo><mn>0</mn><mo separator="true">,</mo><mn>0.2</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathbf m_2=(0,0.2)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5944em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.2</span><span class="mclose">)</span></span></span></span></span> give:</p>
-<!-- calculated:cache:start -->
-<p>The products are <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="bold">u</mi><mn>1</mn></msub><mo>=</mo><mo stretchy="false">(</mo><mn>0.2</mn><mo separator="true">,</mo><mn>0.1</mn><msup><mo stretchy="false">)</mo><mi>T</mi></msup></mrow><annotation encoding="application/x-tex">\mathbf u_1=(0.2, 0.1)^T</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5944em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathbf">u</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0913em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">0.2</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.1</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8413em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span></span></span></span></span></span></span></span></span> and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="bold">u</mi><mn>2</mn></msub><mo>=</mo><mo stretchy="false">(</mo><mn>0.2</mn><mo separator="true">,</mo><mn>0.4</mn><msup><mo stretchy="false">)</mo><mi>T</mi></msup></mrow><annotation encoding="application/x-tex">\mathbf u_2=(0.2, 0.4)^T</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5944em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathbf">u</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0913em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">0.2</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.4</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8413em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span></span></span></span></span></span></span></span></span>, giving <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">f</mi><mo>=</mo><mo stretchy="false">(</mo><mn>0.4</mn><mo separator="true">,</mo><mn>0.5</mn><msup><mo stretchy="false">)</mo><mi>T</mi></msup></mrow><annotation encoding="application/x-tex">\mathbf f=(0.4, 0.5)^T</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathbf" style="margin-right:0.10903em;">f</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0913em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">0.4</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.5</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8413em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span></span></span></span></span></span></span></span></span>. Component 1 uses residual <strong>(0.8, 0.4)</strong>. Replacing its mean by <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi mathvariant="bold">m</mi><mn>1</mn><mrow><mi mathvariant="normal">n</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">w</mi></mrow></msubsup><mo>=</mo><mo stretchy="false">(</mo><mn>0.2</mn><mo separator="true">,</mo><mn>0.1</mn><msup><mo stretchy="false">)</mo><mi>T</mi></msup></mrow><annotation encoding="application/x-tex">\mathbf m_1^{\mathrm{new}}=(0.2, 0.1)^T</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9125em;vertical-align:-0.2481em;"></span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.6644em;"><span style="top:-2.4519em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathrm mtight" style="margin-right:0.01389em;">new</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2481em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0913em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">0.2</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.1</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8413em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span></span></span></span></span></span></span></span></span> changes the fitted crossproduct to <strong>(0.7, 0.8)</strong>.</p>
-<!-- calculated:cache:end -->
+<p>prusie has three layers. The Python package (<code>src/prusie</code>) provides the public
+API: it checks and aligns inputs, prepares the working model, chooses a fitting
+route and assembles the result. The binding crate (<code>rust/prusie-python</code>,
+imported as <code>prusie._native</code>) converts between NumPy and Rust and provides
+native input checks. The solver crate (<code>rust/prusie-core</code>) has no Python
+dependency and runs the iterative Bayesian stepwise selection (IBSS) algorithm.
+This page follows a call from the public functions to the solver and back.
+<a href="optimization.html">Optimization</a> describes the speed and memory techniques
+used along these paths.</p>
+<h2 id="architecture">Architecture</h2>
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Call-path roadmap. Four public entry points in the Python package prepare their inputs, pass through the shared preparation and fitting functions, call native functions in the binding and reach the Rust solver, whose sweep calls single-effect regression, the Gram operator, the objective and the stopping rule." class="figure-complex" src="assets/architecture.svg" /></div><figcaption><a href="assets/architecture.svg">Open original figure</a></figcaption></figure>
+<p>Shaded boxes are public entry points and arrows are calls. The left-hand arrow
+marks the native input checks used during preparation. Results return along
+the same path: the solver returns arrays and diagnostics to <code>_fit</code>, which adds
+PIPs and credible sets and builds the <code>SusieResult</code>.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Main modules</th>
+<th>Responsibilities</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python package</td>
+<td><code>api.py</code>, <code>individual.py</code>, <code>rss_lambda.py</code>, <code>rss_models.py</code>, <code>posterior.py</code>, <code>result.py</code>, <code>refinement.py</code></td>
+<td>Public functions and argument checks; alignment of identifiers and metadata; <code>maf</code> filtering, null column and prior weights; RSS preparation; choice of route; the sweep loop of dynamic RSS models; PIPs, credible sets and <code>SusieResult</code>; continuation and refinement</td>
+</tr>
+<tr>
+<td>Binding</td>
+<td><code>lib.rs</code>, <code>options.rs</code>, <code>array_layout.rs</code>, <code>summary_helpers.rs</code>, <code>prepare_helpers.rs</code>, <code>design.rs</code>, <code>ser.rs</code>, <code>output.rs</code></td>
+<td>Read-only borrowing of NumPy arrays after layout checks; conversion of options to typed Rust values; native matrix validation, repair and preparation; credible-set purity; conversion of results and errors</td>
+</tr>
+<tr>
+<td>Solver</td>
+<td>see the table below</td>
+<td>IBSS sweeps, single-effect regression (SER), prior-variance search, expected residual sum of squares (ER2) and ELBO, stopping rules, trimming and Gram operators</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Solver module</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ibss.rs</code></td>
+<td><code>fit_controlled</code>, the dense entry point, and <code>fit_operator</code>: sweeps, effect updates, residual variance and trimming</td>
+</tr>
+<tr>
+<td><code>ser.rs</code></td>
+<td>Gaussian and fixed-mixture SER (Bayes factors, posterior, KL) and the standalone <code>ser_update</code></td>
+</tr>
+<tr>
+<td><code>optimizer.rs</code></td>
+<td>One-dimensional Brent search for the prior variance</td>
+</tr>
+<tr>
+<td><code>residual.rs</code></td>
+<td>Expected residual sum of squares</td>
+</tr>
+<tr>
+<td><code>diagnostics.rs</code></td>
+<td>Stopping rules, cycle detection and the convergence trace</td>
+</tr>
+<tr>
+<td><code>operator.rs</code>, <code>exact_columns.rs</code>, <code>activation.rs</code></td>
+<td>The <code>GramOperator</code> trait, dense products, implicit scaling and exact signed-column classes</td>
+</tr>
+<tr>
+<td><code>design.rs</code></td>
+<td>Matrix-free operators for dense, sparse and trend-filtering designs</td>
+</tr>
+<tr>
+<td><code>nig.rs</code>, <code>slot.rs</code></td>
+<td>Normal–Inverse-Gamma residual-variance model and effect-activity priors</td>
+</tr>
+<tr>
+<td><code>vector_math.rs</code>, <code>numerical.rs</code>, <code>input_validation.rs</code></td>
+<td>Vector exponentials, compensated summation, digamma and finiteness checks</td>
+</tr>
+<tr>
+<td><code>types.rs</code>, <code>options.rs</code>, <code>model.rs</code></td>
+<td>Options, model extensions and output types</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="fitting-routes">Fitting routes</h2>
+<p>All public fitting functions build a <code>_FitRequest</code> with <code>_prepare_suff_stat</code>
+and pass it to <code>_fit</code>, which follows one of four routes:</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Used for</th>
+<th>Native entry</th>
+<th>Sweep loop</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dense</td>
+<td><code>susie_suff_stat</code>; <code>susie_rss</code> with <code>R</code>; <code>susie_rss</code> with <code>X</code>, <code>bhat</code>, <code>shat</code> and <code>var_y</code>, which builds a correlation matrix</td>
+<td><code>_native.fit</code> → <code>fit_controlled</code></td>
+<td>Rust, with <code>DenseGram</code></td>
+</tr>
+<tr>
+<td>Matrix-free design</td>
+<td><code>susie</code>, <code>susie_trendfilter</code>; <code>susie_rss</code> with reference genotypes <code>X</code></td>
+<td><code>fit_design_dense</code>, <code>fit_design_csc</code>, <code>fit_design_trend</code></td>
+<td>Rust, with <code>Design</code> or <code>TrendDesign</code></td>
+</tr>
+<tr>
+<td>Dynamic RSS</td>
+<td><code>susie_rss</code> with <code>R_finite</code>, <code>R_mismatch</code> other than <code>"none"</code> or a list of LD panels; <code>susie_rss_lambda</code></td>
+<td><code>_native.ser_update</code> for each effect update</td>
+<td>Python, <code>fit_dynamic</code></td>
+</tr>
+<tr>
+<td>Greedy</td>
+<td><code>L_greedy</code></td>
+<td><code>_fit</code> repeatedly, with increasing <code>L</code></td>
+<td>That of the underlying route</td>
+</tr>
+</tbody>
+</table></div>
+<p>The dynamic models recompute their working quantities during fitting, so
+their sweep loop runs in Python with NumPy matrix products. <code>susie_ser</code> calls
+<code>_native.ser_update</code> once, and <code>susie_auto</code> calls <code>susie</code> repeatedly with warm
+starts.</p>
+<h2 id="call-paths">Call paths</h2>
+<h3 id="susie_rss"><code>susie_rss</code></h3>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>susie_rss                                        api.py
+├─ argument checks; RSSControl
+├─ list of LD panels → prepare_multipanel        rss_models.py
+│    fit each panel, start from the best, joint dynamic fit
+├─ z ← bhat/shat when z is not given; missing z ← 0 with a warning
+├─ reference X → _validated_design, _column_stats → design route
+├─ validate R: validate_and_repair_rss (fused) | validate_rss_matrix
+├─ working statistics: n known | bhat, shat and var_y | n missing
+├─ asymmetric R → RuntimeWarning → (M + Mᵀ)/2
+├─ R_finite or R_mismatch → dynamic request
+├─ _prepare_suff_stat → _FitRequest
+└─ _fit
+   ├─ dynamic → fit_dynamic → _native.ser_update for each effect
+   ├─ design  → _native.fit_design_dense | _native.fit_design_csc
+   ├─ dense   → _native.fit → fit_controlled → fit_operator
+   ├─ credible_sets → _native.cs_pairwise_abs; marginal_pip
+   ├─ SusieResult
+   └─ refine  → refine_fit | _refine_by_refitting
+</code></pre></div>
 
-<p>Posterior uncertainty enters the objective through</p>
-<div aria-label="Mathematical formula; scroll horizontally if needed" class="arithmatex" role="region" tabindex="0"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">R</mi><mn>2</mn></mrow><mo>=</mo><msup><mi>y</mi><mi>T</mi></msup><mi>y</mi><mo>−</mo><mn>2</mn><msup><mi mathvariant="bold">g</mi><mi>T</mi></msup><mi mathvariant="bold">m</mi><mo>+</mo><msup><mi mathvariant="bold">m</mi><mi>T</mi></msup><mi mathvariant="bold">Q</mi><mi mathvariant="bold">m</mi><mo>+</mo><munder><mo>∑</mo><mi mathvariant="normal">ℓ</mi></munder><mrow><mo fence="true">{</mo><munder><mo>∑</mo><mi>j</mi></munder><msub><mi>Q</mi><mrow><mi>j</mi><mi>j</mi></mrow></msub><msub><mi>α</mi><mrow><mi mathvariant="normal">ℓ</mi><mi>j</mi></mrow></msub><msubsup><mi>μ</mi><mrow><mi mathvariant="normal">ℓ</mi><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mn>2</mn><mo stretchy="false">)</mo></mrow></msubsup><mo>−</mo><msubsup><mi mathvariant="bold">m</mi><mi mathvariant="normal">ℓ</mi><mi>T</mi></msubsup><mi mathvariant="bold">Q</mi><msub><mi mathvariant="bold">m</mi><mi mathvariant="normal">ℓ</mi></msub><mo fence="true">}</mo></mrow><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">
-\mathrm{ER2}=y^Ty-2\mathbf g^T\mathbf m+\mathbf m^T\mathbf Q\mathbf m
-+\sum_\ell\left\{\sum_j Q_{jj}\alpha_{\ell j}\mu^{(2)}_{\ell j}
--\mathbf m_\ell^T\mathbf Q\mathbf m_\ell\right\}.
-</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord"><span class="mord mathrm">ER2</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0858em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8913em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span></span></span></span></span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0858em;vertical-align:-0.1944em;"></span><span class="mord">2</span><span class="mord"><span class="mord mathbf" style="margin-right:0.01597em;">g</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8913em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span></span></span></span></span><span class="mord mathbf">m</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0858em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8913em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span></span></span></span></span><span class="mord mathbf">Qm</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:3.1638em;vertical-align:-1.4138em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.05em;"><span style="top:-1.8479em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span><span style="top:-3.05em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.3021em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size4">{</span></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.05em;"><span style="top:-1.8723em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.05em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∑</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.4138em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">Q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">jj</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0037em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">ℓ</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal">μ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0448em;"><span style="top:-2.3987em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">ℓ</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span style="top:-3.2198em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mtight">2</span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4374em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8913em;"><span style="top:-2.453em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.247em;"><span></span></span></span></span></span></span><span class="mord mathbf">Q</span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size4">}</span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">.</span></span></span></span></span></div>
-<p>The retained products also supply these quadratic forms. Compensated float64
-summation reduces cancellation in reductions; it does not reproduce R's
-accumulation order or use extended precision to mimic R.</p>
-<h2 id="single-effect-arithmetic">Single-effect arithmetic</h2>
-<p>For marginal estimate <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover accent="true"><mi>b</mi><mo stretchy="true">^</mo></mover><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">\widehat b_j</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.2205em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.9344em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">b</span></span><span class="svg-align" style="top:-3.6944em;"><span class="pstrut" style="height:3em;"></span><span style="height:0.24em;"><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="0.24em" viewBox="0 0 1062 239" preserveAspectRatio="none"><path d="M529 0h5l519 115c5 1 9 5 9 10 0 1-1 2-1 3l-4 22
-c-1 5-5 9-11 9h-2L532 67 19 159h-2c-5 0-9-4-11-9l-5-22c-1-6 2-12 8-13z"/></svg></span></span></span></span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span></span></span></span>, sampling variance <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>s</mi><mi>j</mi><mn>2</mn></msubsup></mrow><annotation encoding="application/x-tex">s_j^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.2089em;vertical-align:-0.3948em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-2.4413em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.3948em;"><span></span></span></span></span></span></span></span></span></span></span> and prior
-variance <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi></mrow><annotation encoding="application/x-tex">V</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">V</span></span></span></span></span>, the Gaussian log Bayes factor is</p>
-<div aria-label="Mathematical formula; scroll horizontally if needed" class="arithmatex" role="region" tabindex="0"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>log</mi><mo>⁡</mo><msub><mrow><mi mathvariant="normal">B</mi><mi mathvariant="normal">F</mi></mrow><mi>j</mi></msub><mo>=</mo><mo>−</mo><mstyle displaystyle="false" scriptlevel="0"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><mi>log</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mi>V</mi><mi mathvariant="normal">/</mi><msubsup><mi>s</mi><mi>j</mi><mn>2</mn></msubsup><mo stretchy="false">)</mo><mo>+</mo><mstyle displaystyle="false" scriptlevel="0"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><msubsup><mover accent="true"><mi>b</mi><mo stretchy="true">^</mo></mover><mi>j</mi><mn>2</mn></msubsup><mfrac><mi>V</mi><mrow><msubsup><mi>s</mi><mi>j</mi><mn>2</mn></msubsup><mo stretchy="false">(</mo><mi>V</mi><mo>+</mo><msubsup><mi>s</mi><mi>j</mi><mn>2</mn></msubsup><mo stretchy="false">)</mo></mrow></mfrac><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">
-\log\mathrm{BF}_j=-\tfrac12\log(1+V/s_j^2)
-+\tfrac12\widehat b_j^2\frac{V}{s_j^2(V+s_j^2)}.
-</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9805em;vertical-align:-0.2861em;"></span><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">BF</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.1901em;vertical-align:-0.345em;"></span><span class="mord">−</span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8451em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">2</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.2472em;vertical-align:-0.3831em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="mord">/</span><span class="mord"><span class="mord mathnormal">s</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-2.453em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.3831em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:2.4593em;vertical-align:-1.099em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8451em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">2</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord"><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.9344em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">b</span></span><span class="svg-align" style="top:-3.6944em;"><span class="pstrut" style="height:3em;"></span><span style="height:0.24em;"><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="0.24em" viewBox="0 0 1062 239" preserveAspectRatio="none"><path d="M529 0h5l519 115c5 1 9 5 9 10 0 1-1 2-1 3l-4 22
-c-1 5-5 9-11 9h-2L532 67 19 159h-2c-5 0-9-4-11-9l-5-22c-1-6 2-12 8-13z"/></svg></span></span></span></span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-2.453em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.3831em;"><span></span></span></span></span></span></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3603em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal">s</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.7959em;"><span style="top:-2.4231em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.0448em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.413em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.7959em;"><span style="top:-2.4231em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.0448em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.413em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.099em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mord">.</span></span></span></span></span></div>
-<!-- calculated:ser:start -->
-<p>For <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>s</mi><mn>2</mn></msup><mo>=</mo><mn>0.1</mn></mrow><annotation encoding="application/x-tex">s^2=0.1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.1</span></span></span></span></span>, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo>=</mo><mn>0.2</mn></mrow><annotation encoding="application/x-tex">V=0.2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.2</span></span></span></span></span> and marginal estimates <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>0.1</mn><mo separator="true">,</mo><mn>0.2</mn><mo separator="true">,</mo><mn>0.3</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(0.1,0.2,0.3)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">0.1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.2</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">0.3</span><span class="mclose">)</span></span></span></span></span>, the common log term is -0.549306 and the denominator is 0.03. The log Bayes factors are <strong>(-0.515973, -0.415973, -0.249306)</strong>.</p>
-<!-- calculated:ser:end -->
+<h3 id="susie"><code>susie</code></h3>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>susie                                            individual.py
+├─ type checks; _validated_design
+│    dense → F-ordered float64, sparse → CSC copy, TrendDesign kept implicit
+├─ _column_stats: column means and scales (centering stays implicit)
+├─ working y, Xᵀy and diagonal → _DesignData
+├─ _prepare_suff_stat(XtX=None, Xty, yty, n, design) → _FitRequest
+└─ _fit → _native.fit_design_dense | fit_design_csc | fit_design_trend
+        → credible_sets (correlations of members computed from X)
+        → SusieResult with fitted values
+</code></pre></div>
 
+<h3 id="inside-the-native-fit">Inside the native fit</h3>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>_native.fit                                      rust/prusie-python/src/lib.rs
+├─ parse options → FitOptions, FitControl, model extensions
+├─ check NumPy layout and borrow read-only views
+├─ fit_controlled                                rust/prusie-core/src/ibss.rs
+│  ├─ check sizes, scalars and scale factors
+│  ├─ implicit scaling, or a materialized working matrix
+│  ├─ diagonal of Q (must be nonnegative) → DenseGram
+│  └─ fit_operator
+│     ├─ each sweep, for ℓ = 1, …, L in order:
+│     │  ├─ single_effect → minimize             ser.rs, optimizer.rs
+│     │  └─ GramOperator::apply                  operator.rs, exact_columns.rs
+│     ├─ after the sweep: expected_residual_sum_squares, ELBO,
+│     │  detect_cycle, stopping_decision          residual.rs, diagnostics.rs
+│     └─ trimming of null effects
+└─ fit_result → dict of NumPy arrays, warnings and diagnostics
+</code></pre></div>
+
+<p>The design entry points build a <code>Design</code> or <code>TrendDesign</code> operator and call the
+same <code>fit_operator</code>. The binding holds the Python global interpreter lock and
+the read borrows of the input arrays for the duration of the solver call.</p>
+<h3 id="refinement-continuation-and-warm-starts">Refinement, continuation and warm starts</h3>
+<p>With <code>retain_data</code>, <code>track_fit</code>, <code>refine</code> or <code>model_init</code>, preparation stores
+read-only copies of the inputs and a signature that identifies them.
+<code>continue_fit</code> and <code>refine_fit</code> call <code>_native.fit</code> again on those copies with a
+warm start, then recompute PIPs and credible sets. For each credible set,
+<code>refine_fit</code> first fits with that set's prior weights set to zero, then refits
+from that state with the original weights. It accepts a refit whose ELBO
+exceeds the current one by more than the tolerance. Models whose inputs cannot
+be retained (designs, dynamic RSS, mixture, NIG and slot priors, the PIP
+criterion, <code>L_greedy</code> and nondefault credible-set controls) use
+<code>_refine_by_refitting</code>, which repeats <code>_fit</code> as susieR does. A warm start
+supplies <code>alpha</code>, <code>mu</code> and <code>mu2</code> (and optionally <code>V</code> and <code>sigma2</code>); the solver
+recomputes every product <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">Q</mi><msub><mi mathvariant="bold">m</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">\mathbf Q\mathbf m_\ell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8805em;vertical-align:-0.1944em;"></span><span class="mord mathbf">Q</span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span> before the first sweep.
+<a href="post_analysis.html">Convergence and refinement</a> describes these interfaces.</p>
+<h2 id="pseudocode">Pseudocode</h2>
+<p>The pseudocode follows the Gaussian model with the default options. Fixed
+mixture priors replace <code>single_effect</code> by <code>single_effect_mixture</code>. The NIG
+model uses <code>single_effect_nig</code>, EM prior updates, the PIP rule when <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">L&gt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal">L</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span> and
+its own objective and residual-variance update. Slot priors weight each stored
+product by the effect's activity probability and skip inactive effects.</p>
+<h3 id="preparation">Preparation</h3>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function susie_rss(z or (bhat, shat), R or X, n, var_y, …):
+    check argument combinations and option types
+    z ← bhat / shat if z is not supplied;  missing z ← 0 with a warning
+    validate R: finite, diagonal ≥ 0, exact symmetry ((n − 1)R for z-scores with known n)
+    if n is missing:            XtX ← R, Xty ← z, yty ← 1 (with a warning)
+    else if bhat, shat, var_y:  reconstruct XtX (always averaged with its transpose),
+                                Xty and yty on the response scale
+    else:                       XtX ← (n − 1)R, Xty ← √(n − 1)·z̃, yty ← (n − 1)·var_y
+                                (z̃ is the Wald-adjusted z when z_method = &quot;wald&quot;;
+                                 var_y is 1 when not supplied)
+    if the z-score matrix was asymmetric: warn and use (M + Mᵀ)/2
+    return _fit(_prepare_suff_stat(XtX, Xty, yty, n, …))
+
+function _prepare_suff_stat(XtX, Xty, yty, n, options):
+    check scalars, tolerances, priors and residual-variance bounds
+    align identifiers and metadata; apply the maf filter
+    if null_weight &gt; 0: append a null column; normalize the prior weights
+    L ← min(L, p)
+    d_j ← sqrt(XtX_jj / (n − 1)) if standardize else 1;  zero scales ← 1
+    pass XtX with scale factors (implicit scaling), or prepare D⁻¹ XtX D⁻¹
+    build native options: prior variance × yty / (n − 1), convergence, warm start
+    keep read-only copies if continuation or refinement must be supported
+    return _FitRequest
+
+function _fit(request):
+    native ← solver result for the request&#39;s route
+    re-emit native warnings; warn if not converged
+    pip  ← marginal_pip(alpha, V)
+    sets ← credible_sets(alpha, V, correlation or X)
+    result ← SusieResult(native, pip, sets, …)
+    return refine(result) if refinement was requested else result
+</code></pre></div>
+
+<h3 id="ibss">IBSS</h3>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function fit_operator(Q, g = Xᵀy, yᵀy, n, options):
+    α_ℓ ← π,  μ_ℓ = μ2_ℓ ← 0,  V_ℓ ← V₀,  σ² ← σ₀²
+    u_ℓ ← 0,  f ← 0              # warm start: u_ℓ ← Q(α_ℓ ∘ μ_ℓ), f ← Σ_ℓ u_ℓ
+    for t = 1, …, max_iter:
+        for ℓ = 1, …, L:            # sequential: each update uses the previous ones
+            f ← f − u_ℓ;  r ← g − f # residual crossproduct without effect ℓ
+            (α_ℓ, μ_ℓ, μ2_ℓ, V_ℓ, lbf_ℓ) ← single_effect(r, diag Q, σ², V_ℓ, π)
+            KL_ℓ ← −lbf_ℓ + E_q[log-likelihood of the single-effect model]
+            u_ℓ ← Q(α_ℓ ∘ μ_ℓ);  f ← f + u_ℓ     # one product with Q per update
+        if check_prior and some V_ℓ &gt; 100 · max_j g_j² / (Q_jj σ²): error
+        ER2  ← expected_residual_sum_squares(g, yᵀy, diag Q, α, μ, μ2, u)
+        ELBO ← −(n/2) log(2πσ²) − ER2 / (2σ²) − Σ_ℓ KL_ℓ
+        decision ← stopping_decision(ELBO history, α and PIP history)
+        if decision ≠ continue: break
+        if estimate_residual_variance: σ² ← clamp(ER2 / n, lower, upper)
+    for ℓ with V_ℓ &lt; prior_tol:     # trimming, also at the iteration limit
+        α_ℓ ← π;  μ_ℓ, μ2_ℓ, lbf_ℓ, KL_ℓ ← 0;  V_ℓ ← 0
+    return α, μ, μ2, V, σ², ELBO history, iterations, converged, diagnostics
+</code></pre></div>
+
+<p>Because the stopping test precedes the residual-variance update, a converged
+fit keeps the <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>σ</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\sigma^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">σ</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> used in its last sweep, whereas a fit that reaches
+<code>max_iter</code> receives one more update.</p>
+<h3 id="single-effect-regression">Single-effect regression</h3>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function single_effect(r, d, σ², V, π, method):
+    b̂_j ← r_j / d_j;   s_j² ← max(σ² / d_j, ε)        # rebuilt when σ² changes
+    ℓ(V) ← log Σ_j π_j BF_j(V)                         # SER log marginal likelihood
+    if method = &quot;optim&quot;:
+        V ← argmax of ℓ(V) over log V ∈ [−30, 15]      # Brent search on log V
+        keep the previous V if the search result is worse
+    if method ∈ {&quot;optim&quot;, &quot;simple&quot;} and ℓ(0) + check_null_threshold ≥ ℓ(V): V ← 0
+    w_j ← log BF_j(V) + log(π_j + √ε)
+    α_j ← exp(w_j − max_k w_k) / Σ_k exp(w_k − max_k w_k)
+    v_j ← V s_j² / (V + s_j²);  μ_j ← v_j b̂_j / s_j²;  μ2_j ← v_j + μ_j²
+    if method = &quot;EM&quot;: V ← Σ_j α_j μ2_j
+    lbf ← max_k w_k + log Σ_k exp(w_k − max_k w_k)
+    return α, μ, μ2, V, lbf
+</code></pre></div>
+
+<h3 id="stopping-rule">Stopping rule</h3>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function stopping_decision(t, ELBO history, Δα, ΔPIP, cycle):
+    infinite ELBO, or NaN ELBO with criterion &quot;joint&quot;   → numerical failure
+    t &lt; min_iter                                        → continue
+    criterion &quot;elbo&quot;:      converged if 0 ≤ ELBO(t) − ELBO(t − 1) &lt; tol
+    criterion &quot;alpha_pip&quot;: converged if Δα &lt; alpha_tol and ΔPIP &lt; pip_tol
+    criterion &quot;joint&quot;:     converged if both hold
+    criterion &quot;pip&quot;:       converged if ΔPIP &lt; tol and Δα &lt; tol
+    NaN ELBO with &quot;elbo&quot;:  apply the PIP rule instead, recorded as a fallback
+    converged                                           → stop
+    cycle of length 2–5 under an α/PIP rule             → stop
+    otherwise                                           → continue
+</code></pre></div>
+
+<p><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mi>α</mi></mrow><annotation encoding="application/x-tex">\Delta\alpha</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord">Δ</span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span></span></span></span></span> and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow></mrow><annotation encoding="application/x-tex">\Delta\mathrm{PIP}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord">Δ</span><span class="mord"><span class="mord mathrm">PIP</span></span></span></span></span></span> are maximum absolute changes from an
+earlier sweep. Under the PIP rule a detected cycle counts as convergence and
+alpha is averaged over the cycle; under <code>"alpha_pip"</code> and <code>"joint"</code> it stops
+with <code>stop_reason="cycle_detected"</code>. Slot priors, NIG with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">L&gt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal">L</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span> and
+<code>convergence_method="pip"</code> use the PIP rule. The Python sweep loop of the
+dynamic RSS models implements only the ELBO and PIP rules, with the default
+<code>min_iter</code> and cycle lag; <code>susie_rss</code> rejects other <code>ConvergenceConfig</code>
+settings for these models before fitting.</p>
+<h2 id="boundaries-and-exceptions">Boundaries and exceptions</h2>
+<h3 id="errors">Errors</h3>
+<ul>
+<li><code>ValueError</code>: invalid values, shapes and option combinations, and every
+  error from the native layer, whose message is passed through unchanged.</li>
+<li><code>TypeError</code>: wrong types of boolean flags, <code>slot_prior</code>, <code>convergence</code>,
+  <code>RSSControl</code> options, <code>refine</code> and <code>model_init</code>.</li>
+<li><code>KeyError</code>: a missing key of the <code>SusieInputs</code> mapping returned by
+  <code>init_only=True</code>.</li>
+</ul>
+<p>Native functions return errors as messages, and the binding converts every
+message into a <code>ValueError</code>. Warnings are <code>RuntimeWarning</code>s. Those issued by
+<code>susie_rss</code>, by the shared preparation and fitting functions and by the solver
+are also stored in <code>fit.warnings</code>.</p>
+<h3 id="input-checks">Input checks</h3>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Matrix of the wrong shape, nonfinite entry or negative diagonal</td>
+<td><code>ValueError</code></td>
+</tr>
+<tr>
+<td>Exactly asymmetric <code>R</code> or <code>XtX</code></td>
+<td>Warning; <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi mathvariant="bold">M</mi><mo>+</mo><msup><mi mathvariant="bold">M</mi><mi>T</mi></msup><mo stretchy="false">)</mo><mi mathvariant="normal">/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">(\mathbf M+\mathbf M^T)/2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathbf">M</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0913em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathbf">M</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8413em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord">/2</span></span></span></span></span> is used. There is no symmetry tolerance</td>
+</tr>
+<tr>
+<td>LD diagonal not one, or <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">∣</mo><msub><mi>r</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false">∣</mo><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lvert r_{ij}\rvert&gt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mopen">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">ij</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mclose">∣</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span></td>
+<td>Accepted; only finiteness, the diagonal sign and symmetry are required</td>
+</tr>
+<tr>
+<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>≤</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n\le1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7719em;vertical-align:-0.136em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span>, negative <code>yty</code>, or zero <code>yty</code> with nonzero <code>Xty</code> or an estimated residual variance</td>
+<td><code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>shat</code> missing or not positive</td>
+<td><code>ValueError</code></td>
+</tr>
+<tr>
+<td>Missing z-scores</td>
+<td>Replaced with zero with a warning</td>
+</tr>
+<tr>
+<td>Missing <code>Xty</code> entries</td>
+<td>Replaced with zero with a warning; <code>ValueError</code> with <code>check_input=True</code></td>
+</tr>
+<tr>
+<td>Infinite summary statistics</td>
+<td><code>ValueError</code></td>
+</tr>
+<tr>
+<td>Negative or nonfinite prior weights, a zero sum, or <code>null_weight</code> outside <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[0,1)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mclose">)</span></span></span></span></span></td>
+<td><code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>L</code> larger than the number of columns</td>
+<td><code>L</code> is reduced to that number, including any null column</td>
+</tr>
+<tr>
+<td>Column with zero variance</td>
+<td>Scale set to one; its Bayes factor is one, so it carries no information</td>
+</tr>
+<tr>
+<td><code>maf</code> filter that removes every variant</td>
+<td><code>ValueError</code></td>
+</tr>
+<tr>
+<td><code>check_input=True</code></td>
+<td>Eigendecomposition: a negative eigenvalue raises <code>ValueError</code>; <code>Xty</code> outside the column space gives a warning</td>
+</tr>
+<tr>
+<td>Infinite <code>y</code>, or missing <code>y</code> without <code>na_rm</code></td>
+<td><code>ValueError</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><a href="inputs.html">Inputs and priors</a> gives the complete input rules.</p>
+<h3 id="numerical-safeguards">Numerical safeguards</h3>
 <p>Posterior weights are normalized after subtracting the largest log weight.
-This prevents exponential overflow without changing relative probabilities.</p>
+This prevents exponential overflow without changing relative probabilities.
+For log weights <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1000</mn><mo separator="true">,</mo><mn>999</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1000, 999)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1000</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">999</span><span class="mclose">)</span></span></span></span></span>, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>e</mi><mn>1000</mn></msup></mrow><annotation encoding="application/x-tex">e^{1000}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">1000</span></span></span></span></span></span></span></span></span></span></span></span></span> overflows in float64, whereas the
+shifted form does not:</p>
 <!-- calculated:logsum:start -->
 <p>A 60-digit decimal calculation gives <strong>1000.313261687518</strong>; the first normalized weight is <strong>0.731058578630</strong>.</p>
 <!-- calculated:logsum:end -->
 
-<p>The implementation uses ordinary float64 arithmetic. On native GNU/Linux
-x86-64 builds, shifted exponentials use the system vector math library when
-available and supported by the CPU; scalar evaluation handles unavailable
-symbols, tails and nonstandard caller rounding modes. Initialization is cached,
-and the caller's floating-point environment is preserved. Existing variances
-are used directly without log/exp round trips. Complete final component alpha
-matrices are compared with pinned susieR 0.16.6 at absolute tolerance <code>1e-5</code>,
-with original component and variant order retained. PIPs and other summaries
+<ul>
+<li><strong>Floors.</strong> Sampling variances are at least machine epsilon, log prior
+  weights use <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>log</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>π</mi><mi>j</mi></msub><mo>+</mo><msqrt><mi>ϵ</mi></msqrt><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\log(\pi_j+\sqrt\epsilon)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0503em;vertical-align:-0.25em;"></span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8003em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="padding-left:0.833em;">ϵ</span></span><span style="top:-2.7603em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.08em" viewBox="0 0 400000 1080" preserveAspectRatio="xMinYMin slice"><path d="M95,702
+c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14
+c0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54
+c44.2,-33.3,65.8,-50.3,66.5,-51c1.3,-1.3,3,-2,5,-2c4.7,0,8.7,3.3,12,10
+s173,378,173,378c0.7,0,35.3,-71,104,-213c68.7,-142,137.5,-285,206.5,-429
+c69,-144,104.5,-217.7,106.5,-221
+l0 -0
+c5.3,-9.3,12,-14,20,-14
+H400000v40H845.2724
+s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
+c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
+M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2397em;"><span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span> as in susieR, and slot log-odds are
+  limited to <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>20</mn><mo separator="true">,</mo><mn>20</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[-20,20]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">−</span><span class="mord">20</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">20</span><span class="mclose">]</span></span></span></span></span>.</li>
+<li><strong>Columns without information.</strong> A variant with zero diagonal or a nonfinite
+  sampling variance gets Bayes factor one and is excluded from the expected
+  log-likelihood and from the <code>check_prior</code> bound.</li>
+<li><strong>Prior-variance search.</strong> A nonfinite trial objective or more than 1000
+  steps is an error.</li>
+<li><strong>Posterior and objective.</strong> A nonfinite posterior quantity, an infinite
+  ELBO or a nonpositive or nonfinite residual-variance estimate is an error.
+  The estimate is otherwise limited to [<code>residual_variance_lowerbound</code>,
+  <code>residual_variance_upperbound</code>].</li>
+<li><strong>Prior variance.</strong> With <code>check_prior</code>, an estimated prior variance more than
+  100 times the largest squared z-score is an error, which usually indicates
+  inconsistent summary statistics and LD.</li>
+<li><strong>Fast paths.</strong> Grouped, vectorized and implicitly scaled computations fall
+  back to the general formula whenever an intermediate is nonfinite or
+  subnormal; see <a href="optimization.html">Optimization</a>.</li>
+</ul>
+<h3 id="convergence-outcomes">Convergence outcomes</h3>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th><code>stop_reason</code></th>
+<th><code>converged</code></th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>criterion_satisfied</code></td>
+<td><code>True</code></td>
+<td>The selected criterion was met</td>
+</tr>
+<tr>
+<td><code>iteration_limit</code></td>
+<td><code>False</code></td>
+<td><code>max_iter</code> sweeps ran without meeting it; a warning reports the iteration count</td>
+</tr>
+<tr>
+<td><code>cycle_detected</code></td>
+<td><code>False</code></td>
+<td>Alpha and PIPs alternate among 2–5 states under <code>"alpha_pip"</code> or <code>"joint"</code></td>
+</tr>
+<tr>
+<td><code>numerical_failure</code></td>
+<td><code>False</code></td>
+<td>A NaN ELBO under <code>"joint"</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>An ELBO decrease larger than <code>tol</code> produces a warning and is counted, and the
+fit continues. A NaN ELBO with a finite posterior under <code>"elbo"</code> switches that
+sweep to the PIP rule and produces a warning. In all cases the fit returns its
+current state. <a href="results.html#iterations-and-finalization">Reading results</a>
+describes the returned diagnostics.</p>
+<h3 id="trimming-and-output-shapes">Trimming and output shapes</h3>
+<p>After the final sweep, including at the iteration limit, effects with
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&lt;</mo></mrow><annotation encoding="application/x-tex">V_\ell&lt;</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span></span></span></span></span> <code>prior_tol</code> are reset: alpha to the prior weights and the moments,
+log Bayes factors and KL terms to zero. The stored ELBO is not recomputed. With
+a null column, <code>alpha</code>, <code>mu</code>, <code>mu2</code> and <code>lbf_variable</code> have one more column
+than <code>pip</code>, and credible sets that contain the null column are rejected. If no
+credible set qualifies, the set collections are empty and PIPs are still
+returned. PIPs use effects with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo></mrow><annotation encoding="application/x-tex">V_\ell&gt;</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span></span></span></span></span> <code>prior_tol</code>; credible sets use
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">V_\ell&gt;10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span>.</p>
+<h2 id="numerical-reproducibility">Numerical reproducibility</h2>
+<p>Agreement with susieR is validated with relative tolerance zero: complete final
+component alpha matrices are compared with pinned susieR 0.16.6 at absolute
+tolerance <code>1e-5</code>, with original component and variant order retained. PIPs and other summaries
 are separate diagnostics; see <a href="numerical_accuracy.html">numerical accuracy</a>.</p>
-<h2 id="dense-storage-and-matrix-products">Dense storage and matrix products</h2>
-<!-- calculated:memory:start -->
-<p>At <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>5000</mn></mrow><annotation encoding="application/x-tex">p=5000</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">5000</span></span></span></span></span>, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><msup><mi>p</mi><mn>2</mn></msup><mo>=</mo><mn>200</mn><mo separator="true">,</mo><mn>000</mn><mo separator="true">,</mo><mn>000</mn></mrow><annotation encoding="application/x-tex">8p^2=200,000,000</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0085em;vertical-align:-0.1944em;"></span><span class="mord">8</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8389em;vertical-align:-0.1944em;"></span><span class="mord">200</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">000</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">000</span></span></span></span></span> bytes, or approximately <strong>190.7 MiB</strong>.</p>
-<!-- calculated:memory:end -->
-
-<p>The dense operator applies diagonal scaling implicitly, avoiding a separate
-scaled matrix when the factors permit safe evaluation. Its products use a four-column kernel
-with runtime-checked AVX2 support and a portable fallback. Gaussian single-effect
-updates reuse groups of equal sampling variance. Default optimizations are
-selected using numerical validation and lower median complete-call runtime on
-a strict majority of a fixed case panel; this does not imply every input is faster.
-There are no environment variables for selecting alternative mathematical paths.
-<code>PRUSIE_NUM_THREADS</code> controls native matrix-check threads (1–32), is read once
-per process, and should be set before importing prusie. Component updates are
-sequential. The primary comparisons use one numerical thread throughout.</p>
+<p>The solver uses float64 rather than long-double C helpers or R-specific
+accumulation order. Small platform-dependent differences are assessed using the
+complete-alpha tolerance above, not bitwise equality. The compile-time
+<code>portable-math</code> feature disables the optional GNU/Linux vector-math shim and
+uses the existing scalar fallback. It leaves model settings unchanged and makes
+no promise of identical floating-point results across platforms. There is no
+runtime environment switch selecting an experimental numerical algorithm.</p>
 <h2 id="reference-source-mapping">Reference source mapping</h2>
 <p>The reference is <a href="https://github.com/stephenslab/susieR/tree/8e56a8e038e989856d106d9ca5175cc664fea9d2">susieR 0.16.6</a>.
-The Gaussian updates correspond to <code>single_effect_regression</code>,
-<code>update_each_effect</code> and <code>susie_workhorse</code>; preprocessing follows the corresponding
-individual-data and summary-statistic entry points. Attribution and licenses are
-retained in the <a href="https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md">third-party notices</a>.</p></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+Corresponding functions at that commit are:</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>prusie</th>
+<th>susieR 0.16.6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ibss.rs</code>: <code>fit_operator</code></td>
+<td><code>susie_workhorse</code> (<code>R/susie_workhorse.R</code>); <code>ibss_fit</code> (<code>R/iterative_bayesian_stepwise_selection.R</code>)</td>
+</tr>
+<tr>
+<td><code>ser.rs</code>: <code>single_effect</code>; <code>optimizer.rs</code>: <code>minimize</code></td>
+<td><code>single_effect_update</code>, <code>single_effect_regression</code>, <code>optimize_prior_variance</code> (<code>R/single_effect_regression.R</code>)</td>
+</tr>
+<tr>
+<td><code>residual.rs</code>: <code>expected_residual_sum_squares</code>; ELBO in <code>ibss.rs</code></td>
+<td><code>get_ER2</code>, <code>Eloglik</code> (<code>R/sufficient_stats_methods.R</code>); <code>get_objective</code> (<code>R/model_methods.R</code>)</td>
+</tr>
+<tr>
+<td><code>diagnostics.rs</code>: <code>stopping_decision</code>, <code>detect_cycle</code></td>
+<td><code>check_convergence</code> (<code>R/model_methods.R</code>); <code>check_alpha_pip_cycle_convergence</code> (<code>R/susie_utils.R</code>)</td>
+</tr>
+<tr>
+<td><code>ibss.rs</code>: residual update and trimming</td>
+<td><code>update_model_variance</code>, <code>trim_null_effects</code> (<code>R/model_methods.R</code>)</td>
+</tr>
+<tr>
+<td><code>individual.py</code>: <code>susie</code>; <code>api.py</code>: <code>susie_suff_stat</code>, <code>susie_rss</code>; <code>rss_lambda.py</code>: <code>susie_rss_lambda</code></td>
+<td><code>susie</code>, <code>susie_ss</code>, <code>susie_rss</code>, <code>susie_rss_lambda</code> (<code>R/susie.R</code>) and their constructors (<code>R/susie_constructors.R</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The Brent search in <code>optimizer.rs</code> is adapted from <code>Brent_fmin</code> in R's
+<code>src/library/stats/src/optimize.c</code> (GPL-2.0-or-later). Attribution and licenses
+are retained in the <a href="https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md">third-party notices</a>.</p></article>
+<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

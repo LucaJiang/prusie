@@ -14,11 +14,15 @@ import inspect
 import itertools
 import json
 import math
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from importlib.metadata import PackageNotFoundError, version
+from typing import Any
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .analysis import _biological, _correlation, _ids, summarize
+from .result import SusieResult
 
 
 def _directions(a, b, shared):
@@ -175,7 +179,9 @@ def _baseline_first(rows, baseline):
     return out
 
 
-def comparison_relations(comparison, *, layer="signals", baseline_only=True):
+def comparison_relations(
+    comparison: Mapping[str, Any], *, layer: str = "signals", baseline_only: bool = True
+) -> list[dict[str, Any]]:
     """Return the relations of a comparison record, including version-1 records.
 
     Parameters
@@ -291,17 +297,17 @@ def comparison_relations(comparison, *, layer="signals", baseline_only=True):
 
 
 def compare_fits(
-    fits,
+    fits: Mapping[str, SusieResult],
     *,
-    baseline=None,
-    R=None,
-    ld_reference=None,
-    pip_threshold=0.1,
-    overlap_threshold=0.5,
-    ld_threshold=0.9,
-    mode="union",
-    top_candidates=3,
-):
+    baseline: str | None = None,
+    R: ArrayLike | Mapping[str, ArrayLike] | None = None,
+    ld_reference: str | None = None,
+    pip_threshold: float = 0.1,
+    overlap_threshold: float = 0.5,
+    ld_threshold: float = 0.9,
+    mode: str = "union",
+    top_candidates: int = 3,
+) -> dict[str, Any]:
     """Compare existing fits by variant PIPs and by relations between their effects.
 
     Parameters
@@ -761,7 +767,13 @@ def _hash_value(h, value):
         raise TypeError(f"unsupported sensitivity cache value type {type(value).__name__}")
 
 
-def sensitivity_key(inputs, settings, *, initialization="cold", software_version=None):
+def sensitivity_key(
+    inputs: Mapping[str, Any],
+    settings: Mapping[str, Any],
+    *,
+    initialization: str = "cold",
+    software_version: str | None = None,
+) -> str:
     """Cache key for a sensitivity fit.
 
     The SHA-256 digest covers the inputs (including variant order and allele
@@ -931,15 +943,15 @@ def _alternative_sensitivity_inputs(alt, settings, baseline_ids, baseline_metada
 
 
 def run_sensitivity(
-    inputs,
-    plan,
+    inputs: Mapping[str, Any],
+    plan: Sequence[Mapping[str, Any]],
     *,
-    baseline=None,
-    baseline_settings=None,
-    cache=None,
-    fit_function=None,
-    software_version=None,
-):
+    baseline: SusieResult | None = None,
+    baseline_settings: Mapping[str, Any] | None = None,
+    cache: MutableMapping[str, Any] | None = None,
+    fit_function: Callable[..., SusieResult] | None = None,
+    software_version: str | None = None,
+) -> dict[str, Any]:
     """Fit a baseline and a list of single-factor alternatives, then compare them.
 
     Parameters
@@ -987,7 +999,10 @@ def run_sensitivity(
     raw weights on the retained variants and the null column. New variants
     require explicit weights unless the baseline prior is uniform, in which
     case they receive the same raw weight, and explicit metadata when the
-    baseline has metadata columns. Cached fit objects are shared, so they
+    baseline has metadata columns. Convergence controls are passed to the
+    fitting function only when they were requested, by ``baseline_settings`` or
+    by the supplied baseline; otherwise its default rule applies, as in a direct
+    call. Cached fit objects are shared, so they
     must not be modified while the cache is in use. When a baseline fit is
     supplied, equality of its z-scores and LD with ``inputs`` cannot be
     verified and is reported as not assessed.
@@ -1093,7 +1108,17 @@ def run_sensitivity(
             warning=("Matching IDs/metadata/settings alone does not prove equal z or LD values."),
         )
         baseline_validation["convergence_resolution"] = copy.deepcopy(control_resolution)
-    settings["convergence"] = control
+    # Forward controls only when they were requested. Otherwise each fit uses the
+    # fitting function's own default rule, as a direct call would (for example
+    # susieR's PIP rule with R_finite or R_mismatch).
+    forward_convergence = override is not None or (
+        baseline is not None
+        and baseline.params.get("convergence_resolution", {}).get("source") != "default"
+    )
+    if forward_convergence:
+        settings["convergence"] = control
+    else:
+        settings.pop("convergence", None)
     if "s_init" in settings:
         raise ValueError("baseline sensitivity is cold-started; use an explicit continuation item")
     if set(inputs) & set(settings):
@@ -1203,7 +1228,7 @@ def run_sensitivity(
                 initialization=initialization,
                 fit_performed=not hit,
                 analysis="fit_change",
-                requested_convergence=options["convergence"].options(),
+                requested_convergence=control.options(),
                 convergence_resolution=copy.deepcopy(control_resolution),
                 prior_resolution=copy.deepcopy(prior_resolution),
                 input_resolution=copy.deepcopy(input_resolution),
@@ -1338,7 +1363,9 @@ def run_sensitivity(
         summaries=summaries,
         records=records,
         plan=saved_plan,
-        baseline_settings=dict(settings, convergence=control.options()),
+        baseline_settings=dict(
+            settings, **({"convergence": control.options()} if forward_convergence else {})
+        ),
         convergence_resolution=copy.deepcopy(control_resolution),
         baseline_validation=baseline_validation,
         comparison=compare_fits(results, R=inputs.get("R"), ld_reference="baseline"),

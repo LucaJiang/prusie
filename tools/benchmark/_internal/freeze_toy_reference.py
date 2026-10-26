@@ -33,9 +33,9 @@ def freeze(record_path, destination):
         reference_arrays_sha256=hashlib.sha256(
             (destination / "reference.npz").read_bytes()
         ).hexdigest(),
-        source=("Independent toy example fit executed by tools/benchmark/fine_mapping.R"),
+        source=("Independent toy example fit executed by the R benchmark driver"),
         regeneration=(
-            "Prepare inputs using tools/benchmark/prepare_toy.py; run "
+            "Prepare inputs using the internal prepare_toy.py helper; run "
             "fine_mapping.R in a new output directory; inspect differences "
             "before changing this reference."
         ),

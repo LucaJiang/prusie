@@ -8,7 +8,7 @@ rule describes one IBSS trajectory; refinement explores other starting solutions
 
 ```python
 import prusie
-from prusie.plots import plot_convergence, plot_refinement
+from prusie.viz import plot_convergence, plot_refinement
 
 example = prusie.load_example()
 fit = prusie.susie_rss(**example["inputs"], **example["parameters"],

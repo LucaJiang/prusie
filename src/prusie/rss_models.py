@@ -679,7 +679,7 @@ def prepare_multipanel(arguments: dict[str, Any]) -> Any:
     """Construct panel sub-fits and the outcome-independent initial mixture."""
     import inspect
 
-    from .api import _fit, susie_rss
+    from .api import _fit, _summary_vector, susie_rss
     from .posterior import _design_correlation
 
     panels = arguments["panels"]
@@ -688,8 +688,11 @@ def prepare_multipanel(arguments: dict[str, Any]) -> Any:
     z = np.asarray(arguments["z"], dtype=float)
     if z.ndim != 1:
         raise ValueError("Multi-panel RSS requires a single shared z-score vector")
+    collected: list[str] = []
+    z = _summary_vector(z, "z", collected)
     accepted = set(inspect.signature(susie_rss).parameters) - {"R", "X", "R_finite", "init_only"}
     options = {key: value for key, value in arguments.items() if key in accepted}
+    options["z"] = z
     sizes = arguments["R_finite"]
     if sizes is None or sizes is False:
         panel_sizes = None
@@ -769,4 +772,5 @@ def prepare_multipanel(arguments: dict[str, Any]) -> Any:
     result.params.update(
         single_panel_elbo=scores, initial_panel=selected, omega=result.convergence.get("omega")
     )
+    result.warnings[:0] = collected
     return result

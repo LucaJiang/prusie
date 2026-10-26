@@ -90,7 +90,7 @@ With the [analysis extra](install.md#optional-analysis-tools) installed, figures
 and a report can be produced from the same `fit` and `summary`:
 
 ```python
-from prusie.plots import plot_locus, plot_convergence
+from prusie.viz import plot_locus, plot_convergence
 from prusie.report import write_report
 
 report = write_report(

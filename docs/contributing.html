@@ -17,11 +17,10 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html" aria-current="page">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
-<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html" aria-current="page">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
-<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="contributing.md">Markdown source</a></div>
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
 <li><a href="#development-environment">Development environment</a></li>
@@ -56,6 +55,16 @@ cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span
 <p>Tests cover frozen susieR outputs, an independent NumPy reference, analytical
 cases, input validation, plotting and reports. Preserve frozen inputs and
 reference outputs; add regression tests for numerical fixes.</p>
+<p>The CI matrix includes Linux, macOS and Windows and a Linux <code>portable-math</code>
+build. An optional manual <strong>tests-and-packages</strong> workflow run with
+<code>r_reference=true</code> installs pinned susieR 0.16.6 and checks the complete alpha
+matrices for individual, sufficient-statistic and RSS fits on the frozen parity
+inputs. It does not regenerate references. The same check can run locally with
+R, jsonlite and that susieR commit installed through <code>remotes::install_github</code>
+(the check verifies its <code>RemoteSha</code>):</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>Rscript<span class="w"> </span>--vanilla<span class="w"> </span>tools/check_r_reference.R
+</code></pre></div>
+
 <h2 id="editing-and-building-documentation">Editing and building documentation</h2>
 <p>Install Node.js (tested with 24.18.0), then:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>tools/docs-requirements.txt
@@ -82,11 +91,15 @@ notices in adapted source and frozen data when distributing packages.</p>
 <h2 id="benchmark-scripts">Benchmark scripts</h2>
 <p><a href="https://github.com/LucaJiang/prusie/tree/main/tools/benchmark"><code>tools/benchmark</code></a>
 contains the R comparison and measurement scripts. Keep numerical tolerances fixed.
+<code>tools/benchmark/reproduce.py</code> is the public entry point; helper drivers are
+under <code>_internal/</code>. Use <code>--render-records</code> to plot saved records without fitting.
 Measure each proposed optimization against its parent on cases chosen before
 inspecting outcomes, and report wins, ties, regressions and repeat variability.
 Merge it only if more than half of those cases have lower median complete-call
-runtime; otherwise retain it as experimental.</p></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+runtime, and no predeclared group of cases (data type, variant-count tertile or
+parent iteration count) becomes slower; otherwise retain it as experimental.
+Include large-variant-count and high-iteration GWAS and eQTL cases in the panel.</p></article>
+<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

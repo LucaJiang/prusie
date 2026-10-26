@@ -8,10 +8,14 @@ from __future__ import annotations
 
 import copy
 import math
+from collections.abc import Mapping
+from typing import Any
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .posterior import credible_sets
+from .result import SusieResult
 
 _UNSET = object()
 
@@ -75,17 +79,17 @@ def _column_summary(values):
 
 
 def summarize(
-    fit,
-    R=None,
+    fit: SusieResult,
+    R: ArrayLike | None = None,
     *,
-    coverage=_UNSET,
-    min_abs_corr=_UNSET,
-    proxy_r=0.99,
-    z=None,
-    pvalues=None,
-    metadata=None,
-    input_info=None,
-):
+    coverage: float | object | None = _UNSET,
+    min_abs_corr: float | object | None = _UNSET,
+    proxy_r: float = 0.99,
+    z: ArrayLike | None = None,
+    pvalues: ArrayLike | None = None,
+    metadata: Mapping[str, Any] | None = None,
+    input_info: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """Tabulate the posterior of a fit by variant, single effect and credible set.
 
     Parameters

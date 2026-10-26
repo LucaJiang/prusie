@@ -34,13 +34,16 @@ coverage90 new fit: False
 
 Use `compare_fits` directly when all fits already exist. `run_sensitivity` runs a
 finite named plan, with requested convergence controls inherited from the
-baseline unless explicitly overridden. A runtime fallback is recorded separately.
+baseline unless explicitly overridden. If neither requested any, every fit uses
+the fitting function's default rule, as a direct call would; for example,
+`R_finite` and `R_mismatch` fits use susieR's PIP rule. A runtime fallback is
+recorded separately.
 Changing coverage or purity is a report filter; it keeps the posterior.
 
 ## Plot and interpret the comparison
 
 ```python
-from prusie.plots import plot_sensitivity
+from prusie.viz import plot_sensitivity
 
 sensitivity_view = plot_sensitivity(
     comparison, layout="compact",
@@ -191,7 +194,7 @@ flag; this diagnostic leaves the input statistics and alleles unchanged.
 | Not assessed | The required observation or calculation is unavailable |
 
 ```python
-from prusie.plots import plot_ld_diagnostics
+from prusie.viz import plot_ld_diagnostics
 from prusie.report import write_report
 
 ld_view = plot_ld_diagnostics(ld, layout="compact")

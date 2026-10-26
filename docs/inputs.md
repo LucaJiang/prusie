@@ -67,8 +67,8 @@ original-scale XtX is always averaged, as in susieR. Caller arrays are never
 modified. No ridge adjustment or eigenvalue clipping is applied.
 
 `susie_suff_stat` requires a finite predictor crossproduct `XtX`,
-nonnegative finite `yty`, and $n>1$. Missing z-scores are replaced with zero;
-missing `Xty` entries are replaced with zero with a warning. Infinite summaries
+nonnegative finite `yty`, and $n>1$. Missing z-scores and missing `Xty`
+entries are replaced with zero with a warning. Infinite summaries
 are rejected. With `check_input=True`, `Xty` must be finite before the optional
 projection check. Zero `yty` requires zero `Xty` and an explicitly fixed positive
 residual variance. These quantities describe the same centered data.
@@ -131,7 +131,8 @@ is normalized. Consequently the final null probability equals `null_weight`
 when the biological weights already sum to one. Arbitrarily rescaling raw
 weights in the presence of a null column can change that probability. The
 null column is appended internally with zero crossproducts; provide only
-biological IDs and metadata.
+biological IDs and metadata. For `susie_rss_lambda`, the null column does not
+increase the cap on `L`: the cap is the variant count after MAF filtering.
 
 SER computes log weights using $\log(\pi_j+\sqrt{\epsilon})$, where
 $\epsilon$ is float64 machine epsilon. Thus zero supplied weights are smoothed
@@ -170,5 +171,5 @@ status. The settings of numerical comparisons are recorded separately on
 [Numerical accuracy](numerical_accuracy.md).
 
 A dense float64 matrix requires $8p^2$ bytes before working arrays and results.
-See [Implementation](implementation.md#dense-storage-and-matrix-products) for copies,
+See [Optimization](optimization.md#memory) for copies,
 layouts and additional storage.

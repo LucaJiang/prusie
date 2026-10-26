@@ -9,22 +9,48 @@ import subprocess
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
+HERE = Path(__file__).resolve().parent / "_internal"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rscript", required=True)
+    parser.add_argument("--rscript", help="Rscript executable for a new comparison")
     parser.add_argument("--r-build", default="R", help="Matching R executable for CMD SHLIB")
     parser.add_argument("--output-dir", type=Path, required=True)
     inputs = parser.add_mutually_exclusive_group()
     inputs.add_argument("--panel", choices=("toy", "regression", "scaling"), default="toy")
     inputs.add_argument("--case-manifest", type=Path, help="Frozen list of case_path records")
+    inputs.add_argument(
+        "--render-records", action="store_true", help="Plot retained records without running fits"
+    )
+    parser.add_argument(
+        "--real", type=Path, default=ROOT / "docs/assets/benchmark/real_summary.json"
+    )
+    parser.add_argument(
+        "--scaling", type=Path, default=ROOT / "docs/assets/benchmark/scaling_summary.json"
+    )
     parser.add_argument("--validation-only", action="store_true")
     parser.add_argument("--sample-rss", action="store_true")
     args = parser.parse_args()
+    if not args.render_records and args.rscript is None:
+        parser.error("--rscript is required unless --render-records is selected")
     out = args.output_dir.resolve()
     out.mkdir(parents=True, exist_ok=False)
+    if args.render_records:
+        return subprocess.run(
+            [
+                sys.executable,
+                str(HERE / "plot_current.py"),
+                "--real",
+                str(args.real.resolve()),
+                "--scaling",
+                str(args.scaling.resolve()),
+                "--output",
+                str(out),
+            ],
+            check=False,
+        ).returncode
     command = [
         sys.executable,
         str(HERE / "compare_r.py"),

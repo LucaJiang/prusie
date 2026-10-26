@@ -1,7 +1,13 @@
 """Stopping rules and convergence summaries for Gaussian IBSS."""
 
+from __future__ import annotations
+
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
+
+from .result import SusieResult
 
 
 @dataclass(frozen=True)
@@ -44,7 +50,7 @@ class ConvergenceConfig:
     min_iter: int = 2
     cycle_lag: int = 5
 
-    def options(self):
+    def options(self) -> dict[str, str | float | int]:
         """Validate the controls and return them as native fitting options."""
         if self.criterion not in ("elbo", "alpha_pip", "joint"):
             raise ValueError("criterion must be elbo, alpha_pip, or joint")
@@ -71,14 +77,16 @@ class ConvergenceConfig:
         )
 
     @classmethod
-    def from_dict(cls, value):
+    def from_dict(cls, value: Mapping[str, Any]) -> ConvergenceConfig:
         """Restore and validate controls saved in a result or cache record."""
         config = cls(**value)
         config.options()
         return config
 
 
-def resolve_convergence(fit=None, override=None):
+def resolve_convergence(
+    fit: SusieResult | None = None, override: ConvergenceConfig | None = None
+) -> tuple[ConvergenceConfig, dict[str, Any]]:
     """Return the requested stopping controls and a record of their source.
 
     Controls are taken from ``override``, else from ``fit.params``, else from
@@ -132,7 +140,7 @@ def resolve_convergence(fit=None, override=None):
     return control, provenance
 
 
-def nonconvergence_message(native):
+def nonconvergence_message(native: Mapping[str, Any]) -> str:
     """Warning text for a fit that did not satisfy its stopping rule."""
     return (
         f"IBSS did not converge after {native['niter']} iterations "
@@ -141,7 +149,7 @@ def nonconvergence_message(native):
     )
 
 
-def tracking_level(value):
+def tracking_level(value: bool | str) -> int:
     """Map ``track_fit`` to the native level: 0 off, 1 compact, 2 dense."""
     if value is False or value is None:
         return 0
@@ -152,7 +160,9 @@ def tracking_level(value):
     raise ValueError("track_fit must be False, True, 'compact', or 'dense'")
 
 
-def convergence_summary(native, options, control):
+def convergence_summary(
+    native: Mapping[str, Any], options: Mapping[str, Any], control: ConvergenceConfig
+) -> dict[str, Any]:
     """Combine native stopping diagnostics with the resolved controls."""
     d = dict(native["diagnostics"])
     trace = d.pop("trace")
@@ -185,7 +195,7 @@ def convergence_summary(native, options, control):
     return d, trace
 
 
-def diagnose_convergence(fit):
+def diagnose_convergence(fit: SusieResult) -> dict[str, Any]:
     """Return a copy of the convergence record of a fit.
 
     Parameters

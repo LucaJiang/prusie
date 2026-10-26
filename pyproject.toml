@@ -62,6 +62,7 @@ allowed-confusables = ["α", "γ", "σ", "ℓ", "×", "−"]
 "tests/reference_susier.py" = ["RUF001"]
 "src/prusie/_style.py" = ["RUF001"]
 "src/prusie/plots.py" = ["RUF001"]
+"src/prusie/viz/*.py" = ["RUF001"]
 # Preserve the mathematical minus sign in the convergence criterion documentation.
 "src/prusie/diagnostics.py" = ["RUF002"]
 # These tests exercise exactly those Unicode labels, including variant IDs.

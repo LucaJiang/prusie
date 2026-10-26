@@ -7,9 +7,11 @@ construct credible sets, summarize and compare results, diagnose LD
 consistency, continue or refine fits, and run sensitivity analyses.
 """
 
-from .analysis import summarize
+from importlib import import_module
+from typing import TYPE_CHECKING, Any
+
+from ._types import CredibleSetAudit, FitParameters, InputChecks
 from .api import susie_rss, susie_ss, susie_suff_stat
-from .comparison import compare_fits, run_sensitivity
 from .constructors import susie_auto, susie_trendfilter
 from .control import (
     RSSControl,
@@ -47,13 +49,41 @@ from .individual import (
     susie_workhorse,
     univariate_regression,
 )
-from .ld import diagnose_ld, estimate_s_rss, kriging_rss
 from .refinement import RefinementConfig, continue_fit, evaluate_objective, refine_fit
-from .report import summary_text
 from .result import InputQuality, SusieResult
+
+if TYPE_CHECKING:
+    from . import (
+        analysis as analysis,
+    )
+    from . import (
+        comparison as comparison,
+    )
+    from . import (
+        ld as ld,
+    )
+    from . import (
+        plots as plots,
+    )
+    from . import (
+        report as report,
+    )
+    from . import (
+        viz as viz,
+    )
+    from .analysis import summarize as summarize
+    from .comparison import compare_fits as compare_fits
+    from .comparison import run_sensitivity as run_sensitivity
+    from .ld import diagnose_ld as diagnose_ld
+    from .ld import estimate_s_rss as estimate_s_rss
+    from .ld import kriging_rss as kriging_rss
+    from .report import summary_text as summary_text
 
 __all__ = [
     "ConvergenceConfig",
+    "CredibleSetAudit",
+    "FitParameters",
+    "InputChecks",
     "InputQuality",
     "RSSControl",
     "RefinementConfig",
@@ -125,3 +155,30 @@ from .utilities import (
     path_order,
     univar_order,
 )
+
+_OPTIONAL_EXPORTS = {
+    "summarize": "analysis",
+    "compare_fits": "comparison",
+    "run_sensitivity": "comparison",
+    "diagnose_ld": "ld",
+    "estimate_s_rss": "ld",
+    "kriging_rss": "ld",
+    "summary_text": "report",
+}
+_OPTIONAL_MODULES = {"analysis", "comparison", "ld", "plots", "report", "viz"}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _OPTIONAL_EXPORTS:
+        module = import_module(f".{_OPTIONAL_EXPORTS[name]}", __name__)
+        value = getattr(module, name)
+    elif name in _OPTIONAL_MODULES:
+        value = import_module(f".{name}", __name__)
+    else:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(__all__) | _OPTIONAL_MODULES)

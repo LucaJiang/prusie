@@ -7,25 +7,33 @@
   "section": "Fine-mapping · Python + Rust",
   "navigation": [
     [
-      "Start here",
+      "START HERE",
       [
         [
           "Overview",
           "index.html"
         ],
         [
-          "Install",
+          "Installation",
           "install.html"
         ],
         [
           "Quick start",
           "example.html"
+        ],
+        [
+          "Worked examples",
+          "worked_examples.html"
         ]
       ]
     ],
     [
-      "Read and check a result",
+      "User guide",
       [
+        [
+          "Inputs and priors",
+          "inputs.html"
+        ],
         [
           "Reading results",
           "results.html"
@@ -35,12 +43,8 @@
           "post_analysis.html"
         ],
         [
-          "Sensitivity and LD",
+          "Sensitivity and LD diagnostics",
           "sensitivity.html"
-        ],
-        [
-          "Worked examples",
-          "worked_examples.html"
         ]
       ]
     ],
@@ -48,17 +52,26 @@
       "Reference",
       [
         [
-          "Inputs and priors",
-          "inputs.html"
-        ],
-        [
-          "API and plotting",
+          "Python API",
           "api.html"
         ],
         [
           "Statistical model",
           "model.html"
         ],
+        [
+          "Implementation",
+          "implementation.html"
+        ],
+        [
+          "Speed and memory optimization",
+          "optimization.html"
+        ]
+      ]
+    ],
+    [
+      "Validation",
+      [
         [
           "Numerical accuracy",
           "numerical_accuracy.html"
@@ -76,10 +89,6 @@
     [
       "Project",
       [
-        [
-          "Implementation",
-          "implementation.html"
-        ],
         [
           "Contributing",
           "contributing.html"

@@ -25,7 +25,7 @@ def susie_rss_lambda(
     *,
     X: Any = None,
     lambda_: float | str,
-    L: int | None = None,
+    L: int | None = 10,
     maf: ArrayLike | None = None,
     maf_thresh: float = 0.0,
     prior_variance: float = 50.0,
@@ -82,6 +82,10 @@ def susie_rss_lambda(
     lambda_ : float or {'estimate'}
         Nonnegative isotropic covariance. ``'estimate'`` uses z-score energy
         in the null space of LD. This is susieR's ``lambda`` argument.
+    L : int or None, default 10
+        Maximum number of single effects, capped at the number of retained
+        variants after MAF filtering, excluding any added null column.
+        Explicit ``None`` is accepted as an alias for 10.
     prior_variance : float, default 50
         Initial effect variance, without phenotype-variance scaling.
     residual_variance : float, optional
@@ -93,7 +97,7 @@ def susie_rss_lambda(
     **options
         Other options have the same meaning as in :func:`susie_rss`.
         ``refine=True`` refits the model by credible-set block coordinate
-        ascent, as in susieR; ``retain_data=True`` and a RefinementConfig are
+        ascent; ``retain_data=True`` and a RefinementConfig are
         unavailable for this dynamic likelihood.
 
     Returns
@@ -102,7 +106,7 @@ def susie_rss_lambda(
         The fitted RSS-lambda posterior. Initialization-only calls return
         :class:`SusieInputs`, accepted by :func:`susie_workhorse`.
     """
-    from .api import _fit, _prepare_suff_stat
+    from .api import _fit, _integer, _prepare_suff_stat
     from .individual import _validated_design
     from .posterior import _design_correlation
 
@@ -175,13 +179,15 @@ def susie_rss_lambda(
     sigma2 = (1.0 if residual_variance is None else residual_variance) - ridge
     if sigma2 <= 0:
         raise ValueError("Initial residual variance must exceed lambda_")
+    # Validate before capping so an invalid request cannot become a valid count.
+    L = min(_integer(10 if L is None else L, "L"), len(scores))
     effective_n = 2 if n is None else float(n)
     request = _prepare_suff_stat(
         matrix,
         scores,
         effective_n - 1,
         effective_n,
-        L=min(10, len(scores)) if L is None else L,
+        L=L,
         scaled_prior_variance=prior_variance,
         residual_variance=sigma2,
         estimate_residual_variance=estimate_residual_variance,

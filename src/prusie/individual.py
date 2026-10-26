@@ -190,7 +190,7 @@ def susie(
     variant_ids, variant_metadata, retain_data, refine, unmappable_effects
         As in :func:`susie_suff_stat`; unmappable models are excluded.
         ``refine=True`` refits the model by credible-set block coordinate
-        ascent, as in susieR. Retained continuation is unavailable for
+        ascent. Retained continuation is unavailable for
         matrix-free designs: ``retain_data=True`` or a RefinementConfig raises
         ValueError before fitting, and no dense Gram is formed.
 

@@ -450,6 +450,38 @@ def test_legacy_baseline_convergence_recovery_never_uses_effective_fallback():
     assert fallback["fits"]["L2"].params["convergence"] == ConvergenceConfig().options()
 
 
+@pytest.mark.filterwarnings("ignore:IBSS did not converge:RuntimeWarning")
+def test_sensitivity_without_requested_controls_matches_direct_fits():
+    from prusie import susie_rss
+
+    R = np.array(
+        [
+            [1.0, 0.6, 0.2, 0.0],
+            [0.6, 1.0, 0.3, 0.1],
+            [0.2, 0.3, 1.0, 0.4],
+            [0.0, 0.1, 0.4, 1.0],
+        ]
+    )
+    inputs = dict(z=np.array([1.0, 4.0, 1.0, -0.5]), R=R, n=500, variant_ids=["a", "b", "c", "d"])
+    settings = dict(L=2, R_mismatch="eb", max_iter=20, check_prior=False)
+    plan = [dict(name="L1", changes={"L": 1})]
+    calls = []
+
+    def fit_function(**arguments):
+        calls.append(arguments)
+        return susie_rss(**arguments)
+
+    out = run_sensitivity(inputs, plan, baseline_settings=settings, fit_function=fit_function)
+    assert calls and all("convergence" not in arguments for arguments in calls)
+    assert "convergence" not in out["baseline_settings"]
+    direct = susie_rss(**inputs, **settings)
+    assert direct.convergence["requested_criterion"] == "pip"
+    assert out["fits"]["baseline"].convergence["requested_criterion"] == "pip"
+    np.testing.assert_array_equal(out["fits"]["baseline"].alpha, direct.alpha)
+    supplied = run_sensitivity(inputs, plan, baseline=direct)
+    assert supplied["fits"]["L1"].convergence["requested_criterion"] == "pip"
+
+
 def test_sensitivity_cache_uses_installed_development_identity(monkeypatch):
     import prusie.comparison as comparison
 

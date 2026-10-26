@@ -20,6 +20,7 @@ from numpy.typing import ArrayLike, NDArray
 
 from . import _native
 from ._array_layout import native_array
+from ._types import CredibleSetAudit, FitParameters, InputChecks, RetainedInputs
 from .control import RSSControl, SlotPrior, susie_rss_control
 from .diagnostics import (
     ConvergenceConfig,
@@ -91,8 +92,8 @@ def _summary_vector(value, name, collected=None):
     if np.any(missing):
         array = array.copy()
         array[missing] = 0.0
-        if name == "Xty":
-            _warn("NA values in Xty are replaced with 0.", collected)
+        label = "z-scores" if name == "z" else name
+        _warn(f"NA values in {label} are replaced with 0.", collected)
     return np.ascontiguousarray(native_array(array))
 
 
@@ -249,11 +250,11 @@ class _FitRequest:
     n_purity: int | str | None
     prior_tol: float
     collected: list[str]
-    qc: dict[str, Any]
-    params: dict[str, Any]
+    qc: InputChecks
+    params: FitParameters
     control: Any
     resolution: dict[str, Any]
-    prepared: Any
+    prepared: RetainedInputs | None
     signature: str | None
     refine: bool | RefinementConfig
     _rss_matrix_scale: float
@@ -624,6 +625,8 @@ def _prepare_suff_stat(
     ):
         if not isinstance(value, (bool, np.bool_)):
             raise TypeError(f"{name} must be a boolean")
+    if not isinstance(refine, (bool, RefinementConfig)):
+        raise TypeError("refine must be False, True, or a RefinementConfig")
     yty = _scalar(yty, "yty")
     Xty = _vector(Xty, "Xty") if check_input else _summary_vector(Xty, "Xty", collected)
     m = Xty.size
@@ -720,7 +723,7 @@ def _prepare_suff_stat(
         ):
             raise ValueError("n_purity must be a finite number or None")
         n_purity = int(np.floor(n_purity))
-    qc: dict[str, Any] = {
+    qc: InputChecks = {
         "matrix_symmetric": True,
         "psd_checked": bool(check_input),
         "input_columns": m,
@@ -937,7 +940,7 @@ def _prepare_suff_stat(
         # credible sets from the same owned data whose signature was recorded.
         crossproduct, crossresponse = prepared.matrix, prepared.response
         XtX = prepared.cs_matrix
-    params = dict(
+    params: FitParameters = dict(
         L=L,
         effective_L=effective_L,
         n=n,
@@ -1124,7 +1127,7 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
             collected,
         )
     alpha, V = native["alpha"], native["V"]
-    cs_audit = []
+    cs_audit: list[CredibleSetAudit] = []
     sets = credible_sets(
         alpha,
         V,
@@ -1224,8 +1227,6 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
             len(fit.sets["cs"]),
         )
     if refine is not False:
-        if not isinstance(refine, (bool, RefinementConfig)):
-            raise TypeError("refine must be False, True, or a RefinementConfig")
         if limitations:
             fit = _refine_by_refitting(request, fit)
         else:
@@ -1234,7 +1235,7 @@ def _fit(request: _FitRequest) -> SusieResult | SusieInputs:
 
 
 def _refine_by_refitting(request: _FitRequest, model: SusieResult) -> SusieResult:
-    """Credible-set refinement by block coordinate ascent, as in susieR ``run_refine``.
+    """Credible-set refinement by block coordinate ascent.
 
     For each credible set, refit with its members' prior weights set to zero,
     then refit from that posterior with the original weights. The candidate
@@ -1506,7 +1507,7 @@ def susie_rss(
     not enter the working statistics, and effects are on the noncentrality
     scale. For ordinary z/R input, symmetry is checked exactly on the working
     XtX after scaling by n − 1 (or on R if n is omitted). Inequality triggers
-    a warning and internal averaging of XtX with its transpose, as in susieR's
+    a warning and internal averaging of XtX with its transpose, matching the
     dense numeric path. The bhat/shat/var_y route always averages its reconstructed
     XtX. Nonfinite inputs and averaging overflow are rejected. Input arrays
     remain unchanged. If R is an external reference panel, its agreement with the study
@@ -1544,6 +1545,21 @@ def susie_rss(
         )
     panels = R if R is not None else X
     multipanel = isinstance(panels, (list, tuple)) and len(panels) > 0 and np.ndim(panels[0]) == 2
+    uncertain_rss = (R_finite is not None and R_finite is not False) or R_mismatch != "none"
+    if (multipanel or uncertain_rss) and isinstance(convergence, ConvergenceConfig):
+        # The Python sweep loop of these models has susieR's ELBO and PIP rules only.
+        requested = convergence.options()
+        if (
+            requested["min_iter"] != 2
+            or requested["cycle_lag"] != 5
+            or (uncertain_rss and requested["criterion"] != "elbo")
+        ):
+            raise ValueError(
+                "R_finite, R_mismatch and multi-panel RSS fits support only the default "
+                "min_iter=2 and cycle_lag=5, and R_finite or R_mismatch fits accept only "
+                "criterion='elbo' from ConvergenceConfig; omit convergence to use "
+                "susieR's PIP rule"
+            )
     if multipanel:
         from .rss_models import prepare_multipanel
 
@@ -1579,7 +1595,8 @@ def susie_rss(
         if np.any(np.isnan(se)) or np.any(se <= 0):
             raise ValueError("shat must be strictly positive without missing values")
         z = beta / se
-    z = _summary_vector(z, "z")
+    extra_warnings = []
+    z = _summary_vector(z, "z", extra_warnings)
     if estimate_residual_method == "NIG" and n is None:
         raise ValueError("NIG RSS fitting requires n")
     if X is not None:
@@ -1617,7 +1634,6 @@ def susie_rss(
     elif not (has_effects and var_y is not None):
         n = _scalar(n, "n", lower=1.0, strict=True)
         prevalidated_scale = n - 1
-    extra_warnings = []
     repaired_rss = None
     repair_error = None
     # Suitable arrays can be validated and repaired in one owned traversal for

@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="806" viewBox="0 0 960 806" role="img" aria-labelledby="title desc">
+<title id="title">prusie call paths</title>
+<desc id="desc">Public Python entry points prepare inputs in Python, call native functions in the PyO3 binding, and reach the Rust IBSS solver.</desc>
+<defs>
+<marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#28618b"/></marker>
+<style>
+text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #202b33; }
+.band { font-size: 12px; font-weight: 700; letter-spacing: .04em; fill: #596774; }
+.code { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 13px; font-weight: 600; text-anchor: middle; }
+.title { font-size: 13px; font-weight: 700; text-anchor: middle; }
+.note { font-size: 11px; fill: #596774; text-anchor: middle; }
+.label { font-size: 11px; fill: #28618b; }
+.arrow { fill: none; stroke: #28618b; stroke-width: 1.4; }
+</style>
+</defs>
+<rect width="960" height="806" fill="#ffffff"/>
+<rect x="10" y="10" width="940" height="382" rx="8" fill="#f5f7f9" stroke="#c9d4dc"/><text x="24" y="32" class="band">Python package · src/prusie</text>
+<rect x="40" y="46" width="211" height="46" rx="5" fill="#edf3f7" stroke="#28618b" stroke-width="1.4"/>
+<text x="145.5" y="65.5" class="code">susie</text>
+<text x="145.5" y="80.5" class="note">individual.py · X and y</text>
+<rect x="269" y="46" width="211" height="46" rx="5" fill="#edf3f7" stroke="#28618b" stroke-width="1.4"/>
+<text x="374.5" y="65.5" class="code">susie_suff_stat</text>
+<text x="374.5" y="80.5" class="note">api.py · XtX, Xty, yty, n</text>
+<rect x="498" y="46" width="211" height="46" rx="5" fill="#edf3f7" stroke="#28618b" stroke-width="1.4"/>
+<text x="603.5" y="65.5" class="code">susie_rss</text>
+<text x="603.5" y="80.5" class="note">api.py · z or bhat/shat, R</text>
+<rect x="727" y="46" width="211" height="46" rx="5" fill="#edf3f7" stroke="#28618b" stroke-width="1.4"/>
+<text x="832.5" y="65.5" class="code">susie_rss_lambda</text>
+<text x="832.5" y="80.5" class="note">rss_lambda.py · z, R, λ</text>
+<rect x="40" y="116" width="211" height="46" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="145.5" y="135.5" class="title">Design preparation</text>
+<text x="145.5" y="150.5" class="note">column means and scales · Xᵀy</text>
+<rect x="498" y="116" width="211" height="46" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="603.5" y="135.5" class="title">RSS preparation</text>
+<text x="603.5" y="150.5" class="note">working statistics · LD checks</text>
+<rect x="727" y="116" width="211" height="46" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="832.5" y="135.5" class="title">λ preparation</text>
+<text x="832.5" y="150.5" class="note">estimate λ · eigen checks</text>
+<path d="M145.5,92 L145.5,114" class="arrow" marker-end="url(#head)"/>
+<path d="M145.5,162 L145.5,184" class="arrow" marker-end="url(#head)"/>
+<path d="M603.5,92 L603.5,114" class="arrow" marker-end="url(#head)"/>
+<path d="M603.5,162 L603.5,184" class="arrow" marker-end="url(#head)"/>
+<path d="M832.5,92 L832.5,114" class="arrow" marker-end="url(#head)"/>
+<path d="M832.5,162 L832.5,184" class="arrow" marker-end="url(#head)"/>
+<path d="M374.5,92 L374.5,184" class="arrow" marker-end="url(#head)"/>
+<rect x="40" y="186" width="898" height="42" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="489.0" y="203.5" class="code">_prepare_suff_stat</text>
+<text x="489.0" y="218.5" class="note">api.py · identifiers · maf filter · null column · prior weights · scales · native options → _FitRequest</text>
+<rect x="40" y="252" width="534" height="46" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="307.0" y="271.5" class="code">_fit</text>
+<text x="307.0" y="286.5" class="note">api.py · choose the route · call the solver · build SusieResult</text>
+<path d="M307.0,228 L307.0,250" class="arrow" marker-end="url(#head)"/>
+<rect x="768" y="252" width="170" height="46" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="853.0" y="271.5" class="code">fit_dynamic</text>
+<text x="853.0" y="286.5" class="note">rss_models.py · sweeps</text>
+<path d="M574,275 L766,275" class="arrow" marker-end="url(#head)"/>
+<text x="600" y="268" class="label" text-anchor="start">dynamic RSS models</text>
+<rect x="40" y="322" width="170" height="46" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="125.0" y="341.5" class="code">refine_fit</text>
+<text x="125.0" y="356.5" class="note">refinement.py · warm refits</text>
+<path d="M125.0,322 L125.0,300" class="arrow" marker-end="url(#head)"/>
+<rect x="586" y="322" width="170" height="46" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="671.0" y="341.5" class="code">credible_sets</text>
+<text x="671.0" y="356.5" class="note">posterior.py · PIP and CS</text>
+<path d="M540,298 L540,345 L584,345" class="arrow" marker-end="url(#head)"/>
+<rect x="10" y="406" width="940" height="112" rx="8" fill="#f5f7f9" stroke="#c9d4dc"/><text x="24" y="428" class="band">Binding · rust/prusie-python</text>
+<rect x="40" y="440" width="170" height="62" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="125.0" y="460.0" class="code">validate_*</text>
+<text x="125.0" y="475.0" class="note">finite · diagonal · symmetry</text>
+<text x="125.0" y="490.0" class="note">repair · preparation</text>
+<rect x="222" y="440" width="170" height="62" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="307.0" y="460.0" class="code">fit</text>
+<text x="307.0" y="475.0" class="note">NumPy views and layout</text>
+<text x="307.0" y="490.0" class="note">options → typed Rust</text>
+<rect x="404" y="440" width="170" height="62" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="489.0" y="460.0" class="code">fit_design_*</text>
+<text x="489.0" y="475.0" class="note">dense · CSC · trend</text>
+<text x="489.0" y="490.0" class="note">designs</text>
+<rect x="586" y="440" width="170" height="62" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="671.0" y="460.0" class="code">cs_pairwise_abs</text>
+<text x="671.0" y="475.0" class="note">credible-set purity</text>
+<text x="671.0" y="490.0" class="note">early rejection</text>
+<rect x="768" y="440" width="170" height="62" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="853.0" y="460.0" class="code">ser_update</text>
+<text x="853.0" y="475.0" class="note">one single-effect</text>
+<text x="853.0" y="490.0" class="note">update</text>
+<path d="M40,207 L24,207 L24,471 L38,471" class="arrow" marker-end="url(#head)"/>
+<text x="19" y="340" class="label" transform="rotate(-90 19 340)" text-anchor="middle">input checks</text>
+<path d="M307.0,298 L307.0,438" class="arrow" marker-end="url(#head)"/>
+<path d="M489.0,298 L489.0,438" class="arrow" marker-end="url(#head)"/>
+<path d="M671.0,368 L671.0,438" class="arrow" marker-end="url(#head)"/>
+<path d="M853.0,298 L853.0,438" class="arrow" marker-end="url(#head)"/>
+<rect x="10" y="532" width="940" height="264" rx="8" fill="#f5f7f9" stroke="#c9d4dc"/><text x="24" y="554" class="band">Solver · rust/prusie-core</text>
+<rect x="222" y="566" width="170" height="50" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="307.0" y="580.0" class="code">fit_controlled</text>
+<text x="307.0" y="595.0" class="note">ibss.rs · checks, implicit</text>
+<text x="307.0" y="610.0" class="note">scaling → DenseGram</text>
+<rect x="404" y="566" width="170" height="50" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="489.0" y="580.0" class="code">Design</text>
+<text x="489.0" y="595.0" class="note">design.rs · matrix-free</text>
+<text x="489.0" y="610.0" class="note">Xᵀ(Xv), trend operator</text>
+<rect x="768" y="566" width="170" height="50" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="853.0" y="587.5" class="code">ser_update</text>
+<text x="853.0" y="602.5" class="note">ser.rs · standalone SER</text>
+<path d="M307.0,502 L307.0,564" class="arrow" marker-end="url(#head)"/>
+<path d="M307.0,616 L307.0,636" class="arrow" marker-end="url(#head)"/>
+<path d="M489.0,502 L489.0,564" class="arrow" marker-end="url(#head)"/>
+<path d="M489.0,616 L489.0,636" class="arrow" marker-end="url(#head)"/>
+<path d="M853.0,502 L853.0,564" class="arrow" marker-end="url(#head)"/>
+<rect x="222" y="638" width="352" height="46" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="398.0" y="657.5" class="code">fit_operator</text>
+<text x="398.0" y="672.5" class="note">ibss.rs · sweeps; effects ℓ = 1, …, L updated in order</text>
+<rect x="40" y="722" width="170" height="56" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="125.0" y="739.0" class="code">stopping_decision</text>
+<text x="125.0" y="754.0" class="note">diagnostics.rs · tolerance,</text>
+<text x="125.0" y="769.0" class="note">cycles, NaN fallback</text>
+<rect x="222" y="722" width="170" height="56" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="307.0" y="739.0" class="title">ER2 and ELBO</text>
+<text x="307.0" y="754.0" class="note">residual.rs · ibss.rs</text>
+<text x="307.0" y="769.0" class="note">stored products</text>
+<rect x="404" y="722" width="170" height="56" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="489.0" y="739.0" class="code">GramOperator::apply</text>
+<text x="489.0" y="754.0" class="note">operator.rs · dense kernel,</text>
+<text x="489.0" y="769.0" class="note">exact classes, Design</text>
+<rect x="586" y="722" width="170" height="56" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="671.0" y="739.0" class="code">minimize</text>
+<text x="671.0" y="754.0" class="note">optimizer.rs · Brent</text>
+<text x="671.0" y="769.0" class="note">search for V</text>
+<rect x="768" y="722" width="170" height="56" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
+<text x="853.0" y="739.0" class="code">single_effect</text>
+<text x="853.0" y="754.0" class="note">ser.rs · Bayes factors,</text>
+<text x="853.0" y="769.0" class="note">posterior, KL</text>
+<path d="M222,661 L125.0,661 L125.0,720" class="arrow" marker-end="url(#head)"/>
+<path d="M307.0,684 L307.0,720" class="arrow" marker-end="url(#head)"/>
+<path d="M489.0,684 L489.0,720" class="arrow" marker-end="url(#head)"/>
+<path d="M574,661 L826,661 L826,720" class="arrow" marker-end="url(#head)"/>
+<path d="M881.0,616 L881.0,720" class="arrow" marker-end="url(#head)"/>
+<path d="M768,750 L758,750" class="arrow" marker-end="url(#head)"/>
+</svg>

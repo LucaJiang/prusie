@@ -2,6 +2,17 @@
 
 ## 0.2.4.dev2 — Gaussian model and API expansion (unreleased)
 
+- Warn when `susie_rss` replaces missing z-scores with zero. The multi-panel
+  joint fit now also uses zero for them; previously the missing values entered
+  its panel-weight updates.
+- Reject `ConvergenceConfig` settings that the `R_finite`, `R_mismatch` and
+  multi-panel sweep loop does not implement, instead of silently applying the
+  ELBO rule.
+- Check the type of `refine` before fitting.
+- `run_sensitivity` passes convergence controls to the fitting function only
+  when they were requested. Previously it always passed the default
+  `ConvergenceConfig`, so `R_finite` and `R_mismatch` fits used the ELBO rule
+  instead of susieR's PIP rule, and other fits lost susieR's NaN-ELBO handling.
 - Separate the pure Rust solver from the PyO3 binding in a Cargo workspace.
 - Use mathematically equivalent float64 calculations without R-rounding emulation.
 - Use variance grouping, vector exponentials and implicit matrix scaling

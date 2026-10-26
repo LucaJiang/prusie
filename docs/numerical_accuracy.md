@@ -183,5 +183,5 @@ by `tests/test_packaged_example.py`.
 
 The [reproducibility guide](reproducibility.md) distinguishes regeneration from
 saved records, offline frozen-reference checks, and live-R fitting.
-`tools/benchmark/compare_fits.py` compares original component IDs and retains all
+The internal benchmark comparator compares original component IDs and retains all
 field diagnostics. Existing frozen references and tolerances are unchanged.

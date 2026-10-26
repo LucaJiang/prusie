@@ -17,3 +17,4 @@ ndarray.workspace = true
 
 [features]
 extension-module = ["pyo3/extension-module"]
+portable-math = ["prusie-core/portable-math"]

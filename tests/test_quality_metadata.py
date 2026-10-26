@@ -55,7 +55,8 @@ def test_typed_summary_missing_policy_matches_validation(check_input: bool, poli
 @pytest.mark.parametrize("check_input", [False, True])
 def test_rss_policy_describes_original_input_instead_of_cleaned_Xty(check_input: bool) -> None:
     options = dict(FIXED_OPTIONS, R=np.eye(2), n=100, check_input=check_input)
-    scores = prusie.susie_rss(z=[np.nan, 2.0], **options)
+    with pytest.warns(RuntimeWarning, match="NA values in z-scores are replaced with 0"):
+        scores = prusie.susie_rss(z=[np.nan, 2.0], **options)
     assert scores.input_quality.missing_summary_values == "zero"
     assert scores.qc["input_missing_policy"] == "zero"
     effects = prusie.susie_rss(bhat=[0.0, 0.2], shat=0.1, **options)

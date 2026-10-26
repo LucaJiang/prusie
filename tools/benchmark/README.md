@@ -17,7 +17,8 @@ Use matching R/Rscript executables with the pinned susieR installation.
 All generated inputs, build files and records go below the new output directory.
 Add `--validation-only` to skip clocks, memory measurements and probe compilation;
 add `--panel regression` or `--panel scaling` for the other predefined panels.
-The individual preparation and fitting drivers remain available for advanced use.
+Preparation, fitting and record-analysis helpers live in `_internal/`; they are
+implementation details rather than additional public entry points.
 
 The default input is the independently generated 500-variant toy example
 in `src/prusie/data/toy`. Set `R_LIBS_USER` for your intended R library.
@@ -72,7 +73,7 @@ For an independently frozen panel of portable cases, use the same command with
 records, resolved relative to that manifest. Inputs remain read-only; generated
 records go under `--output-dir`. Fix the full case panel before looking at results.
 
-`fine_mapping.py` and `fine_mapping.R` accept `--case CASE.json --mode
+The internal `fine_mapping.py` and `fine_mapping.R` drivers accept `--case CASE.json --mode
 validate|time|memory --output RECORD.json`. A case identifies signed float64 z,
 signed LD and ordered variant IDs, with explicit fitting parameters:
 
@@ -106,21 +107,26 @@ files for matrices that are not bitwise symmetric.
 
 Validation exports alpha, moments, PIPs, natural-log BFs, variances, ELBO, KL and
 original CS component/member IDs, returned mass and purity.
-`compare_fits.py` checks complete final alpha matrices in their original component
+The internal comparator checks complete final alpha matrices in their original component
 row order, with absolute error ≤1e-5 and rtol=0, plus input/model/probability
 validity. No component is filtered or permuted. Rows must sum to one within
 1e-10. PIP, CS and intermediate differences remain diagnostics.
 
 ## Retained-record analysis
 
-`summary.py` defines case selection, grouping and paired summaries;
+The internal `summary.py` defines case selection, grouping and paired summaries;
 its unit tests cover empty CSs, both-max-iteration fits, failures and true error
-maxima. `import_records.py` can import the original controlled evidence archive
+maxima. The internal `import_records.py` can import the original controlled evidence archive
 using `--evidence-root`, `--output` and a run-local `--private-receipt`.
 The public `tools/generate_results.py` needs only retained normalized records.
-`plot_current.py --real REAL.json --scaling SCALING.json --output FIGURES`
-plots fitting runtime, iteration counts,
-process RSS and the separately labeled sampled incremental memory.
+To plot the retained development-version runtime, iteration counts, process RSS
+and sampled incremental memory without fitting or R:
+
+```sh
+python tools/benchmark/reproduce.py --render-records --output-dir benchmark-figures
+```
+
+Use `--real REAL.json --scaling SCALING.json` to select other normalized records.
 See [reproducibility](../../docs/reproducibility.md) for the distinction between
 record regeneration and input-level reruns.
 

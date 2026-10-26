@@ -12,7 +12,8 @@ from pathlib import Path
 import numpy as np
 
 import prusie
-from prusie.plots import (
+from prusie.report import load_analysis, save_analysis, write_report
+from prusie.viz import (
     plot_convergence,
     plot_ld_diagnostics,
     plot_locus,
@@ -21,7 +22,6 @@ from prusie.plots import (
     plot_sensitivity,
     plot_signal,
 )
-from prusie.report import load_analysis, save_analysis, write_report
 
 
 def checksum(a):

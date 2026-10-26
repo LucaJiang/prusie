@@ -9,7 +9,7 @@ import pytest
 from compare_fits import FIELDS, compare
 from fine_mapping import load_case
 
-DATA = Path(__file__).resolve().parents[2] / "tests/fixtures/susier_regression"
+DATA = Path(__file__).resolve().parents[3] / "tests/fixtures/susier_regression"
 
 
 def exported_record():

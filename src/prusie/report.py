@@ -178,7 +178,12 @@ def _plain(value):
 
 
 def evidence_bundle(
-    summary: Mapping, *, ld=None, comparison=None, provenance=None, annotations=None
+    summary: Mapping,
+    *,
+    ld: Mapping[str, Any] | None = None,
+    comparison: Mapping[str, Any] | None = None,
+    provenance: Mapping[str, Any] | None = None,
+    annotations: Mapping[str, Any] | None = None,
 ) -> dict:
     """Collect scalar facts of an analysis, each with a stable evidence ID.
 
@@ -386,7 +391,12 @@ def _select(record, keys):
 
 
 def analysis_summary(
-    summary: Mapping, *, ld=None, comparison=None, candidate_pip=0.1, top_candidates=10
+    summary: Mapping,
+    *,
+    ld: Mapping[str, Any] | None = None,
+    comparison: Mapping[str, Any] | None = None,
+    candidate_pip: float = 0.1,
+    top_candidates: int = 10,
 ) -> dict:
     """Return a compact summary of results, convergence, refinement, LD and sensitivity.
 
@@ -700,7 +710,12 @@ def _display(value, *, probability=False):
     return str(value)
 
 
-def summary_text(summary: Mapping, *, ld=None, comparison=None) -> str:
+def summary_text(
+    summary: Mapping,
+    *,
+    ld: Mapping[str, Any] | None = None,
+    comparison: Mapping[str, Any] | None = None,
+) -> str:
     """Return a short plain-text summary of an analysis.
 
     Parameters
@@ -819,12 +834,12 @@ def write_report(
     summary: Mapping,
     directory: str | Path,
     *,
-    figures=None,
-    ld=None,
-    comparison=None,
-    provenance=None,
-    annotations=None,
-    title="prusie analysis",
+    figures: Mapping[str, Any] | None = None,
+    ld: Mapping[str, Any] | None = None,
+    comparison: Mapping[str, Any] | None = None,
+    provenance: Mapping[str, Any] | None = None,
+    annotations: Mapping[str, Any] | None = None,
+    title: str = "prusie analysis",
 ) -> dict:
     """Write an offline HTML report with full-precision exports.
 
@@ -836,7 +851,7 @@ def write_report(
         Output directory.
     figures : mapping, optional
         Labels mapped to Matplotlib figures or to the tuples returned by the
-        functions in :mod:`prusie.plots`.
+        functions in :mod:`prusie.viz`.
     ld, comparison : dict, optional
         LD diagnostics and a comparison of fits.
     provenance : mapping, optional

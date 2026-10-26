@@ -8,3 +8,6 @@ publish.workspace = true
 [dependencies]
 libm = "=0.2.15"
 ndarray.workspace = true
+
+[features]
+portable-math = []

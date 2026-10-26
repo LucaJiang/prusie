@@ -31,6 +31,18 @@ Tests cover frozen susieR outputs, an independent NumPy reference, analytical
 cases, input validation, plotting and reports. Preserve frozen inputs and
 reference outputs; add regression tests for numerical fixes.
 
+The CI matrix includes Linux, macOS and Windows and a Linux `portable-math`
+build. An optional manual **tests-and-packages** workflow run with
+`r_reference=true` installs pinned susieR 0.16.6 and checks the complete alpha
+matrices for individual, sufficient-statistic and RSS fits on the frozen parity
+inputs. It does not regenerate references. The same check can run locally with
+R, jsonlite and that susieR commit installed through `remotes::install_github`
+(the check verifies its `RemoteSha`):
+
+```sh
+Rscript --vanilla tools/check_r_reference.R
+```
+
 ## Editing and building documentation
 
 Install Node.js (tested with 24.18.0), then:
@@ -65,7 +77,11 @@ notices in adapted source and frozen data when distributing packages.
 
 [`tools/benchmark`](https://github.com/LucaJiang/prusie/tree/main/tools/benchmark)
 contains the R comparison and measurement scripts. Keep numerical tolerances fixed.
+`tools/benchmark/reproduce.py` is the public entry point; helper drivers are
+under `_internal/`. Use `--render-records` to plot saved records without fitting.
 Measure each proposed optimization against its parent on cases chosen before
 inspecting outcomes, and report wins, ties, regressions and repeat variability.
 Merge it only if more than half of those cases have lower median complete-call
-runtime; otherwise retain it as experimental.
+runtime, and no predeclared group of cases (data type, variant-count tertile or
+parent iteration count) becomes slower; otherwise retain it as experimental.
+Include large-variant-count and high-iteration GWAS and eQTL cases in the panel.

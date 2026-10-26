@@ -173,12 +173,11 @@ def build() -> None:
 <a class="brand" href="index.html" aria-label="{html.escape(config["package"])} documentation home"><img class="brand-mark" src="{html.escape(config["logo"])}" alt="" width="96" height="96"><span>{config["package"]}<small>{html.escape(config["tagline"])}</small></span></a>
 <div class="version"><span class="version-number">{version}</span><span class="version-badge">{"Development" if ".dev" in version else "Release candidate"}</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation">{"".join(nav)}</nav></details>
-<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
 </aside>
 <main id="main" tabindex="-1">
-<div class="page-meta"><span>{html.escape(config["section"])}</span><a href="{path.name}">Markdown source</a></div>
+<div class="page-meta"><span>{html.escape(config["section"])}</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
 <article>{toc}{body}</article>
-<footer><p>{config["package"]} {version} · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+<footer><p>{config["package"]} {version} · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

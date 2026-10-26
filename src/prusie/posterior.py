@@ -13,6 +13,7 @@ from numpy.typing import ArrayLike, NDArray
 
 from . import _native
 from ._array_layout import native_array
+from ._types import CredibleSetAudit
 
 
 def marginal_pip(
@@ -116,7 +117,7 @@ def credible_sets(
     squared: bool = False,
     seed: int | None = None,
     disable_without_threshold: bool = True,
-    audit: list[dict[str, Any]] | None = None,
+    audit: list[CredibleSetAudit] | None = None,
 ) -> dict[str, Any]:
     """Construct credible sets and optionally filter or extend them by correlation.
 
@@ -226,7 +227,7 @@ def credible_sets(
             reasons.append("duplicate")
         if not variances[i] > 1e-9:
             reasons.append("inactive")
-        record = dict(
+        record: CredibleSetAudit = dict(
             component_id=i,
             candidate_members=members.tolist(),
             reasons=reasons,

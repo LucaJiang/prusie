@@ -1196,7 +1196,7 @@ mod tests {
             assert!(values.iter().all(|&x| x == 0.0));
         }
         assert_eq!(result.elbo.len(), 1);
-        // Trace and fitted products refer to the state before trimming, as in susieR.
+        // Trace and fitted products refer to the state before trimming.
         assert!(result.xtxr.iter().any(|&x| x != 0.0));
     }
 

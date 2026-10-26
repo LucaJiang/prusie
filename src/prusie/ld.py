@@ -15,15 +15,18 @@ import hashlib
 import math
 import time
 import warnings as warning_module
+from collections.abc import Mapping, MutableMapping, Sequence
+from typing import Any
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .analysis import _correlation
 
 _REFERENCE = "stephenslab/susieR@8e56a8e038e989856d106d9ca5175cc664fea9d2:R/susie_rss_utils.R"
 
 
-def diagnostic_input_missing(row):
+def diagnostic_input_missing(row: Mapping[str, Any]) -> bool:
     """Whether a diagnostic row records a missing input z-score.
 
     Rows saved without the ``input_missing`` field are recognized by their
@@ -36,7 +39,7 @@ def diagnostic_input_missing(row):
     )
 
 
-def diagnostic_status(row):
+def diagnostic_status(row: Mapping[str, Any]) -> str:
     """Classify a diagnostic row as flagged, not_flagged, conditional_only or not_assessed.
 
     Rows saved without a ``status`` field are classified from their flag.
@@ -51,7 +54,7 @@ def diagnostic_status(row):
     return "not_assessed"
 
 
-def diagnostic_counts(diagnostics):
+def diagnostic_counts(diagnostics: Mapping[str, Any]) -> dict[str, int]:
     """Count variants by diagnostic status."""
     states = [diagnostic_status(row) for row in diagnostics.get("variants", [])]
     return dict(
@@ -72,11 +75,13 @@ def _scipy():
     return optimize, special
 
 
-def prepare_ld(R, *, r_tol=1e-8, cache=None):
+def prepare_ld(
+    R: ArrayLike, *, r_tol: float = 1e-8, cache: MutableMapping[str, Any] | None = None
+) -> dict[str, Any]:
     """Eigendecompose an LD matrix for the diagnostics, optionally with a cache.
 
-    Eigenvalues below ``r_tol`` are set to zero for the diagnostics only, as
-    in susieR; ``R`` itself is unchanged. If R has an eigenvalue below
+    Eigenvalues below ``r_tol`` are set to zero for diagnostics only;
+    ``R`` itself is unchanged. If R has an eigenvalue below
     -r_tol, a warning is recorded. ``cache`` is a caller-owned mapping keyed
     by matrix content and ``r_tol``.
     """
@@ -177,13 +182,22 @@ def _estimate(z, decomposition, method):
     return float(result.x)
 
 
-def estimate_s_rss(z, R, n=None, *, r_tol=1e-8, method="null-mle", cache=None, return_info=False):
+def estimate_s_rss(
+    z: ArrayLike,
+    R: ArrayLike,
+    n: float | None = None,
+    *,
+    r_tol: float = 1e-8,
+    method: str = "null-mle",
+    cache: MutableMapping[str, Any] | None = None,
+    return_info: bool = False,
+) -> float | dict[str, Any]:
     """Estimate the LD inconsistency parameter s of the SuSiE-RSS null model.
 
     Parameters
     ----------
     z : array_like, shape (p,)
-        Marginal z-scores; NaN entries are replaced by zero, as in susieR.
+    Marginal z-scores; NaN entries are replaced by zero.
     R : array_like, shape (p, p)
         Signed LD correlation matrix in the order of ``z``.
     n : float, optional
@@ -278,32 +292,32 @@ def _mixture(log_likelihood):
 
 
 def kriging_rss(
-    z,
-    R,
-    n=None,
+    z: ArrayLike,
+    R: ArrayLike,
+    n: float | None = None,
     *,
-    s=None,
-    r_tol=1e-8,
-    method="null-mle",
-    variant_ids=None,
-    cache=None,
-    flip_log_lr=2.0,
-    flip_abs_z=2.0,
-):
+    s: float | None = None,
+    r_tol: float = 1e-8,
+    method: str = "null-mle",
+    variant_ids: Sequence[str] | None = None,
+    cache: MutableMapping[str, Any] | None = None,
+    flip_log_lr: float = 2.0,
+    flip_abs_z: float = 2.0,
+) -> dict[str, Any]:
     """Compare each z-score with its conditional distribution and test for allele flips.
 
     Parameters
     ----------
     z : array_like, shape (p,)
         Marginal z-scores. NaN entries are replaced by zero for the
-        computation, as in susieR, and those variants are not assessed.
+        computation, and those variants are not assessed.
     R : array_like, shape (p, p)
         Signed LD correlation matrix in the order of ``z``.
     n : float, optional
         Sample size, used to adjust the z-scores.
     s : float, optional
         LD inconsistency parameter. Estimated with ``method`` if omitted;
-        values above one are replaced by 0.8, as in susieR.
+        values above one are replaced by 0.8.
     r_tol : float, default 1e-8
         Eigenvalues of R below this value are treated as zero.
     method : str, default 'null-mle'
@@ -363,7 +377,7 @@ def kriging_rss(
     diagonal = np.diag(precision)
     valid = np.isfinite(diagonal) & (diagonal > 0)
     condvar = np.divide(1.0, diagonal, out=np.full(p, np.nan), where=valid)
-    # Conditional mean from the off-diagonal precision entries, as in susieR;
+    # Conditional mean from the off-diagonal precision entries;
     # the algebraically equal z - Pz/P_jj is prone to cancellation.
     offdiagonal = precision.copy()
     np.fill_diagonal(offdiagonal, 0.0)
@@ -474,7 +488,9 @@ def kriging_rss(
     )
 
 
-def diagnose_ld(z, R, n=None, **kwargs):
+def diagnose_ld(
+    z: ArrayLike, R: ArrayLike, n: float | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """Run :func:`kriging_rss`, estimating s unless it is supplied.
 
     Keyword arguments are passed to :func:`kriging_rss`.

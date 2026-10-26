@@ -1,7 +1,18 @@
 name: tests-and-packages
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      r_reference:
+        description: Check the frozen examples with pinned susieR
+        type: boolean
+        default: false
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash
 env:
   PYTHONDONTWRITEBYTECODE: '1'
   OMP_NUM_THREADS: '1'
@@ -24,27 +35,65 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
   test:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - python: '3.10'
+          - os: ubuntu-24.04
+            python: '3.10'
             numpy: '1.26.4'
-          - python: '3.12'
+            features: extension-module
+          - os: ubuntu-24.04
+            python: '3.12'
             numpy: '2.5.3'
-          - python: '3.13'
+            features: extension-module
+          - os: ubuntu-24.04
+            python: '3.13'
             numpy: '2.5.3'
+            features: extension-module
+          - os: macos-latest
+            python: '3.12'
+            numpy: '2.5.3'
+            features: extension-module
+          - os: windows-latest
+            python: '3.12'
+            numpy: '2.5.3'
+            features: extension-module
+          - os: ubuntu-24.04
+            python: '3.12'
+            numpy: '2.5.3'
+            features: extension-module,portable-math
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install 'numpy==${{ matrix.numpy }}' '.[test,analysis]'
+      - run: python -m pip install 'numpy==${{ matrix.numpy }}' 'pytest>=8,<9' 'scipy>=1.11' 'matplotlib>=3.7' 'maturin==1.10.2'
+      - run: maturin build --release --locked --features '${{ matrix.features }}' --out dist
+      - run: python -m pip install dist/*.whl
       - run: python -m pytest tests
-      - if: matrix.python == '3.13'
+      - if: matrix.os == 'ubuntu-24.04' && matrix.python == '3.12' && matrix.features == 'extension-module'
+        run: python -m pytest tools/benchmark/_internal
+      - if: matrix.os == 'ubuntu-24.04' && matrix.python == '3.13'
         run: |
           cargo test --locked -p prusie-core -- --test-threads=1
+  r-reference:
+    if: github.event_name == 'workflow_dispatch' && inputs.r_reference
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.4'
+          use-public-rspm: true
+      - name: Install the pinned reference
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Rscript -e 'install.packages(c("remotes", "jsonlite")); remotes::install_github("stephenslab/susieR@8e56a8e038e989856d106d9ca5175cc664fea9d2", upgrade="never")'
+      - name: Check frozen inputs and complete alpha matrices
+        run: Rscript --vanilla tools/check_r_reference.R
   package:
     runs-on: ubuntu-24.04
     steps:

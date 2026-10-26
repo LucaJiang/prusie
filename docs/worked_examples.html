@@ -17,11 +17,10 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
 <div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">Start here</p><a href="index.html">Overview</a><a href="install.html">Install</a><a href="example.html">Quick start</a></div><div class="nav-group"><p class="nav-label">Read and check a result</p><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD</a><a href="worked_examples.html" aria-current="page">Worked examples</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="inputs.html">Inputs and priors</a><a href="api.html">API and plotting</a><a href="model.html">Statistical model</a><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="implementation.html">Implementation</a><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
-<div class="sidebar-note">Python software · Wenxin Jiang<br>Static documentation. Works offline.</div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html" aria-current="page">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
-<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a href="worked_examples.md">Markdown source</a></div>
+<div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
 <li><a href="#stable-signals-with-a-prior-sensitive-background">Stable signals with a prior-sensitive background</a></li>
@@ -228,7 +227,7 @@ and <a href="examples/post_analysis/problem/ld_diagnostics.json">LD diagnostics<
 fragment requires the problem fit's posterior <code>summary</code> and aligned LD matrix
 <code>R</code>; they are not the quick-start toy result. Its two retained CS justify
 distinct detail views:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.plots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_signal</span>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.viz</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_signal</span>
 
 <span class="n">singleton</span> <span class="o">=</span> <span class="n">plot_signal</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">variant_id</span><span class="o">=</span><span class="s2">&quot;33&quot;</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span>
                         <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">ld_measure</span><span class="o">=</span><span class="s2">&quot;r2&quot;</span><span class="p">)</span>
@@ -273,7 +272,7 @@ Opening the saved reports above does not. Each report includes PNG/SVG, complete
 provenance and a figure index. The compact main figures are supplemented by a
 separate variance-details figure and full search tables.</p>
 </details></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p><p><a href="model.html">Statistical model</a> · <a href="citation.html">Citation and license</a></p></footer>
+<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

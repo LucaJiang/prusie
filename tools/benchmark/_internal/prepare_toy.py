@@ -46,7 +46,7 @@ if __name__ == "__main__":
     p.add_argument(
         "--data",
         type=Path,
-        default=Path(__file__).resolve().parents[2] / "src/prusie/data/toy",
+        default=Path(__file__).resolve().parents[3] / "src/prusie/data/toy",
     )
     p.add_argument("--output-dir", type=Path, required=True)
     a = p.parse_args()

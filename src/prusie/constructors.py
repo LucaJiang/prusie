@@ -190,7 +190,7 @@ def susie_trendfilter(
         Fitted trend model, or prepared inputs with ``init_only=True``.
         With MAD initialization, the prepared result retains the first
         preparation in ``params["model_init"]``. This nested object is not a
-        fitted posterior, so :func:`susie_workhorse` rejects it, as in susieR.
+        fitted posterior, so :func:`susie_workhorse` rejects it.
     """
     if isinstance(order, bool) or int(order) != order or order < 0:
         raise ValueError("order must be a nonnegative integer")

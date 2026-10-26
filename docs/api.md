@@ -52,11 +52,13 @@ With the default `use_mad=True`, trend-filter initialization follows susieR's
 nested preparation; use `use_mad=False` for a directly reusable `SusieInputs`.
 `susie_auto` requires fitting and does not accept `init_only=True`.
 
+Warning filters, including `error`, and warning recording are supported. Callbacks that mutate input arrays during a fit, and replacing `warnings.warn` before importing prusie, are unsupported.
+
 ## Shared fitting options
 
 | Option | Meaning |
 | --- | --- |
-| `L=10` | Maximum number of effects, capped at the internal predictor count |
+| `L=10` | Maximum number of effects, capped at the internal predictor count; RSS-lambda uses retained variants after MAF filtering, excluding any null column (`L=None` is an alias for 10) |
 | `scaled_prior_variance=0.2` | Gaussian initial variance relative to outcome variance; NIG slab variance relative to residual variance; scalar or length-L vector |
 | `residual_variance=None` | Initial or fixed residual variance; defaults to the working outcome variance |
 | `estimate_prior_variance=True` | Update component prior variances |
@@ -106,6 +108,16 @@ Results include documented fields `pip`, `alpha`, `mu`, `mu2`, `lbf_variable`,
 activity models additionally return grid Bayes factors and slot probabilities.
 `input_quality` gives typed input diagnostics; `fit.qc` retains the existing
 mapping interface. `fit.as_dict()` returns a shallow mapping and does not copy arrays.
+
+`params`, `qc` and entries in `cs_audit` use the exported `FitParameters`,
+`InputChecks` and `CredibleSetAudit` schemas. These are `TypedDict` definitions:
+dictionary access and saved-result formats are unchanged. `input_missing_policy`
+is `"reject"` or `"zero"`; the latter records zero-filled missing summary
+statistics. Retained working inputs are private, read-only snapshots used by
+continuation and refinement, not additional caller-owned data.
+
+Analysis, comparison, LD diagnostics, reports and visualization modules load
+only when requested. Ordinary `import prusie` does not import SciPy or Matplotlib.
 
 ## Posterior and model helpers
 
@@ -212,7 +224,11 @@ common/union support and missing-assessment states.
 
 ## Figures and local style
 
-Every function in `prusie.plots` returns `(figure, axes, plotted_data)`. The third
+Use `from prusie.viz import plot_locus` for plotting. `prusie.plots` remains a
+compatibility import for existing scripts. Install the `analysis` extra for
+Matplotlib and SciPy; neither is required for ordinary dense Gaussian fits.
+
+Every function in `prusie.viz` returns `(figure, axes, plotted_data)`. The third
 item records selection rules and plotted values alongside the complete evidence
 needed to interpret the view. Existing Matplotlib axes can be passed with
 `axes=...`; their count must match the selected layout.
@@ -236,7 +252,7 @@ relation/details tables without discarding returned records.
 Use the shared white-background style or override Matplotlib settings locally:
 
 ```python
-from prusie.plots import plot_convergence
+from prusie.viz import plot_convergence
 
 figure, axes, data = plot_convergence(
     fit, layout="compact", style={"font.size": 11, "axes.labelsize": 11},
