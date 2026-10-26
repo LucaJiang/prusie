@@ -339,8 +339,8 @@ def test_shared_preparation_matches_same_count_parent_and_serializes(
 
 
 @pytest.mark.skipif(
-    sys.platform != "linux" or platform.machine() != "x86_64",
-    reason="native early worker ownership is Linux x86_64",
+    not _native._parallel_preparation_available(),
+    reason="this native build has no preparation floating-control fingerprint",
 )
 def test_native_helper_workers_are_joined_before_close_returns():
     matrix = np.eye(1025)
@@ -531,8 +531,8 @@ def test_public_cleanup_policy_ignores_an_exception_handled_by_the_caller(
 
 
 @pytest.mark.skipif(
-    sys.platform != "linux" or platform.machine() != "x86_64",
-    reason="Linux x86_64 caller-control boundary",
+    not _native._parallel_preparation_available(),
+    reason="this native build has no preparation floating-control fingerprint",
 )
 def test_nonstandard_rounding_keeps_parent_and_changed_controls_replace_workers():
     library = ctypes.CDLL(None)

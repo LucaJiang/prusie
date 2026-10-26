@@ -144,6 +144,12 @@ impl FitExecutor {
         }
     }
 
+    /// Whether this build can fingerprint the caller's floating-point controls.
+    /// This is a read-only capability probe, not per-call preparation admission.
+    pub fn parallel_preparation_available() -> bool {
+        vector_math::fp_control_fingerprint().is_some()
+    }
+
     pub fn has_started(&self) -> bool {
         self.started
     }

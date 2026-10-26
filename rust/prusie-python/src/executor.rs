@@ -85,6 +85,11 @@ fn _new_fit_executor(threads: &Bound<'_, PyAny>) -> PyResult<FitExecutor> {
     })
 }
 
+#[pyfunction]
+fn _parallel_preparation_available() -> bool {
+    prusie_core::FitExecutor::parallel_preparation_available()
+}
+
 /// An error in argument parsing, array checks or result construction can occur
 /// outside the core's cleanup boundary. Join here without replacing that error.
 pub(crate) fn close_after_error(executor: &Bound<'_, FitExecutor>) {
@@ -97,5 +102,6 @@ pub(crate) fn close_after_error(executor: &Bound<'_, FitExecutor>) {
 pub(crate) fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<FitExecutor>()?;
     module.add_function(wrap_pyfunction!(_new_fit_executor, module)?)?;
+    module.add_function(wrap_pyfunction!(_parallel_preparation_available, module)?)?;
     Ok(())
 }
