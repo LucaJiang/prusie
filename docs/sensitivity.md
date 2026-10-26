@@ -1,23 +1,33 @@
 # Sensitivity and LD diagnostics
 
-Compare explicit modeling choices to see which candidates persist, then check
-compatibility between the signed association statistics and LD. This workflow
-continues the `example` and `fit` from the [quick start](example.md); plotting and
-LD diagnostics use the [analysis extra](install.md#optional-analysis-tools).
+To assess how fine-mapping conclusions depend on modeling choices or input
+data, compare variant posterior inclusion probabilities (PIPs) and credible sets
+across explicit alternatives. Linkage disequilibrium (LD) diagnostics assess
+consistency between signed association z-scores and the supplied LD correlation
+matrix. Their flags suggest possible mismatch; they do not change alleles or
+remove variants.
+
+The examples below continue the `example` and `fit` from the
+[quick start](example.md). Plotting and LD diagnostics require the
+[analysis extra](install.md#optional-analysis-tools).
 
 ## Compare explicit settings
 
-Name each change so that its interpretation remains separate. This plan reuses
-the baseline, fits two alternatives and re-extracts coverage from the baseline
-posterior:
+Name each alternative so that changes in PIPs or credible sets can be traced to
+a specific choice. This plan increases $L$, the maximum number of single-effect
+components, compares a fixed effect-size prior variance, and lowers the requested
+credible-set coverage:
 
 ```python
-sensitivity = prusie.run_sensitivity(example["inputs"], [
+plan = [
     {"name": "larger_L", "changes": {"L": 6}},
-    {"name": "fixed_variance", "changes": {"scaled_prior_variance": .05,
-                                         "estimate_prior_variance": False}},
-    {"name": "coverage90", "report": {"coverage": .90}},
-], baseline=fit)
+    {"name": "fixed_variance", "changes": {
+        "scaled_prior_variance": 0.05,
+        "estimate_prior_variance": False,
+    }},
+    {"name": "coverage90", "report": {"coverage": 0.90}},
+]
+sensitivity = prusie.run_sensitivity(example["inputs"], plan, baseline=fit)
 comparison = sensitivity["comparison"]
 for record in sensitivity["records"]:
     print(record["name"], "new fit:", record["fit_performed"])
@@ -32,15 +42,27 @@ fixed_variance new fit: True
 coverage90 new fit: False
 ```
 
-Use `compare_fits` directly when all fits already exist. `run_sensitivity` runs a
-finite named plan, with requested convergence controls inherited from the
-baseline unless explicitly overridden. If neither requested any, every fit uses
-the fitting function's default rule, as a direct call would; for example,
-`R_finite` and `R_mismatch` fits use susieR's PIP rule. A runtime fallback is
-recorded separately.
-Changing coverage or purity is a report filter; it keeps the posterior.
+The supplied `fit` is reused as the baseline. The two `changes` items inherit its
+recorded model settings except for the named changes. Fixing the effect-size
+[prior variance](model.md#a-sum-of-single-effects) requires
+`estimate_prior_variance=False`; changing only `scaled_prior_variance` while
+estimating it tests sensitivity to initialization.
+
+The `report` item re-extracts credible sets at `coverage=0.90` without refitting,
+so PIPs are unchanged. It also accepts `min_abs_corr` to change the purity
+threshold.
+
+Requested convergence controls are inherited from the baseline unless overridden
+by `convergence` in `baseline_settings`. If none were requested, each fit uses
+the fitting function's default [stopping rule](model.md#stopping-rules). A runtime
+fallback is not inherited.
+
+Use `prusie.compare_fits` directly when all fits already exist.
 
 ## Plot and interpret the comparison
+
+A comparison can preserve the leading credible sets while changing support for
+other variants. Use the heatmap to compare candidate PIPs across settings:
 
 ```python
 from prusie.viz import plot_sensitivity
@@ -51,140 +73,182 @@ sensitivity_view = plot_sensitivity(
                    "fixed_variance": "Scaled prior variance\n0.05 (fixed)",
                    "coverage90": "CS coverage\n90%"},
 )
+figure, axes, plotted_data = sensitivity_view
 ```
 
-![Stable candidate PIPs across baseline, larger L, fixed scaled prior variance and reported CS coverage.](examples/post_analysis/stable/figure_5.png)
+The official [Toy example](worked_examples.md#sensitivity-and-ld-compatibility)
+provides an executed comparison of a baseline fit, refinement and an increase
+from `L=10` to `L=12`:
 
-The two leading CS, `{syn0100}` and `{syn0350}`, persist in the saved comparison.
-L=6 and the coverage-only change leave all PIPs unchanged. Fixing
-`scaled_prior_variance=0.05` with `estimate_prior_variance=False` changes the
-background: `syn0143` rises from about 5.318e-11 to 0.2544, and `syn0145` from
-about 2.066e-11 to 0.1430.
+![PIPs for the official susieR example before refinement, after refinement and with L increased to 12.](examples/post_analysis/official/figure_5.png)
 
-The fixed positive variance keeps all five components active, including three
-without retained CS. With estimation disabled, those components cannot shrink
-to V=0 through that estimation step and can distribute additional posterior mass.
-Thus the main CS are stable while the background is prior-sensitive.
-`scaled_prior_variance` means V divided by the working response variance
-yty/(n−1); it is not generally the working-scale V itself. See the
-[worked example](worked_examples.md#stable-signals-with-a-prior-sensitive-background)
-and [complete comparison](examples/post_analysis/stable/comparison.json).
+Refinement moves support between variants, whereas increasing `L` preserves the
+baseline's three credible sets and changes diffuse posterior support. Components
+without retained credible sets can still contribute to PIPs. Full-precision
+values are in the [saved comparison](examples/post_analysis/official/comparison.json).
+The fitting and plotting code above illustrates other explicit settings on the
+quick-start inputs; its settings are recorded independently from this report.
 
-Every column uses the same candidate order and linear PIP scale from 0 to 1.
-The compact view includes formal CS members on the declared comparison support,
-per-component top candidates and threshold candidates. Labels use `<0.01` and `>0.99` near the endpoints; exact
-0 and 1 remain explicit, and unobserved variants are grey `NA`. Display text is
-separate from full-precision values in `plotted_data`, CSV and JSON.
+The baseline is the first column. All columns share the same variant order and
+linear PIP scale from 0 to 1. Cell labels use `<0.01` and `>0.99` near the
+endpoints, keeping exact 0 and 1 explicit; variants absent from a fit are grey
+`NA`. Full-precision probabilities remain in `plotted_data["pip_matrix"]` and the
+CSV/JSON exports. `candidates_only=False` shows every variant on the
+[comparison support](#common-and-union-comparison-support).
 
-The report also identifies the largest PIP change on the full declared comparison
-support, including variants outside the heatmap. Use `candidates_only=False` for
-all comparison variants, or `layout="full"` for relation tables.
-`layer="components"` includes all active-component relations; the default
-`layer="signals"` emphasizes formal CS-supported relations. Table pagination
-changes only the display, retaining full records.
+`plotted_data["baseline_changes"]` records the largest PIP change from baseline
+for each alternative across that support, including variants outside the
+heatmap. Use `layout="full"` to add relation tables. The default `layer="signals"`
+shows retained credible sets and their overlap with unresolved effects;
+`layer="components"` includes all active components and components with retained
+credible sets. Pagination changes only the table display, retaining complete
+records.
 
 ## Variant alignment and prior weights
 
-Variant IDs determine alignment across reordered, subset or extended inputs.
-Missing variants remain unobserved; they are not assigned PIP=0. The default
-view compares each alternative with baseline, with full original settings and
-prior-resolution records available in the exports.
+When changing windows or filters, align each alternative's association vectors
+and both LD axes to its own variant order and effect alleles; see
+[input alignment](inputs.md#variant-order-and-alleles). Each alternative `inputs`
+mapping supplies its own statistics, LD and explicit unique `variant_ids`.
+Those IDs align the comparison and determine how inherited prior weights and
+metadata are mapped. Absent variants remain unobserved, with unavailable PIPs.
 
-<details markdown="1">
-<summary>Alternative windows, nonuniform priors and null weights</summary>
+When reusing `baseline=fit`, supply its original inputs. Agreement of IDs,
+metadata and settings alone does not verify equal z-scores or LD.
 
-An alternative `inputs` mapping supplies its own summary statistics, LD and
-explicit variant IDs. Existing prior weights and inherited metadata columns are
-mapped by those IDs, including when a previously fitted baseline is supplied.
-For a subset, the prior is conditioned on the retained variants and the null
-component. If raw biological weights are $w$ and `null_weight` is $\eta$, the
-constructor normalizes $[(1-\eta)w,\eta]$ **once**, after selecting the retained
-weights. Biological weights are not separately normalized first: $\eta$ is not
-necessarily the final null probability when the raw weights do not sum to one.
-Zero biological support is rejected, even with a positive null weight.
+For permutations and subsets, inherited weights follow the IDs. A subset
+conditions the prior on the retained variants and the null column. Let
+$\mathcal S$ be the retained variant IDs, $w_j$ their raw weights and $\eta$ the
+inherited `null_weight`. The normalized prior probability of the null column is
 
-For new IDs under a nonuniform prior, provide complete alternative weights in
-the alternative input order. This illustrative fragment requires `new_inputs`
-containing the alternative aligned data and `new_variant_weights` in that order;
-they are not provided by the toy example:
+$$
+\pi_{\mathrm{null}}
+=\frac{\eta}{(1-\eta)\sum_{j\in\mathcal S}w_j+\eta}.
+$$
+
+The augmented weights are normalized once, without first normalizing the
+variant weights. Thus changing the window can change the final null probability,
+even though an `inputs` item must keep `null_weight` unchanged. Raw weights must
+be finite, nonnegative and have a positive finite total; zero support is rejected
+even with a positive null weight.
+
+For new IDs under a nonuniform baseline prior, supply complete alternative
+weights in the alternative order. This illustrative fragment assumes
+`new_inputs` already contains aligned alternative data and any required metadata,
+with `new_variant_weights` in that order:
 
 ```python
 alternative_inputs = dict(new_inputs, prior_weights=new_variant_weights)
-plan = [{'name': 'alternative_window', 'inputs': alternative_inputs}]
+alternative_plan = [{"name": "alternative_window", "inputs": alternative_inputs}]
 ```
 
-Explicit `prior_weights=None` requests uniform weights for the alternative.
-Without an explicit prior, a uniform baseline extends its existing equal raw
-weight to new IDs; the final null probability can therefore change with the
-window size. New IDs also need explicit metadata columns if baseline columns
-were supplied; explicit alternative metadata may omit unavailable columns.
-The plan is checked for IDs, dimensions and valid weights before any fit starts.
-Each fit record includes `prior_resolution` (mapping, policy, raw and normalized
-weights, effective null probability), and input changes include `input_resolution`.
-The cache hashes the resolved data and settings. Alternative fits are cold starts;
-baseline arrays and results are not mutated.
+Explicit `prior_weights=None` requests uniform weights. Without an explicit
+prior, a uniform baseline extends its existing equal raw weight to new IDs.
+If the baseline has metadata columns, new IDs also require explicit
+`variant_metadata`; that mapping may omit unavailable columns.
 
-Supported choices include L, variant priors, fixed effect variance, explicit
-LD/window/filter inputs, continuation and refinement. Changing only V's
-initialization while estimating it is computational initialization sensitivity.
-External-LD residual variance is not automatically estimated. Cache keys include
-inputs/order/alleles, settings, software and initialization; caches are caller-owned.
+`prior_resolution` in `sensitivity["records"]` describes the mapping, raw and
+normalized weights and effective null probability. Input alternatives also
+record `input_resolution`. IDs, dimensions and weights are checked before any
+fit starts. Alternative fits start from the prior and preserve baseline inputs
+and results; [continuation and refinement](post_analysis.md#continue-first-then-consider-refinement)
+are separate choices. Changing LD does not automatically enable residual-variance
+estimation.
 
-</details>
+An optional caller-owned `cache` hashes resolved inputs, variant order, allele
+metadata, settings, initialization and software version. Cached fit objects are
+shared; do not modify them while using the cache.
 
 ## Common and union comparison support
 
-`mode='union'` displays the union and computes each pair's PIP and posterior/CS
-overlap on that pair's intersection; representative LD uses the original
-representatives in the named LD reference. `mode='common'` uses the **global intersection across
-all fits** for displayed variants, ranks/top-candidate selection, all PIP metrics,
-shared counts, allele alignment, posterior overlap and CS-overlap evidence.
-Representative-LD evidence additionally requires both original representatives
-to belong to that support. The `support` and `support_scope` fields identify the
-policy. Component posteriors, original CS sizes/purities and representative IDs
-remain full-fit metadata; they are not refitted or renormalized on the intersection.
-Reported omitted/unobserved mass is outside the declared comparison support.
-An empty global intersection gives zero shared counts and unavailable PIP metrics,
-with components unmatched on that support. It does not imply biological absence.
-The legacy field name `full_region_pip_correlation` refers to the declared support
-for that mode, not to a union in which missing PIPs have been filled in.
+When fits contain different variants, choose a comparison support before
+interpreting their PIP changes or signal relations. The `mode` argument of
+`prusie.compare_fits` selects:
 
-<details markdown="1">
-<summary>Signal matching, resolution and complete component relations</summary>
+| Mode | Displayed variants | Support for pairwise PIP and overlap metrics |
+| --- | --- | --- |
+| `"union"` (default) | Union across fits | Each pair's intersection |
+| `"common"` | Intersection across all fits | The same global intersection for every pair |
 
-Missing variants stay NA. The default comparison shows formal-CS-supported
-signals against baseline; complete active-component relations are a separate
-view. A diffuse component can overlap another diffuse component almost perfectly
-without identifying a localized signal. Unresolved support changes remain visible
-and do not become confirmed split/merge events from diffuse graph degrees.
-Main candidates include formal CS members on the comparison support, top
-candidates and threshold candidates. A large CS is not trimmed by the display
-PIP threshold; common-mode support may exclude members absent from another fit.
-Signal relations use shared-support posterior overlap
-without renormalizing away unobserved mass, CS overlap and explicitly identified
-LD evidence. Component numbers are not matched directly. Unmatched,
-ambiguous and split/merge relations remain visible; a one-to-one display match
-is only an aid. Candidate PIP changes, ranks, thresholds, CS sizes/purity and
-high-LD exchanges remain separate metrics rather than a composite robustness
-score.
+For example, compare the existing fits on their global intersection:
 
-</details>
+```python
+common_comparison = prusie.compare_fits(
+    sensitivity["fits"], baseline="baseline", mode="common",
+    R=example["inputs"]["R"], ld_reference="baseline",
+)
+```
+
+Common mode also restricts ranks, top-candidate selection, shared counts and
+allele alignment to that global intersection. Representative LD requires both
+original representative variants in the named LD reference; common mode
+additionally requires them in the global intersection.
+
+Comparison does not refit or renormalize the posteriors. Original component
+probabilities, credible sets, set sizes/purities and representative IDs remain
+unchanged. `support` and per-record `support_scope` identify the policy;
+`unobserved_mass` records posterior mass outside that support.
+`full_region_pip_correlation` uses the same declared support despite its legacy
+name; missing PIPs are never filled with zero.
+
+An empty global intersection gives zero shared counts, unavailable PIP metrics
+and unmatched components. It provides no evidence of biological absence.
+
+Candidates include retained credible-set members on the support, leading variants
+from components with retained sets, and variants meeting `pip_threshold`. If a
+fit has no retained set, its leading PIPs supply additional candidates. The PIP
+threshold does not trim a large credible set; common mode can omit members
+absent from another fit.
+
+Relations use posterior overlap on this support, credible-set overlap and
+representative LD, rather than equal component numbers. In the signal view,
+overlap with a component lacking a retained credible set is `unresolved`.
+Diffuse components can overlap strongly without localizing a signal. The
+[signal and component views](#plot-and-interpret-the-comparison) keep these
+relations distinct.
+
+`split`, `merge` and `ambiguous` describe connections between retained credible
+sets; components without retained sets do not determine those labels. These
+relations do not establish biological signal identities. Unmatched relations
+remain visible, and a one-to-one display match is only an aid. PIP changes,
+ranks, threshold crossings, credible-set sizes/purities and high-LD exchanges
+remain separate metrics rather than a combined robustness score.
 
 ## Diagnose consistency of z and LD
 
-Run LD diagnostics explicitly for the supplied signed statistics and correlation
-matrix:
+To investigate possible mismatch, compare each signed z-score with its
+conditional distribution given the other scores and the supplied LD. Run this
+check explicitly, separately from fitting:
 
 ```python
-ld = prusie.diagnose_ld(example["inputs"]["z"], example["inputs"]["R"],
-                        n=example["inputs"]["n"], variant_ids=fit.variant_ids)
+ld = prusie.diagnose_ld(
+    example["inputs"]["z"], example["inputs"]["R"],
+    n=example["inputs"]["n"], variant_ids=fit.variant_ids,
+)
+print(ld["status_counts"])
 ```
 
-The saved stable example assesses all 500 variants and flags none. Read the joint
-rule and assessed counts with that result: **log LR > 2 and |adjusted z| > 2**.
-A large conditional residual alone is not an allele-flip flag. Check ancestry,
-effect alleles, order, filtering and LD-reference identity when investigating a
-flag; this diagnostic leaves the input statistics and alleles unchanged.
+The diagnostic follows the SuSiE-RSS null model
+
+$$
+\widetilde{\mathbf z}\sim
+N\!\left(\mathbf 0,(1-s)\mathbf R+s\mathbf I_p\right),
+$$
+
+where $\mathbf R$ is the signed LD correlation matrix for $p$ variants,
+$\mathbf I_p$ is the identity matrix and $s$ regularizes the covariance toward
+independence. With sample size $n$, $\widetilde{\mathbf z}$ uses the
+[finite-sample Wald adjustment](model.md#known-sample-size-and-wald-z-statistics);
+without `n`, the scores are unadjusted. `diagnose_ld` estimates $s$ with
+`method="null-mle"` unless `s` is supplied. `estimate_s_rss` also supports
+`"null-partialmle"` and `"null-pseudomle"`. If a supplied or estimated $s$ exceeds
+1, `diagnose_ld` replaces it by 0.8 and warns.
+
+A normal scale mixture fitted to the standardized conditional residuals gives
+the likelihood ratio (LR) for reversing a score's sign versus retaining it.
+The default flag requires both $\log\mathrm{LR}>2$ (`flip_log_lr=2`) and
+$|\widetilde z_j|>2$ (`flip_abs_z=2`), with strict inequalities. A large
+conditional residual alone is not an allele-flip flag.
 
 | Report state | Meaning |
 | --- | --- |
@@ -193,6 +257,27 @@ flag; this diagnostic leaves the input statistics and alleles unchanged.
 | Conditional only | Conditional quantities exist, but the full flip test is unavailable |
 | Not assessed | The required observation or calculation is unavailable |
 
+Read `status_counts` alongside the flags: conditional-only and unassessed rows
+are not negative flip tests. Absence of flags does not prove LD calibration or
+causal identity. Investigate flags by checking ancestry, effect alleles,
+variant order, filtering and LD-reference identity; see
+[input alignment](inputs.md#variant-order-and-alleles). The diagnostic changes
+neither input statistics nor LD and does not flip alleles or remove variants.
+
+Eigenvalues below `r_tol` (default `1e-8`) are set to zero only within the
+diagnostic; eigenvalues below `-r_tol` produce a warning. At $s=0$, singular LD
+uses a recorded spectral pseudoinverse convention. A caller-owned `cache` can
+reuse the eigendecomposition.
+
+The mixture-weight fit requires optimizer convergence and a Karush–Kuhn–Tucker
+(KKT) optimality check for constrained maximum likelihood. The optimizer differs
+from susieR's `mixsqp`, so flip likelihood ratios need not agree. Failed mixture
+optimization retains available conditional quantities as `conditional_only`.
+
+Missing z-scores use working zeros in the calculation, recorded separately
+from unavailable observed scores. These variants remain `not_assessed` and
+are omitted from the observed-score plot. Unavailable results keep their reason.
+
 ```python
 from prusie.viz import plot_ld_diagnostics
 from prusie.report import write_report
@@ -200,40 +285,20 @@ from prusie.report import write_report
 ld_view = plot_ld_diagnostics(ld, layout="compact")
 summary = prusie.summarize(fit, example["inputs"]["R"], z=example["inputs"]["z"])
 print(prusie.summary_text(summary, ld=ld, comparison=comparison))
-report = write_report(summary, "output/diagnostics", ld=ld, comparison=comparison,
-                      figures={"Sensitivity": sensitivity_view, "LD diagnostics": ld_view})
+report = write_report(
+    summary, "output/diagnostics", ld=ld, comparison=comparison,
+    figures={"Sensitivity": sensitivity_view, "LD diagnostics": ld_view},
+)
 ```
 
 Open `output/diagnostics/index.html` to read the heatmap, full-support PIP changes,
-LD states and downloadable tables together. Missing observed z is not plotted
-at zero; failed or skipped assessments retain their reason.
+LD states and downloadable tables together. `plot_ld_diagnostics` defaults to
+conditional residuals in its second panel; `auxiliary="log_lr"` shows flip log
+likelihood ratios instead.
 
-<details markdown="1">
-<summary>LD model, mixture optimization and recorded input information</summary>
-
-The explicit LD diagnostic implements the RSS null model
-$z\sim N(0,(1-s)R+sI)$, including finite-n z adjustment, likelihood-based s
-estimation, conditional means/variances and a normal scale mixture for allele-flip
-likelihood ratios. `estimate_s_rss` exposes null MLE, partial MLE and pseudo-MLE.
-Eigen decomposition is explicit, separately timed and optionally cached. Small
-or negative eigenvalues are truncated only inside the diagnostic, with warnings;
-the fitting matrix is untouched. Singular s=0 uses the labelled spectral
-pseudoinverse convention. Missing statistics and undefined conditional quantities
-remain unassessed. The report separates assessed/flagged, assessed/not flagged,
-conditional-only and unassessed rows. A finite conditional residual does not
-establish that mixture optimization and the flip test succeeded. For missing z,
-the diagnostic's working zero is recorded separately from the unavailable
-observed statistic. Flags suggest possible mismatch; nothing is flipped or removed.
-
-The scale-mixture likelihood is solved with a full-simplex KKT check. Some pinned
-R `mixsqp` default fits stop at suboptimal weights; prusie records this solver
-accuracy difference rather than reproducing premature stopping. Conditional
-formulas and independently certified R mixture optima are validated separately.
-
-User-provided allele labels, EAF, N, INFO, ancestry/build, LD reference sample
-size and external QC flags can be carried in metadata and `input_info`.
-Missing information stays `not_assessed`. Provided P values take precedence;
-otherwise plotted association values use a labelled two-sided normal
-approximation with a stable log-tail calculation.
-
-</details>
+In `summarize`, `metadata` carries per-variant annotations such as allele labels,
+EAF, N, INFO and `qc_flags`; `input_info` carries study-level information such as
+`genome_build`, `ld_ancestry`, `ld_reference_n` and `ld_source`. Unprovided QC
+information remains `not_assessed`. Finite supplied `pvalues` take precedence
+over z-based association values; otherwise finite z-scores give a labelled
+two-sided normal approximation computed stably in the log tail.
