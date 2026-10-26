@@ -83,13 +83,15 @@ def _plot_convergence_stage(
             )
         if tolerance is None and key == "delta_elbo":
             tolerance = summary.get("tol")
+        if criterion == "pip" and key in ("max_abs_delta_alpha", "max_abs_delta_pip"):
+            tolerance = summary.get("tol")
         if tolerance is not None:
             selected = (
                 criterion == "joint"
                 or (key == "delta_elbo" and criterion == "elbo")
                 or (
                     key != "delta_elbo"
-                    and criterion in ("alpha_pip", "alpha_pip_nonfinite_fallback")
+                    and criterion in ("pip", "alpha_pip", "alpha_pip_nonfinite_fallback")
                 )
             )
             if layout == "compact":

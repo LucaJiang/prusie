@@ -361,6 +361,6 @@ def plot_refinement(
                 else "full region"
             ),
             "candidate_statuses": candidate_states,
-            "objective_definition": "original-prior post-trim ELBO",
+            "objective_definition": refinement.get("objective_definition") or "not recorded",
         },
     )

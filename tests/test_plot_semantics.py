@@ -514,6 +514,55 @@ def test_nonfinite_fallback_selects_alpha_pip_thresholds():
     plt.close(view[0])
 
 
+def test_compatible_pip_rule_uses_fitting_tol_for_both_posterior_thresholds():
+    summary = {
+        "convergence": {
+            "requested_criterion": "elbo",
+            "effective_criterion": "pip",
+            "tol": 0.001,
+            "alpha_tol": 0.0002,
+            "pip_tol": 0.0003,
+        },
+        "trace": [
+            {
+                "iteration": 1,
+                "elbo": np.nan,
+                "max_abs_delta_alpha": 0.0001,
+                "max_abs_delta_pip": 0.0001,
+                "V": [1.0],
+                "sigma2": 1.0,
+            }
+        ],
+    }
+    view = plots.plot_convergence(summary)
+    for axis in view[1][2:4]:
+        assert axis.lines[1].get_label() == "Selected stopping threshold: 0.001"
+        assert axis.lines[1].get_ydata() == [0.001, 0.001]
+    plt.close(view[0])
+    # A saved summary that omits the actual fitting tolerance must not use
+    # unrelated configured alpha/PIP thresholds as the selected PIP rule.
+    del summary["convergence"]["tol"]
+    view = plots.plot_convergence(summary)
+    assert len(view[1][2].lines) == len(view[1][3].lines) == 1
+    plt.close(view[0])
+
+
+@pytest.mark.parametrize(
+    "definition",
+    [
+        "last_logged_elbo; original prior; susieR refinement",
+        "original-prior post-trim ELBO",
+        None,
+    ],
+)
+def test_refinement_plot_preserves_recorded_objective_definition(definition):
+    before = {"variants": [], "credible_sets": []}
+    after = dict(before, refinement={"objective_definition": definition, "history": []})
+    view = plots.plot_refinement(before, after)
+    assert view[2]["objective_definition"] == (definition or "not recorded")
+    plt.close(view[0])
+
+
 def test_explicit_signal_view_keeps_cs_and_full_posterior_without_renormalizing():
     ids = [f"rs{i}" for i in range(30)]
     alpha = np.full(30, 1 / 30)
