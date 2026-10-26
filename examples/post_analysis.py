@@ -31,7 +31,7 @@ def checksum(a):
 
 
 def source_identity():
-    """Identify Python presentation source separately from the unchanged native core."""
+    """Identify example, refinement and rendering source separately from the native core."""
     import prusie._native
 
     root = Path(__file__).resolve().parents[1]
@@ -40,6 +40,7 @@ def source_identity():
     )
     sources = [
         Path(__file__),
+        Path(prusie.__file__).with_name("refinement.py"),
         Path(prusie.__file__).with_name("report.py"),
         Path(prusie.__file__).parent / "viz/_locus.py",
     ]
@@ -48,7 +49,8 @@ def source_identity():
         source_files_sha256={p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},
         native_sha256=hashlib.sha256(Path(prusie._native.__file__).read_bytes()).hexdigest(),
         note=(
-            "Source hashes identify presentation changes; this record is not a final wheel freeze."
+            "Source hashes identify the example, refinement tracking and presentation; "
+            "this record is not a final wheel freeze."
         ),
     )
 
@@ -124,7 +126,7 @@ def execute(case, output):
     inputs = e["inputs"]
     params = e["parameters"]
     fit = prusie.susie_suff_stat(**inputs, **params, track_fit=True)
-    refined = prusie.refine_fit(fit, prusie.RefinementConfig(inner_tol=0.001))
+    refined = prusie.refine_fit(fit, prusie.RefinementConfig(inner_tol=0.001), track_fit=True)
     diagonal = np.sqrt(np.diag(inputs["XtX"]))
     R = inputs["XtX"] / diagonal[:, None] / diagonal[None, :]
     # Marginal t statistics on the supplied response scale, with n - 2 df.
@@ -174,6 +176,7 @@ def execute(case, output):
             "Input order preserved; allele labels unavailable in this toy fixture."
         ),
         parameters=params,
+        tracking=dict(baseline=True, refinement=True, candidate_trajectory="original IBSS sweeps"),
         initial_state=("cold start; refinement stage B uses stage A posterior moments"),
         reference_sources=[source],
         software_versions={

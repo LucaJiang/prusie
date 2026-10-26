@@ -255,6 +255,12 @@ def test_official_local_optimum_improves_and_preserves_tracking():
     assert g.refinement_status == "completed" and g.converged
     assert evaluate_objective(g)["elbo"] - evaluate_objective(f)["elbo"] > 17
     assert not g.trace and len(g.refinement["before"]["trace"]) == f.niter
+    assert g.params["track_fit"] is False
+    assert all(
+        "trace" not in stage and stage["solver_settings"]["track_fit"] is False
+        for row in g.refinement["history"]
+        for stage in row["stages"].values()
+    )
     for phase, result in [("baseline", f), ("refined", g)]:
         np.testing.assert_allclose(
             result.pip, example["reference"]["latest_" + phase + "_pip"], atol=1e-5, rtol=0
@@ -268,6 +274,112 @@ def test_official_local_optimum_improves_and_preserves_tracking():
         r["stages"]["A"]["objective"] for r in g.refinement["history"]
     )
     np.testing.assert_array_equal(g.params["prior_weights"], f.params["prior_weights"])
+
+
+@pytest.fixture(scope="module")
+def official_tracked_baseline():
+    from prusie.datasets import load_convergence_example
+
+    example = load_convergence_example()
+    return susie_suff_stat(**example["inputs"], **example["parameters"], track_fit=True)
+
+
+@pytest.mark.parametrize("track_fit", [True, "compact", "dense"])
+def test_official_refinement_tracking_captures_original_candidate_sweeps(
+    monkeypatch, track_fit, official_tracked_baseline
+):
+    import prusie.refinement as module
+
+    baseline = official_tracked_baseline
+    config = RefinementConfig(inner_tol=0.001)
+    untracked = refine_fit(baseline, config)
+    native_fit = module._native.fit
+    native_runs = []
+
+    def capture_native(*args):
+        result = native_fit(*args)
+        native_runs.append(copy.deepcopy(result))
+        return result
+
+    monkeypatch.setattr(module._native, "fit", capture_native)
+    tracked = refine_fit(baseline, config, track_fit=track_fit)
+    exact(untracked, tracked)
+    assert tracked.niter == 3
+    assert tracked.convergence["stop_reason"] == "criterion_satisfied"
+    assert len(tracked.trace) == 3
+    assert [row["iteration"] for row in tracked.trace] == [1, 2, 3]
+    assert tracked.refinement_status == untracked.refinement_status == "completed"
+    assert tracked.refinement["stop_reason"] == untracked.refinement["stop_reason"]
+    assert tracked.refinement["config"] == untracked.refinement["config"]
+    assert tracked.refinement["total_fits"] == untracked.refinement["total_fits"] == 10
+    assert len(native_runs) == 10  # No continuation or extra fit to construct the trace.
+    assert not untracked.trace
+    assert len(baseline.trace) == baseline.niter == 10
+
+    for before, after in zip(
+        untracked.refinement["history"], tracked.refinement["history"], strict=True
+    ):
+        for key in (
+            "round",
+            "component",
+            "excluded_indices",
+            "accepted",
+            "reason",
+            "incumbent_objective",
+            "objective",
+            "improvement",
+            "relative_improvement",
+        ):
+            assert before[key] == after[key], key
+        for phase in ("A", "B"):
+            a, b = before["stages"][phase], after["stages"][phase]
+            for key in (
+                "niter",
+                "stop_reason",
+                "ibss_converged",
+                "logged_elbo",
+                "post_trim_objective",
+                "objective",
+            ):
+                assert a[key] == b[key], (phase, key)
+            native = native_runs.pop(0)
+            assert b["trace"] == native["diagnostics"]["trace"]
+            assert len(b["trace"]) == b["niter"]
+            assert b["trace"][-1]["elbo"] == b["logged_elbo"]
+            assert b["solver_settings"]["track_fit"] == track_fit
+            if phase == "B" and after["accepted"]:
+                assert b["trace"] == tracked.trace
+                assert native["alpha"].tobytes() == tracked.alpha.tobytes()
+    assert tracked.refinement["after"]["trace"] == tracked.trace
+    assert tracked.trace[0]["max_abs_delta_alpha"] is None
+    np.testing.assert_array_equal([row["elbo"] for row in tracked.trace], tracked.elbo)
+    for row in tracked.trace:
+        assert np.isfinite(row["elbo"]) and row["sigma2"] > 0
+    if track_fit == "dense":
+        np.testing.assert_array_equal(tracked.trace[-1]["alpha"], tracked.alpha)
+        for prev, cur in zip(tracked.trace, tracked.trace[1:], strict=False):
+            assert cur["max_abs_delta_alpha"] == np.max(
+                abs(np.asarray(cur["alpha"]) - np.asarray(prev["alpha"]))
+            )
+
+
+@pytest.mark.parametrize("track_fit", ["invalid", 1, [], {}])
+def test_refinement_validates_tracking_even_without_retained_data(
+    track_fit, official_tracked_baseline
+):
+    fit = copy.copy(official_tracked_baseline)
+    fit._prepared = None
+    with pytest.raises(ValueError, match="track_fit must be"):
+        refine_fit(fit, track_fit=track_fit)
+
+
+def test_refinement_without_accepted_candidate_keeps_input_trace(official_tracked_baseline):
+    baseline = official_tracked_baseline
+    result = refine_fit(baseline, RefinementConfig(candidate_budget=0), track_fit="dense")
+    exact(baseline, result)
+    assert result.refinement_status == "budget_exhausted"
+    assert result.trace == baseline.trace
+    assert result.trace is not baseline.trace
 
 
 def test_failed_last_candidate_cannot_replace_accepted_best(monkeypatch):

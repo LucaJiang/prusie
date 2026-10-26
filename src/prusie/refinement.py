@@ -671,6 +671,7 @@ def refine_fit(
     fit: SusieResult,
     config: RefinementConfig | None = None,
     *,
+    track_fit: bool | str = False,
     convergence: ConvergenceConfig | None = None,
 ) -> SusieResult:
     """Search for a higher-objective solution by excluding credible sets.
@@ -692,6 +693,11 @@ def refine_fit(
     config : RefinementConfig, optional
         Search settings. When omitted, use 100 rounds and inherit the fit's
         iteration budget and tolerance, including both improvement thresholds.
+    track_fit : bool or {'compact', 'dense'}, default False
+        Record each candidate's original IBSS sweeps, as in
+        :func:`susie_suff_stat`. The returned accepted fit keeps its stage-B
+        trace; each completed stage also records its trace in the search
+        history. If no candidate is accepted, the input fit's trace is kept.
     convergence : ConvergenceConfig, optional
         Stopping rule of the candidate fits; defaults to the rule requested
         for ``fit``.
@@ -710,6 +716,7 @@ def refine_fit(
     Unsupported inputs (no retained data or an invalid baseline)
     are reported in ``refinement['status']`` rather than raised.
     """
+    level = tracking_level(track_fit)
     if config is None:
         tolerance = float(fit.params["tol"])
         config = RefinementConfig(
@@ -825,7 +832,9 @@ def refine_fit(
                 record["total_fits"] += 1
                 try:
                     if phase == "A":
-                        candidate = _run(incumbent, data, o, convergence=control)
+                        candidate = _run(
+                            incumbent, data, o, track_fit=track_fit, convergence=control
+                        )
                     else:
                         restored = dict(data.options)
                         restored.update(
@@ -840,7 +849,7 @@ def refine_fit(
                             restored,
                             initial=proposal,
                             reset_variances=True,
-                            track_fit=False,
+                            track_fit=track_fit,
                             convergence=control,
                         )
                     # Both stages share one resolved stopping rule; passing it on
@@ -861,6 +870,8 @@ def refine_fit(
                         ),
                         convergence=copy.deepcopy(candidate.convergence),
                     )
+                    if level:
+                        stage["trace"] = copy.deepcopy(candidate.trace)
                     stages[phase] = stage
                     row["stages"] = stages
                     if phase == "A":

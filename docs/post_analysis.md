@@ -75,7 +75,7 @@ search_config = prusie.RefinementConfig(
     inner_tol=1e-3,
     candidate_budget=20,
 )
-refined = prusie.refine_fit(fit_for_search, search_config)
+refined = prusie.refine_fit(fit_for_search, search_config, track_fit="compact")
 search = refined.refinement
 print("Search:", search["status"])
 print(
@@ -156,9 +156,9 @@ print("Same PIPs:", bool((fit_for_search.pip == refined.pip).all()))
 ```
 
 This official example prints `Same PIPs: False`: refinement accepts a higher-ELBO
-solution under the same model. The baseline has a saved sweep trace; the accepted
-search candidate has no iteration trace, so its convergence panel is labelled as
-unrecorded. Separate fits use independent sweep axes.
+solution under the same model. Tracking captures the baseline's ten sweeps and
+the accepted candidate's three original stage-B sweeps. Separate fits use
+independent sweep axes.
 
 The refinement plot compares the two fits' PIPs, each attempt's ELBO gain over
 the best fit at the start of its round, and the sequence of best ELBOs. These
@@ -167,9 +167,9 @@ displays selected variants; `candidates_only=False` shows all variants.
 `layout="full"` adds credible-set memberships and attempt records.
 
 Read `accepted`, `reason` and `stages` in `refined.refinement["history"]` to
-distinguish selection from inner IBSS convergence. Refinement candidates have
-no iteration trace, so an accepted fit's convergence panels are labelled as
-unrecorded.
+distinguish selection from inner IBSS convergence. Refinement defaults to
+`track_fit=False`; enable it explicitly to save candidate trajectories. It
+does not reconstruct a trajectory for an already fitted result.
 
 The [saved Toy example](worked_examples.md#a-stopped-fit-improved-by-refinement)
 shows changed PIPs and credible sets after the initial fit satisfies its
@@ -316,6 +316,12 @@ at least $1/q$. Thresholds, omitted mass and `lossy=True` are recorded; these
 entries cannot reconstruct the posterior. `"dense"` also stores full `alpha`,
 `mu` and `mu2`. Tracking level changes the stored history, rather than the fit
 or stopping rule. [Cycle handling](#convergence-diagnostics) depends on that rule.
+
+`refine_fit(..., track_fit=True)` records both stages of each candidate in
+`refinement["history"][i]["stages"][phase]["trace"]`. An accepted result's
+`trace` contains its original stage-B trajectory. If no candidate is accepted,
+the returned copy keeps the input fit's trace. Candidate traces are not saved
+by default, even if the baseline was tracked.
 
 Requested controls are read from `params["convergence"]`, with labelled recovery
 from diagnostics or retained options for older results. If those controls are

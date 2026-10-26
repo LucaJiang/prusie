@@ -23,10 +23,10 @@ The baseline permits `L=10` single effects and satisfies its ELBO stopping rule
 after ten sweeps at `tol=0.001`. Refinement evaluates five credible-set exclusion
 attempts in two rounds, using ten inner fits, and accepts one candidate. The
 returned candidate satisfies its inner stopping rule after three sweeps.
-It has no saved iteration trace; the report labels that trajectory as
-unrecorded rather than reconstructing it.
+The example opts into tracking for both the baseline and refinement, so the
+report shows the accepted candidate's three original stage-B sweeps.
 
-![Baseline convergence trajectory and the explicitly unrecorded accepted-candidate trace.](examples/post_analysis/official/figure_2.png){.figure-complex}
+![Baseline and accepted-candidate convergence trajectories, on separate sweep axes.](examples/post_analysis/official/figure_2.png){.figure-complex}
 
 The search ranks candidates by their last logged ELBO under the original prior.
 Here it rises from −70832.271605 to −70814.813272, a gain of 17.458333.
