@@ -4,7 +4,8 @@
 
 - Add per-call `n_threads` to the main fitting functions, defaulting to 1.
   Counts from 1 to 32 use the integer-index protocol, including NumPy integers;
-  booleans and floats are rejected. Try 2–4 threads for larger problems.
+  booleans and floats are rejected. `fit.params['n_threads']` records the
+  normalized count. Try 2–4 threads for larger problems.
   Matrix products keep their ordered arithmetic and IBSS effects remain sequential.
 - Reduce matrix-validation passes and fuse owned RSS validation and repair.
   Eligible GNU/Linux x86-64 builds without `portable-math` also parallelize
@@ -32,7 +33,8 @@
 - Warn when missing RSS z-scores are replaced by zero, and use those zeros in
   joint multi-panel fits. Reject unsupported dynamic-model convergence controls
   and invalid `refine` values before fitting. Sensitivity fits forward convergence
-  controls only when requested, preserving the fitting route's default rule.
+  controls only when requested, preserving the fitting route's PIP convergence
+  and NaN-ELBO handling defaults.
 - Input mutation by callbacks during a fit is unsupported and no longer changes
   the completed validation/repair result. Sensitivity refits do not inherit
   destructive LD workspace policy from a supplied baseline.
@@ -41,17 +43,6 @@
 
 ## 0.2.4.dev2 — Gaussian model and API expansion (unreleased)
 
-- Warn when `susie_rss` replaces missing z-scores with zero. The multi-panel
-  joint fit now also uses zero for them; previously the missing values entered
-  its panel-weight updates.
-- Reject `ConvergenceConfig` settings that the `R_finite`, `R_mismatch` and
-  multi-panel sweep loop does not implement, instead of silently applying the
-  ELBO rule.
-- Check the type of `refine` before fitting.
-- `run_sensitivity` passes convergence controls to the fitting function only
-  when they were requested. Previously it always passed the default
-  `ConvergenceConfig`, so `R_finite` and `R_mismatch` fits used the ELBO rule
-  instead of susieR's PIP rule, and other fits lost susieR's NaN-ELBO handling.
 - Separate the pure Rust solver from the PyO3 binding in a Cargo workspace.
 - Use mathematically equivalent float64 calculations without R-rounding emulation.
 - Use variance grouping, vector exponentials and implicit matrix scaling
