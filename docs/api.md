@@ -44,7 +44,7 @@ required for sparse inputs and advanced RSS linear algebra.
 
 `susie`, `susie_suff_stat`, `susie_rss` and `susie_rss_lambda` accept
 `init_only=True` to return a `SusieInputs` specification;
-`susie_workhorse(inputs)` fits it later. Panel-list RSS initialization performs
+`susie_workhorse(inputs)` fits it later; both are defined in `prusie.workhorse`. Panel-list RSS initialization performs
 per-panel selection fits before returning that specification. `model_init` accepts a previous fit
 or posterior state; `s_init` remains its supported alias. Supplying both raises
 an error. The existing retained-data continuation interface remains available.
@@ -94,35 +94,32 @@ estimation is justified.
 `n_threads` is accepted by `susie`, `susie_suff_stat`, `susie_rss` and
 `susie_rss_lambda`, and the requested value is recorded in `fit.params`.
 The parallel kernels include dense Gram-matrix products and proved exact-class
-compact products. Eligible ordinary `susie_rss(z, R, n)` calls also share one
-private executor between exact input validation, owned symmetry repair and the
-solver. Each matrix entry and output coordinate keeps its ordered arithmetic;
-component updates remain sequential. Design-matrix operators, dynamic RSS
-likelihoods and other preparation routes retain their ordinary implementation.
-Small matrices and compact products with fewer than 1024 rows remain serial.
+compact products. Eligible `susie_rss(z, R, n)` preparation also partitions the
+exact symmetry proof and owned repair. Each matrix entry and output coordinate
+keeps its ordered arithmetic; component updates remain sequential. Small
+matrices and compact products with fewer than 1024 rows remain serial.
 The process-wide BLAS, OpenMP and Rayon configuration is unchanged.
 
-Parallel preparation requires a plain Python integer count, p ≥ 1024, a plain
-aligned C-order float64 LD array, provided n, ordinary scalar Gaussian controls
-and standard warning handling. It excludes `overwrite_ld=True`, reference X,
-effect/SE input, known var_y, finite-panel/mismatch controls, MAF/null augmentation,
-prior weights or vector prior variance, mixture/slot/NIG models, custom conversion
-or warning hooks, tracking, retained data, initialization and refinement. Such
-calls retain their previous preparation and requested solver thread count.
-NumPy integer counts are accepted, but retain ordinary serial preparation.
-Nonstandard floating-control modes also retain the ordinary preparation path.
-Requesting more threads does not imply a speedup for every stage or input.
+Parallel preparation requires a normalized count greater than one, p ≥ 1024,
+provided n, `var_y=None`, and a plain aligned native float64 C-order LD array
+on the owned-repair route. Solver and output controls do not restrict this
+independent matrix work. NumPy integer counts use the same path as Python
+integers. Replaced stderr, tracing, profiling and logging warning capture do not
+change eligibility. Nonstandard floating-control modes use ordinary preparation;
+no floating controls are changed. Other preparation routes retain the requested
+solver count. The destructive `overwrite_ld=True` route prepares serially.
 
-The default is explicitly one native thread. Environment-only requests through
-`PRUSIE_NUM_THREADS` no longer select public fitting parallelism; pass
-`n_threads=4`, for example. Booleans and floating-point values are not thread
-counts. Determinism is defined for the same input and requested thread count;
-numerical equality between different thread counts is reported, not guaranteed.
-Eligible preparation workers are joined before return or exception. One executor
-normally serves preparation and fitting; if caller floating controls change
-between them, its workers are joined before a replacement starts at the solver's
-ordinary pool-selection point. Numerical determinism does not promise equality
-of thread-local sticky floating-point exception flags.
+The default is explicitly one native thread. Pass `n_threads=2` or
+`n_threads=4` to try parallel fitting; more threads do not guarantee a speedup.
+Environment-only requests through `PRUSIE_NUM_THREADS` do not select public
+fitting parallelism. Counts implement the integer-index protocol; booleans and
+floating-point values are rejected. Determinism is defined for the same input
+and requested count; equality across different counts is reported separately.
+Preparation workers join before later Python transformations and warning
+dispatch. Fitting uses a separate per-call executor. Warning predicates and
+deferred errors return as data; the calling thread emits warnings through
+`warnings.warn` in their original order. Numerical determinism does not promise
+equality of thread-local sticky floating-point exception flags.
 
 ## Optional LD workspace
 
@@ -137,14 +134,12 @@ with ordinary positive C-order strides and NumPy-owned heap storage. Reshape
 views of such an owner are supported. Array subclasses, memory maps and views
 of them, external buffers, readonly, F-order or strided arrays are rejected.
 Other arguments must use plain scalars or flat nonobject numeric/string vectors
-and plain metadata dictionaries; custom conversion/warning hooks and any
-overlap with R, including nested or zero-dimensional views, are rejected before
-writes. External aliases that are not arguments are consumed with R and must
+and plain metadata dictionaries; custom conversion objects and any overlap
+with R, including nested or zero-dimensional views, are rejected before writes. External aliases that are not arguments are consumed with R and must
 not be accessed concurrently.
-The option requires standard warning display or plain-list recording through
-`warnings.catch_warnings(record=True)`; custom warning dispatch/display and
-`logging.captureWarnings` are unsupported. Ordinary warning-as-error filters
-remain supported. `R_finite` must be `None` or the plain Python value `False`;
+Standard warning dispatch, recording, `logging.captureWarnings` and
+warning-as-error filters are supported. Warning display and tracing state do
+not affect eligibility; callbacks must not mutate input arrays during a fit. `R_finite` must be `None` or the plain Python value `False`;
 the NumPy boolean scalar is outside this narrow support boundary.
 
 This option excludes reference `X`, `bhat`/`shat`, finite-reference/mismatch or

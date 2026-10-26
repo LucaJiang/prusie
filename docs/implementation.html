@@ -47,7 +47,9 @@
 <li><a href="#trimming-and-output-shapes">Trimming and output shapes</a></li>
 </ul>
 </li>
+<li><a href="#native-threading">Native threading</a></li>
 <li><a href="#numerical-reproducibility">Numerical reproducibility</a></li>
+<li><a href="#dense-storage-and-matrix-products">Dense storage and matrix products</a></li>
 <li><a href="#reference-source-mapping">Reference source mapping</a></li>
 </ul>
 </div>
@@ -77,9 +79,14 @@ PIPs and credible sets and builds the <code>SusieResult</code>.</p>
 </thead>
 <tbody>
 <tr>
-<td>Python package</td>
-<td><code>api.py</code>, <code>individual.py</code>, <code>rss_lambda.py</code>, <code>rss_models.py</code>, <code>posterior.py</code>, <code>result.py</code>, <code>refinement.py</code></td>
-<td>Public functions and argument checks; alignment of identifiers and metadata; <code>maf</code> filtering, null column and prior weights; RSS preparation; choice of route; the sweep loop of dynamic RSS models; PIPs, credible sets and <code>SusieResult</code>; continuation and refinement</td>
+<td>Python entry points</td>
+<td><code>individual.py</code>, <code>suff_stat.py</code>, <code>rss.py</code>, <code>rss_lambda.py</code>, <code>constructors.py</code>, <code>ser.py</code></td>
+<td>Convert individual data, sufficient statistics and association/LD inputs; construct automatic and trend-filter fits; standalone single-effect regression</td>
+</tr>
+<tr>
+<td>Python shared core</td>
+<td><code>_request.py</code>, <code>workhorse.py</code>, <code>rss_models.py</code>, <code>posterior.py</code>, <code>result.py</code>, <code>refinement.py</code>, <code>_validation.py</code></td>
+<td>Validate and construct fitting requests; dispatch prepared fits and assemble results; dynamic RSS sweeps; PIPs, credible sets, continuation and refinement</td>
 </tr>
 <tr>
 <td>Binding</td>
@@ -144,8 +151,9 @@ PIPs and credible sets and builds the <code>SusieResult</code>.</p>
 </tbody>
 </table></div>
 <h2 id="fitting-routes">Fitting routes</h2>
-<p>All public fitting functions build a <code>_FitRequest</code> with <code>_prepare_request</code>
-and pass it to <code>_fit</code>, which follows one of four routes:</p>
+<p>The individual-data, sufficient-statistics, RSS and RSS-lambda entry points
+convert their inputs, then use <code>_request._prepare_request</code> to build a
+<code>_FitRequest</code> and call <code>workhorse._fit</code>, which follows one of four routes:</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -188,9 +196,9 @@ their sweep loop runs in Python with NumPy matrix products. <code>susie_ser</cod
 starts.</p>
 <h2 id="call-paths">Call paths</h2>
 <h3 id="susie_rss"><code>susie_rss</code></h3>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>susie_rss                                        api.py
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>susie_rss                                        rss.py
 ├─ argument checks; RSSControl
-├─ list of LD panels → prepare_multipanel        rss_models.py
+├─ list of LD panels → prepare_multipanel        rss.py
 │    fit each panel, start from the best, joint dynamic fit
 ├─ z ← bhat/shat when z is not given; missing z ← 0 with a warning
 ├─ reference X → _validated_design, _column_stats → design route
@@ -198,8 +206,8 @@ starts.</p>
 ├─ working statistics: n known | bhat, shat and var_y | n missing
 ├─ asymmetric R → RuntimeWarning → (M + Mᵀ)/2
 ├─ R_finite or R_mismatch → dynamic request
-├─ _prepare_request → _FitRequest
-└─ _fit
+├─ _prepare_request → _FitRequest                 _request.py
+└─ _fit                                           workhorse.py
    ├─ dynamic → fit_dynamic → _native.ser_update for each effect
    ├─ design  → _native.fit_design_dense | _native.fit_design_csc
    ├─ dense   → _native.fit → fit_controlled → fit_operator
@@ -214,8 +222,8 @@ starts.</p>
 │    dense → F-ordered float64, sparse → CSC copy, TrendDesign kept implicit
 ├─ _column_stats: column means and scales (centering stays implicit)
 ├─ working y, Xᵀy and diagonal → _DesignData
-├─ _prepare_request(XtX=None, Xty, yty, n, design) → _FitRequest
-└─ _fit → _native.fit_design_dense | fit_design_csc | fit_design_trend
+├─ _prepare_request(XtX=None, Xty, yty, n, _design=design) → _FitRequest  _request.py
+└─ _fit (workhorse.py) → _native.fit_design_dense | fit_design_csc | fit_design_trend
         → credible_sets (correlations of members computed from X)
         → SusieResult with fitted values
 </code></pre></div>
@@ -273,9 +281,10 @@ product by the effect's activity probability and skip inactive effects.</p>
                                 (z̃ is the Wald-adjusted z when z_method = &quot;wald&quot;;
                                  var_y is 1 when not supplied)
     if the z-score matrix was asymmetric: warn and use (M + Mᵀ)/2
-    return _fit(_prepare_request(XtX, Xty, yty, n, …))
+    return workhorse._fit(_request._prepare_request(XtX, Xty, yty, n, …))
 
-function _prepare_request(XtX, Xty, yty, n, options):
+function _request._prepare_request(XtX, Xty, yty, n, options, design=None):
+    individual-level input supplies design instead of XtX (XtX=None)
     check scalars, tolerances, priors and residual-variance bounds
     align identifiers and metadata; apply the maf filter
     if null_weight &gt; 0: append a null column; normalize the prior weights
@@ -286,7 +295,7 @@ function _prepare_request(XtX, Xty, yty, n, options):
     keep read-only copies if continuation or refinement must be supported
     return _FitRequest
 
-function _fit(request):
+function workhorse._fit(request):
     native ← solver result for the request&#39;s route
     re-emit native warnings; warn if not converged
     pip  ← marginal_pip(alpha, V)
@@ -525,6 +534,44 @@ than <code>pip</code>, and credible sets that contain the null column are reject
 credible set qualifies, the set collections are empty and PIPs are still
 returned. PIPs use effects with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo></mrow><annotation encoding="application/x-tex">V_\ell&gt;</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span></span></span></span></span> <code>prior_tol</code>; credible sets use
 <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">V_\ell&gt;10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span>.</p>
+<h2 id="native-threading">Native threading</h2>
+<p>Dense Gram products may partition output rows among a private per-fit native
+thread pool when <code>n_threads &gt; 1</code>. Each output coordinate retains its ordered
+source-column accumulation; IBSS still updates effects sequentially. Pool
+creation is skipped for one thread and small matrices. Kernel dispatch requires
+at least 1024 output rows and 1,048,576 matrix entries. Exact-class compact
+products use the same rule based on their proved dimension. Public default-one
+validation is serial and does not consult a process-global thread count. No
+global Rayon pool or BLAS thread setting is modified.</p>
+<p>Eligible plain C-order z/R/n RSS calls use a local private execution owner for
+the sufficient exact-symmetry proof and complete owned paired validation/repair.
+Eligibility depends on normalized preparation inputs: a count greater than one,
+p ≥ 1024, provided n, <code>var_y=None</code>, and aligned native float64 C-order storage.
+Solver and output controls do not disable this matrix work. NumPy integer counts,
+replaced stderr, tracing, profiling and logging warning capture use the same
+path. Other preparation routes retain their requested solver count; destructive
+LD workspace preparation remains serial.</p>
+<p>All conversion and array checks finish before native borrowing. Static upper
+macroblock-row jobs own each unordered pair, write both output positions once
+and preserve the separate scaled terms and ordered average. Workers never call
+Python or acquire the GIL. Native preparation returns warning predicates and
+deferred repair errors as data. Its owner retains the worker JoinHandles and
+joins them in <code>finally</code> before later Python transformations or warning dispatch.
+The calling thread uses <code>warnings.warn</code> with the original messages and order;
+raw validation errors retain priority, and symmetry warnings precede deferred
+repair errors. Fitting creates its own per-call executor after preparation.
+The private owner is absent from result options and serialization, and a saved
+traceback retains only an inert closed wrapper.</p>
+<p>On Linux x86_64, parallel preparation requires nearest rounding, masked
+exceptions, FTZ/DAZ disabled and the canonical x87 control word. Read-only probes
+inspect the caller and every worker. Unknown or nonstandard controls use ordinary
+preparation; no floating controls are set. Sticky exception flags can accrue on
+different threads; equality of the complete floating environment is not a result
+contract. Construction failure uses ordinary preparation. A recoverable joined
+task panic discards its partial output and runs the complete serial helper;
+unrecoverable join failure cannot return a valid posterior. Solver-only fallback
+entries retain their existing Rayon lifecycle; dropping a pool signals termination
+and does not itself establish that all worker threads have joined.</p>
 <h2 id="numerical-reproducibility">Numerical reproducibility</h2>
 <p>Agreement with susieR is validated with relative tolerance zero: complete final
 component alpha matrices are compared with pinned susieR 0.16.6 at absolute
@@ -537,6 +584,44 @@ complete-alpha tolerance above, not bitwise equality. The compile-time
 uses the existing scalar fallback. It leaves model settings unchanged and makes
 no promise of identical floating-point results across platforms. There is no
 runtime environment switch selecting an experimental numerical algorithm.</p>
+<h2 id="dense-storage-and-matrix-products">Dense storage and matrix products</h2>
+<p>Ordinary RSS validation owns its repair and leaves the caller unchanged.
+The explicit <code>susie_rss(overwrite_ld=True)</code> storage option first performs the
+same complete exact-symmetry proof. If it fails, a read-only search must find
+finite raw/scaled terms with unequal scaled values before any store. With no
+witness, the unchanged owned helper is used and R remains untouched. Otherwise
+the read borrow ends and one NumPy mutable borrow, under the GIL, supplies a
+paired repair traversal. A complete SSE2 tile loads both original orientations
+before any tile store; scalar tails load each original pair before either
+store. No immutable Rust slice aliases the mutable buffer, and no full backup
+or repaired matrix is allocated by this destructive path.</p>
+<p>The traversal independently derives the same raw/scaled/repair predicates and
+ordered <code>(x*s + y*s)/2</code> values as owned preparation. Raw validation errors keep
+their priority, then the original Python symmetry warning precedes deferred
+repair errors. The mutable borrow ends before warning dispatch. The actual
+native action controls the matrix representation: consumed R is scaled XtX
+with global scale 1; no-write paths keep raw R and scale n−1. Original sample
+size and all model settings are retained. Diagonal preparation, ordinary stored
+products and both native purity loops use that same matrix and scale. The
+option's support, alias exclusions and destructive-on-failure contract are
+documented in <a href="api.html#optional-ld-workspace">the API</a>.</p>
+<!-- calculated:memory:start -->
+<p>At <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>5000</mn></mrow><annotation encoding="application/x-tex">p=5000</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">5000</span></span></span></span></span>, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><msup><mi>p</mi><mn>2</mn></msup><mo>=</mo><mn>200</mn><mo separator="true">,</mo><mn>000</mn><mo separator="true">,</mo><mn>000</mn></mrow><annotation encoding="application/x-tex">8p^2=200,000,000</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0085em;vertical-align:-0.1944em;"></span><span class="mord">8</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8389em;vertical-align:-0.1944em;"></span><span class="mord">200</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">000</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">000</span></span></span></span></span> bytes, or approximately <strong>190.7 MiB</strong>.</p>
+<!-- calculated:memory:end -->
+
+<p>The dense operator applies diagonal scaling implicitly, avoiding a separate
+scaled matrix when the factors permit safe evaluation. Its products use a four-column kernel
+with runtime-checked AVX2 support and a portable fallback. Gaussian single-effect
+updates reuse groups of equal sampling variance. Runtime and memory use depend
+on input size, exact matrix structure, iteration count and requested threads.
+Reducing temporary storage need not reduce runtime, and parallelism does not
+make every input faster.
+There are no environment variables for selecting alternative mathematical paths.
+Use the per-fit <code>n_threads</code> parameter for native product parallelism and eligible
+RSS preparation. Its default is one, and public thread selection remains
+independent of <code>PRUSIE_NUM_THREADS</code>.
+Component updates are sequential. The primary comparisons use one numerical
+thread throughout.</p>
 <h2 id="reference-source-mapping">Reference source mapping</h2>
 <p>The reference is <a href="https://github.com/stephenslab/susieR/tree/8e56a8e038e989856d106d9ca5175cc664fea9d2">susieR 0.16.6</a>.
 Corresponding functions at that commit are:</p>
@@ -569,7 +654,7 @@ Corresponding functions at that commit are:</p>
 <td><code>update_model_variance</code>, <code>trim_null_effects</code> (<code>R/model_methods.R</code>)</td>
 </tr>
 <tr>
-<td><code>individual.py</code>: <code>susie</code>; <code>api.py</code>: <code>susie_suff_stat</code>, <code>susie_rss</code>; <code>rss_lambda.py</code>: <code>susie_rss_lambda</code></td>
+<td><code>individual.py</code>: <code>susie</code>; <code>suff_stat.py</code>: <code>susie_suff_stat</code>/<code>susie_ss</code>; <code>rss.py</code>: <code>susie_rss</code>; <code>rss_lambda.py</code>: <code>susie_rss_lambda</code>; <code>_request.py</code> and <code>workhorse.py</code>: shared construction and fitting</td>
 <td><code>susie</code>, <code>susie_ss</code>, <code>susie_rss</code>, <code>susie_rss_lambda</code> (<code>R/susie.R</code>) and their constructors (<code>R/susie_constructors.R</code>)</td>
 </tr>
 </tbody>

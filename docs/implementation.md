@@ -21,7 +21,8 @@ PIPs and credible sets and builds the `SusieResult`.
 
 | Layer | Main modules | Responsibilities |
 | --- | --- | --- |
-| Python package | `api.py`, `individual.py`, `rss_lambda.py`, `rss_models.py`, `posterior.py`, `result.py`, `refinement.py` | Public functions and argument checks; alignment of identifiers and metadata; `maf` filtering, null column and prior weights; RSS preparation; choice of route; the sweep loop of dynamic RSS models; PIPs, credible sets and `SusieResult`; continuation and refinement |
+| Python entry points | `individual.py`, `suff_stat.py`, `rss.py`, `rss_lambda.py`, `constructors.py`, `ser.py` | Convert individual data, sufficient statistics and association/LD inputs; construct automatic and trend-filter fits; standalone single-effect regression |
+| Python shared core | `_request.py`, `workhorse.py`, `rss_models.py`, `posterior.py`, `result.py`, `refinement.py`, `_validation.py` | Validate and construct fitting requests; dispatch prepared fits and assemble results; dynamic RSS sweeps; PIPs, credible sets, continuation and refinement |
 | Binding | `lib.rs`, `options.rs`, `array_layout.rs`, `summary_helpers.rs`, `prepare_helpers.rs`, `design.rs`, `ser.rs`, `output.rs` | Read-only borrowing of NumPy arrays after layout checks; conversion of options to typed Rust values; native matrix validation, repair and preparation; credible-set purity; conversion of results and errors |
 | Solver | see the table below | IBSS sweeps, single-effect regression (SER), prior-variance search, expected residual sum of squares (ER2) and ELBO, stopping rules, trimming and Gram operators |
 
@@ -40,8 +41,9 @@ PIPs and credible sets and builds the `SusieResult`.
 
 ## Fitting routes
 
-All public fitting functions build a `_FitRequest` with `_prepare_request`
-and pass it to `_fit`, which follows one of four routes:
+The individual-data, sufficient-statistics, RSS and RSS-lambda entry points
+convert their inputs, then use `_request._prepare_request` to build a
+`_FitRequest` and call `workhorse._fit`, which follows one of four routes:
 
 | Route | Used for | Native entry | Sweep loop |
 | --- | --- | --- | --- |
@@ -60,9 +62,9 @@ starts.
 ### `susie_rss`
 
 ```text
-susie_rss                                        api.py
+susie_rss                                        rss.py
 ├─ argument checks; RSSControl
-├─ list of LD panels → prepare_multipanel        rss_models.py
+├─ list of LD panels → prepare_multipanel        rss.py
 │    fit each panel, start from the best, joint dynamic fit
 ├─ z ← bhat/shat when z is not given; missing z ← 0 with a warning
 ├─ reference X → _validated_design, _column_stats → design route
@@ -70,8 +72,8 @@ susie_rss                                        api.py
 ├─ working statistics: n known | bhat, shat and var_y | n missing
 ├─ asymmetric R → RuntimeWarning → (M + Mᵀ)/2
 ├─ R_finite or R_mismatch → dynamic request
-├─ _prepare_request → _FitRequest
-└─ _fit
+├─ _prepare_request → _FitRequest                 _request.py
+└─ _fit                                           workhorse.py
    ├─ dynamic → fit_dynamic → _native.ser_update for each effect
    ├─ design  → _native.fit_design_dense | _native.fit_design_csc
    ├─ dense   → _native.fit → fit_controlled → fit_operator
@@ -88,8 +90,8 @@ susie                                            individual.py
 │    dense → F-ordered float64, sparse → CSC copy, TrendDesign kept implicit
 ├─ _column_stats: column means and scales (centering stays implicit)
 ├─ working y, Xᵀy and diagonal → _DesignData
-├─ _prepare_request(XtX=None, Xty, yty, n, design) → _FitRequest
-└─ _fit → _native.fit_design_dense | fit_design_csc | fit_design_trend
+├─ _prepare_request(XtX=None, Xty, yty, n, _design=design) → _FitRequest  _request.py
+└─ _fit (workhorse.py) → _native.fit_design_dense | fit_design_csc | fit_design_trend
         → credible_sets (correlations of members computed from X)
         → SusieResult with fitted values
 ```
@@ -156,9 +158,10 @@ function susie_rss(z or (bhat, shat), R or X, n, var_y, …):
                                 (z̃ is the Wald-adjusted z when z_method = "wald";
                                  var_y is 1 when not supplied)
     if the z-score matrix was asymmetric: warn and use (M + Mᵀ)/2
-    return _fit(_prepare_request(XtX, Xty, yty, n, …))
+    return workhorse._fit(_request._prepare_request(XtX, Xty, yty, n, …))
 
-function _prepare_request(XtX, Xty, yty, n, options):
+function _request._prepare_request(XtX, Xty, yty, n, options, design=None):
+    individual-level input supplies design instead of XtX (XtX=None)
     check scalars, tolerances, priors and residual-variance bounds
     align identifiers and metadata; apply the maf filter
     if null_weight > 0: append a null column; normalize the prior weights
@@ -169,7 +172,7 @@ function _prepare_request(XtX, Xty, yty, n, options):
     keep read-only copies if continuation or refinement must be supported
     return _FitRequest
 
-function _fit(request):
+function workhorse._fit(request):
     native ← solver result for the request's route
     re-emit native warnings; warn if not converged
     pip  ← marginal_pip(alpha, V)
@@ -352,46 +355,37 @@ products use the same rule based on their proved dimension. Public default-one
 validation is serial and does not consult a process-global thread count. No
 global Rayon pool or BLAS thread setting is modified.
 
-Ordinary plain C-order z/R/n RSS calls can share a private execution owner for
-the sufficient exact-symmetry proof, complete owned paired validation/repair,
-and the native solver. This optional preparation route requires a plain integer
-count greater than one, p ≥ 1024, scalar Gaussian controls and standard warning
-handling. Other input types, advanced models, filtering/augmentation, explicit
-prior weights, tracking, retained/refitted/prepared routes and destructive LD
-workspace calls keep their ordinary preparation. These fallbacks still use the
-requested solver count; they do not become single-thread fits.
+Eligible plain C-order z/R/n RSS calls use a local private execution owner for
+the sufficient exact-symmetry proof and complete owned paired validation/repair.
+Eligibility depends on normalized preparation inputs: a count greater than one,
+p ≥ 1024, provided n, `var_y=None`, and aligned native float64 C-order storage.
+Solver and output controls do not disable this matrix work. NumPy integer counts,
+replaced stderr, tracing, profiling and logging warning capture use the same
+path. Other preparation routes retain their requested solver count; destructive
+LD workspace preparation remains serial.
 
-The owner is a local resource of one `susie_rss` invocation. Dedicated private
-arguments carry it through the helper and native fitting entry; it is absent
-from option dictionaries, prepared requests, results and serialization. All
-argument conversion and array checks finish before native borrowing. Static
-upper macroblock-row jobs own each unordered pair, write both owned output
-positions once and preserve the separate scaled terms and ordered average.
-Every job finishes before the caller reads or releases the owned output. Workers
-never call Python or acquire the GIL. The calling thread emits the original
-warning before any deferred repair error, at its existing stack depth.
+All conversion and array checks finish before native borrowing. Static upper
+macroblock-row jobs own each unordered pair, write both output positions once
+and preserve the separate scaled terms and ordered average. Workers never call
+Python or acquire the GIL. Native preparation returns warning predicates and
+deferred repair errors as data. Its owner retains the worker JoinHandles and
+joins them in `finally` before later Python transformations or warning dispatch.
+The calling thread uses `warnings.warn` with the original messages and order;
+raw validation errors retain priority, and symmetry warnings precede deferred
+repair errors. Fitting creates its own per-call executor after preparation.
+The private owner is absent from result options and serialization, and a saved
+traceback retains only an inert closed wrapper.
 
-On Linux x86_64, early reuse requires nearest rounding, masked exceptions,
-FTZ/DAZ disabled and the canonical x87 control word. Read-only probes inspect
-the caller and every worker. Unknown/nonstandard controls use ordinary
-preparation; no floating controls are set. At the original solver pool-selection
-point, after its unchanged validation/materialization, controls and execution
-ownership are checked again. Matching controls reuse the pool. Changed controls
-terminate and join it before a same-count replacement starts under the current
-caller controls. This rare branch has two sequential worker generations and
-one execution owner, with no overlap. Sticky exception status flags can accrue
-on different threads; equality of the entire floating environment is not a
-result contract. Custom hooks depending on those flags retain the parent route.
-
-The new owner retains all worker JoinHandles and joins them on success, failure
-or explicit close. A public `finally` also covers preparation/warning failures;
-a saved traceback retains only an inert closed wrapper. Construction/admission
-failure uses ordinary preparation and preserves the solver's original error
-point. A recoverable joined task panic discards its private partial output and
-runs the complete serial helper. Actual join/unrecoverable failure cannot return
-a valid posterior. Original solver-only fallback entries retain their existing
-Rayon pool lifecycle; dropping those pools signals termination and is not a
-claim that all worker threads have already joined.
+On Linux x86_64, parallel preparation requires nearest rounding, masked
+exceptions, FTZ/DAZ disabled and the canonical x87 control word. Read-only probes
+inspect the caller and every worker. Unknown or nonstandard controls use ordinary
+preparation; no floating controls are set. Sticky exception flags can accrue on
+different threads; equality of the complete floating environment is not a result
+contract. Construction failure uses ordinary preparation. A recoverable joined
+task panic discards its partial output and runs the complete serial helper;
+unrecoverable join failure cannot return a valid posterior. Solver-only fallback
+entries retain their existing Rayon lifecycle; dropping a pool signals termination
+and does not itself establish that all worker threads have joined.
 
 ## Numerical reproducibility
 
@@ -461,7 +455,7 @@ Corresponding functions at that commit are:
 | `residual.rs`: `expected_residual_sum_squares`; ELBO in `ibss.rs` | `get_ER2`, `Eloglik` (`R/sufficient_stats_methods.R`); `get_objective` (`R/model_methods.R`) |
 | `diagnostics.rs`: `stopping_decision`, `detect_cycle` | `check_convergence` (`R/model_methods.R`); `check_alpha_pip_cycle_convergence` (`R/susie_utils.R`) |
 | `ibss.rs`: residual update and trimming | `update_model_variance`, `trim_null_effects` (`R/model_methods.R`) |
-| `individual.py`: `susie`; `api.py`: `susie_suff_stat`, `susie_rss`; `rss_lambda.py`: `susie_rss_lambda` | `susie`, `susie_ss`, `susie_rss`, `susie_rss_lambda` (`R/susie.R`) and their constructors (`R/susie_constructors.R`) |
+| `individual.py`: `susie`; `suff_stat.py`: `susie_suff_stat`/`susie_ss`; `rss.py`: `susie_rss`; `rss_lambda.py`: `susie_rss_lambda`; `_request.py` and `workhorse.py`: shared construction and fitting | `susie`, `susie_ss`, `susie_rss`, `susie_rss_lambda` (`R/susie.R`) and their constructors (`R/susie_constructors.R`) |
 
 The Brent search in `optimizer.rs` is adapted from `Brent_fmin` in R's
 `src/library/stats/src/optimize.c` (GPL-2.0-or-later). Attribution and licenses

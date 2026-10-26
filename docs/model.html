@@ -755,8 +755,14 @@ The summary-statistic construction follows
 <a href="https://doi.org/10.1371/journal.pgen.1010299">Zou et al. (2022), <em>Fine-mapping from summary data with the “Sum of Single
 Effects” model</em></a>.</p>
 <p>For the executed path, read
-<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py">api.py</a>
-(<code>susie_rss</code>, <code>susie_suff_stat</code>),
+<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/rss.py">rss.py</a>
+(<code>susie_rss</code>),
+<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/suff_stat.py">suff_stat.py</a>
+(<code>susie_suff_stat</code>, <code>susie_ss</code>),
+<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/_request.py">_request.py</a>
+(<code>_prepare_request</code>) and
+<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/workhorse.py">workhorse.py</a>
+(<code>_fit</code>, <code>SusieInputs</code>, <code>susie_workhorse</code>),
 <a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/individual.py">individual.py</a>
 (<code>susie</code>),
 <a href="https://github.com/LucaJiang/prusie/tree/main/rust/prusie-core/src">solver crate</a>

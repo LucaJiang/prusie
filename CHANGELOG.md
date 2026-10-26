@@ -1,5 +1,10 @@
 # Changelog
 
+- Unreleased: replace `prusie.api` with `suff_stat`, `rss`, `workhorse`,
+  `_request` and `_validation`; `SusieInputs` and `susie_workhorse` are now
+  defined in `prusie.workhorse`. Public `prusie.*` names are unchanged.
+  `SusieInputs` objects pickled by earlier versions do not load.
+
 ## 0.2.4.dev2 — Gaussian model and API expansion (unreleased)
 
 - Warn when `susie_rss` replaces missing z-scores with zero. The multi-panel

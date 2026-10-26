@@ -616,8 +616,14 @@ The summary-statistic construction follows
 Effects” model*](https://doi.org/10.1371/journal.pgen.1010299).
 
 For the executed path, read
-[api.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/api.py)
-(`susie_rss`, `susie_suff_stat`),
+[rss.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/rss.py)
+(`susie_rss`),
+[suff_stat.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/suff_stat.py)
+(`susie_suff_stat`, `susie_ss`),
+[_request.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/_request.py)
+(`_prepare_request`) and
+[workhorse.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/workhorse.py)
+(`_fit`, `SusieInputs`, `susie_workhorse`),
 [individual.py](https://github.com/LucaJiang/prusie/blob/main/src/prusie/individual.py)
 (`susie`),
 [solver crate](https://github.com/LucaJiang/prusie/tree/main/rust/prusie-core/src)

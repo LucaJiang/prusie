@@ -20,10 +20,10 @@ text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Ar
 <text x="145.5" y="80.5" class="note">individual.py · X and y</text>
 <rect x="269" y="46" width="211" height="46" rx="5" fill="#edf3f7" stroke="#28618b" stroke-width="1.4"/>
 <text x="374.5" y="65.5" class="code">susie_suff_stat</text>
-<text x="374.5" y="80.5" class="note">api.py · XtX, Xty, yty, n</text>
+<text x="374.5" y="80.5" class="note">suff_stat.py · XtX, Xty, yty, n</text>
 <rect x="498" y="46" width="211" height="46" rx="5" fill="#edf3f7" stroke="#28618b" stroke-width="1.4"/>
 <text x="603.5" y="65.5" class="code">susie_rss</text>
-<text x="603.5" y="80.5" class="note">api.py · z or bhat/shat, R</text>
+<text x="603.5" y="80.5" class="note">rss.py · z or bhat/shat, R</text>
 <rect x="727" y="46" width="211" height="46" rx="5" fill="#edf3f7" stroke="#28618b" stroke-width="1.4"/>
 <text x="832.5" y="65.5" class="code">susie_rss_lambda</text>
 <text x="832.5" y="80.5" class="note">rss_lambda.py · z, R, λ</text>
@@ -45,10 +45,10 @@ text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Ar
 <path d="M374.5,92 L374.5,184" class="arrow" marker-end="url(#head)"/>
 <rect x="40" y="186" width="898" height="42" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
 <text x="489.0" y="203.5" class="code">_prepare_request</text>
-<text x="489.0" y="218.5" class="note">api.py · identifiers · maf filter · null column · prior weights · scales · native options → _FitRequest</text>
+<text x="489.0" y="218.5" class="note">_request.py · identifiers · maf filter · null column · prior weights · scales · native options → _FitRequest</text>
 <rect x="40" y="252" width="534" height="46" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
 <text x="307.0" y="271.5" class="code">_fit</text>
-<text x="307.0" y="286.5" class="note">api.py · choose the route · call the solver · build SusieResult</text>
+<text x="307.0" y="286.5" class="note">workhorse.py · choose the route · call the solver · build SusieResult</text>
 <path d="M307.0,228 L307.0,250" class="arrow" marker-end="url(#head)"/>
 <rect x="768" y="252" width="170" height="46" rx="5" fill="#ffffff" stroke="#c9d4dc" stroke-width="1"/>
 <text x="853.0" y="271.5" class="code">fit_dynamic</text>
