@@ -866,11 +866,23 @@ def _sensitivity_prior(weights, ids, null_weight, *, policy, source_ids=None):
     )
 
 
+def _sensitivity_workspace_policy(arguments):
+    """Sensitivity fits reuse inputs and never request destructive LD storage."""
+    if "overwrite_ld" not in arguments:
+        return
+    overwrite = arguments.pop("overwrite_ld")
+    if type(overwrite) not in (bool, np.bool_):
+        raise ValueError("overwrite_ld must be bool or numpy.bool_")
+    if overwrite:
+        raise ValueError("run_sensitivity requires overwrite_ld=False; fits reuse the inputs")
+
+
 def _alternative_sensitivity_inputs(alt, settings, baseline_ids, baseline_metadata):
     """Resolve an alternative input set, mapping prior weights and metadata by variant ID."""
     if not isinstance(alt, dict):
         raise ValueError("alternative inputs must be a mapping")
     data = dict(alt)
+    _sensitivity_workspace_policy(data)
     options = dict(settings)
     explicit_prior = "prior_weights" in data
     supplied_prior = data.pop("prior_weights", None)
@@ -970,9 +982,12 @@ def run_sensitivity(
         (max_iter, tol, track_fit and/or convergence).
     baseline : SusieResult, optional
         Existing baseline fit; its variant IDs, alleles and recorded settings
-        are checked against ``inputs`` and ``baseline_settings``.
+        are checked against ``inputs`` and ``baseline_settings``. Continuation
+        requires retained data, which an ``overwrite_ld=True`` baseline cannot
+        provide; ordinary changes and refinement use fresh refits.
     baseline_settings : dict, optional
-        Model settings shared by all fits.
+        Model settings shared by all fits. Explicit ``overwrite_ld=True`` is
+        rejected; sensitivity fits preserve their reusable inputs.
     cache : dict, optional
         Caller-owned cache of fits keyed by :func:`sensitivity_key`.
     fit_function : callable, default susie_rss
@@ -1005,7 +1020,9 @@ def run_sensitivity(
     call. Cached fit objects are shared, so they
     must not be modified while the cache is in use. When a baseline fit is
     supplied, equality of its z-scores and LD with ``inputs`` cannot be
-    verified and is reported as not assessed.
+    verified and is reported as not assessed. Its ``overwrite_ld`` workspace
+    policy is not inherited by refits. Explicit ``overwrite_ld=False`` in
+    settings or input mappings is equivalent to omitting it.
     """
     from .diagnostics import ConvergenceConfig, resolve_convergence
     from .rss import susie_rss
@@ -1015,6 +1032,8 @@ def run_sensitivity(
         raise TypeError("inputs must be a mapping and plan must be an explicit sequence")
     inputs = dict(inputs)
     settings = copy.deepcopy(baseline_settings or {})
+    _sensitivity_workspace_policy(inputs)
+    _sensitivity_workspace_policy(settings)
     if set(inputs) & set(settings):
         raise ValueError("inputs and baseline_settings must not duplicate argument keys")
     if set(settings) & {"z", "R", "n", "bhat", "shat", "variant_ids"}:
@@ -1064,7 +1083,17 @@ def run_sensitivity(
         allowed_settings = (
             set(inspect.signature(susie_rss).parameters)
             - set(inputs)
-            - {"s_init", "variant_metadata", "variant_ids", "z", "R", "n", "bhat", "shat"}
+            - {
+                "s_init",
+                "variant_metadata",
+                "variant_ids",
+                "z",
+                "R",
+                "n",
+                "bhat",
+                "shat",
+                "overwrite_ld",
+            }
         )
         recorded = {
             k: copy.deepcopy(v) for k, v in baseline.params.items() if k in allowed_settings
@@ -1206,6 +1235,11 @@ def run_sensitivity(
     cache = {} if cache is None else cache
     results, records, summaries = {}, [], {}
     retain = any("continuation" in item for item in plan)
+    if retain and baseline is not None and getattr(baseline, "_prepared", None) is None:
+        raise ValueError(
+            "Continuation needs retained data; fit the supplied baseline with "
+            "retain_data=True (overwrite_ld=True cannot retain data)"
+        )
     if retain:
         settings["retain_data"] = True
         for _, options, _, _ in resolved.values():
