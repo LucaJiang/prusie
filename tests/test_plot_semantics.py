@@ -543,7 +543,8 @@ def test_compatible_pip_rule_uses_fitting_tol_for_both_posterior_thresholds():
     # unrelated configured alpha/PIP thresholds as the selected PIP rule.
     del summary["convergence"]["tol"]
     view = plots.plot_convergence(summary)
-    assert len(view[1][2].lines) == len(view[1][3].lines) == 1
+    for axis in view[1][2:4]:
+        assert not any("threshold" in line.get_label().lower() for line in axis.lines)
     plt.close(view[0])
 
 
