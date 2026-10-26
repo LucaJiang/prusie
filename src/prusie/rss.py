@@ -260,7 +260,8 @@ def susie_rss(
         raise ValueError("Supply exactly one of R or X")
     if z_method not in ("wald", "score"):
         raise ValueError("z_method must be 'wald' or 'score'")
-    z_method = str(z_method)
+    if type(z_method) in (str, np.str_):
+        z_method = str(z_method)
     if R_mismatch not in ("none", "eb", "eb_mix", "eb_ser_init", "eb_force_init", "eb_no_init"):
         raise ValueError("Unknown R_mismatch option")
     rss_control = (
@@ -368,6 +369,7 @@ def susie_rss(
     fused_rss = (
         n is not None
         and var_y is None
+        and type(z_method) is str
         and type(R) is np.ndarray
         and R.dtype is _FUSED_RSS_DTYPE
         and R.flags.c_contiguous
