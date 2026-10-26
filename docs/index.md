@@ -12,7 +12,7 @@ validation against susieR 0.16.6 and [the model](model.md) for assumptions.
 
 ## Installation
 
-This checkout contains **0.2.4.dev2** (development version). Building from source requires CPython 3.10–3.13,
+This checkout contains **0.3.0**. Building from source requires CPython 3.10–3.13,
 the Rust toolchain pinned in `rust-toolchain.toml`, a C linker and the Python
 development headers:
 

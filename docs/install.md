@@ -5,7 +5,7 @@ supports ordinary dense fitting. Install the analysis extra below for sparse
 designs, advanced RSS models and auxiliary functions that use SciPy.
 Fitting does not call R.
 
-This checkout contains **0.2.4.dev2** (development version). Record the package
+This checkout contains **0.3.0**. Record the package
 version and source revision with each analysis.
 
 ## Build from source
@@ -45,7 +45,7 @@ reproducibility guarantee. See [numerical reproducibility](implementation.md#num
 The [v0.2.3rc6 prerelease](https://github.com/LucaJiang/prusie/releases/tag/v0.2.3rc6)
 provides a CPython 3.12 wheel for Linux x86-64, tagged `manylinux_2_34`
 (glibc ≥2.34), a source distribution and `SHA256SUMS`. These files belong to
-that earlier version and do not contain the development version described here.
+that earlier version and do not contain version 0.3.0 described here.
 
 Download the matching file and verify it against `SHA256SUMS`. For that wheel:
 

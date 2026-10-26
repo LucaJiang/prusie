@@ -100,14 +100,18 @@ keeps its ordered arithmetic; component updates remain sequential. Small
 matrices and compact products with fewer than 1024 rows remain serial.
 The process-wide BLAS, OpenMP and Rayon configuration is unchanged.
 
-Parallel preparation requires a normalized count greater than one, p ≥ 1024,
+Parallel preparation is available on GNU/Linux x86-64 builds without
+`portable-math`, with standard floating controls. It requires a normalized
+count greater than one, p ≥ 1024,
 provided n, `var_y=None`, and a plain aligned native float64 C-order LD array
 on the owned-repair route. Solver and output controls do not restrict this
 independent matrix work. NumPy integer counts use the same path as Python
 integers. Replaced stderr, tracing, profiling and logging warning capture do not
 change eligibility. Nonstandard floating-control modes use ordinary preparation;
 no floating controls are changed. Other preparation routes retain the requested
-solver count. The destructive `overwrite_ld=True` route prepares serially.
+solver count. Memory-mapped LD, ndarray subclasses and other dtypes use the
+serial preparation route. The destructive `overwrite_ld=True` route prepares
+serially. Builds without the preparation capability can still parallelize fitting.
 
 The default is explicitly one native thread. Pass `n_threads=2` or
 `n_threads=4` to try parallel fitting; more threads do not guarantee a speedup.

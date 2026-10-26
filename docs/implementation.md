@@ -357,11 +357,13 @@ global Rayon pool or BLAS thread setting is modified.
 
 Eligible plain C-order z/R/n RSS calls use a local private execution owner for
 the sufficient exact-symmetry proof and complete owned paired validation/repair.
-Eligibility depends on normalized preparation inputs: a count greater than one,
+The native preparation capability is limited to GNU/Linux x86-64 builds without
+`portable-math`. Eligibility depends on normalized preparation inputs: a count greater than one,
 p ≥ 1024, provided n, `var_y=None`, and aligned native float64 C-order storage.
 Solver and output controls do not disable this matrix work. NumPy integer counts,
 replaced stderr, tracing, profiling and logging warning capture use the same
-path. Other preparation routes retain their requested solver count; destructive
+path. Memory-mapped LD, ndarray subclasses and other dtypes prepare serially.
+Other preparation routes retain their requested solver count; destructive
 LD workspace preparation remains serial.
 
 All conversion and array checks finish before native borrowing. Static upper
@@ -383,8 +385,8 @@ preparation; no floating controls are set. Sticky exception flags can accrue on
 different threads; equality of the complete floating environment is not a result
 contract. Construction failure uses ordinary preparation. A recoverable joined
 task panic discards its partial output and runs the complete serial helper;
-unrecoverable join failure cannot return a valid posterior. Solver-only fallback
-entries retain their existing Rayon lifecycle; dropping a pool signals termination
+unrecoverable join failure cannot return a valid posterior. Every ordinary fit
+uses a separate Rayon pool; dropping that pool signals termination
 and does not itself establish that all worker threads have joined.
 
 ## Numerical reproducibility

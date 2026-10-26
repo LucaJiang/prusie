@@ -136,6 +136,13 @@ def build() -> None:
     check_assets()
     config = json.loads((ROOT / "tools/site_config.json").read_text())
     version = re.search(r'^version = "([^"]+)"', (ROOT / "pyproject.toml").read_text(), re.M)[1]
+    version_badge = (
+        "Development"
+        if ".dev" in version
+        else "Release candidate"
+        if re.search(r"(?:a|b|rc)\d", version)
+        else "Stable"
+    )
     for path in sorted(DOCS.glob("*.md")):
         body, md = render_markdown(path.read_text(), path.relative_to(ROOT).as_posix())
         body = decorate_body(body)
@@ -171,7 +178,7 @@ def build() -> None:
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="{html.escape(config["package"])} documentation home"><img class="brand-mark" src="{html.escape(config["logo"])}" alt="" width="96" height="96"><span>{config["package"]}<small>{html.escape(config["tagline"])}</small></span></a>
-<div class="version"><span class="version-number">{version}</span><span class="version-badge">{"Development" if ".dev" in version else "Release candidate"}</span></div>
+<div class="version"><span class="version-number">{version}</span><span class="version-badge">{version_badge}</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation">{"".join(nav)}</nav></details>
 </aside>
 <main id="main" tabindex="-1">

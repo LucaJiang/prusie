@@ -20,7 +20,7 @@ SuSiE-inf, SuSiE-ash and Mr.ASH are outside the supported model set.
 
 ## Installation
 
-This checkout contains **0.2.4.dev2** (development version). Building from source
+This checkout contains **0.3.0**. Building from source
 requires CPython 3.10–3.13, the Rust toolchain pinned in `rust-toolchain.toml`,
 a C compiler and archiver, and the Python development headers:
 
@@ -70,19 +70,11 @@ sets (CS) and then produces figures and an offline report from the same fit.
 ## Accuracy and performance
 
 <!-- current:highlights:start -->
-Historical measurements of the recorded **0.2.4.dev2** snapshot against susieR 0.16.6.
-
-| Analysis | Loci | Max. absolute PIP difference vs susieR | Speed-up¹ | Memory ratio² |
-| --- | --- | --- | --- | --- |
-| GWAS | 100 | 9.14e-09 | 26× | 6.3× |
-| eQTL | 100 | 1.22e-08 | 22× | 6.2× |
-
-¹ Geometric mean of per-locus susieR/prusie runtime ratios. ² Median per-locus susieR/prusie ratio of peak resident memory (RSS), including the interpreter and inputs.
+See [performance](docs/performance.md) for measured runtime and memory against
+susieR 0.16.6, and [numerical accuracy](docs/numerical_accuracy.md) for validation.
 <!-- current:highlights:end -->
 
-AMD EPYC 9754, Linux x86-64; one numerical thread per fit.
-See [performance](docs/performance.md) for the data, software and measurement
-protocol, and [numerical accuracy](docs/numerical_accuracy.md) for validation.
+The performance report identifies the measured software, hardware, data and protocol.
 
 ## Documentation
 
