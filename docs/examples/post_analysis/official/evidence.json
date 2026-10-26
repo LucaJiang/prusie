@@ -71757,10 +71757,10 @@
       },
       "render_version": "0.3.0",
       "render_source_identity": {
-        "checkout_head": "bc08eacc7112b30764c097c04eb58843e4b5e6a1",
+        "checkout_head": "68c23b56c7d8e0e6ada6cc47516b0780cb346406",
         "source_files_sha256": {
-          "post_analysis.py": "9adf9f81532a03c97212ee8765137ae1a0fd0f3fb95889c031f644cfb75f0945",
-          "report.py": "690313bcae42074b9c6876c7cd4bda891dd9a7ece9bf86646b98ab05c9cc1db3",
+          "post_analysis.py": "1c8728bb9dd77e957cddb067e146153773d3f4f1484e072bbcae7bfe74c41d66",
+          "report.py": "aab8a15c6faf896cd6bbd7946a2ea09b9c283964ec01a89fafb7c43dfd25a24c",
           "_locus.py": "5745cdcf246b6328a74e9d4f5b804085ec84681c9195247080b519f875596add"
         },
         "native_sha256": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e",
@@ -158663,7 +158663,7 @@
     {
       "id": "ev_a254c72860db994eb53a",
       "path": "/provenance/render_source_identity/checkout_head",
-      "value": "bc08eacc7112b30764c097c04eb58843e4b5e6a1"
+      "value": "68c23b56c7d8e0e6ada6cc47516b0780cb346406"
     },
     {
       "id": "ev_8f9090edade081a8ecb9",
@@ -158683,12 +158683,12 @@
     {
       "id": "ev_81e749ed005dc189969d",
       "path": "/provenance/render_source_identity/source_files_sha256/post_analysis.py",
-      "value": "9adf9f81532a03c97212ee8765137ae1a0fd0f3fb95889c031f644cfb75f0945"
+      "value": "1c8728bb9dd77e957cddb067e146153773d3f4f1484e072bbcae7bfe74c41d66"
     },
     {
       "id": "ev_e507aef3ceb3dac47184",
       "path": "/provenance/render_source_identity/source_files_sha256/report.py",
-      "value": "690313bcae42074b9c6876c7cd4bda891dd9a7ece9bf86646b98ab05c9cc1db3"
+      "value": "aab8a15c6faf896cd6bbd7946a2ea09b9c283964ec01a89fafb7c43dfd25a24c"
     },
     {
       "id": "ev_e09340b8bbd6a6ab4d4d",
@@ -386956,6 +386956,6 @@
       "value": -3.4452043910148324
     }
   ],
-  "sha256": "383660af30fe359ca1498e3bed52c45148b804d466edce37a1932f857d0dfe75",
+  "sha256": "7fc3dd0d4af3b1f5463fa8ce94460db8b150782418d59d3d3d0a9bdbbd8f22c4",
   "transmission_scope": "Selected deterministic result tables, diagnostics and comparisons; supplied provenance and annotations are included and require privacy review. Dense fit histories, effect moments and raw fit matrices are not collected from results."
 }
