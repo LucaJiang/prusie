@@ -1340,8 +1340,9 @@ def write_report(
                 "The inner stopping condition and improvement after "
                 "search answer different questions. Refinement "
                 "improvements use the recorded search objective defined above; "
-                "the iteration log records ELBO before finalization. Accepted search "
-                "candidates may have no saved iteration trace."
+                "the iteration log records ELBO before finalization. Saved iteration "
+                "traces show recorded sweeps; separate fits use independent "
+                "iteration axes."
             ),
             "variance": (
                 "Prior-variance and residual-variance paths describe "
