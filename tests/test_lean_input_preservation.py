@@ -86,9 +86,19 @@ def test_module_warning_filter_keeps_original_helper_stack():
 
 @pytest.mark.parametrize("hook", ["category", "message", "module"])
 @pytest.mark.parametrize("check_input", [False, True])
-def test_warning_filter_callbacks_keep_original_repair_order(hook, check_input):
+def test_warning_filter_callbacks_run_after_owned_repair(hook, check_input):
     R = np.array([[1.0, 0.4], [0.2, 1.0]])
     events = []
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        baseline = susie_rss(
+            z=np.array([1.0, 2.0]),
+            R=R.copy(),
+            n=1000,
+            L=1,
+            max_iter=2,
+            check_input=check_input,
+        )
 
     def callback():
         events.append(hook)
@@ -123,8 +133,19 @@ def test_warning_filter_callbacks_keep_original_repair_order(hook, check_input):
                 ),
             )
             warnings._filters_mutated()
-        with pytest.raises(ValueError, match="XtX diagonal must be nonnegative"):
-            susie_rss(z=np.array([1.0, 2.0]), R=R, n=1000, L=1, max_iter=2, check_input=check_input)
+        # Warnings dispatch after owned matrix preparation. This deliberately
+        # adversarial callback mutates the caller's buffer only after the valid
+        # working matrix has been built; it cannot alter the prepared alpha.
+        actual = susie_rss(
+            z=np.array([1.0, 2.0]),
+            R=R,
+            n=1000,
+            L=1,
+            max_iter=2,
+            check_input=check_input,
+        )
+    assert R[0, 0] == -1.0
+    np.testing.assert_array_equal(actual.alpha.view(np.uint64), baseline.alpha.view(np.uint64))
     assert events == [hook]
     assert [str(w.message) for w in caught] == ["XtX is not symmetric; using (XtX + t(XtX))/2."]
 
