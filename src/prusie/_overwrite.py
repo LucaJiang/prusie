@@ -251,8 +251,6 @@ def recheck(state):
 
 
 def _overwrite_prepare(arguments):
-    from ._overwrite import prepare
-
     state = prepare(arguments)
     _thread_count(arguments["n_threads"])
     L = _integer(arguments["L"], "L")
@@ -303,6 +301,4 @@ def _overwrite_prepare(arguments):
 
 
 def _overwrite_recheck(state):
-    from ._overwrite import recheck
-
     recheck(state)
