@@ -1,94 +1,95 @@
 # Installation
 
-prusie is installed from source for CPython 3.10–3.13. NumPy (≥1.26, <3)
-supports ordinary dense fitting. Install the analysis extra below for sparse
-designs, advanced RSS models and auxiliary functions that use SciPy.
-Fitting does not call R.
+Build prusie 0.3.0 [from source](#build-from-source) using CPython 3.10–3.13.
+NumPy (≥1.26, <3) is its only required Python dependency. Fitting uses a compiled
+Rust extension and does not require R.
 
-This checkout contains **0.3.0**. Record the package
-version and source revision with each analysis.
+Install the [analysis extra](#optional-analysis-tools) for sparse input, LD
+diagnostics and plotting. Record the package version and source revision with
+each analysis.
 
 ## Build from source
 
-Building requires the Rust toolchain pinned in `rust-toolchain.toml` (1.98.1),
-a C compiler and archiver and the Python development headers. The build uses maturin 1.10.2
-and the locked Cargo dependencies.
+Install the Rust toolchain pinned in `rust-toolchain.toml` (1.98.1) and your
+platform's linker tools. The default native GNU/Linux x86-64 build also uses a
+C compiler and `ar` for the vector-math helper. pip uses maturin 1.10.2, pinned in
+`pyproject.toml`, as the build backend.
 
-The pinned PyO3 0.23.5 supports CPython up to 3.13, and the package metadata
-therefore requires Python ≥3.10, <3.14. Support for newer interpreters would
-require an updated binding and its validation.
+From the source checkout, run these commands in a POSIX shell:
 
 ```sh
-cd prusie  # source checkout for the version documented here
 python -m venv .venv
 . .venv/bin/activate
-python -m pip install .
+python -m pip install . --config-settings=build-args="--locked"
 ```
 
-pip and Cargo need network access or locally cached build dependencies. Install
-the pinned Rust toolchain with your usual Rust installer before building. The
-extension does not require a BLAS development library. The portable scalar
-solver requires no system vector-math library.
+`--locked` requires the dependency versions recorded in `Cargo.lock`. pip and
+Cargo need network access or locally available dependencies. The extension does
+not require BLAS development libraries.
 
-To build without the optional GNU/Linux vector-math shim, enable the compile-time
-`portable-math` feature:
+To disable the optional vector-math helper, add `portable-math`:
 
 ```sh
-python -m pip install . --config-settings=build-args="--features portable-math"
+python -m pip install . --config-settings=build-args="--locked --features portable-math"
 ```
 
-This selects the existing scalar fallback; it is not a bitwise cross-platform
-reproducibility guarantee. See [numerical reproducibility](implementation.md#numerical-reproducibility).
+This uses scalar exponentials and keeps RSS preparation sequential; see
+[native threading](implementation.md#native-threading). It does not guarantee
+bitwise identical results across platforms; see
+[numerical reproducibility](implementation.md#numerical-reproducibility).
 
 ## Use a prebuilt wheel
 
-The [v0.2.3rc6 prerelease](https://github.com/LucaJiang/prusie/releases/tag/v0.2.3rc6)
-provides a CPython 3.12 wheel for Linux x86-64, tagged `manylinux_2_34`
-(glibc ≥2.34), a source distribution and `SHA256SUMS`. These files belong to
-that earlier version and do not contain version 0.3.0 described here.
-
-Download the matching file and verify it against `SHA256SUMS`. For that wheel:
+Use a prusie 0.3.0 wheel that matches your Python interpreter and platform.
+For example, the following filename identifies a wheel for CPython 3.12 on
+Linux x86-64 with glibc ≥2.34. From the directory containing the wheel:
 
 ```sh
-python -m pip install ./prusie-0.2.3rc6-cp312-cp312-manylinux_2_34_x86_64.whl
+python -m pip install ./prusie-0.3.0-cp312-cp312-manylinux_2_34_x86_64.whl
 ```
 
-Installing a compatible wheel requires neither Cargo nor a compiler; a source
-distribution requires the build toolchain above. The API documented here
-requires a build of this source revision. The version and platform tags of a wheel identify
-its code and supported environment.
+If a checksum is supplied, verify it before installation. The wheel contains
+the compiled extension, so installing prusie itself does not require Rust or a
+compiler. A source distribution still requires the
+[build toolchain](#build-from-source).
 
-The CI matrix includes CPython 3.10–3.13 on Linux and CPython 3.12 on macOS and
-Windows, plus a Linux `portable-math` build.
-See [contributing](contributing.md) for package validation commands.
+See [contributing](contributing.md#building-packages) for package-building and
+validation commands.
 
 ## Optional analysis tools
 
-To install the plotting and LD-diagnostic dependencies from the same checkout:
+The `analysis` extra adds SciPy (≥1.11) and Matplotlib (≥3.7). From the same
+source checkout:
 
 ```sh
-python -m pip install '.[analysis]'
+python -m pip install '.[analysis]' --config-settings=build-args="--locked"
 ```
 
-The analysis extra adds Matplotlib and SciPy. Ordinary dense Gaussian fitting
-needs only NumPy; sparse input, dynamic RSS and posterior outcome configurations
-also use SciPy. Reports are written for offline reading, and figures and diagnostics
-are computed only when requested.
-Plotting functions live in `prusie.viz`; reports live in `prusie.report`.
-These modules are loaded on demand rather than by `import prusie`.
+If using `portable-math`, include `--features portable-math` in these build
+arguments.
+
+SciPy is used for sparse input, LD diagnostics, RSS models with reference
+uncertainty or mismatch, multi-panel RSS, and
+`prusie.susie_post_outcome_configuration`. Plotting functions in `prusie.viz`
+use Matplotlib; `prusie.report` writes offline reports. Both modules are loaded
+on demand. See the [analysis and plotting API](api.md#summaries-comparisons-and-reports).
 
 ## Run the installed example
 
-The following works from any directory after installation:
+To check the installation, fit the packaged synthetic toy example:
 
 ```python
 import prusie
 
 example = prusie.load_example()
 fit = prusie.susie_rss(**example["inputs"], **example["parameters"])
-print(fit.converged, fit.niter, fit.pip.max())
+print("Version:", prusie.__version__)
+print("Converged:", fit.converged, "IBSS sweeps:", fit.niter)
+print("Maximum PIP:", fit.pip.max())
 ```
 
-The package contains the inputs, metadata and frozen reference fit of this
-example, so neither a source checkout, R nor network access is needed to load
-and fit it. Continue with the [toy example tutorial](example.md).
+`load_example()` reads inputs and metadata from the installed package, so this
+example can run from any directory without a source checkout, R or network
+access. It needs no optional analysis dependencies. Continue with the
+[toy example tutorial](example.md) to interpret PIPs and credible sets and add
+figures and an offline report.
