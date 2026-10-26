@@ -371,7 +371,9 @@ def susie_rss(
         and var_y is None
         and type(z_method) is str
         and type(R) is np.ndarray
-        and R.dtype is _FUSED_RSS_DTYPE
+        and R.dtype == _FUSED_RSS_DTYPE
+        and R.dtype.metadata is None
+        and R.dtype.isnative
         and R.flags.c_contiguous
         and R.flags.aligned
     )

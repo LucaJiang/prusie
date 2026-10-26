@@ -3,6 +3,7 @@
 import contextlib
 import io
 import logging
+import pickle
 import sys
 import threading
 import warnings
@@ -31,6 +32,37 @@ def request(**updates):
 
 def assert_alpha_bits(left, right):
     np.testing.assert_array_equal(left.alpha.view(np.uint64), right.alpha.view(np.uint64))
+
+
+@pytest.mark.parametrize("count", [1, 4])
+@pytest.mark.parametrize("overwrite", [False, True])
+def test_pickled_float64_ld_preserves_preparation_path_and_alpha(monkeypatch, count, overwrite):
+    paths = []
+    for name in (
+        "validate_and_repair_rss",
+        "_validate_and_repair_rss_with_executor",
+        "validate_and_overwrite_rss",
+    ):
+        original = getattr(_native, name)
+
+        def observe(*args, _original=original, _name=name, **kwargs):
+            paths.append(_name)
+            return _original(*args, **kwargs)
+
+        monkeypatch.setattr(_native, name, observe)
+    ordinary = request(n_threads=count, overwrite_ld=overwrite)
+    baseline = susie_rss(**ordinary)
+    expected_path = paths.copy()
+    paths.clear()
+    restored = request(n_threads=count, overwrite_ld=overwrite)
+    # Unpickling can use a bytes-backed view. Copy it to meet the separate
+    # overwrite ownership contract while retaining the restored dtype object.
+    restored["R"] = pickle.loads(pickle.dumps(restored["R"], protocol=4)).copy(order="C")
+    assert restored["R"].dtype == ordinary["R"].dtype
+    assert restored["R"].flags.owndata
+    actual = susie_rss(**restored)
+    assert paths == expected_path
+    assert_alpha_bits(actual, baseline)
 
 
 @contextlib.contextmanager
