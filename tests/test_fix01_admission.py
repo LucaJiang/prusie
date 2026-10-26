@@ -136,8 +136,8 @@ def test_warning_dispatch_is_after_join_on_calling_thread_and_in_serial_order(mo
     original_close = _execution.close_executor
     original_warn = warnings.warn
 
-    def close(owner):
-        original_close(owner)
+    def close(owner, **kwargs):
+        original_close(owner, **kwargs)
         events.append(("joined", threading.get_ident()))
 
     def warn(message, *args, **kwargs):
@@ -190,8 +190,8 @@ def test_preparation_joins_before_numpy_error_handling_and_separate_fit(monkeypa
         events.append("prepare")
         return original_prepare(matrix, scale, owner)
 
-    def close(owner):
-        original_close(owner)
+    def close(owner, **kwargs):
+        original_close(owner, **kwargs)
         events.append("joined")
 
     def fit(*args, **kwargs):
