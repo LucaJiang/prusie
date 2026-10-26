@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from prusie import _execution, _native, susie_rss
+from prusie import _execution, _native, rss, susie_rss
 
 
 def arguments(p=1025, **updates):
@@ -326,7 +326,7 @@ def test_shared_preparation_matches_same_count_parent_and_serializes(
         warnings.simplefilter("ignore")
         # Force only preparation to the serial helper at the same solver count.
         with monkeypatch.context() as patch:
-            patch.setattr(_execution, "create_executor", lambda *args: None)
+            patch.setattr(rss, "create_executor", lambda *args: None)
             parent = susie_rss(**args)
         actual = susie_rss(**args)
         repeated = susie_rss(**args)
@@ -500,7 +500,34 @@ def test_cleanup_preserves_baseexception_and_reports_unmasked_cleanup_failure():
         try:
             raise KeyboardInterrupt("primary")
         finally:
-            _execution.close_executor(FailingClose())
+            _execution.close_executor(FailingClose(), suppress_errors=True)
+
+
+@pytest.mark.parametrize("helper_fails", [False, True])
+def test_public_cleanup_policy_ignores_an_exception_handled_by_the_caller(
+    monkeypatch, helper_fails
+):
+    class FailingClose:
+        def close(self):
+            raise RuntimeError("injected worker join failure")
+
+    def prepare(*args):
+        if helper_fails:
+            raise KeyboardInterrupt("primary preparation failure")
+        return True, None, None
+
+    monkeypatch.setattr(rss, "create_executor", lambda *args: FailingClose())
+    monkeypatch.setattr(_native, "_validate_and_repair_rss_with_executor", prepare)
+    error, match = (
+        (KeyboardInterrupt, "primary preparation")
+        if helper_fails
+        else (RuntimeError, "worker join failure")
+    )
+    with pytest.raises(error, match=match):
+        try:
+            raise ValueError("already handled by user")
+        except ValueError:
+            susie_rss(**arguments(L=1, max_iter=2, coverage=None))
 
 
 @pytest.mark.skipif(

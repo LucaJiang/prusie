@@ -406,14 +406,19 @@ def susie_rss(
                                     R, prevalidated_scale, _executor
                                 )
                             )
-                        finally:
-                            # Later NumPy operations may warn or invoke a caller
-                            # error callback. Do not keep preparation workers alive
-                            # across any of that Python work, even when no package
-                            # warning has been generated.
-
-                            close_executor(_executor)
+                        except BaseException:
+                            # A helper failure takes precedence over cleanup.
+                            close_executor(_executor, suppress_errors=True)
                             _executor = None
+                            raise
+                        else:
+                            # Later NumPy operations may warn or invoke a caller
+                            # error callback. Join before that work, and propagate
+                            # close failures even inside a caller's except block.
+                            try:
+                                close_executor(_executor)
+                            finally:
+                                _executor = None
                 R = np.ascontiguousarray(R)
         else:
             R, symmetric = None, True

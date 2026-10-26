@@ -1,7 +1,5 @@
 """Eligibility and cleanup for one private RSS preparation executor."""
 
-import sys
-
 import numpy as np
 
 from . import _native
@@ -38,11 +36,10 @@ def create_executor(matrix, count):
     return _native._new_fit_executor(count)
 
 
-def close_executor(executor):
-    """Join every worker while preserving an already-active primary exception."""
-    primary = sys.exc_info()[0] is not None
+def close_executor(executor, *, suppress_errors=False):
+    """Join workers; only an explicitly propagating primary error takes priority."""
     try:
         executor.close()
     except BaseException:
-        if not primary:
+        if not suppress_errors:
             raise
