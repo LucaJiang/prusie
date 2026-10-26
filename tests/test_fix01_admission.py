@@ -36,7 +36,10 @@ def assert_alpha_bits(left, right):
 
 @pytest.mark.parametrize("count", [1, 4])
 @pytest.mark.parametrize("overwrite", [False, True])
-def test_pickled_float64_ld_preserves_preparation_path_and_alpha(monkeypatch, count, overwrite):
+@pytest.mark.parametrize("asymmetric", [False, True])
+def test_pickled_float64_ld_preserves_preparation_path_and_alpha(
+    monkeypatch, count, overwrite, asymmetric
+):
     paths = []
     for name in (
         "validate_and_repair_rss",
@@ -51,17 +54,31 @@ def test_pickled_float64_ld_preserves_preparation_path_and_alpha(monkeypatch, co
 
         monkeypatch.setattr(_native, name, observe)
     ordinary = request(n_threads=count, overwrite_ld=overwrite)
-    baseline = susie_rss(**ordinary)
-    expected_path = paths.copy()
-    paths.clear()
     restored = request(n_threads=count, overwrite_ld=overwrite)
+    if asymmetric:
+        for case in (ordinary, restored):
+            case["R"][0, 1], case["R"][1, 0] = 0.125, 0.25
     # Unpickling can use a bytes-backed view. Copy it to meet the separate
     # overwrite ownership contract while retaining the restored dtype object.
     restored["R"] = pickle.loads(pickle.dumps(restored["R"], protocol=4)).copy(order="C")
     assert restored["R"].dtype == ordinary["R"].dtype
     assert restored["R"].flags.owndata
-    actual = susie_rss(**restored)
+    if restored["R"].dtype is ordinary["R"].dtype:
+        pytest.skip(
+            "This NumPy version canonicalizes the restored dtype; distinct identity not exercised"
+        )
+    with warnings.catch_warnings(record=True) as baseline_warnings:
+        warnings.simplefilter("always")
+        baseline = susie_rss(**ordinary)
+    expected_path = paths.copy()
+    paths.clear()
+    with warnings.catch_warnings(record=True) as actual_warnings:
+        warnings.simplefilter("always")
+        actual = susie_rss(**restored)
     assert paths == expected_path
+    assert [str(w.message) for w in actual_warnings] == [str(w.message) for w in baseline_warnings]
+    if asymmetric:
+        assert any("not symmetric" in str(w.message) for w in actual_warnings)
     assert_alpha_bits(actual, baseline)
 
 

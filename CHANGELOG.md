@@ -15,6 +15,9 @@
   after preparation workers join, with their original text and order.
   Equal native float64 dtypes restored by serialization have the same
   preparation eligibility as freshly allocated arrays.
+  NumPy `str_` values for `z_method` are normalized to a plain `str` in the
+  recorded parameters and follow the same preparation and overwrite routes.
+  Other string subclasses retain their comparison hooks and serial preparation.
 - Add opt-in `overwrite_ld=True` for the restricted ordinary z/R/n route.
   It may consume LD and its aliases as an XtX workspace, including when a later
   error occurs. The default preserves inputs. `fit.params['overwrite_ld']` and
