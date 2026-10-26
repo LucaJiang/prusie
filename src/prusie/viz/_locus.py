@@ -115,6 +115,57 @@ def read_gene_track(
     }
 
 
+def _locus_references(summary, ids, reference_variant):
+    """Select references from component alpha without using marginal PIP for a CS."""
+    if reference_variant is not None:
+        if reference_variant not in ids:
+            raise ValueError("LD reference variant is absent")
+        return [
+            dict(
+                component_id=None,
+                top_variant_id=reference_variant,
+                top_index=ids.index(reference_variant),
+                rule="explicit reference variant",
+            )
+        ]
+    sets = sorted(summary.get("credible_sets", []), key=lambda cs: int(cs["component_id"]))
+    if not sets:
+        rows = summary["variants"]
+        index = min(range(len(ids)), key=lambda j: (-_number(rows[j].get("pip")), str(ids[j])))
+        return [
+            dict(
+                component_id=None,
+                top_variant_id=ids[index],
+                top_index=index,
+                rule="no retained CS; highest marginal PIP; lexical ID breaks ties",
+            )
+        ]
+    components = {c["component_id"]: c for c in summary.get("components", [])}
+    references = []
+    for cs in sets:
+        members = cs["members"]
+        if any(v not in ids for v in members):
+            raise ValueError("A credible-set member is absent from the variant order")
+        component = components.get(cs["component_id"], {})
+        alpha = dict(zip(component.get("ranking", []), component.get("alpha", []), strict=True))
+        if not members or any(v not in alpha or not np.isfinite(alpha[v]) for v in members):
+            raise ValueError("CS top selection requires finite component alpha for every member")
+        # Match summarize's representative rule, including exact ties.
+        top = min(members, key=lambda v: (-float(alpha[v]), str(v)))
+        references.append(
+            dict(
+                component_id=cs["component_id"],
+                cs_members=list(members),
+                top_variant_id=top,
+                top_index=ids.index(top),
+                top_alpha=float(alpha[top]),
+                tied_variant_ids=sorted(v for v in members if alpha[v] == alpha[top]),
+                rule="highest component alpha among CS members; exact ties use lexical variant ID",
+            )
+        )
+    return references
+
+
 @_local_style
 def plot_locus(
     summary: Mapping[str, Any],
@@ -135,14 +186,18 @@ def plot_locus(
     summary : dict
         Output of :func:`prusie.summarize`.
     R : array_like, optional
-        Signed LD correlation matrix in the variant order of ``summary``; the
-        LD track shows r² with ``reference_variant``.
+        Signed LD correlation matrix in the variant order of ``summary``.
+        Each LD track shows r² with the top variant of one retained CS.
     reference_variant : str, optional
-        Reference variant of the LD track; defaults to the highest PIP.
+        Override the per-CS tracks with a single reference. By default, the
+        top of each CS maximizes its own component alpha among CS members;
+        exact ties use lexical variant ID order, as in ``summarize``.
+        With no retained CS, use the highest marginal PIP (same tie rule).
     genes : dict, optional
         Gene track from :func:`read_gene_track`, or a table of the same form.
     axes : sequence of matplotlib Axes, optional
-        Existing axes, one per track.
+        Existing axes, one per track: association, PIP, CS, then one per LD
+        reference (one placeholder if R is missing), then an optional gene track.
     layout : {'full', 'compact'}, default 'full'
         'compact' reduces track spacing; every variant is still plotted.
     position_unit : {'auto', 'bp', 'kb', 'Mb'}, default 'auto'
@@ -151,7 +206,8 @@ def plot_locus(
     label_variants : sequence of str, optional
         Variants to annotate; defaults to the three highest nonzero PIPs.
     color_by_ld : bool, default False
-        Color association points by r² with the reference variant.
+        Color association points by r² with the first displayed reference;
+        the colorbar identifies it. Supply ``reference_variant`` to choose it.
     style : dict or False, optional
         Matplotlib rc settings applied to this figure only; False uses the
         current settings.
@@ -161,7 +217,11 @@ def plot_locus(
     figure : matplotlib Figure
     axes : ndarray of Axes
     plotted_data : dict
-        Plotted values and selection rules.
+        Plotted values and selection rules. ``ld_references`` contains each
+        component ID (original zero-based fit row), reference ID/index, alpha,
+        tied IDs, signed r and r² in the full variant order. Missing R gives
+        an empty list. Legacy ``ld_reference`` and ``r_squared`` refer to the
+        first displayed series. Input LD and summary arrays are never modified.
     """
     compact = _layout(layout)
     rows = summary["variants"]
@@ -280,12 +340,16 @@ def plot_locus(
         coordinate_status["chromosome"] = (
             "matched" if chromosomes and variant_chromosomes else "not_assessed"
         )
-    count = 5 if genes is not None else 4
+    references = (
+        _locus_references(summary, ids, reference_variant) if R is not None and rows else []
+    )
+    ld_count = max(1, len(references))
+    count = 3 + ld_count + int(genes is not None)
     figure, axs = _axes(
         axes,
         count,
         figsize=(8.5, 1.55 * count + 0.7) if compact else None,
-        height_ratios=([1.4, 1.4, 0.8, 1.0] + ([0.8] if genes is not None else []))
+        height_ratios=([1.4, 1.4, 0.8] + [1.0] * ld_count + ([0.8] if genes is not None else []))
         if compact
         else None,
     )
@@ -301,7 +365,8 @@ def plot_locus(
     axs[1].set_ylabel("Marginal PIP")
     axs[1].set_ylim(-0.03, 1.03)
     memberships = []
-    for i, cs in enumerate(summary.get("credible_sets", [])):
+    credible_sets = sorted(summary.get("credible_sets", []), key=lambda cs: int(cs["component_id"]))
+    for i, cs in enumerate(credible_sets):
         member_indices = [ids.index(v) for v in cs["members"] if v in ids]
         axs[2].scatter(
             x[member_indices],
@@ -316,7 +381,7 @@ def plot_locus(
     axs[2].set_ylabel("Formal CS")
     _variant_ticks(
         axs[2],
-        [f"Component {cs['component_id']}" for cs in summary.get("credible_sets", [])],
+        [f"Component {cs['component_id']}" for cs in credible_sets],
         axis="y",
     )
     if not memberships:
@@ -324,48 +389,54 @@ def plot_locus(
     ld_values = None
     if R is not None and rows:
         matrix = _ld(R, len(rows))
-        reference_was_selected = reference_variant is None
-        if reference_was_selected:
-            finite = np.where(np.isfinite(pip), pip, -np.inf)
-            reference_variant = ids[int(np.argmax(finite))]
-        if reference_variant not in ids:
-            raise ValueError("LD reference variant is absent")
-        ld_values = matrix[ids.index(reference_variant)] ** 2
-        points = axs[3].scatter(
-            x, ld_values, c=ld_values, cmap=COLORS["ld_r2_cmap"], vmin=0, vmax=1, s=18
-        )
-        figure.colorbar(points, ax=axs[3], label="LD r²")
+        for ax, reference in zip(axs[3 : 3 + ld_count], references, strict=True):
+            reference_index = reference["top_index"]
+            signed_r = matrix[reference_index].copy()
+            values = signed_r**2
+            reference.update(signed_r=signed_r, r_squared=values, reference_marker_r_squared=1.0)
+            points = ax.scatter(
+                x, values, c=values, cmap=COLORS["ld_r2_cmap"], vmin=0, vmax=1, s=18
+            )
+            component = reference["component_id"]
+            accent = _component_color(component) if component is not None else COLORS["text"]
+            ax.scatter(
+                [x[reference_index]],
+                [1.0],
+                marker="D",
+                s=44,
+                facecolors="none",
+                edgecolors=accent,
+                linewidths=1.5,
+            )
+            suffix = (
+                f"top of CS component {component} (zero-based)"
+                if component is not None
+                else reference["rule"]
+            )
+            ax.set_title(
+                f"LD r² with {reference['top_variant_id']} · {suffix}", fontsize=10, color=accent
+            )
+        reference_variant = references[0]["top_variant_id"]
+        ld_values = references[0]["r_squared"]
+        figure.colorbar(points, ax=list(axs[3 : 3 + ld_count]), label="LD r²", ticks=[0, 0.5, 1])
         if color_by_ld:
             points_association.set_array(ld_values)
             points_association.set_cmap(COLORS["ld_r2_cmap"])
             points_association.set_clim(0, 1)
-        reference_index = ids.index(reference_variant)
-        axs[3].scatter(
-            [x[reference_index]],
-            [ld_values[reference_index]],
-            marker="D",
-            s=44,
-            facecolors="none",
-            edgecolors=COLORS["text"],
-            linewidths=1.2,
-        )
-        axs[3].set_title(
-            f"LD reference: {reference_variant}"
-            + (" (highest PIP)" if reference_was_selected else ""),
-            fontsize=10,
-        )
+            figure.colorbar(points_association, ax=axs[0], label=f"LD r² with {reference_variant}")
     else:
-        _missing(axs[3], "LD not assessed")
-    axs[3].set_ylabel("LD r²")
-    axs[3].set_ylim(-0.03, 1.03)
+        _missing(axs[3], "LD not supplied" if R is None else "No variants to assess")
+    for ax in axs[3 : 3 + ld_count]:
+        ax.set_ylabel("LD r²")
+        ax.set_ylim(-0.03, 1.03)
     if genes is not None:
         for i, gene in enumerate(genes["records"]):
-            axs[4].plot([gene["start"] / scale, gene["end"] / scale], [i, i], color=COLORS["text"])
-            axs[4].text(
+            axs[-1].plot([gene["start"] / scale, gene["end"] / scale], [i, i], color=COLORS["text"])
+            axs[-1].text(
                 gene["start"] / scale, i, str(gene.get("label", "")), va="bottom", fontsize=9
             )
-        axs[4].set_ylabel("Transcripts")
-        axs[4].set_title(
+        axs[-1].set_ylabel("Transcripts")
+        axs[-1].set_title(
             (
                 f"{genes['genome_build'] or 'unknown build'}"
                 f"; {genes['coordinate_convention']}"
@@ -406,7 +477,7 @@ def plot_locus(
             color=COLORS["text"],
             arrowprops=dict(arrowstyle="-", color=COLORS["muted"], lw=0.6),
         )
-    for ax in (axs[0], axs[1], axs[3]):
+    for ax in [axs[0], axs[1], *axs[3 : 3 + ld_count]]:
         ax.grid(axis="y")
     return (
         figure,
@@ -419,8 +490,23 @@ def plot_locus(
             "neg_log10_p": association,
             "pip": pip,
             "cs_memberships": memberships,
-            "ld_reference": reference_variant,
+            "ld_reference": reference_variant if references else None,
             "r_squared": ld_values,
+            "ld_references": references,
+            "ld_status": (
+                "not_supplied"
+                if R is None
+                else "no_variants"
+                if not rows
+                else "explicit_reference"
+                if reference_variant is not None
+                and references[0]["rule"] == "explicit reference variant"
+                else "per_cs"
+                if credible_sets
+                else "global_pip_fallback"
+            ),
+            "ld_reference_rule": references[0]["rule"] if references else None,
+            "component_id_convention": "original zero-based fit row",
             "genes": genes,
             "coordinate_status": coordinate_status,
             "position_unit": unit if physical else "index",
@@ -571,6 +657,7 @@ def plot_signal(
         rank, np.asarray(component["cumulative_posterior"])[selected], marker=".", color=color
     )
     axs[1].set_ylabel("Cumulative posterior")
+    axs[1].set_ylim(max(0, min(axs[1].get_ylim()[0], 0.95)), 1.01)
     if cs:
         axs[1].axhline(
             cs["requested_coverage"],
@@ -616,7 +703,9 @@ def plot_signal(
         ids = [v["variant_id"] for v in summary["variants"]]
         indices = [ids.index(v) for v in cs["members"]]
         within = _ld(R, len(ids))[np.ix_(indices, indices)]
-        shown_ld = within**2 if ld_measure == "r2" else within
+        shown_ld = within**2 if ld_measure == "r2" else within.copy()
+        # Mathematical self-correlation is 1; retain unrounded input in within_cs_r.
+        np.fill_diagonal(shown_ld, 1.0)
         import matplotlib.pyplot as plt
         from matplotlib.colors import Normalize
 
@@ -703,10 +792,11 @@ def plot_signal(
             "cumulative_posterior_renormalized": False,
             "selected_posterior_mass": selected_mass,
             "ld_measure": ld_measure,
-            "displayed_ld": within**2 if within is not None and ld_measure == "r2" else within,
+            "displayed_ld": shown_ld if within is not None else None,
             "ld_display_text": ld_text,
             "ld_annotation_colors": ld_text_colors,
             "ld_display_policy": {
+                "self_correlation": "diagonal displayed as 1; raw values retained in within_cs_r",
                 "cmap": ld_cmap.name if ld_cmap is not None else None,
                 "normalization": [0 if ld_measure == "r2" else -1, 1],
                 "scale": "linear",

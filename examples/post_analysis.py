@@ -1,11 +1,12 @@
-"""Run stable and local-optimum toy examples, entirely offline.
+"""Run the official susieR FinemappingConvergence toy example, entirely offline.
 
-python examples/post_analysis.py --output-dir output/post-analysis --case both
+python examples/post_analysis.py --output-dir output/post-analysis --case official
 """
 
 import argparse
 import hashlib
 import json
+import subprocess
 import time
 from pathlib import Path
 
@@ -29,23 +30,33 @@ def checksum(a):
     return hashlib.sha256(a.tobytes(order="C")).hexdigest()
 
 
+def source_identity():
+    """Identify Python presentation source separately from the unchanged native core."""
+    import prusie._native
+
+    root = Path(__file__).resolve().parents[1]
+    revision = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, text=True, check=False
+    )
+    sources = [
+        Path(__file__),
+        Path(prusie.__file__).with_name("report.py"),
+        Path(prusie.__file__).parent / "viz/_locus.py",
+    ]
+    return dict(
+        checkout_head=revision.stdout.strip() if revision.returncode == 0 else "not_assessed",
+        source_files_sha256={p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},
+        native_sha256=hashlib.sha256(Path(prusie._native.__file__).read_bytes()).hexdigest(),
+        note=(
+            "Source hashes identify presentation changes; this record is not a final wheel freeze."
+        ),
+    )
+
+
 def make_figures(fit, refined, summary, R, ld, comparison):
     "Screen-sized views, with every retained CS and separate variance details."
     matched = prusie.compare_fits({"before": fit, "after": refined}, baseline="before", R=R)
-    display_names = {
-        "baseline": "Baseline",
-        "refined": "After refinement",
-        "coverage90": "CS coverage\n90%",
-    }
-    for name, settings in comparison.get("fit_settings", {}).items():
-        if name == "larger_L" and "L" in settings:
-            display_names[name] = f"L = {settings['L']}"
-    display_names["fixed_variance"] = "Scaled prior variance\n0.05 (fixed)"
-    display_names = {
-        name: label
-        for name, label in display_names.items()
-        if name in comparison.get("settings", [])
-    }
+    display_names = {"baseline": "Baseline", "refined": "After refinement", "larger_L": "L = 12"}
     figures = {
         "locus overview": plot_locus(summary, R=R, layout="compact"),
         "convergence before and after": plot_convergence(fit, after=refined, layout="compact"),
@@ -55,13 +66,7 @@ def make_figures(fit, refined, summary, R, ld, comparison):
             comparison, candidates_only=True, layout="compact", display_names=display_names
         ),
     }
-    components = sorted(
-        summary["credible_sets"],
-        key=lambda cs: (
-            -max(row["pip"] for row in summary["variants"] if row["variant_id"] in cs["members"]),
-            cs["component_id"],
-        ),
-    )
+    components = sorted(summary["credible_sets"], key=lambda cs: int(cs["component_id"]))
     for cs in components:
         component = cs["component_id"]
         detail = next(row for row in summary["components"] if row["component_id"] == component)
@@ -81,60 +86,75 @@ def make_figures(fit, refined, summary, R, ld, comparison):
     return figures
 
 
+def export_records(output, records):
+    """Readable full-precision records alongside lossless analysis persistence."""
+    for name, value in records.items():
+        (output / f"{name}.json").write_text(
+            json.dumps(value, default=lambda item: item.tolist(), allow_nan=False, indent=2) + "\n"
+        )
+
+
+def write_source_assets(output):
+    """Keep fixture attribution bytes and supply full terms from repository notices."""
+    import shutil
+    from importlib.resources import files
+
+    output.mkdir(parents=True, exist_ok=True)
+    for name in ("metadata.json", "LICENSE.txt", "LICENSE-BSD-3-Clause.txt"):
+        shutil.copyfile(files("prusie").joinpath("data/convergence", name), output / name)
+    notices = Path(__file__).resolve().parents[1] / "THIRD_PARTY_NOTICES.md"
+    terms = notices.read_text().split("### susieR\n", 1)[1].split("### R Brent_fmin", 1)[0]
+    full = terms[terms.index("Copyright (c)") :].strip() + "\n"
+    (output / "BSD-3-Clause.txt").write_text(full)
+    return dict(
+        full_terms="BSD-3-Clause.txt",
+        full_terms_source="THIRD_PARTY_NOTICES.md / susieR",
+        attribution="LICENSE.txt",
+        fixture_license_stub="LICENSE-BSD-3-Clause.txt",
+    )
+
+
 def execute(case, output):
     started = time.perf_counter()
-    if case == "stable":
-        e = prusie.load_example()
-        inputs = e["inputs"]
-        params = dict(e["parameters"])
-        fit = prusie.susie_rss(**inputs, **params, track_fit=True, retain_data=True)
-        R = inputs["R"]
-        z = inputs["z"]
-        n = inputs["n"]
-        refined = prusie.refine_fit(fit, prusie.RefinementConfig(candidate_budget=4))
-        sensitivity = prusie.run_sensitivity(
-            inputs,
-            [
-                {"name": "larger_L", "changes": {"L": params["L"] + 1}},
-                {
-                    "name": "fixed_variance",
-                    "changes": {"scaled_prior_variance": 0.05, "estimate_prior_variance": False},
-                },
-                {"name": "coverage90", "report": {"coverage": 0.9}},
-            ],
-            baseline=fit,
-            baseline_settings=params,
-        )
-        comparison = sensitivity["comparison"]
-        source = "prusie packaged synthetic toy example; frozen generator seed 20261007"
-        annotations = {
-            "example_kind": ("synthetic toy example; no biological mechanism is inferred")
-        }
-    else:
-        e = prusie.load_convergence_example()
-        inputs = e["inputs"]
-        params = e["parameters"]
-        fit = prusie.susie_suff_stat(**inputs, **params, track_fit=True)
-        refined = prusie.refine_fit(fit, prusie.RefinementConfig(inner_tol=0.001))
-        diagonal = np.sqrt(np.diag(inputs["XtX"]))
-        R = inputs["XtX"] / diagonal[:, None] / diagonal[None, :]
-        # Derived signed marginal t statistics from the supplied centered sums.
-        beta = inputs["Xty"] / np.diag(inputs["XtX"])
-        se = np.sqrt(
-            (inputs["yty"] - beta * inputs["Xty"]) / (inputs["n"] - 2) / np.diag(inputs["XtX"])
-        )
-        z = beta / se
-        n = inputs["n"]
-        alternate = prusie.susie_suff_stat(**inputs, **dict(params, L=12))
-        comparison = prusie.compare_fits(
-            {"baseline": fit, "refined": refined, "larger_L": alternate}, R=R
-        )
-        source = e["metadata"]["source_url"]
-        annotations = {
-            "example_kind": (
-                "official convergence toy sufficient statistics; local-optimum solver example"
-            )
-        }
+    e = prusie.load_convergence_example()
+    inputs = e["inputs"]
+    params = e["parameters"]
+    fit = prusie.susie_suff_stat(**inputs, **params, track_fit=True)
+    refined = prusie.refine_fit(fit, prusie.RefinementConfig(inner_tol=0.001))
+    diagonal = np.sqrt(np.diag(inputs["XtX"]))
+    R = inputs["XtX"] / diagonal[:, None] / diagonal[None, :]
+    # Marginal t statistics on the supplied response scale, with n - 2 df.
+    beta = inputs["Xty"] / np.diag(inputs["XtX"])
+    se = np.sqrt(
+        (inputs["yty"] - beta * inputs["Xty"]) / (inputs["n"] - 2) / np.diag(inputs["XtX"])
+    )
+    z = beta / se
+    n = inputs["n"]
+    alternate = prusie.susie_suff_stat(**inputs, **dict(params, L=12))
+    comparison = prusie.compare_fits(
+        {"baseline": fit, "refined": refined, "larger_L": alternate}, R=R
+    )
+    source = e["metadata"]["source_url"]
+    annotations = {
+        "example_kind": e["metadata"]["description"],
+        "association_source": (
+            "Two-sided normal approximation applied to marginal t statistics derived "
+            "from XtX, Xty and yty (df = n - 2); these are not external GWAS z scores."
+        ),
+        "ld_diagnostic_scope": (
+            "In-sample signed LD r is normalized from the same XtX. Diagnostics use "
+            "the t-derived statistics with a normal approximation; the near-singular "
+            "matrix requires the recorded regularization. No flags does not validate "
+            "an external reference; paired susieR flip-flag agreement was not tested."
+        ),
+        "report_notes": [
+            e["metadata"]["description"],
+            "Component IDs are original zero-based fit rows. Variant IDs are zero-based "
+            "positional indices; genomic positions, alleles and genome build are unavailable.",
+            "PIP, alpha, signed r and displayed r² are unitless. Effect estimates use "
+            "the scale of the supplied sufficient statistics. CS count is not a causal count.",
+        ],
+    }
     summary = prusie.summarize(
         refined,
         R,
@@ -143,6 +163,7 @@ def execute(case, output):
     )
     ld = prusie.diagnose_ld(z, R, n, variant_ids=fit.variant_ids)
     figures = make_figures(fit, refined, summary, R, ld, comparison)
+    license_files = write_source_assets(output)
     provenance = dict(
         data_checksums={k: checksum(v) for k, v in inputs.items()},
         variant_harmonization=(
@@ -158,6 +179,9 @@ def execute(case, output):
         },
         random_seed=e["metadata"].get("seed", "frozen upstream fixture; no new random generation"),
         elapsed_seconds=time.perf_counter() - started,
+        fixture=e["metadata"],
+        license_files=license_files,
+        source_identity=source_identity(),
         skipped=[
             "gene track: no physical coordinate metadata",
         ],
@@ -170,18 +194,27 @@ def execute(case, output):
         comparison=comparison,
         provenance=provenance,
         annotations=annotations,
-        title="prusie " + case + " toy example",
+        title="Toy example: susieR FinemappingConvergence",
     )
     save_analysis({"baseline": fit, "refined": refined}, output / "fits")
     restored = load_analysis(output / "fits")
     assert restored["refined"].alpha.tobytes() == refined.alpha.tobytes()
-    if case == "problem":
-        gain = prusie.evaluate_objective(refined)["elbo"] - prusie.evaluate_objective(fit)["elbo"]
-        assert gain > 17
-        np.testing.assert_allclose(
-            refined.pip, e["reference"]["latest_refined_pip"], atol=1e-5, rtol=0
-        )
-        receipt["objective_gain"] = gain
+    save_analysis(
+        {"baseline": fit, "refined": refined, "larger_L": alternate}, output / "sensitivity_fits"
+    )
+    gain = prusie.evaluate_objective(refined)["elbo"] - prusie.evaluate_objective(fit)["elbo"]
+    assert gain > 17
+    np.testing.assert_allclose(refined.pip, e["reference"]["latest_refined_pip"], atol=1e-5, rtol=0)
+    receipt["recomputed_objective_gain"] = gain
+    export_records(
+        output,
+        dict(
+            provenance=provenance,
+            comparison=comparison,
+            posterior_summary=summary,
+            ld_diagnostics=ld,
+        ),
+    )
     receipt.update(
         case=case,
         ibss_converged=refined.converged,
@@ -202,13 +235,10 @@ def render_saved(case, source, output):
 
     record = load_analysis(source)
     fits = load_analysis(source / "fits")
-    example = prusie.load_example() if case == "stable" else prusie.load_convergence_example()
+    example = prusie.load_convergence_example()
     inputs = example["inputs"]
-    if case == "stable":
-        R = inputs["R"]
-    else:
-        diagonal = np.sqrt(np.diag(inputs["XtX"]))
-        R = inputs["XtX"] / diagonal[:, None] / diagonal[None, :]
+    diagonal = np.sqrt(np.diag(inputs["XtX"]))
+    R = inputs["XtX"] / diagonal[:, None] / diagonal[None, :]
     figures = make_figures(
         fits["baseline"],
         fits["refined"],
@@ -219,12 +249,30 @@ def render_saved(case, source, output):
     )
     if source.resolve() != output.resolve():
         shutil.copytree(source, output, dirs_exist_ok=True)
+    license_files = write_source_assets(output)
+    provenance = dict(record["provenance"])
+    provenance["license_files"] = license_files
+    provenance.update(
+        render_version=prusie.__version__,
+        render_source_identity=source_identity(),
+        rendering_scope="Saved numerical fits/diagnostics reused; no refitting",
+    )
     receipt = write_report(
         record["summary"],
         output,
         figures=figures,
-        **{key: record[key] for key in ("ld", "comparison", "provenance", "annotations")},
-        title=f"prusie {case}: fine-mapping results",
+        **{key: record[key] for key in ("ld", "comparison", "annotations")},
+        provenance=provenance,
+        title="Toy example: susieR FinemappingConvergence",
+    )
+    export_records(
+        output,
+        dict(
+            provenance=provenance,
+            comparison=record["comparison"],
+            posterior_summary=record["summary"],
+            ld_diagnostics=record["ld"],
+        ),
     )
     import matplotlib.pyplot as plt
 
@@ -235,19 +283,18 @@ def render_saved(case, source, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--case", choices=("stable", "problem", "both"), default="both")
+    parser.add_argument("--case", choices=("official",), default="official")
     parser.add_argument(
         "--saved-dir",
         type=Path,
         help="Render saved case directories, using their recorded summaries and fits.",
     )
     args = parser.parse_args()
-    for case in ("stable", "problem") if args.case == "both" else (args.case,):
-        if args.saved_dir is None:
-            receipt = execute(case, args.output_dir / case)
-        else:
-            receipt = render_saved(case, args.saved_dir / case, args.output_dir / case)
-        print(json.dumps(receipt))
+    if args.saved_dir is None:
+        receipt = execute(args.case, args.output_dir / args.case)
+    else:
+        receipt = render_saved(args.case, args.saved_dir / args.case, args.output_dir / args.case)
+    print(json.dumps(receipt))
 
 
 if __name__ == "__main__":

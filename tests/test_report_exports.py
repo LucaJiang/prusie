@@ -259,3 +259,25 @@ def test_display_and_export_leave_probabilities_and_objectives_unchanged(tmp_pat
     assert json.loads(stages[1]["solver_settings"]) == {"tol": 0.001}
     assert "Stage A changes the prior" in Path(receipt["html"]).read_text()
     assert json.loads(Path(receipt["figure_index"]).read_text()) == []
+
+
+def test_report_uses_recorded_search_objective_and_does_not_promote_zero_pip(tmp_path):
+    supplied = summary()
+    supplied["variants"].append(dict(variant_id="zero", pip=0.0, rank=3))
+    supplied["refinement"] = dict(
+        status="completed",
+        stop_reason="no_improvement_above_absolute_tol",
+        history=[],
+        total_fits=0,
+        before={"elbo": -20, "logged_elbo": -20},
+        after={"elbo": -18, "logged_elbo": -18},
+        objective_definition="last_logged_elbo; original prior; susieR refinement",
+    )
+    compact = analysis_summary(supplied)
+    assert compact["refinement"]["objective_definition"].startswith("last_logged_elbo")
+    assert "zero" not in [r["variant_id"] for r in compact["results"]["candidates"]]
+    write_report(supplied, tmp_path)
+    page = (tmp_path / "index.html").read_text()
+    assert "Recorded search objective: last_logged_elbo" in page
+    assert "evaluated after zeroing components" not in page
+    assert "zero-based fit row" in page

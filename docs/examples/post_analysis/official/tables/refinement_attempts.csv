@@ -1,0 +1,6 @@
+round,component,excluded_ids,accepted,reason,incumbent_objective,objective,improvement,A_stop,A_iterations,A_converged,B_stop,B_iterations,B_converged
+1,0,"[""35""]",True,accepted_best_original_objective,-70832.27160472408,-70814.81327158018,17.458333143906202,criterion_satisfied,15,True,criterion_satisfied,3,True
+1,2,"[""32""]",False,not_best_candidate,-70832.27160472408,-70814.81327161635,17.45833310773014,criterion_satisfied,9,True,criterion_satisfied,3,True
+1,1,"[""86"", ""90""]",False,not_best_candidate,-70832.27160472408,-70832.27149205601,0.0001126680726883933,criterion_satisfied,17,True,criterion_satisfied,17,True
+2,2,"[""33""]",False,no_improvement_above_absolute_tol,-70814.81327158018,-70832.2713900634,-17.45811848322046,criterion_satisfied,10,True,criterion_satisfied,3,True
+2,1,"[""86"", ""90""]",False,no_improvement_above_absolute_tol,-70814.81327158018,-70832.27149205601,-17.458220475833514,criterion_satisfied,17,True,criterion_satisfied,17,True

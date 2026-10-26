@@ -367,7 +367,8 @@ def export_tables(summary: Mapping, directory: str | Path) -> list[str]:
     return paths
 
 
-_METHODS = """PIP is marginal inclusion probability across active components; alpha is a
+_METHODS = """Component IDs are original zero-based fit rows (add one for susieR's L index).
+PIP is marginal inclusion probability across active components; alpha is a
 component probability. Credible sets use the recorded posterior coverage and LD purity
 filters. The effective number of variants is exp(entropy of component alpha),
 normalized over non-null variants; it describes concentration, not a causal count.
@@ -467,7 +468,7 @@ def analysis_summary(
         )
 
     ordered = sorted(variants, key=lambda row: (-pip_value(row), str(row.get("variant_id", ""))))
-    top = {str(row.get("variant_id")) for row in ordered[:top_candidates]}
+    top = {str(row.get("variant_id")) for row in ordered[:top_candidates] if pip_value(row) > 0}
     candidates = []
     for row in ordered:
         variant = str(row.get("variant_id"))
@@ -561,9 +562,7 @@ def analysis_summary(
         before_objective=before_objective,
         after_objective=after_objective,
         improvement=improvement,
-        objective_definition=(
-            "common original-prior objective recomputed from the complete post-trim state"
-        ),
+        objective_definition=refinement.get("objective_definition", "not_assessed"),
         before_logged_elbo=before.get("logged_elbo"),
         after_logged_elbo=after.get("logged_elbo"),
         config=_plain(refinement.get("config", {})),
@@ -983,6 +982,8 @@ def write_report(
     }
     if identity:
         sections.append('<p class="analysis-input">' + escape(_display(identity)) + "</p>")
+    for note in supplied.get("report_notes", []):
+        sections.append('<p class="analysis-input">' + escape(note) + "</p>")
     sections.append(
         '<p class="lede">Read the candidate sets, then check '
         "the fitted solution, search and input "
@@ -1014,7 +1015,7 @@ def write_report(
         "pip": "PIP",
         "size": "CS size",
         "representative": "Representative",
-        "component_id": "Component ID",
+        "component_id": "Component ID (zero-based fit row)",
         "actual_coverage": "Posterior mass",
         "requested_coverage": "CS target",
         "effective_candidates": "Effective number of variants",
@@ -1118,7 +1119,7 @@ def write_report(
     )
     sections.append(
         "<h3>Main candidates</h3><p>All formal CS members, the "
-        "top ten variants by PIP, and all PIP ≥ 0.1 candidates "
+        "top ten variants with positive PIP, and all PIP ≥ 0.1 candidates "
         "are included in the display selection. Missing or "
         "excluded variants are not assigned zero PIP. Numbers "
         "use four significant digits; near-endpoint "
@@ -1199,12 +1200,11 @@ def write_report(
             [_select(search, ("stop_reason", "before_objective", "after_objective", "improvement"))]
         )
         sections.append(
-            '<p class="caption">Improvement compares full-model ELBO under the '
-            "original prior, evaluated after zeroing components with "
-            "V &lt; prior_tol (the post-trim state). A negative rejected candidate does "
-            "not mean the accepted solution regressed. Logged "
-            "pre-finalization ELBO remains separate in the full "
-            "search record.</p>"
+            '<p class="caption">Recorded search objective: '
+            + escape(search["objective_definition"])
+            + ". A negative rejected candidate does not mean the accepted solution "
+            "regressed. Recomputed post-finalization ELBO is a separate diagnostic; "
+            "it can differ from the logged objective used to rank candidates.</p>"
         )
     sensitivity, counts = compact["sensitivity"], compact["ld"]
     sections.append("<h3>Sensitivity</h3>")
@@ -1331,13 +1331,17 @@ def write_report(
             "locus": (
                 "All analyzed variants are retained. Physical "
                 "coordinates are used only when supplied; otherwise the "
-                "x axis is variant index."
+                "x axis is zero-based variant index. LD panels show r² to each CS's "
+                "highest-alpha member (its own component; exact ties use lexical ID). "
+                "An explicit reference overrides this; without CS the reference is the "
+                "highest marginal PIP. Signed r is used for fitting; r² is a unitless display."
             ),
             "fit": (
                 "The inner stopping condition and improvement after "
                 "search answer different questions. Refinement "
-                "improvements use the full-model ELBO defined above; "
-                "the iteration log records ELBO before finalization."
+                "improvements use the recorded search objective defined above; "
+                "the iteration log records ELBO before finalization. Accepted search "
+                "candidates may have no saved iteration trace."
             ),
             "variance": (
                 "Prior-variance and residual-variance paths describe "
@@ -1346,7 +1350,7 @@ def write_report(
             ),
             "signal": (
                 "CS members and explicitly selected additional "
-                "candidates describe localization. Component "
+                "candidates describe localization. IDs are original zero-based fit rows. Component "
                 "probabilities and Bayes factors are conditional on the "
                 "other fitted components."
             ),
@@ -1364,6 +1368,9 @@ def write_report(
             ),
         }
         caption = captions[group]
+        note = supplied.get({"locus": "association_source", "ld": "ld_diagnostic_scope"}.get(group))
+        if note:
+            caption += " " + str(note)
         if group == "sensitivity" and "variant_ids" in plot_data.get(str(name), {}):
             shown = plot_data[str(name)]
             selected = shown.get("variant_ids", [])
@@ -1595,6 +1602,8 @@ def write_report(
             "software_versions",
             "reference_sources",
             "random_seed",
+            "fixture",
+            "source_identity",
         ),
     )
     details("Source and software identity", sources)

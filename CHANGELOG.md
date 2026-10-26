@@ -34,6 +34,10 @@
 - Make refinement plot metadata retain the recorded objective definition and
   label the effective PIP stopping thresholds with the fitting tolerance.
   Clarify convergence docstrings without changing solver stopping rules.
+- Show a separate LD r² track for each retained credible set in locus plots,
+  referenced to its own component's highest-alpha member. Reports identify
+  zero-based component rows and preserve the recorded refinement objective.
+  Use the official susieR convergence fixture for the Toy example report.
 - Default `susie_rss_lambda` to `L=10`, validate explicit L before capping it
   at the retained variant count, and exclude an added null column from that cap.
   Explicit `L=None` remains an alias for 10.

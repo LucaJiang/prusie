@@ -1,3 +1,0 @@
-component_id,members,member_indices,size,requested_coverage,actual_coverage,representative,representative_index,representative_rule,min_abs_corr,mean_abs_corr,median_abs_corr
-1,"[""86"", ""90""]","[86, 90]",2,0.95,0.9999999912437146,90,90,highest alpha; lexical variant ID breaks ties,0.9989091776612095,0.9989091776612095,0.9989091776612095
-2,"[""33""]",[33],1,0.95,1.0,33,33,highest alpha; lexical variant ID breaks ties,1.0,1.0,1.0

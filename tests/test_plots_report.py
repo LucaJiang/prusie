@@ -29,7 +29,14 @@ def summary():
                 "alpha": [0.7, 0.3, 0.0],
                 "cumulative_posterior": [0.7, 1.0, 1.0],
                 "null_mass": 0.0,
-            }
+            },
+            {
+                "component_id": 7,
+                "ranking": ["v2", "vα", "v3"],
+                "alpha": [1.0, 0.0, 0.0],
+                "cumulative_posterior": [1.0, 1.0, 1.0],
+                "null_mass": 0.0,
+            },
         ],
         "credible_sets": [
             {"component_id": 4, "members": ["vα", "v2"], "requested_coverage": 0.95},

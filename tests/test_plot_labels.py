@@ -346,3 +346,17 @@ def test_small_candidate_axes_label_every_id_and_positive_delta_has_no_empty_neg
     assert view[1][1].get_ylim()[0] == 0.0
     np.testing.assert_array_equal(view[1][1].lines[0].get_ydata()[1:], [1.0, 0.0])
     plt.close(view[0])
+
+
+def test_signal_self_correlation_display_preserves_raw_ld(posterior):
+    R = np.eye(24)
+    R[0, 0] = np.nextafter(1.0, 0.0)
+    original = R.copy()
+    figure, _, data = plots.plot_signal(posterior, 2, R=R, layout="compact", ld_measure="r2")
+    try:
+        assert data["within_cs_r"][0, 0] == original[0, 0]
+        assert data["displayed_ld"][0, 0] == 1.0
+        assert data["ld_display_text"][0][0] == "1"
+        np.testing.assert_array_equal(R, original)
+    finally:
+        plt.close(figure)

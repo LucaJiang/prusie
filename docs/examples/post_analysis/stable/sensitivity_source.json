@@ -1,1 +1,0 @@
-{"source_sha":"1f2b246ebd7970929711b2a51bb08f6a76ddad56","version":"0.2.4.dev1","recomputed_fits":["larger_L","fixed_variance"],"report_only":["coverage90"],"requested_convergence":{"criterion":"elbo","alpha_tol":0.0001,"pip_tol":0.0001,"min_iter":2,"cycle_lag":5},"convergence_resolution":{"source":"recovered_legacy_diagnostics"}}
