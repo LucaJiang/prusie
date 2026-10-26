@@ -38,10 +38,11 @@ class ConvergenceConfig:
     In 'elbo' mode with a finite objective, repeated states at lags 2 to
     ``cycle_lag`` are recorded as diagnostics only. In 'alpha_pip' and
     'joint' modes they may stop the fit with ``converged=False``, returning
-    the current posterior. In the native Gaussian loop, a NaN under 'elbo'
-    uses the susieR-compatible PIP rule with fitting ``tol`` for both posterior
-    distances; its cycle stop averages the repeated alpha states and counts
-    as convergence. 'alpha_pip' can proceed with NaN using its configured
+    the current posterior. In the native Gaussian loop, the default NaN-ELBO
+    fallback uses the susieR-compatible PIP rule with fitting ``tol`` for both
+    posterior distances; its cycle stop averages the repeated alpha states
+    and counts as convergence. Other 'elbo' fallback configurations and
+    'alpha_pip' can proceed with NaN using their configured posterior
     tolerances, whereas 'joint' fails. A computed infinite objective raises
     ``ValueError`` in that native loop. Dynamic RSS models have a separate
     posterior-rule branch for nonfinite objectives. The first finite objective,

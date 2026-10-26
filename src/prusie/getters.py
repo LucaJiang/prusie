@@ -517,13 +517,20 @@ def coef(res: SusieResult) -> NDArray[np.float64]:
     -----
     Includes every returned component and an optional null column, following
     susieR's coefficient extractor. ``res.coef`` remains the historical
-    predictor-only accessor and excludes the null column.
+    predictor-only accessor and excludes the null column. Both include fitted
+    slot-activity probabilities for slot-prior models.
     """
     intercept = res.intercept
     if not np.isfinite(intercept):
         warnings.warn("Intercept is missing; returning 0", RuntimeWarning, stacklevel=2)
         intercept = 0.0
-    effects = np.sum(res.alpha * res.mu, axis=0) / res.X_column_scale_factors
+    if res.slot_weights is None:
+        effects = np.sum(res.alpha * res.mu, axis=0) / res.X_column_scale_factors
+    else:
+        effects = (
+            np.sum((res.alpha * res.mu) * res.slot_weights[:, None], axis=0)
+            / res.X_column_scale_factors
+        )
     return np.r_[intercept, effects]
 
 
