@@ -71757,7 +71757,7 @@
       },
       "render_version": "0.3.0",
       "render_source_identity": {
-        "checkout_head": "14743c1ba08bba4630591b627bde3e8307e14b60",
+        "checkout_head": "bc08eacc7112b30764c097c04eb58843e4b5e6a1",
         "source_files_sha256": {
           "post_analysis.py": "9adf9f81532a03c97212ee8765137ae1a0fd0f3fb95889c031f644cfb75f0945",
           "report.py": "690313bcae42074b9c6876c7cd4bda891dd9a7ece9bf86646b98ab05c9cc1db3",
@@ -158663,7 +158663,7 @@
     {
       "id": "ev_a254c72860db994eb53a",
       "path": "/provenance/render_source_identity/checkout_head",
-      "value": "14743c1ba08bba4630591b627bde3e8307e14b60"
+      "value": "bc08eacc7112b30764c097c04eb58843e4b5e6a1"
     },
     {
       "id": "ev_8f9090edade081a8ecb9",
@@ -386956,6 +386956,6 @@
       "value": -3.4452043910148324
     }
   ],
-  "sha256": "2671020216405e5fc3a038a1f95640f4be19ff75b0aa5e1eae504e080749a09b",
+  "sha256": "383660af30fe359ca1498e3bed52c45148b804d466edce37a1932f857d0dfe75",
   "transmission_scope": "Selected deterministic result tables, diagnostics and comparisons; supplied provenance and annotations are included and require privacy review. Dense fit histories, effect moments and raw fit matrices are not collected from results."
 }
