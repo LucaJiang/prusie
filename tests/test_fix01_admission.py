@@ -169,14 +169,29 @@ def test_warning_dispatch_is_after_join_on_calling_thread_and_in_serial_order(mo
     ]
 
 
-def test_warning_as_error_precedes_deferred_repair_error_and_only_first_warning_escapes():
+def test_warning_as_error_precedes_deferred_repair_error_and_only_first_warning_escapes(
+    monkeypatch,
+):
+    observed = []
+    original_prepare = _native._validate_and_repair_rss_with_executor
+
+    def prepare(matrix, scale, owner):
+        result = original_prepare(matrix, scale, owner)
+        observed.append((owner.has_started, result[2] is not None))
+        return result
+
+    monkeypatch.setattr(_native, "_validate_and_repair_rss_with_executor", prepare)
     for count in (1, 4):
+        observed.clear()
         args = request(n_threads=count, n=1e308)
         args["R"][0, 1], args["R"][1, 0] = 1.5, 1.0
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             with pytest.raises(RuntimeWarning, match="not symmetric"):
                 susie_rss(**args)
+        assert observed == (
+            [(_native._parallel_preparation_available(), True)] if count == 4 else []
+        )
 
 
 @pytest.mark.parametrize("underflow", ["warn", "call", "raise"])
