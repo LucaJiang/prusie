@@ -51,9 +51,11 @@ GPL-3.0 as part of prusie.
 
 ## Rust libraries linked into the binary wheel
 
-The Linux x86-64 wheel uses the following libraries. MIT is selected wherever
-it is offered; the common MIT permission below applies to these attributions,
-except for rust-numpy's separate BSD-2-Clause notice.
+The following inventory describes the produced Linux x86-64 wheel. The CI
+workflow also defines macOS and Windows build-and-test targets; it does not
+publish their wheels, and this inventory does not attest to their contents.
+MIT is selected wherever it is offered; the common MIT permission below applies
+to these attributions, except for rust-numpy's separate BSD-2-Clause notice.
 Crate sources are available at `https://crates.io/crates/NAME/VERSION`.
 
 | Crate | Version | Copyright / authors |
