@@ -110,7 +110,8 @@ def susie_rss_lambda(
         The fitted RSS-lambda posterior. Initialization-only calls return
         :class:`SusieInputs`, accepted by :func:`susie_workhorse`.
     """
-    from .api import _fit, _integer, _prepare_suff_stat
+    from ._validation import _integer
+    from .api import _fit, _prepare_suff_stat
     from .individual import _validated_design
     from .posterior import _design_correlation
 

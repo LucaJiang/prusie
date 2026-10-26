@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from prusie import _native
-from prusie.api import _symmetrize_matrix
+from prusie._validation import _symmetrize_matrix
 
 
 def scalar_parent(a, scale):

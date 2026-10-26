@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from prusie import _native
-from prusie.api import _symmetrize_matrix
+from prusie._validation import _symmetrize_matrix
 
 
 @pytest.mark.parametrize("p", [1, 2, 31, 32, 33, 65])

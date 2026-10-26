@@ -72,7 +72,7 @@ def susie_auto(
     SusieResult
         Final model after staged fitting and a final tolerance refinement.
     """
-    from .api import _integer
+    from ._validation import _integer
 
     count, maximum = _integer(L_init, "L_init"), _integer(L_max, "L_max")
     response = np.asarray(y, dtype=float)

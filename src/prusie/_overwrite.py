@@ -1,6 +1,16 @@
 """Strict, opt-in caller-workspace contract for ordinary z/R/n RSS only."""
 
+from __future__ import annotations
+
 import numpy as np
+
+from ._validation import (
+    _integer,
+    _metadata,
+    _scalar,
+    _thread_count,
+    _vector,
+)
 
 _SCALARS = frozenset(
     (
@@ -24,7 +34,11 @@ _SCALARS = frozenset(
         np.str_,
     )
 )
+
+
 _VECTORS = frozenset(("z", "scaled_prior_variance", "prior_weights", "variant_ids"))
+
+
 _NONE = frozenset(
     [
         "X",
@@ -46,6 +60,8 @@ _NONE = frozenset(
         "convergence",
     ]
 )
+
+
 _FALSE = frozenset(("refine", "retain_data", "track_fit", "init_only", "check_input"))
 
 
@@ -229,3 +245,61 @@ def recheck(state):
         other_low, other_high = _span(array)
         if other_low < high and low < other_high:
             raise ValueError("overwrite_ld R overlaps another input before repair")
+
+
+def _overwrite_prepare(arguments):
+    from ._overwrite import prepare
+
+    state = prepare(arguments)
+    _thread_count(arguments["n_threads"])
+    L = _integer(arguments["L"], "L")
+    _integer(arguments["max_iter"], "max_iter")
+    # Reject inexpensive matrix-independent errors before taking workspace.
+    # These checks use the ordinary rules without normalizing weights twice.
+    _scalar(arguments["n"], "n", lower=1.0, strict=True)
+    for name in ("r_tol", "residual_variance_lowerbound"):
+        _scalar(arguments[name], name)
+    _scalar(1e-4 if arguments["tol"] is None else arguments["tol"], "tol")
+    for name in ("greedy_lbf_cutoff", "check_null_threshold"):
+        _scalar(arguments[name], name, lower=-np.inf)
+    prior_tol = float(arguments["prior_tol"])
+    if np.isnan(prior_tol) or prior_tol < 0:
+        raise ValueError("prior_tol must be a nonnegative scalar")
+    lower = arguments["residual_variance_lowerbound"]
+    upper = arguments["residual_variance_upperbound"]
+    if upper is not None and (np.isnan(upper) or upper < lower):
+        raise ValueError("residual_variance_upperbound must be at least the lower bound")
+    if arguments["residual_variance"] is not None:
+        _scalar(arguments["residual_variance"], "residual_variance", strict=True)
+    for name in ("coverage", "min_abs_corr"):
+        value = arguments[name]
+        if value is not None and (not np.isfinite(value) or not 0 <= value <= 1):
+            raise ValueError(f"{name} must be in [0, 1]")
+    value = arguments["scaled_prior_variance"]
+    if np.ndim(value) == 0:
+        _scalar(value, "scaled_prior_variance")
+    elif np.any(_vector(value, "scaled_prior_variance", L) < 0):
+        raise ValueError("scaled_prior_variance must be nonnegative")
+    weights = arguments["prior_weights"]
+    if weights is not None:
+        weights = _vector(weights, "prior_weights", arguments["R"].shape[0])
+        if np.any(weights < 0) or not np.isfinite(weights.sum()) or weights.sum() <= 0:
+            raise ValueError("prior_weights must be nonnegative with a finite positive sum")
+    if arguments["estimate_prior_variance"] and arguments["estimate_prior_method"] not in (
+        "optim",
+        "EM",
+        "simple",
+        "fixed_mixture",
+    ):
+        raise ValueError("estimate_prior_method must be 'optim', 'EM', or 'simple'")
+    value = arguments["n_purity"]
+    if value is not None and value != "auto" and not np.isfinite(value):
+        raise ValueError("n_purity must be a finite number or None")
+    _metadata(arguments["variant_ids"], arguments["variant_metadata"], arguments["R"].shape[0])
+    return state
+
+
+def _overwrite_recheck(state):
+    from ._overwrite import recheck
+
+    recheck(state)

@@ -246,7 +246,7 @@ def block_coordinate_ascent(
     import logging
     import warnings
 
-    from .api import _integer, _scalar
+    from ._validation import _integer, _scalar
     from .getters import susie_get_objective
     from .result import SusieResult
 

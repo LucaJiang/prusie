@@ -800,7 +800,7 @@ def sensitivity_key(
 
 def _sensitivity_inputs(data, *, explicit_ids=False):
     """Validate RSS inputs of a sensitivity plan before any fit is run."""
-    from .api import _metadata, _scalar, _validated_matrix, _vector
+    from ._validation import _metadata, _scalar, _validated_matrix, _vector
 
     if not isinstance(data, dict):
         raise ValueError("sensitivity inputs must be a mapping")
@@ -832,7 +832,7 @@ def _sensitivity_prior(weights, ids, null_weight, *, policy, source_ids=None):
     Raw weights are augmented with the null weight and normalized once,
     without normalizing the variant weights first.
     """
-    from .api import _scalar, _vector
+    from ._validation import _scalar, _vector
 
     null_weight = _scalar(null_weight, "null_weight")
     if null_weight >= 1:

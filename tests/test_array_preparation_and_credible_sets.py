@@ -3,7 +3,8 @@
 import numpy as np
 import pytest
 
-from prusie import api, posterior
+from prusie import _validation as api
+from prusie import posterior
 
 
 @pytest.mark.parametrize("layout", ["C", "F", "strided", "readonly", "unaligned"])

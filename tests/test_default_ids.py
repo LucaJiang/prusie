@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from prusie import susie_rss
-from prusie.api import _metadata
+from prusie._validation import _metadata
 
 
 @pytest.mark.parametrize(

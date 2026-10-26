@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from prusie import _native, susie_rss, susie_suff_stat
-from prusie.api import _matrix
+from prusie._validation import _matrix
 
 
 def layouts(a):

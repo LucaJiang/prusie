@@ -69,7 +69,7 @@ def susie_ser(
     SusieResult
         One-effect posterior, with attainable credible sets without LD filtering.
     """
-    from .api import _scalar, _vector
+    from ._validation import _scalar, _vector
     from .getters import susie_get_cs_attainable
 
     if estimate_prior_method not in ("optim", "simple"):

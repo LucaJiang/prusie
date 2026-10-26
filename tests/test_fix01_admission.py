@@ -192,7 +192,7 @@ def test_preparation_joins_before_numpy_error_handling_and_separate_fit(monkeypa
 
 
 def test_thread_count_uses_index_protocol_but_rejects_booleans():
-    from prusie.api import _thread_count
+    from prusie._validation import _thread_count
 
     class Count:
         def __index__(self):

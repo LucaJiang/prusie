@@ -679,7 +679,8 @@ def prepare_multipanel(arguments: dict[str, Any]) -> Any:
     """Construct panel sub-fits and the outcome-independent initial mixture."""
     import inspect
 
-    from .api import _fit, _summary_vector, susie_rss
+    from ._validation import _summary_vector
+    from .api import _fit, susie_rss
     from .posterior import _design_correlation
 
     panels = arguments["panels"]
