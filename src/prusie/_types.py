@@ -32,6 +32,8 @@ class FitParameters(_RidgeParameters, total=False):
     null_weight: float
     standardize: bool
     max_iter: int
+    n_threads: int
+    overwrite_ld: bool
     tol: float
     coverage: float | None
     min_abs_corr: float | None
@@ -93,6 +95,7 @@ class InputChecks(TypedDict, total=False):
     variant_ids_are_positional: bool
     minimum_eigenvalue: float
     projection_squared_fraction: float
+    ld_overwrite: dict[str, Any]
     p: int
     variant_ids_positional: bool
 
