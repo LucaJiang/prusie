@@ -107,13 +107,15 @@ def snippets(x):
     }
 
 
-def build():
+def build(pages=None, check=False):
     values = calculate()
     text = snippets(values)
     for name, keys in [
-        ("implementation.md", ["logsum"]),
+        ("implementation.md", ["logsum", "memory"]),
         ("optimization.md", ["cache", "ser", "memory"]),
     ]:
+        if pages is not None and name not in pages:
+            continue
         path = ROOT / "docs" / name
         updated = path.read_text()
         for key in keys:
@@ -125,9 +127,20 @@ def build():
             before, remainder = updated.split(start)
             _, after = remainder.split(end)
             updated = before + start + "\n" + text[key] + end + after
-        path.write_text(updated)
+        if check:
+            assert updated == path.read_text(), f"Stale calculated blocks: {name}"
+        else:
+            path.write_text(updated)
     print("Generated explanatory matrix and numerical calculations")
 
 
 if __name__ == "__main__":
-    build()
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--pages", help="Comma-separated page filenames; omit for all calculated blocks"
+    )
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+    build(pages=args.pages.split(",") if args.pages else None, check=args.check)

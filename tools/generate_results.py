@@ -46,6 +46,27 @@ def f(x):
 
 
 def main():
+    current = ROOT / "docs/assets/benchmark/v030_summary.json"
+    if current.exists():
+        import argparse
+
+        from v030_tables import render as render_v030
+
+        parser = argparse.ArgumentParser(description=__doc__)
+        parser.add_argument(
+            "--pages", help="Comma-separated repository-relative pages; omit for all blocks"
+        )
+        parser.add_argument("--check", action="store_true")
+        args = parser.parse_args()
+        changed = render_v030(
+            ROOT, pages=args.pages.split(",") if args.pages else None, check=args.check
+        )
+        print("Current 0.3.0 blocks:", len(changed), "stale" if args.check else "updated")
+        return
+    if len(sys.argv) > 1:
+        raise SystemExit(
+            "Page-scoped/check regeneration requires the current 0.3.0 retained records"
+        )
     evidence = json.loads((ROOT / "docs/assets/benchmark_records.json").read_text())
     cases = [paired(c) for c in evidence["cases"] if c["stage"] == "C"]
     assert len(cases) == len(evidence["cases"]), "Canonical records must contain fine-mapping only"

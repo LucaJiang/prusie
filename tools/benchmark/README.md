@@ -4,6 +4,44 @@ These scripts compare installed prusie with susieR **0.16.6**, commit
 `8e56a8e038e989856d106d9ca5175cc664fea9d2`. Use R with the pinned package and
 jsonlite; retain package source provenance as well as its version.
 
+## Recorded 0.3.0 measurements
+
+The fixed real-data panel comprises 200 FinnGen R13 T2D loci and 14,157 GTEx v11
+Whole_Blood genes. The primary comparison uses fresh susieR fits and one native
+thread, with one warm-up and seven retained complete-call timings per backend.
+Backends run sequentially on the same core for each case. Independent processes
+measure peak RSS, including interpreter, imports, inputs and the returned fit.
+Thread scaling, opt-in LD overwrite and nested windows of one real T2D locus
+are separate series. The 184-case M1 comparison uses the distinct paired v10
+protocol; its measurements and acceptance decisions are reported separately.
+
+The small `v030_*.tsv` tables under `docs/assets/benchmark/` contain per-case
+summaries. `v030_records.jsonl.gz` preserves all retained observations, numerical
+statuses, convergence and host-load summaries; it contains no association inputs
+or individual-level data. `v030_m1.json` retains the M1 comparisons, case records
+and gate diagnostics. The public records suffice to redraw the current figures
+and verify generated text without R or the real association inputs:
+
+```sh
+python tools/benchmark/v030.py figures
+python tools/generate_results.py --check
+python tools/model_examples.py --check
+python tools/build_docs.py
+```
+
+Use `python tools/generate_results.py` to update generated text. Its `--pages`
+option accepts comma-separated repository-relative paths. Figure generation is
+separate so that checking text does not redraw all plots. The private archive
+importer, `python tools/benchmark/v030.py import --run MEASUREMENT_ARCHIVE`, checks
+the complete fixed panel and emits only the selected public measurement fields.
+
+Headline speed-up is the sum of all seven retained R times divided by the
+corresponding prusie total, separately for GWAS and eQTL. The geometric mean of
+per-case median-time ratios is a distinct summary. All completed positive timing
+pairs enter both summaries, including alpha discrepancies, iteration-limit fits,
+empty credible sets and cases whose separate memory measurement failed.
+Incomplete timing pairs and all other failures remain explicitly accounted for.
+
 ## Independent toy example
 
 From an installed checkout, one command prepares the probe and runs the comparison:
