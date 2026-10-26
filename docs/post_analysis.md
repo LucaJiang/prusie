@@ -1,18 +1,31 @@
 # Convergence and refinement
 
-Read why a fit stopped, give an unfinished fit more iterations when appropriate,
-then search for a better solution and compare the returned results. A stopping
-rule describes one IBSS trajectory; refinement explores other starting solutions.
+A fit can satisfy its stopping rule while a better solution remains available
+under the same model. Refinement searches alternative starting solutions for a
+higher evidence lower bound (ELBO).
+
+Start by inspecting [why the fit stopped](#convergence-diagnostics).
+`continue_fit` runs more sweeps from the saved posterior; `refine_fit` searches
+for an improvement. Both require retained inputs. Compare PIPs and credible sets
+before and after the search to assess its effect on the fine-mapping results.
 
 ## Start with a tracked fit
+
+To see how a fit approached its stopping rule, set `track_fit="compact"` when
+fitting. This records diagnostics after each complete pass through the
+single-effect components. In the official susieR `FinemappingConvergence` toy example below, tracking retains
+validated inputs for continuation and refinement.
 
 ```python
 import prusie
 from prusie.viz import plot_convergence, plot_refinement
 
-example = prusie.load_example()
-fit = prusie.susie_rss(**example["inputs"], **example["parameters"],
-                       track_fit="compact", retain_data=True)
+example = prusie.load_convergence_example()
+fit = prusie.susie_suff_stat(
+    **example["inputs"],
+    **example["parameters"],
+    track_fit="compact",
+)
 print("Stop:", fit.convergence["stop_reason"], "Iterations:", fit.niter)
 convergence_view = plot_convergence(fit, layout="compact")
 ```
@@ -20,290 +33,304 @@ convergence_view = plot_convergence(fit, layout="compact")
 Expected output:
 
 ```text
-Stop: criterion_satisfied Iterations: 3
+Stop: criterion_satisfied Iterations: 10
 ```
 
-Enable `track_fit` during fitting to retain iteration history. The compact plot
-shows logged ELBO, signed ΔELBO, Δalpha and ΔPIP. `layout="variance"` shows prior
-and residual variances separately; `layout="full"` includes all six metrics.
-`retain_data=True` preserves validated inputs for continuation and refinement.
+The compact plot shows the logged ELBO, its signed change, and the maximum
+absolute changes in component inclusion probabilities (`alpha`) and marginal
+PIPs between successive sweeps. `layout="variance"` shows the component prior
+variances and residual variance; `layout="full"` combines both views.
 
 ## Continue first, then consider refinement
 
-Reuse a completed fit. For an iteration-limit exit, an explicit continuation can
-give the same posterior more sweeps:
+If a fit reaches its iteration limit, more IBSS sweeps may be enough to satisfy
+its stopping rule. `continue_fit` starts from the saved posterior:
 
 ```python
 fit_for_search = fit
 if fit.convergence["stop_reason"] == "iteration_limit":
     fit_for_search = prusie.continue_fit(fit, max_iter=100, track_fit="compact")
-print("Ready for search:", fit_for_search.ibss_converged)
+print("IBSS converged:", fit_for_search.ibss_converged)
 ```
 
-This example prints `Ready for search: True` and reuses `fit`, because the
-initial fit already satisfied its rule. A continuation call starts from the
-supplied posterior, retains the original requested criterion and alpha/PIP,
-minimum-iteration and cycle controls, and inherits the ELBO tolerance when `tol`
-is omitted. Its `niter` counts the new call's sweeps. An explicit `tol` or
-`convergence=ConvergenceConfig(...)` overrides the corresponding controls.
-Investigate an objective anomaly or cycle before deciding to continue it.
+For the toy fit above, this branch is skipped because the stopping rule was
+already satisfied. `max_iter` gives the continuation call an additional sweep
+budget; its returned `niter` counts only those new sweeps. Unless overridden,
+the call inherits the requested convergence controls and fitting tolerance.
+Supply `tol` or `convergence=prusie.ConvergenceConfig(...)` to change the
+corresponding controls. Inspect the [convergence diagnostics](#convergence-diagnostics)
+before extending a fit with an objective anomaly or recorded cycle.
 
-Now run one refinement search with explicit search settings:
+Refinement searches alternative starting solutions under the same model. It
+requires retained inputs and a valid baseline with a finite ELBO; neither the
+baseline nor the candidate IBSS fits need to have converged. Run a search with
+explicit settings:
 
 ```python
 search_config = prusie.RefinementConfig(
-    max_rounds=10, absolute_tol=1e-3, relative_tol=None,
-    max_iter=100, inner_tol=1e-4, candidate_budget=20,
+    max_rounds=10,
+    absolute_tol=1e-3,
+    relative_tol=None,
+    max_iter=100,
+    inner_tol=1e-3,
+    candidate_budget=20,
 )
 refined = prusie.refine_fit(fit_for_search, search_config)
 search = refined.refinement
 print("Search:", search["status"])
-print("Accepted attempts:", sum(row["accepted"] for row in search["history"]),
-      "of", len(search["history"]))
+print(
+    "Accepted attempts:", sum(row["accepted"] for row in search["history"]),
+    "of", len(search["history"]),
+)
 ```
 
-For the packaged example:
+Refinement inherits the baseline's requested convergence controls, even after a
+runtime fallback; `convergence=...` overrides them. `inner_tol` sets `tol` for
+each inner fit, and `max_iter` limits its sweeps. `max_rounds` limits search
+rounds and `candidate_budget` limits exclusion attempts, each using at most two
+fits. `relative_tol=None` disables the relative-gain stopping rule.
 
-```text
-Search: no_improvement
-Accepted attempts: 0 of 2
-```
+Stage A sets the prior weights of one retained credible set to zero and fits
+from a cold start. The zeroed weights are softened by ordinary prior
+stabilization. Stage B restores the original prior and starts from stage A's
+`alpha`, `mu` and `mu2`, resetting the prior and residual variances to the
+original model's initial values.
 
-Refinement requires a valid baseline with retained inputs, not necessarily a
-converged inner IBSS fit. It inherits the
-baseline's **requested** convergence configuration unless explicitly overridden;
-`search_config.inner_tol` separately sets the inner ELBO tolerance. A runtime
-alpha/PIP fallback after a NaN ELBO is recorded as the effective rule and
-does not replace the original request for later calls.
-
-Each refinement attempt first excludes one retained credible set by setting its
-prior weights to zero and fits from a cold start. It then restores the original
-prior and refits, starting from the excluded-variant solution. The saved search
-records call these steps A and B, respectively.
-
-Candidates are compared using the **last logged ELBO with the original
-prior**, before final component trimming, as in pinned susieR. The recomputed
-post-trimming objective is retained only as a validity check and diagnostic.
-A candidate must be valid and finite, but need not have converged internally.
-It must improve the logged ELBO by more than `absolute_tol`. An unsuccessful search does not
-establish global optimality.
+The search ranks candidates by their last logged ELBO under the original prior,
+before final component trimming. The best valid, finite candidate in a round
+replaces the current fit only if its gain exceeds `absolute_tol`. The recomputed
+post-trimming ELBO is a validity check and diagnostic. An unsuccessful search
+does not establish a global optimum.
 
 ## Refinement compared with susieR
 
-`refine=True` and `refine_fit` perform the same prusie search. The table compares
-the Gaussian model with susieR **0.16.6**, commit
-`8e56a8e038e989856d106d9ca5175cc664fea9d2`. It describes algorithm choices;
-standard-fit R agreement alone does not validate refinement equivalence.
+When comparing refinement results, match the search settings as well as the
+model settings. For Gaussian RSS fits, `refine=True` calls `refine_fit`;
+other fitting routes can use a
+[separate refitting search](implementation.md#refinement-continuation-and-warm-starts).
+The table compares `refine_fit` without an explicit
+`RefinementConfig` with susieR **0.16.6**, commit
+`8e56a8e038e989856d106d9ca5175cc664fea9d2`.
 
 | Step or control | prusie | Pinned susieR |
 | --- | --- | --- |
-| Excluded-variant fit (A) | Cold fit; zero CS weights use the ordinary `log(pi + sqrt(eps))` convention | Same stabilized zero weights, not hard exclusion |
-| Refit under the original prior (B) | Restore original prior and model; initialize alpha/mu/mu2 from A, reset V and sigma² to original initialization | Restore original prior; initialize alpha/mu/mu2 from A with ordinary variance initialization |
-| Candidate ELBO | Last logged ELBO; A's objective is diagnostic only | Same |
-| Required absolute gain | Fit `tol` by default; explicit configs can override `absolute_tol` | Strictly greater than fit `tol`, default `1e-4` |
-| Relative round stop | By default, accepted gain divided by `max(1, abs(new objective))`, compared with fit `tol` | Same |
-| Convergence eligibility | No inner convergence requirement; outer status determines `converged` after an executed search, with inner status recorded separately | No explicit baseline/A/B convergence eligibility test; the outer search overwrites `converged` |
-| Search bound | 100 rounds by default; optional explicit candidate budget | 100 outer rounds; no separate candidate budget |
-| Invalid or failed candidate | Record failed stage, reject candidate, retain incumbent; require a finite recomputed objective | No per-candidate exception recovery or nonfinite filtering in `run_refine`; underlying fitting/objective errors propagate |
+| Stage A | Cold start; zero CS weights retain the ordinary `log(pi + sqrt(eps))` stabilization | Same; zero weights do not impose strict exclusion |
+| Stage B | Restore the original prior; transfer A's `alpha`, `mu` and `mu2`; reset `V` and `sigma2` to original initial values | Same posterior transfer, with ordinary variance initialization |
+| Ranking objective | Stage B's last logged ELBO under the original prior | Same, through `susie_get_objective` |
+| Required absolute gain | Strictly greater than the original fit's `tol` | Same |
+| Relative stop after acceptance | Accepted gain divided by `max(1, abs(new ELBO))` is below the original fit's `tol` | Same |
+| Inner IBSS convergence | Not required for the baseline or candidates; outer search status can replace `converged` | Not required; the outer search replaces `converged` |
+| Search limits | 100 rounds; an explicit configuration can also set `candidate_budget` | 100 rounds; no separate attempt budget |
+| Candidate validity and errors | Require finite logged and recomputed ELBOs; record and reject caught fitting or validation errors while retaining the current best fit | No per-candidate error recovery or nonfinite filtering in `run_refine`; errors propagate |
 
-Without an explicit `RefinementConfig`, both APIs forward the original fit's
-iteration budget and tolerance. An explicitly constructed config is a custom
-search and may intentionally override these settings; the example above does so.
-For exact definitions, see the
+Without an explicit configuration, prusie forwards the original fit's `max_iter`
+and `tol` to each inner fit, as susieR does. Constructing `RefinementConfig()`
+instead selects `max_rounds=10`, `absolute_tol=1e-3`, `max_iter=100`,
+`inner_tol=1e-4` and `relative_tol=None`. These settings can differ from the
+baseline's; the preceding example also sets an attempt budget.
+
+Use `refinement["status"]` to read the search outcome. When `refine_fit`
+overwrites `converged`, it saves the preceding flag in
+`convergence["inner_ibss_converged"]`. Agreement of fits without refinement does
+not establish numerical equivalence of refinement. For the algorithm
+definitions, see the
 [prusie implementation](https://github.com/LucaJiang/prusie/blob/main/src/prusie/refinement.py),
 [pinned R search](https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/refinement.R)
 and [pinned R objective accessor](https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/susie_get_functions.R).
-The saved [worked examples](worked_examples.md) report executed prusie searches
-with their own source identities and settings; their search outcomes should be
-read separately from the [standard-fit comparison](numerical_accuracy.md).
+The [Toy example](worked_examples.md) documents this official fixture with its
+software versions and settings. Read its outcome separately from the
+[comparison of fits without refinement](numerical_accuracy.md).
 
 ## Compare before and after
 
-Reuse the `refined` result and the configuration above; these plotting calls do
-not repeat the search:
+Compare changes in variant support alongside the objective gains that led to
+acceptance. Reuse `fit_for_search` and `refined` from above; these plotting calls
+do not repeat the search:
 
 ```python
-convergence_figure = plot_convergence(fit_for_search, after=refined, layout="compact")
-search_figure = plot_refinement(fit_for_search, refined, layout="compact")
+convergence_figure, _, _ = plot_convergence(
+    fit_for_search, after=refined, layout="compact"
+)
+search_figure, _, _ = plot_refinement(fit_for_search, refined, layout="compact")
 print("Same PIPs:", bool((fit_for_search.pip == refined.pip).all()))
 ```
 
-This example prints `Same PIPs: True`; the returned trajectory is labelled
-**After search (unchanged)**. Before and after have independent iteration axes.
-The refinement figure compares candidate PIPs, ELBO gains relative to the best
-fit at the start of each round, and the ELBO of accepted solutions. Full records distinguish
-failed, unconverged, below-threshold, valid but unselected, and accepted candidates.
+This official example prints `Same PIPs: False`: refinement accepts a higher-ELBO
+solution under the same model. The baseline has a saved sweep trace; the accepted
+search candidate has no iteration trace, so its convergence panel is labelled as
+unrecorded. Separate fits use independent sweep axes.
 
-The [problem example](worked_examples.md#a-stopped-fit-improved-by-refinement)
-illustrates a different outcome: its initial fit satisfies the stopping rule,
-yet refinement improves the ELBO by 17.4583. The final logged
-sweep ELBO precedes finalization; use the finalized ELBO for candidate comparisons.
+The refinement plot compares the two fits' PIPs, each attempt's ELBO gain over
+the best fit at the start of its round, and the sequence of best ELBOs. These
+gains use the last logged ELBO under the original prior. The compact layout
+displays selected variants; `candidates_only=False` shows all variants.
+`layout="full"` adds credible-set memberships and attempt records.
+
+Read `accepted`, `reason` and `stages` in `refined.refinement["history"]` to
+distinguish selection from inner IBSS convergence. Refinement candidates have
+no iteration trace, so an accepted fit's convergence panels are labelled as
+unrecorded.
+
+The [saved Toy example](worked_examples.md#a-stopped-fit-improved-by-refinement)
+shows changed PIPs and credible sets after the initial fit satisfies its
+stopping rule. Its own record defines the ELBO comparison used there.
 
 ## Convergence diagnostics
 
-`fit.convergence` contains requested/effective criterion, thresholds, iteration
-count, stop reason, last distances and recorded events. `fit.converged` and
-`fit.ibss_converged` describe the returned **inner IBSS** fit, independently of
-search status.
+Read the stopping rule alongside changes in variant support. `fit.convergence`
+records the requested and effective criteria, thresholds and stop reason;
+`fit.convergence["last"]` holds the final sweep's metrics and events.
+`fit.trace` holds the per-sweep records when tracking is enabled.
 
-| Evidence | Reading question |
-| --- | --- |
-| Logged ELBO and signed ΔELBO | Is the recorded objective still improving, flat, decreasing or nonfinite? |
-| Maximum absolute Δalpha | Are the component probabilities still moving? |
-| Maximum absolute ΔPIP | Is marginal variant inclusion still moving? |
-| Requested/effective criterion | Which condition was selected, and did a fallback occur? |
-| Stop reason | Was the criterion satisfied, an eligible cycle stop taken, the iteration cap reached, or a numerical failure detected? |
+For the returned fit's inner IBSS status, read
+`fit.convergence["ibss_converged"]`. The property `fit.ibss_converged` aliases
+`fit.converged`, which refinement can overwrite with its search outcome.
+Read `fit.refinement["status"]` separately.
 
-For biological variant $j$, marginal PIP combines active components:
+Component probabilities can move while marginal PIPs stay similar. For sweep
+$t$, the maximum absolute changes are
 
 $$
-\mathrm{PIP}_j = 1-\prod_{l:V_l>\mathrm{prior\_tol}}(1-\alpha_{lj}).
-$$
-
-The null column is excluded. Component allocations can move while marginal PIPs
-stay similar. Exact distances compare consecutive complete IBSS sweeps:
-
-$$
-\Delta_\alpha=\max_{l,j}|\alpha^{(t)}_{lj}-\alpha^{(t-1)}_{lj}|,\qquad
+\Delta_\alpha=\max_{\ell,j}|\alpha^{(t)}_{\ell j}-\alpha^{(t-1)}_{\ell j}|,\qquad
 \Delta_{\mathrm{PIP}}=\max_j|\mathrm{PIP}^{(t)}_j-\mathrm{PIP}^{(t-1)}_j|.
 $$
 
-The first recorded sweep has no preceding sweep, so its distances are unavailable.
-Each PIP uses that iteration's component activity. Alpha distance includes any
-null column; PIP distance does not.
+Here $\alpha_{\ell j}$ is the probability that component $\ell$ selects variant
+$j$. Alpha distance includes any null column; PIP distance excludes it. PIPs
+combine components with $V_\ell>\mathtt{prior\_tol}$, as described under
+[PIP and credible sets](model.md#pip-and-credible-sets). The first sweep has no
+preceding sweep, so its distances are unavailable.
 
-The default finite-ELBO rule, starting at iteration two, is
-$0\leq\Delta\mathrm{ELBO}<\mathrm{tol}$. A negative increment does not satisfy it.
-The `alpha_pip` rule requires both probability distances below their separate
-absolute tolerances; `joint` requires those conditions and the finite-ELBO rule.
-`min_iter=2` is the default; a larger value delays successful convergence and
-any cycle stop until that sweep. Repetition of alpha/PIP at lags two through five
-is **diagnostic only for a finite objective in `elbo` mode**. It cannot stop that
-fit or override an already satisfied convergence criterion.
-Select a different requested rule explicitly when fitting or continuing:
+The ordinary ELBO rule requires a finite objective and a finite signed increment
+$0\leq\Delta\mathrm{ELBO}<\mathtt{tol}$. A negative increment does not satisfy
+it or trigger a posterior fallback. Relative ELBO change is a diagnostic, rather
+than this stopping condition.
+
+`ConvergenceConfig` selects `elbo`, `alpha_pip` or `joint`. The `alpha_pip` rule
+requires $\Delta_\alpha<\mathtt{alpha\_tol}$ and
+$\Delta_{\mathrm{PIP}}<\mathtt{pip\_tol}$; both tolerances default to `1e-4`.
+The `joint` rule also requires the ELBO condition. For example:
 
 ```python
-rule = prusie.ConvergenceConfig(criterion="joint", alpha_tol=1e-6,
-                                 pip_tol=1e-6, min_iter=2, cycle_lag=5)
+rule = prusie.ConvergenceConfig(
+    criterion="joint", alpha_tol=1e-6, pip_tol=1e-6
+)
 ```
 
-Pass `convergence=rule` to the desired operation; merely creating this object
-leaves the completed example unchanged. Plot legends distinguish selected
-stopping thresholds from diagnostic-only thresholds. Relative ELBO change is
-reported separately and is not the default stopping condition.
+Pass `convergence=rule` when fitting, continuing or refining. `min_iter=2` is
+the default; a larger value delays successful convergence and cycle stops.
+Cycle detection checks for repeated alpha and PIP states up to `cycle_lag`
+sweeps earlier (default 5). Repetition at lags greater than one is diagnostic
+only under a finite ELBO in `elbo` mode. In explicit `alpha_pip` or `joint`
+mode, an eligible cycle stops with `cycle_detected` and inner IBSS convergence
+false if the requested success condition has not already held.
+
+The [PIP stopping rule](model.md#stopping-rules), selected with
+`convergence_method="pip"` or automatically for some models, uses `tol` for
+both distances. An eligible cycle counts as convergence and averages `alpha`
+over the cycle. That rule also seeds the preceding PIP at its first check using
+the current component variances; later PIPs retain their own sweep's activity.
+
+The following nonfinite-objective rules describe the native Gaussian loop.
+The dynamic RSS path has its own posterior-validity checks; see
+[convergence outcomes](implementation.md#convergence-outcomes).
 
 | Objective state | Behavior |
 | --- | --- |
-| First finite ELBO, following the initial −∞ sentinel | No convergence check or fallback; a preceding completed sweep is required |
-| Finite ELBO with a negative or nonfinite increment | Does not satisfy the ELBO condition; no alpha/PIP fallback |
-| NaN ELBO in `elbo` mode | At or after `min_iter`, use the labelled `alpha_pip_nonfinite_fallback` rule; success requires both posterior distances |
-| NaN ELBO in `alpha_pip` mode | Use the explicitly requested posterior rule and record the nonfinite objective |
+| NaN ELBO in `elbo` mode | At or after `min_iter`, record `alpha_pip_nonfinite_fallback` and use posterior checks; the default ELBO fit without a `convergence` configuration uses the PIP rule above |
+| NaN ELBO in `alpha_pip` mode | Apply the requested posterior rule and record the nonfinite objective |
 | NaN ELBO in `joint` mode | Stop with `numerical_failure` and `converged=False`, even before `min_iter` |
-| Infinite computed ELBO in any mode | Raise `ValueError`, as in the pinned R fitter |
+| Infinite computed ELBO | Raise `ValueError` |
 
-A nonfinite objective cannot win refinement selection. `criterion_satisfied`
-means the effective rule succeeded; inspect that rule and objective validity
-before interpreting the fit. If no stopping condition holds at `max_iter`, the
-reason is `iteration_limit` and `converged=False`.
+If a NaN ELBO accompanies nonfinite posterior arrays, fitting raises an error.
+A nonfinite objective cannot win refinement selection. Read
+`criterion_satisfied` with the effective rule and objective validity. If no
+stopping condition holds at `max_iter`, the inner fit reports `iteration_limit`
+and convergence false.
 
 ## Technical details
 
 <details markdown="1">
-<summary>Iteration phases, finalization and objective conventions</summary>
+<summary>Iteration phases and objective values</summary>
 
-Metrics are recorded after each complete sequential sweep, before any residual
-variance update. Posterior-mean distance uses
-$\bar b_j=\sum_l\alpha_{lj}\mu_{lj}$ on the working predictor scale. Signed
-variance changes, top variants, entropy, activity and events accompany the
-metrics. Online component entropy includes null; posterior resolution instead
-normalizes biological alpha and reports null mass separately. Relative ELBO
-change is $\Delta\mathrm{ELBO}/\max(1,|\mathrm{ELBO}_{t-1}|)$.
+Online metrics describe each completed sweep before any residual-variance
+update, cycle averaging or final trimming. For ordinary Gaussian fits,
+posterior-mean distance uses
+$\bar b_j=\sum_\ell\alpha_{\ell j}\mu_{\ell j}$ on the working predictor
+scale. The relative ELBO increment is
+$\Delta\mathrm{ELBO}/\max(1,|\mathrm{ELBO}_{t-1}|)$.
+Online component entropy includes the null column; `summarize` instead
+normalizes alpha over biological variants and reports null mass separately.
 
-After a non-stopping sweep, residual variance may be updated. Final trimming
-zeros components with $V_l<\mathrm{prior\_tol}$, including at the iteration
-limit. Stored `elbo` and `XtXr` retain their pre-finalization values;
-`evaluate_objective(fit)` explicitly recomputes likelihood, KL and fitted
-products from the complete saved state. `convergence['finalization']` separates
-trim changes from iterations. The CS activity threshold remains $10^{-9}$;
-a custom PIP `prior_tol` can therefore produce different boundary activity.
+An iteration-limit exit can return a residual variance updated after the last
+ELBO. Final trimming zeros `V`, `mu` and `mu2` for components with
+$V_\ell<\mathtt{prior\_tol}$, retaining their rows. In the retained Gaussian
+path, stored `elbo` and `XtXr` are not recomputed after trimming.
+`fit.convergence["finalization"]` records trimming distances and the returned
+residual variance. [Results](results.md#iterations-and-finalization) describes
+these phases and the separate PIP and credible-set activity thresholds.
 
-Ordinary SER uses `log(pi + sqrt(eps))`; trimmed V=0 components contribute zero
-KL. This convention and the recorded phase explain small logged-versus-final
-objective differences. Stage A's hard-exclusion weights remain exactly zero;
-B restores the original ordinary-prior convention.
-
-</details>
-
-<details markdown="1">
-<summary>Warm-start validation and legacy configuration recovery</summary>
-
-Tracking, initialization, refinement or `retain_data=True` retains validated
-input snapshots and scale metadata. Their content signature is computed once
-and reused by `continue_fit` and `refine_fit`. Ordinary unretained fits have
-`data_signature=None`; missing signatures never establish matching inputs.
-Set `retain_data=True` before later continuation. New fits using `s_init` do not
-require an input signature. Caller-array changes cannot alter retained inputs.
-
-`continue_fit` reuses the retained context and starts from the saved posterior.
-`save_analysis` preserves an available signature, but excludes the private
-snapshot. To warm-start a restored retained-origin result, pass the original
-inputs and `s_init=restored` to the fitting interface; new inputs are fully
-validated. A restored ordinary result can initialize a new fit, but cannot
-continue without the original private retained context.
-
-Supplied variant IDs/order, allele labels, null layout and working scales must
-agree. An explicit working-coordinate mapping needs `alpha`, `mu`, `mu2`;
-identity metadata is optional but checked when provided. Optional V and sigma2
-are checked; supplied V initializes even fixed-prior fits, while sigma2 is
-resumed only when residual variance is estimated, as in R. Growing L prioritizes
-credible-set components and adds uniform, zero-mean rows; requesting fewer
-effects than the state retains its existing effect count.
-Fitted crossproducts are rebuilt from the current posterior and inputs; old KL,
-BF and fitted caches are not reused as current values.
-
-Requested controls are read from `params['convergence']`, with labelled recovery
-from diagnostics or retained options for older results. If no original controls
-were recorded, compatibility defaults are identified rather than presented as
-inheritance. Per-stage `solver_settings` and `convergence` record the resolved
-controls for refinement runs; older saved files may lack these fields.
+`evaluate_objective(fit)` recomputes the ELBO from retained inputs and the
+returned posterior, without using cached KL, Bayes factors or fitted products.
+It can materialize an additional dense working matrix. Ordinary prior
+stabilization is `log(pi + sqrt(eps))`, where `pi` is a normalized prior weight
+and `eps` is float64 machine epsilon. Components with `V=0` contribute zero KL.
+Refinement stage A uses this same softened zero-weight convention.
 
 </details>
 
 <details markdown="1">
-<summary>Tracking detail, cycle detection and refinement budgets</summary>
+<summary>Retained inputs and warm starts</summary>
 
-Compact tracking (`True` or `'compact'`) records exact online distances and
-component summaries. Its alpha display retains rows with maximum alpha at least
-$2/p$ and entries at least $1/p$, where $p$ includes any internal null column.
-Thresholds, omitted mass and `lossy=True` are recorded. This display cannot
-reconstruct the posterior. `'dense'` also records full alpha and moments and is
-intended for small debugging inputs.
+For [supported Gaussian models](api.md#convergence-and-post-analysis),
+`retain_data=True` keeps read-only input snapshots and scale metadata.
+Tracking, initialization and refinement also imply retention within this scope.
+Continuation and refinement share these owned inputs and their cached content
+signature, `data_signature`. Later changes to caller arrays do not alter the
+snapshot. Ordinary unretained fits have `data_signature=None`; a missing
+signature cannot establish input identity.
 
-A lag-one fixed point is distinct from a short cycle. `cycle_lag=5` retains the
-default diagnostic history in every mode; `cycle_lag=1` disables lag-greater-than-one
-detection. Lagged repetition is recorded independently of the stopping decision.
-In explicit `alpha_pip` or `joint` mode, or the NaN-ELBO fallback, an eligible
-lag-two-through-five cycle stops only when the requested success criterion has
-not already held and `min_iter` has been reached. Such an exit reports
-`cycle_detected` and leaves IBSS convergence false. Finite-ELBO mode continues.
-Every mode retains the complete current posterior; components are not averaged.
-`track_fit=False`, `'compact'` and `'dense'` change recorded history, not fitted
-values or stopping decisions.
+`save_analysis` preserves an available signature but excludes the private input
+snapshot. A [reloaded fit](example.md#save-and-reload-a-result) can initialize a
+new fit when inputs are supplied again with `model_init=restored` (`s_init` is
+an alias). It cannot be passed directly to `continue_fit`.
 
-Every search round freezes an incumbent and its CS list. Stage A zeros excluded
-variant weights and normalizes the remaining full prior, including null. Stage B
-transfers alpha/mu/mu2, then resets V and sigma2 to the original model initialization.
-Candidates share immutable inputs and own their posterior arrays. A failed final
-attempt does not replace an earlier accepted best.
+A new fit can use a posterior without a retained-data signature.
+Working-coordinate mappings require `alpha`, `mu` and `mu2`; supplied variant
+IDs/order, allele labels, scales and null layout must agree with the new inputs.
+Supplied `V` initializes even fixed-prior fits; `sigma2` is resumed only when
+residual variance is estimated. Increasing $L$ preserves existing row order and
+adds uniform alpha rows with zero moments. Requesting fewer effects preserves
+the state's effect count. Fitted products are rebuilt from the posterior and
+inputs; old KL, Bayes factors and fitted caches are not reused.
 
-The default absolute improvement threshold avoids accepting numerical noise.
-The optional relative threshold is disabled by default; after an accepted gain,
-it can stop further rounds when the gain divided by
-$\max(1,|\mathrm{incumbent\ objective}|)$ is below the requested value.
-A candidate budget counts exclusion attempts, each using at most two fits.
-Round or candidate limits report `budget_exhausted`. No CS, no improvement,
-unsupported baseline, all candidates failed and exhausted budgets remain
-separate outcomes from IBSS stopping.
+</details>
+
+<details markdown="1">
+<summary>Tracking detail and search records</summary>
+
+Compact tracking (`True` or `"compact"`) records exact online distances and a
+lossy alpha display. Let $q$ be `alpha.shape[1]`, including any null column.
+The display retains rows whose maximum alpha is at least $2/q$ and entries
+at least $1/q$. Thresholds, omitted mass and `lossy=True` are recorded; these
+entries cannot reconstruct the posterior. `"dense"` also stores full `alpha`,
+`mu` and `mu2`. Tracking level changes the stored history, rather than the fit
+or stopping rule. [Cycle handling](#convergence-diagnostics) depends on that rule.
+
+Requested controls are read from `params["convergence"]`, with labelled recovery
+from diagnostics or retained options for older results. If those controls are
+unavailable, the record identifies compatibility defaults. Completed inner fits
+record their resolved controls in the stage's `solver_settings` and
+`convergence` entries.
+
+Each search round keeps its incumbent and credible-set list fixed. Candidates
+share the retained inputs and own their posterior arrays; a later failed
+attempt does not discard an earlier accepted best. `refinement["config"]`
+records the resolved search settings; the
+[default comparison](#refinement-compared-with-susier) explains how an explicit
+configuration changes them. The candidate budget counts exclusion attempts,
+each using at most two fits. Round or candidate limits report
+`budget_exhausted`; read search status separately from IBSS stopping.
 
 </details>
 
