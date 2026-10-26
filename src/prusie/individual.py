@@ -14,11 +14,13 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from ._array_layout import native_array
+from ._request import _prepare_request
+from ._trend import TrendDesign
 from .control import SlotPrior
 from .diagnostics import ConvergenceConfig
 from .refinement import RefinementConfig
 from .result import SusieResult
-from .workhorse import SusieInputs
+from .workhorse import SusieInputs, _fit
 
 
 @dataclass(frozen=True)
@@ -33,12 +35,12 @@ class _DesignData:
 
 def _validated_design(X: Any, y: ArrayLike, *, na_rm: bool) -> tuple[Any, NDArray[np.float64]]:
     try:
+        # SciPy is optional and is loaded only for this route.
         from scipy import sparse
 
         is_sparse = sparse.issparse(X)
     except ImportError:
         is_sparse = False
-    from ._trend import TrendDesign
 
     if isinstance(X, TrendDesign):
         pass
@@ -184,8 +186,6 @@ def susie(
     SusieResult or SusieInputs
         Fitted posterior or a validated no-fit request.
     """
-    from ._request import _prepare_request
-    from .workhorse import _fit
 
     for name, value in (
         ("intercept", intercept),

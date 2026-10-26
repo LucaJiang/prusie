@@ -11,6 +11,7 @@ from typing import Any
 import numpy as np
 
 from . import _native
+from ._rss_qc import finite_reference_diagnostics
 from .posterior import marginal_pip
 
 _EPS = np.finfo(float).eps
@@ -19,6 +20,7 @@ _EPS = np.finfo(float).eps
 def _bounded(
     function: Any, lower: float, upper: float, *, tolerance: float = 1e-8
 ) -> tuple[float, float]:
+    # SciPy is optional and is loaded only for this route.
     from scipy.optimize import minimize_scalar
 
     result = minimize_scalar(
@@ -78,6 +80,7 @@ def _mixture_gate(
     z: np.ndarray,
     reference_p: float,
 ) -> np.ndarray:
+    # SciPy is optional and is loaded only for this route.
     from scipy.special import expit, ndtri
 
     rz = residual / np.sqrt(n - 1)
@@ -213,6 +216,7 @@ def _update_omega(
 
 def fit_dynamic(request: Any) -> dict[str, Any]:
     """Run exact sequential SER updates for a dynamic RSS covariance model."""
+    # SciPy is optional and is loaded only for this route.
     from scipy.special import digamma, expit
 
     config, settings = request.dynamic, dict(request.options)
@@ -392,7 +396,6 @@ def fit_dynamic(request: Any) -> dict[str, Any]:
                     correlation = gram[np.ix_(keep, keep)] / (request.n - 1)
                     coherence = float(np.clip(mass @ (correlation**2) @ mass, 0, 1))
                     bias *= coherence
-            from ._rss_qc import finite_reference_diagnostics
 
             init_mean = np.sum(slot[:, None] * alpha * mu, axis=0)
             init_residual = (response - gram @ init_mean) / np.sqrt(request.n - 1)
@@ -654,8 +657,6 @@ def fit_dynamic(request: Any) -> dict[str, Any]:
     if grid_values is not None:
         output["lbf_grid"] = grid_values
     if config["kind"] != "lambda":
-        from ._rss_qc import finite_reference_diagnostics
-
         final_mean = np.sum(slot[:, None] * alpha * mu, axis=0)
         residual = (response - gram @ final_mean) / np.sqrt(request.n - 1)
         output["R_finite_diagnostics"] = finite_reference_diagnostics(

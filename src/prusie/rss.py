@@ -11,6 +11,7 @@ from numpy.typing import ArrayLike
 
 from . import _native
 from ._array_layout import native_array
+from ._execution import close_executor, create_executor
 from ._overwrite import _overwrite_prepare, _overwrite_recheck
 from ._request import (
     _prepare_request,
@@ -29,6 +30,8 @@ from .control import RSSControl, SlotPrior, susie_rss_control
 from .diagnostics import (
     ConvergenceConfig,
 )
+from .individual import _column_stats, _DesignData, _validated_design
+from .posterior import _design_correlation
 from .refinement import RefinementConfig
 from .result import SusieResult
 from .workhorse import (
@@ -325,8 +328,6 @@ def susie_rss(
     if estimate_residual_method == "NIG" and n is None:
         raise ValueError("NIG RSS fitting requires n")
     if X is not None:
-        from .individual import _column_stats, _DesignData, _validated_design
-
         raw_rows = X.shape[0] if hasattr(X, "shape") else len(X)
         raw, _ = _validated_design(X, np.zeros(raw_rows), na_rm=False)
         if raw.shape[1] != len(z):
@@ -349,8 +350,6 @@ def susie_rss(
             False,
         )
         if has_effects and var_y is not None:
-            from .posterior import _design_correlation
-
             R = _design_correlation(raw, np.arange(len(z)), np.arange(len(z)))
             design_data = None
     prevalidated_scale = None
@@ -395,8 +394,6 @@ def susie_rss(
                     # Eligibility uses normalized preparation inputs only; solver
                     # and output options cannot disable independent matrix work.
                     if n_threads > 1 and len(z) >= 1024:
-                        from ._execution import create_executor
-
                         _executor = create_executor(R, n_threads)
                     if _executor is None:
                         symmetric, repaired_rss, repair_error = _native.validate_and_repair_rss(
@@ -414,7 +411,6 @@ def susie_rss(
                             # error callback. Do not keep preparation workers alive
                             # across any of that Python work, even when no package
                             # warning has been generated.
-                            from ._execution import close_executor
 
                             close_executor(_executor)
                             _executor = None
@@ -584,18 +580,12 @@ def susie_rss(
 
     finally:
         if _executor is not None:
-            from ._execution import close_executor
-
             close_executor(_executor)
 
 
 def prepare_multipanel(arguments: dict[str, Any]) -> Any:
     """Construct panel sub-fits and the outcome-independent initial mixture."""
     import inspect
-
-    from ._validation import _summary_vector
-    from .posterior import _design_correlation
-    from .workhorse import _fit
 
     panels = arguments["panels"]
     if arguments["n"] is None:
@@ -635,8 +625,6 @@ def prepare_multipanel(arguments: dict[str, Any]) -> Any:
             )
             matrix = matrix * inverse[:, None] * inverse[None, :]
         else:
-            from .individual import _validated_design
-
             raw, _ = _validated_design(panel, np.zeros(np.shape(panel)[0]), na_rm=False)
             matrix = _design_correlation(raw, np.arange(raw.shape[1]), np.arange(raw.shape[1]))
         correlations.append(matrix)

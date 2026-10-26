@@ -8,6 +8,9 @@ from typing import Any
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
+from ._validation import _integer, _scalar
+from .getters import susie_get_objective
+from .individual import _column_stats, _validated_design
 from .result import SusieResult
 
 
@@ -45,7 +48,6 @@ def univar_order(X: Any, y: ArrayLike) -> NDArray[np.int64]:
     ndarray of int, shape (p,)
         Stable descending order of absolute univariate coefficients.
     """
-    from .individual import _validated_design
 
     X, response = _validated_design(X, y, na_rm=False)
     squared = (
@@ -173,7 +175,6 @@ def compute_marginal_bhat_shat(
     dict
         ``Bhat`` and ``Shat`` matrices with shape (p, t).
     """
-    from .individual import _column_stats, _validated_design
 
     response = np.asarray(Y, dtype=float)
     if response.ndim == 1:
@@ -245,10 +246,6 @@ def block_coordinate_ascent(
     import copy
     import logging
     import warnings
-
-    from ._validation import _integer, _scalar
-    from .getters import susie_get_objective
-    from .result import SusieResult
 
     if not isinstance(model, SusieResult) or not callable(step_fn):
         raise TypeError("model must be a SusieResult and step_fn must be callable")

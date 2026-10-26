@@ -10,7 +10,7 @@ import warnings
 import numpy as np
 import pytest
 
-from prusie import _execution, _native, susie_rss
+from prusie import _execution, _native, rss, susie_rss
 
 
 def request(**updates):
@@ -108,7 +108,7 @@ def test_warning_dispatch_is_after_join_on_calling_thread_and_in_serial_order(mo
         events.append((str(message), threading.get_ident()))
         return original_warn(message, *args, **kwargs)
 
-    monkeypatch.setattr(_execution, "close_executor", close)
+    monkeypatch.setattr(rss, "close_executor", close)
     monkeypatch.setattr(warnings, "warn", warn)
     messages = []
     for count in (1, 4):
@@ -167,7 +167,7 @@ def test_preparation_joins_before_numpy_error_handling_and_separate_fit(monkeypa
         events.append(error)
 
     monkeypatch.setattr(_native, "_validate_and_repair_rss_with_executor", prepare)
-    monkeypatch.setattr(_execution, "close_executor", close)
+    monkeypatch.setattr(rss, "close_executor", close)
     monkeypatch.setattr(_native, "fit", fit)
     args = request(n=1.5, z_method="score", check_prior=False)
     args["R"] *= 3 * np.nextafter(0.0, 1.0)

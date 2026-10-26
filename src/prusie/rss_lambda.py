@@ -13,9 +13,13 @@ from typing import Any
 import numpy as np
 from numpy.typing import ArrayLike
 
+from ._request import _prepare_request
+from ._validation import _integer
 from .control import SlotPrior
+from .individual import _validated_design
+from .posterior import _design_correlation
 from .result import SusieResult
-from .workhorse import SusieInputs
+from .workhorse import SusieInputs, _fit
 
 
 def susie_rss_lambda(
@@ -110,11 +114,6 @@ def susie_rss_lambda(
         The fitted RSS-lambda posterior. Initialization-only calls return
         :class:`SusieInputs`, accepted by :func:`susie_workhorse`.
     """
-    from ._request import _prepare_request
-    from ._validation import _integer
-    from .individual import _validated_design
-    from .posterior import _design_correlation
-    from .workhorse import _fit
 
     if (R is None) == (X is None):
         raise ValueError("Supply exactly one of R and X")

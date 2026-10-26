@@ -12,6 +12,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from . import _native
+from ._validation import _scalar, _vector
+from .getters import susie_get_cs_attainable
 from .posterior import marginal_pip
 from .result import SusieResult
 
@@ -69,8 +71,6 @@ def susie_ser(
     SusieResult
         One-effect posterior, with attainable credible sets without LD filtering.
     """
-    from ._validation import _scalar, _vector
-    from .getters import susie_get_cs_attainable
 
     if estimate_prior_method not in ("optim", "simple"):
         raise ValueError("estimate_prior_method must be 'optim' or 'simple'")

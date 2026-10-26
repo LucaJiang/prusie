@@ -13,6 +13,8 @@ from typing import Any
 import numpy as np
 from numpy.typing import ArrayLike
 
+from ._trend import TrendDesign
+from ._validation import _integer
 from .individual import susie
 from .result import SusieResult
 from .workhorse import SusieInputs
@@ -73,7 +75,6 @@ def susie_auto(
     SusieResult
         Final model after staged fitting and a final tolerance refinement.
     """
-    from ._validation import _integer
 
     count, maximum = _integer(L_init, "L_init"), _integer(L_max, "L_max")
     response = np.asarray(y, dtype=float)
@@ -200,7 +201,6 @@ def susie_trendfilter(
     response = np.asarray(y, dtype=float)
     if response.ndim != 1 or len(response) < 2 or not np.isfinite(response).all():
         raise ValueError("y must be a finite vector with at least two observations")
-    from ._trend import TrendDesign
 
     design = TrendDesign(len(response), int(order))
     controls = dict(kwargs)

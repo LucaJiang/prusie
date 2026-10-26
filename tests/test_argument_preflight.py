@@ -89,9 +89,7 @@ def test_explicit_elbo_rule_remains_available_for_mismatch_rss():
 @pytest.mark.parametrize("refine", ["yes", 1, None])
 @pytest.mark.parametrize("entry", ["suff_stat", "rss", "individual"])
 def test_invalid_refine_is_rejected_before_fitting(monkeypatch, entry, refine):
-    monkeypatch.setattr(
-        getattr(prusie, "workhorse" if entry == "individual" else entry), "_fit", pytest.fail
-    )
+    monkeypatch.setattr(getattr(prusie, entry), "_fit", pytest.fail)
     with pytest.raises(TypeError, match="refine must be False, True, or a RefinementConfig"):
         if entry == "suff_stat":
             prusie.susie_suff_stat(499 * R, FILLED, 499.0, 500, L=2, refine=refine)

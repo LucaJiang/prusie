@@ -15,6 +15,8 @@ from ._request import (
     _legacy_analysis_limitations,
     _require_legacy_analysis,
 )
+from ._rss_qc import summarize_attenuation
+from ._trend import TrendDesign
 from ._types import CredibleSetAudit
 from ._validation import (
     _warn,
@@ -27,6 +29,7 @@ from .diagnostics import (
 from .posterior import credible_sets, marginal_pip
 from .refinement import RefinementConfig, initial_options, refine_fit
 from .result import SusieResult
+from .rss_models import fit_dynamic
 
 
 def _fit(request: _FitRequest, *, _executor=None) -> SusieResult | SusieInputs:
@@ -100,8 +103,6 @@ def _fit(request: _FitRequest, *, _executor=None) -> SusieResult | SusieInputs:
     if params.get("L_greedy") is not None:
         return _fit_greedy(request)
     if request.dynamic is not None:
-        from .rss_models import fit_dynamic
-
         native = fit_dynamic(request)
     elif request.design is None:
         if _executor is None:
@@ -120,7 +121,6 @@ def _fit(request: _FitRequest, *, _executor=None) -> SusieResult | SusieInputs:
             n,
             options,
         )
-        from ._trend import TrendDesign
 
         if isinstance(design.X, TrendDesign):
             native = _native.fit_design_trend(design.X.n, design.X.order, *arguments)
@@ -215,8 +215,6 @@ def _fit(request: _FitRequest, *, _executor=None) -> SusieResult | SusieInputs:
     )
     if fit.R_finite_diagnostics:
         if "R_bf_attenuation" in native:
-            from ._rss_qc import summarize_attenuation
-
             summarize_attenuation(
                 fit, native["R_bf_attenuation"], request.dynamic["control"].sensitivity_threshold
             )
