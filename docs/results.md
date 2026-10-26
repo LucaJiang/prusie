@@ -1,217 +1,342 @@
 # Reading fine-mapping results
 
-Start with the PIP ranking and retained credible sets, then ask how concentrated
-each component is and whether diagnostics change the interpretation. A variant
-can have a high marginal PIP while belonging to a set with several plausible
-alternatives. Component IDs identify model rows, not ranks or known causal effects.
+Fine-mapping results summarize uncertainty about which variants affect a trait
+under the fitted model and input assumptions. Start with the marginal posterior
+inclusion probabilities (PIPs) in `fit.pip` and retained credible sets in
+`fit.sets`, then examine posterior concentration, LD purity and convergence
+diagnostics.
+
+A high marginal PIP can coexist with a credible set containing several plausible
+variants. Component IDs refer to rows of `fit.alpha`; they do not rank signals
+or identify known causal effects. The [statistical model](model.md#pip-and-credible-sets)
+defines PIPs and credible sets.
 
 ## PIP, alpha and credible sets
 
-| Quantity | Question it answers | How to read it |
+Use PIPs to rank variants and alpha to examine uncertainty within a single-effect
+component. A credible set (CS) summarizes that component's possible locations.
+
+| Quantity | Where to read it | Interpretation |
 | --- | --- | --- |
-| Marginal PIP | How much posterior support does this variant have across active components? | Rank candidates under the fitted model and assumptions |
-| Component alpha | Where does this one single-effect component place its probability? | Read within a component; its rows can exchange roles across fits |
-| Credible set (CS) | Which variants together reach the requested component posterior mass? | Read the actual mass, membership and original component ID |
-| Purity | Are the CS members strongly correlated with one another? | Minimum, mean and median absolute LD correlation; a singleton has purity 1 by definition |
-| Effective number of variants | How concentrated is the component posterior? | Entropy-based resolution, distinct from CS size and causal count |
+| Marginal PIP | `fit.pip` | Variant support across active components |
+| Component alpha | `fit.alpha` | Probability allocation within one component |
+| Credible set | `fit.sets` | Selected variants, attained posterior mass and original component ID |
+| LD purity | `fit.sets["purity"]` | Minimum, mean and median absolute pairwise correlation within each set, when evaluated |
+| Effective number of variants | `effective_candidates` in the [component summary](#posterior-summaries) | Entropy-based concentration of alpha, distinct from CS size or causal count |
 
-For active components, marginal PIP is
+For component $\ell$ and variant $j$, $\alpha_{\ell j}$ is the entry of
+`fit.alpha` and $V_\ell$ is the component's prior variance in `fit.V`. For fits
+without a slot-activity prior, let $\mathcal A$ contain the components with
+$V_\ell>\mathtt{prior\_tol}$. The marginal PIP is
 
 $$
-\mathrm{PIP}_j=1-\prod_{l:V_l>\mathrm{prior\_tol}}(1-\alpha_{lj}).
+\mathrm{PIP}_j=1-\prod_{\ell\in\mathcal A}(1-\alpha_{\ell j}).
 $$
 
-The optional null position is excluded. A CS with target mass 0.95 can have
-actual mass greater than 0.95 because variants are included whole. That target is
-posterior mass under the model; it is not a claim of demonstrated repeated-sampling
-coverage in a new study. PIP and CS support do not establish biological mechanism.
+`fit.pip` excludes the optional null column. Active components can contribute
+even without a retained CS. With a [slot-activity prior](model.md#additional-model-options),
+each alpha is also weighted by its component's posterior activity probability
+before computing the product.
 
-This fragment continues from the [quick start](example.md), with its `prusie`,
-`fit` and `inputs` objects already defined:
+CS members are selected by decreasing alpha until their cumulative probability
+reaches `coverage` (default 0.95). The attained mass can exceed the target because
+the last selected variant is included whole. Sets are then screened for activity,
+duplicate membership and LD purity; see [credible-set fields](#credible-set-fields)
+for the exact extraction order and options. This posterior mass does not establish
+repeated-sampling coverage in a new study. PIP and CS support do not establish
+biological mechanism.
 
-```python
-summary = prusie.summarize(fit, inputs["R"], z=inputs["z"])
-print(prusie.summary_text(summary).splitlines()[0])
-```
+High purity means that the set's members are strongly correlated; uncertainty
+about which member carries the effect can remain. When evaluated, singleton
+purity is 1 by convention and says nothing about LD with neighboring variants.
 
-```text
-500 variants; 2 retained credible sets; 2 active components.
-```
-
-For the [packaged example](example.md), `syn0100` has PIP about 0.9697 and
-`syn0350` about 0.99994. Each has a singleton CS. Their effective numbers of variants
-are approximately 1.146 and 1.001: most mass is concentrated, although neighboring
-variants can still carry small probabilities. See the
-[worked examples](worked_examples.md) for a retained two-variant CS whose members
-remain difficult to resolve.
+The [quick start](example.md#summarize-the-fitted-posterior) shows how to obtain
+the summary tables. The [Toy example](worked_examples.md#what-remains-unresolved)
+illustrates a retained CS whose members remain difficult to resolve.
 
 ## Posterior summaries
 
-`summarize` provides variant, component and CS tables, the recorded CS pipeline
-audit, direct LD proxies and conditional prior/BF information. CS audit reasons
-include inactive, duplicate, contains-null, low-purity, disabled and unavailable;
-several reasons may apply. Changing summary coverage or purity re-extracts sets
-from the same posterior without running IBSS.
+Use `summary = prusie.summarize(fit, R)` to tabulate variants, components and
+credible sets, with CS audit records, LD proxies and prior-influence information.
+Supply `R` as signed LD correlations in `fit.variant_ids` order. Passing
+`coverage` or `min_abs_corr` re-extracts sets from the same posterior without
+running IBSS or changing `fit`. Re-extraction requires an explicit `R` unless
+CS construction is disabled.
 
-The effective number of variants is $\exp(H_\ell)$, where
-$H_\ell=-\sum_j a_j\log a_j$ is the entropy of component $\ell$ and
-$a_j=\alpha_{\ell j}/\sum_{k\ne\mathrm{null}}\alpha_{\ell k}$ over non-null
-variants. The result field is `effective_candidates`; null mass is reported
-separately. This is a continuous resolution
-summary, with no automatic cutoff declaring a component to be a causal signal.
+Inspect `summary["cs_audit"]` for the extraction decisions. Reasons such as
+`inactive` and `duplicate` can coexist; `unavailable` marks a missing audit
+record.
 
-Direct proxies require pairwise $|r|$ above the chosen threshold (default 0.99).
-They do not add CS members or expand through chains of correlated variants.
-Representatives use highest alpha, with lexical ID tie-breaking. Genotype
-correlation supplements posterior resolution; it is not a test of whether
-multiple conditional effects can be distinguished. CS count is not a known
-causal count.
+Each entry in `summary["components"]` reports `effective_candidates`, the
+entropy-based effective number of variants. Let $\mathcal J$ contain the
+non-null variants. For component $\ell$ with positive non-null mass, define
 
-Prior-influence plots compare supplied and effective computational weights,
-component-conditional log Bayes factors and alpha in the same variant order.
-These Bayes factors depend on the other components and current settings. They
-are not independent evidence for additional effects. Exact prior conventions
-are described in the [model](model.md) and [sensitivity guide](sensitivity.md).
+$$
+a_{\ell j}=\frac{\alpha_{\ell j}}{\sum_{k\in\mathcal J}\alpha_{\ell k}},
+\qquad
+H_\ell=-\sum_{j\in\mathcal J:\,a_{\ell j}>0}a_{\ell j}\log a_{\ell j}.
+$$
+
+`effective_candidates` is $\exp(H_\ell)$, and `null_mass` is reported separately.
+If all probability is on the null position, the effective number is `None`.
+This measures posterior concentration, with no cutoff declaring a component
+to be a causal signal.
+
+`summary["proxies"]` lists variants outside each retained CS with
+$|r|\geq\mathtt{proxy\_r}$ to a CS member, where $r$ is their signed LD
+correlation and `proxy_r=0.99` by default. Only direct pairs are listed; proxies
+do not add CS members or expand through chains of correlated variants. Without
+`R`, proxies are not assessed. Each CS representative is its highest-alpha
+member, with ties broken by lexical variant ID. Genotype correlation does not
+test whether multiple conditional effects can be distinguished, and CS count
+does not identify the number of causal effects.
+
+`summary["prior_influence"]` and `plot_prior_influence` compare stored and
+effective prior weights, component-conditional log Bayes factors and alpha.
+These Bayes factors depend on the other components and fit settings; they are
+not independent evidence for additional effects. See the
+[prior conventions](inputs.md#priors-and-zero-information-columns) and
+[sensitivity guide](sensitivity.md#variant-alignment-and-prior-weights).
 
 ## Result object
 
-Both fitting functions return `SusieResult`. All indices are zero-based and
-biological variants remain in the caller's order. Let $p$ be their count and
-$q=p+1$ when an internal null column is present, otherwise $q=p$. In the table,
-$L$ is the returned component count, capped at the number of available columns.
-`as_dict()` returns a shallow mapping without copying arrays. Results are
-mutable; callers own any copies they need.
+After fitting, the fitting entry points return a mutable `SusieResult`
+containing posterior arrays, credible sets and the fitting record. Variant and
+component indices are zero-based; non-null variants retain input order after
+any filtering.
+
+For the [posterior field shapes](#posterior-fields) below, let $p$ be the number
+of returned non-null variants (`len(fit.variant_ids)`). There are $q=p+1$ columns
+when `fit.null_index` is present, otherwise $q=p$. The returned number of
+single-effect components is $L$ (`fit.alpha.shape[0]`), including inactive rows.
+
+`fit.as_dict()` returns the stored public fields without copying their arrays
+or nested containers, except that `input_quality` is exported as a dictionary.
+Computed properties such as `coef` are omitted. Copy any values you intend to
+modify independently.
 
 ## Posterior fields
 
+The dimensions $p$, $q$ and $L$ are defined [above](#result-object). Effect
+moments use the working predictor scale; `coef` reverses the stored predictor
+scaling.
+
 | Field | Shape/type | Meaning |
 | --- | --- | --- |
-| `variant_ids` | $(p,)$ strings | Caller variant order, excluding null |
-| `alpha` | $(L,q)$ float64 | Component probabilities $q_\ell(\gamma_\ell=j)$ |
-| `mu` | $(L,q)$ float64 | Conditional means on the fitted predictor scale |
-| `mu2` | $(L,q)$ float64 | Conditional second moments, equal to squared conditional means plus conditional variances |
-| `lbf_variable` | $(L,q)$ float64 | Natural-log component/variant Bayes factors before variant weights |
-| `lbf` | $(L,)$ float64 | Component log weighted evidence |
-| `V` | $(L,)$ float64 | Component prior variances after trimming |
-| `sigma2` | float | Residual variance on the working response scale |
-| `pip` | $(p,)$ float64 | Marginal inclusion probability over active components, excluding null |
-| `coef` | $(p,)$ property | Sum of alpha times mu over components, divided by predictor scale factors |
-| `KL` | $(L,)$ float64 | Component divergence terms from the fitting updates; trimmed rows are zero |
-| `elbo` | `(niter,)` float64 | Objective trace before final low-V trimming |
-| `XtXr` | $(q,)$ float64 | Retained fitted crossproduct before trimming; this is not the crossproduct residual |
-| `X_column_scale_factors` | $(q,)$ float64 | Predictor scale factors including null, if present |
-| `intercept` | float | Supplied response mean minus predictor means times posterior coefficients; NaN when means are unavailable |
+| `variant_ids` | $(p,)$ strings | Retained variant identifiers in input order, excluding null |
+| `alpha` | $(L,q)$ float64 | Single-effect location probabilities; each row sums to one |
+| `mu` | $(L,q)$ float64 | Conditional posterior means given the component's location |
+| `mu2` | $(L,q)$ float64 | Conditional second moments: squared conditional means plus conditional variances |
+| `lbf_variable` | $(L,q)$ float64 | Natural-log Bayes factors for each component and variant, before variant prior weighting |
+| `lbf` | $(L,)$ float64 | Natural-log prior-weighted Bayes factor for each component |
+| `V` | $(L,)$ float64 | Returned component prior variances after final trimming; interpretation depends on the prior |
+| `sigma2` | float | Returned residual-variance parameter on the working response scale |
+| `pip` | $(p,)$ float64 | Marginal inclusion probabilities over active components, including slot-activity weights when present; null excluded |
+| `coef` | $(p,)$ property | Posterior mean effects on the input predictor scale, including slot-activity weights when present; null excluded |
+| `KL` | $(L,)$ float64 | Stored component divergence terms; final-trimmed rows are zero |
+| `elbo` | `(niter,)` float64 | Recorded objective after each sweep, before final trimming |
+| `XtXr` | $(q,)$ float64 | Stored fitted crossproduct; its phase is described below |
+| `X_column_scale_factors` | $(q,)$ float64 | Predictor scale divisors, including null when present |
+| `intercept` | float | Reconstructed from response and predictor means; NaN when means are unavailable |
 
-`mu` is conditional on a variant being selected within one component, whereas
-`alpha * mu` is the component's marginal coefficient mean. See the
-[model explanation](model.md#single-effect-posteriors-and-effect-means) for their
-relationship and the separate [RSS coefficient scales](model.md#from-summaries-to-working-sufficient-statistics).
+Without a slot prior, `alpha * mu` gives each component's marginal coefficient
+mean. For slot-prior fits, `coef` also applies the fitted component activity
+probabilities, `slot_weights`. The reconstructed `intercept` and individual-level
+`fitted` values use the same activity-weighted posterior mean. Slot-prior
+intercepts deliberately differ from susieR 0.16.6 exports, which omit these
+weights. See the [posterior moments](model.md#single-effect-posteriors-and-effect-means)
+and [RSS coefficient scales](model.md#from-summaries-to-working-sufficient-statistics)
+for the interpretation of effect estimates.
+
+`XtXr` stores a fitted crossproduct, rather than the crossproduct residual. The
+ordinary Gaussian solver retains it from before final trimming; RSS fits using
+finite-reference or mismatch models, multiple LD panels, or `susie_rss_lambda`
+construct it from the trimmed posterior. See [iterations and finalization](#iterations-and-finalization)
+for how stored quantities relate to the returned posterior.
+
+Additional outputs depend on the fitting route and are `None` when absent.
+Here $n$ is the number of observations used in the fit and $K$ is the number of
+variances in `prior_variance_grid`.
+
+| Field | Shape when present | Meaning |
+| --- | --- | --- |
+| `fitted` | $(n,)$ | Stored fitted responses for individual-level data |
+| `univariate_zscore` | $(p,)$ | Marginal regression z-scores requested with `compute_univariate_zscore=True` |
+| `slot_weights` | $(L,)$ | Posterior component activity probabilities under a slot prior |
+| `lbf_grid` | $(L,q,K)$ | Natural-log Bayes factors for each component, variant and mixture variance |
+| `rv` | $(L,)$ | Per-component residual-variance values for NIG |
+| `marginal_loglik` | $(L,)$ | Integrated NIG single-effect log likelihoods, when evaluated |
+
+The [additional model options](model.md#additional-model-options) explain mixture
+moments and the returned `V` under mixture and NIG priors. When mixture SER takes
+precedence over NIG SER, the NIG fields do not contain newly evaluated NIG
+posteriors.
 
 ## Credible-set fields
 
-`sets['cs'][k]` contains member indices for the original component
-`sets['cs_index'][k]`. IDs need not be consecutive; sorting returned sets does
-not relabel components. The mapping contains:
+Read CS membership together with its component ID, attained posterior mass and
+purity. `fit.sets["cs"][k]` contains member indices for the component identified by
+`fit.sets["cs_index"][k]`. These IDs index rows of `fit.alpha`; they need not be
+consecutive, and sorting sets does not relabel them.
 
 | Key | Meaning |
 | --- | --- |
-| `cs` | List of member-index arrays, ascending within each set |
+| `cs` | List of member-index arrays in ascending variant order within each set |
 | `cs_index` | Original zero-based component ID for each returned set |
-| `coverage`, `actual_coverage` | Actual selected posterior mass in that component; equal aliases sharing the returned array for nonempty results |
-| `requested_coverage` | Requested selection target |
+| `coverage`, `actual_coverage` | Attained component posterior mass; the two keys share one array when sets are retained |
+| `requested_coverage` | Requested selection target, including when no sets are retained |
 | `purity` | Arrays `min_abs_corr`, `mean_abs_corr`, `median_abs_corr`, one entry per returned set |
+
+Empty or disabled results contain an empty `cs` list and empty index, mass and
+purity arrays. PIPs remain available separately in `fit.pip`. In fitting calls,
+`coverage=None` disables CS construction, as does setting both `min_abs_corr`
+and `median_abs_corr` to `None`. A retained CS does not establish that the fit
+converged; inspect the [stopping record](#iterations-and-finalization) separately.
 
 <details markdown="1">
 <summary>Exact CS extraction order and boundary cases</summary>
 
-Candidates accumulate alpha in descending order with stable ties, then sort
-member indices. Deduplication retains the first occurrence of a membership set
-**before** activity and purity filtering, so an earlier rejected candidate can
-suppress a later duplicate. CS activity uses $V_\ell>10^{-9}$. Candidates
-containing null receive the reference's negative purity sentinel and are not
-retained at allowed thresholds. Singleton sets have purity one; larger retained
-sets use every unordered pair's absolute correlation. `n_purity` does not
-subsample matrix input. Returned sets sort by decreasing minimum purity with
-stable ties.
+Variants are ranked by decreasing alpha, with ties retaining column order, and
+added until their cumulative mass reaches `coverage`. Member indices are then
+sorted. The CS definitions follow the
+[pinned susieR reference](implementation.md#reference-source-mapping).
 
-Empty sets give empty member/index/mass/purity collections while retaining PIPs
-and the target. `coverage=None` or `min_abs_corr=None` disables construction.
-The [two-variant example](model.md#pip-and-credible-sets) distinguishes requested
-mass, selected mass, LD purity and repeated-sampling coverage. The presence of
-a credible set and convergence are separate properties.
+Deduplication records the first occurrence of each initial membership set
+**before** activity and purity filtering. An earlier rejected candidate can
+therefore suppress a later duplicate. CS activity requires $V_\ell>10^{-9}$;
+this threshold is fixed independently of the configurable `prior_tol` used for
+PIPs.
+
+If `cs_extension_corr` is supplied, variants with absolute correlation strictly
+above that threshold to any initially selected member are added before purity
+filtering. Extension excludes the null column and does not follow correlation
+chains. Extended memberships are not deduplicated again.
+
+Candidates containing null are rejected when purity is evaluated. Singleton
+purity is 1 by convention. Matrix-based purity uses every unordered pair within
+a retained set; `n_purity` does not subsample matrix input. For purity computed
+from individual-level `X`, `n_purity` can cap the calculation: sets exceeding
+the cap use a random subset of members to estimate purity, while the full CS
+membership is returned.
+
+By default, the minimum absolute correlation must be at least `min_abs_corr`.
+If `median_abs_corr` is also supplied, meeting either threshold is sufficient;
+with `min_abs_corr=None`, only the median threshold is used. Returned sets sort
+by decreasing minimum purity when its threshold is present, otherwise by
+decreasing median purity, with ties retaining component order.
+
+The [model explanation](model.md#pip-and-credible-sets) distinguishes the requested
+mass, attained posterior mass, LD purity and repeated-sampling coverage.
 
 </details>
 
 ## Iterations and finalization
 
-`niter` counts executed sweeps; `max_iter` is the cap. By default, convergence
-requires a finite $0\leq\Delta\mathcal L<\mathtt{tol}$ after at least two sweeps.
-An objective decrease does not satisfy this rule. Reaching the cap leaves IBSS
-unconverged unless the criterion held on the last sweep. Optional alpha/PIP and
-joint rules are selected by `ConvergenceConfig`; the library does not silently
-refit when a rule fails.
+`fit.niter` counts completed IBSS sweeps; `max_iter` caps the sweeps in one fit.
+If no stopping condition holds on the last permitted sweep, `fit.converged` is
+false. A convergence flag describes the selected stopping rule and does not
+establish that the fit is a global optimum. Read `fit.convergence` for the
+requested and effective rules, stop reason and fitting diagnostics.
 
-`fit.convergence` records the requested and effective rules, actual stopping
-reason, exact last distances and finalization. Finite-ELBO mode records lagged
-alpha/PIP repetition as a diagnostic and continues until its own rule succeeds
-or the iteration cap is reached. Explicit alpha/PIP and joint modes may stop
-on a lagged cycle after `min_iter`, reporting `cycle_detected` with convergence
-false. A successful criterion takes precedence over a cycle diagnostic.
+For ordinary Gaussian fitting, the default ELBO rule requires a finite
+$0\leq\Delta\mathcal L<\mathtt{tol}$, where $\Delta\mathcal L$ is the change
+from the preceding sweep. The first check is after two sweeps; `min_iter` can
+delay it. A decrease does not satisfy the rule. With a finite ELBO, repeated
+alpha/PIP states are recorded only as diagnostics in `elbo` mode.
 
-Only an actual NaN objective in ELBO mode permits the labelled alpha/PIP
-fallback. The initial −∞ sentinel or an overflowing difference between finite
-objectives does not. A NaN objective in joint mode reports `numerical_failure`;
-an infinite computed objective raises `ValueError`, as in the pinned R fitter.
-Numerical failure may stop before
-`min_iter`; successful and cycle exits respect it. Every stop retains the
-complete current posterior; components are not averaged across states.
-Read [convergence and refinement](post_analysis.md) for thresholds, continuation,
-tracking costs and the distinction between stopping and finding a better solution.
+The susieR-compatible PIP rule, selected by `convergence_method="pip"` and some
+[model-specific defaults](model.md#stopping-rules), can accept a short alpha/PIP
+cycle as convergence. It averages `alpha` over the cycle; the other posterior
+arrays are not averaged or refitted. For ordinary fits using an explicit
+`ConvergenceConfig` with `criterion="alpha_pip"` or `"joint"`, an eligible cycle
+instead returns the current state with `stop_reason="cycle_detected"` and
+`converged=False`, unless the requested criterion already holds. Successful and
+cycle exits respect `min_iter`.
+
+In the ordinary solver's `elbo` mode, a NaN ELBO with finite posterior arrays
+invokes the labelled alpha/PIP fallback at or after `min_iter`. Default controls use
+the compatible PIP rule, including cycle averaging; an explicit ELBO
+configuration uses its separate alpha/PIP tolerances without averaging. A finite
+ELBO with a nonfinite increment does not trigger fallback. NaN in `joint` mode
+reports `numerical_failure`, even before `min_iter`; an infinite computed ELBO
+raises `ValueError`. See [convergence diagnostics](post_analysis.md#convergence-diagnostics)
+and [continuation and refinement](post_analysis.md#continue-first-then-consider-refinement)
+for how to investigate a stopped fit.
 
 <details markdown="1">
 <summary>Residual-variance updates, trim thresholds and stored field phases</summary>
 
-Residual variance is updated only after the objective and stopping check, so
-it is unchanged on the convergence sweep. If estimation is enabled at an
-iteration-limit exit, returned `sigma2` includes the final ER2/n update while
-the last ELBO used the previous value. After iteration, V&lt;prior_tol components
-have V, moments, log BFs and KL set to zero and alpha restored to the normalized
-prior. ELBO and XtXr retain the completed iteration values before trimming.
-PIP uses $V_\ell>\mathtt{prior\_tol}$; a component exactly at that threshold is
-untrimmed but inactive for PIP. The separate CS threshold is fixed as described
-above.
+Residual variance is updated after the objective and stopping check, and the
+update is skipped when that check terminates the fit. At an iteration-limit
+exit with variance estimation enabled, the final update can therefore return a
+`sigma2` different from the value used for the last ELBO. For ordinary Gaussian
+fits the update uses the expected residual sum of squares divided by the sample
+size, subject to the variance bounds. Other likelihoods have
+[different updates](model.md#elbo-and-residual-variance).
+
+Final trimming acts on components with $V_\ell<\mathtt{prior\_tol}$. Their `V`,
+`mu`, `mu2`, `lbf_variable`, `lbf` and `KL` are set to zero, and their alpha rows
+are restored to the normalized prior weights. Rows are retained. NIG converts
+its component prior variances using `rv` before this comparison; see the
+[model options](model.md#additional-model-options).
+
+The returned PIPs use the finalized arrays and require
+$V_\ell>\mathtt{prior\_tol}$. A component exactly at that threshold is untrimmed
+but inactive for PIP. CS extraction uses its separate fixed
+[activity cutoff](#credible-set-fields).
+
+The ELBO trace is not recomputed after trimming. Ordinary fits also retain the
+pre-trimming `XtXr`; the [posterior fields](#posterior-fields) describe RSS routes
+that reconstruct it from the trimmed posterior. Online distances describe the
+stopping checks before cycle averaging and final trimming. Ordinary fits provide
+`fit.convergence["last"]` and `fit.convergence["finalization"]` to distinguish the
+last checked state from the returned variance and trimming changes; these
+detailed records are not supplied by every fitting route.
 
 </details>
 
 ## Metadata and persistence
 
+Keep the fitting record with the posterior to track settings, input checks and
+stopping behavior when comparing analyses.
+
 | Field | Meaning |
 | --- | --- |
-| `niter`, `converged`, `ibss_converged` | Executed sweep count and inner IBSS stopping status |
+| `niter` | Sweep count of the returned IBSS fit, excluding other refinement attempts |
+| `converged`, `ibss_converged` | Returned status and its property alias; refinement can change their interpretation |
 | `convergence`, `trace` | Requested/effective rule, stopping evidence and optional iteration history |
-| `refinement` | Explicit search settings, attempts, accepted objective path and search status |
-| `null_index` | Last internal column index, or None |
-| `params` | Actual options, normalized weights, effective dimensions and RSS input/scale information |
-| `backend_version` | Installed Rust implementation and pinned reference identity |
-| `warnings` | Numerical, model and convergence messages, also emitted as Python warnings |
-| `qc` | Per-call matrix diagnostics; these do not certify external allele alignment |
-| `variant_metadata` | Copies of caller-supplied length-$p$ metadata arrays |
+| `refinement` | Explicit search record; defaults to `status="not_executed"` when no search was requested |
+| `null_index` | Index of the appended null column, or `None` |
+| `params` | Resolved fitting options, normalized prior weights, effective dimensions and RSS input/scale information |
+| `backend_version` | Native package version and pinned susieR reference identity |
+| `warnings` | Collected numerical, model and convergence messages, also emitted as `RuntimeWarning` |
+| `qc`, `input_quality` | Per-call input checks as a mapping and a typed `InputQuality` record |
+| `variant_metadata` | Copied caller-supplied columns, filtered into `variant_ids` order |
+| `data_signature` | SHA-256 digest of an owned input snapshot, when available; otherwise `None` |
+| `R_finite_diagnostics` | Finite-reference LD and mismatch reliability summaries, when evaluated; otherwise an empty mapping |
 
-Use `save_analysis(fit, directory)` and `load_analysis(directory)` from
-`prusie.report` to preserve the result's arrays, identifiers and metadata without
-pickle. The [quick start](example.md#save-and-reload-a-result) shows the round trip;
-manual NPZ/JSON export is available in its advanced section. Array shapes and
-stored phases above remain part of the saved result. The retained optimization
-context is omitted, so supply the original inputs when warm-starting a reloaded
-posterior.
+After `refine_fit`, `converged` can describe the search outcome. Read
+`fit.convergence["ibss_converged"]` for the returned fit's inner IBSS status and
+`fit.refinement["status"]` for the search status; see
+[convergence diagnostics](post_analysis.md#convergence-diagnostics).
+Input checks do not certify external variant or allele alignment, and a missing
+`data_signature` does not establish that inputs match.
 
-<details markdown="1">
-<summary>Older saved results</summary>
+Use `save_analysis(fit, directory)` from `prusie.report` to write the public
+result fields to `analysis.json` and `arrays.npz`. Keep both files together.
+`load_analysis(directory)` reconstructs a `SusieResult`, preserving array values,
+dtypes, shapes and stored diagnostics without refitting or recomputing summaries.
+The loader checks the array archive against the SHA-256 digest stored in JSON
+and reads it with `allow_pickle=False`. The
+[quick start](example.md#save-and-reload-a-result) shows the round trip;
+[manual export](example.md#advanced-export-and-example-provenance) covers exchange
+of selected arrays and metadata.
 
-Python pickles retain class module paths and require a compatible environment.
-For trusted results saved by an older package, export arrays with that original
-environment before importing them into a new workflow. Saved examples with
-producer/render identities are described in
-[worked-example provenance](worked_examples.md#sources-and-reproducibility).
+An available `data_signature` is saved, but the private input snapshot is omitted.
+Consequently, `continue_fit(restored)` cannot run directly. To warm-start a new
+fit, supply the original inputs and fitting options with `s_init=restored`; see
+[warm-start validation](post_analysis.md#technical-details).
 
-</details>
+Keep input provenance and a full software environment record alongside saved fits.
+The [Toy example provenance](worked_examples.md#sources-and-reproducibility)
+distinguishes the software that produced saved results from the current renderer.
