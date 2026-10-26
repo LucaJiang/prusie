@@ -7,7 +7,7 @@ Dense and sparse predictor matrices are passed to matrix-free native operators.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from typing import Any, Literal
 
 import numpy as np
@@ -18,6 +18,7 @@ from .control import SlotPrior
 from .diagnostics import ConvergenceConfig
 from .refinement import RefinementConfig
 from .result import SusieResult
+from .workhorse import SusieInputs
 
 
 @dataclass(frozen=True)
@@ -28,26 +29,6 @@ class _DesignData:
     diagonal: NDArray[np.float64]
     response_variance: float
     fitted_response: bool = True
-
-
-@dataclass(frozen=True)
-class SusieInputs:
-    """Validated data and fitting parameters returned by ``init_only=True``.
-
-    ``data`` and ``params`` are inspectable mappings. Pass this object to
-    :func:`susie_workhorse` to fit the same prepared inputs. A trend-filter
-    MAD preparation may retain another preparation as ``model_init``;
-    this is not a fitted warm start and cannot be used by the workhorse.
-    """
-
-    data: dict[str, Any]
-    params: dict[str, Any]
-    _request: Any = field(repr=False)
-
-    def __getitem__(self, key: str) -> dict[str, Any]:
-        if key not in ("data", "params"):
-            raise KeyError(key)
-        return getattr(self, key)
 
 
 def _validated_design(X: Any, y: ArrayLike, *, na_rm: bool) -> tuple[Any, NDArray[np.float64]]:
@@ -203,7 +184,8 @@ def susie(
     SusieResult or SusieInputs
         Fitted posterior or a validated no-fit request.
     """
-    from .api import _fit, _prepare_suff_stat
+    from ._request import _prepare_request
+    from .workhorse import _fit
 
     for name, value in (
         ("intercept", intercept),
@@ -280,7 +262,7 @@ def susie(
         convergence_method=None if convergence is not None else convergence_method,
         _design=design,
     )
-    request = _prepare_suff_stat(None, crossresponse, float(working_y @ working_y), n, **options)
+    request = _prepare_request(None, crossresponse, float(working_y @ working_y), n, **options)
     request = replace(request, requested_convergence_method=convergence_method)
     result = _fit(request)
     if isinstance(result, SusieResult):
@@ -290,35 +272,6 @@ def susie(
             with np.errstate(divide="ignore", invalid="ignore"):
                 result.univariate_zscore = regression["betahat"] / regression["sebetahat"]
     return result
-
-
-def susie_workhorse(inputs: SusieInputs) -> SusieResult:
-    """Fit a request returned by an entry point with ``init_only=True``.
-
-    Parameters
-    ----------
-    inputs : SusieInputs
-        Validated data and model options returned by a public fitter.
-
-    Returns
-    -------
-    SusieResult
-        Posterior fit using the stored request without repeating preprocessing.
-
-    Raises
-    ------
-    ValueError
-        A deferred ``model_init`` contains prepared inputs instead of a fitted
-        posterior, as in the default-MAD trend-filter preparation-only path.
-    """
-    from dataclasses import replace
-
-    from .api import _fit
-
-    if not isinstance(inputs, SusieInputs):
-        raise TypeError("inputs must be SusieInputs returned by init_only=True")
-    request = replace(inputs._request, params={**inputs._request.params, "init_only": False})
-    return _fit(request)
 
 
 def compute_suff_stat(X: Any, y: ArrayLike, *, standardize: bool = False) -> dict[str, Any]:

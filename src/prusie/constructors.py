@@ -13,8 +13,9 @@ from typing import Any
 import numpy as np
 from numpy.typing import ArrayLike
 
-from .individual import SusieInputs, susie
+from .individual import susie
 from .result import SusieResult
+from .workhorse import SusieInputs
 
 
 def _expanded_state(fit: SusieResult, additional: int, sigma2: float) -> dict[str, Any]:

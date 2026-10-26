@@ -680,8 +680,9 @@ def prepare_multipanel(arguments: dict[str, Any]) -> Any:
     import inspect
 
     from ._validation import _summary_vector
-    from .api import _fit, susie_rss
+    from .api import susie_rss
     from .posterior import _design_correlation
+    from .workhorse import _fit
 
     panels = arguments["panels"]
     if arguments["n"] is None:

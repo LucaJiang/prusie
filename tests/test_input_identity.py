@@ -50,7 +50,7 @@ def assert_same_fit(left, right):
 
 @pytest.mark.parametrize("interface", ["rss", "suff_stat"])
 def test_unretained_fit_does_not_hash_or_snapshot(monkeypatch, interface):
-    import prusie.api as api
+    import prusie._request as api
     import prusie.refinement as module
 
     def forbidden(*args, **kwargs):

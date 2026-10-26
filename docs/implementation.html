@@ -144,7 +144,7 @@ PIPs and credible sets and builds the <code>SusieResult</code>.</p>
 </tbody>
 </table></div>
 <h2 id="fitting-routes">Fitting routes</h2>
-<p>All public fitting functions build a <code>_FitRequest</code> with <code>_prepare_suff_stat</code>
+<p>All public fitting functions build a <code>_FitRequest</code> with <code>_prepare_request</code>
 and pass it to <code>_fit</code>, which follows one of four routes:</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
@@ -198,7 +198,7 @@ starts.</p>
 ├─ working statistics: n known | bhat, shat and var_y | n missing
 ├─ asymmetric R → RuntimeWarning → (M + Mᵀ)/2
 ├─ R_finite or R_mismatch → dynamic request
-├─ _prepare_suff_stat → _FitRequest
+├─ _prepare_request → _FitRequest
 └─ _fit
    ├─ dynamic → fit_dynamic → _native.ser_update for each effect
    ├─ design  → _native.fit_design_dense | _native.fit_design_csc
@@ -214,7 +214,7 @@ starts.</p>
 │    dense → F-ordered float64, sparse → CSC copy, TrendDesign kept implicit
 ├─ _column_stats: column means and scales (centering stays implicit)
 ├─ working y, Xᵀy and diagonal → _DesignData
-├─ _prepare_suff_stat(XtX=None, Xty, yty, n, design) → _FitRequest
+├─ _prepare_request(XtX=None, Xty, yty, n, design) → _FitRequest
 └─ _fit → _native.fit_design_dense | fit_design_csc | fit_design_trend
         → credible_sets (correlations of members computed from X)
         → SusieResult with fitted values
@@ -273,9 +273,9 @@ product by the effect's activity probability and skip inactive effects.</p>
                                 (z̃ is the Wald-adjusted z when z_method = &quot;wald&quot;;
                                  var_y is 1 when not supplied)
     if the z-score matrix was asymmetric: warn and use (M + Mᵀ)/2
-    return _fit(_prepare_suff_stat(XtX, Xty, yty, n, …))
+    return _fit(_prepare_request(XtX, Xty, yty, n, …))
 
-function _prepare_suff_stat(XtX, Xty, yty, n, options):
+function _prepare_request(XtX, Xty, yty, n, options):
     check scalars, tolerances, priors and residual-variance bounds
     align identifiers and metadata; apply the maf filter
     if null_weight &gt; 0: append a null column; normalize the prior weights

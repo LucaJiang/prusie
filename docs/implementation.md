@@ -40,7 +40,7 @@ PIPs and credible sets and builds the `SusieResult`.
 
 ## Fitting routes
 
-All public fitting functions build a `_FitRequest` with `_prepare_suff_stat`
+All public fitting functions build a `_FitRequest` with `_prepare_request`
 and pass it to `_fit`, which follows one of four routes:
 
 | Route | Used for | Native entry | Sweep loop |
@@ -70,7 +70,7 @@ susie_rss                                        api.py
 ├─ working statistics: n known | bhat, shat and var_y | n missing
 ├─ asymmetric R → RuntimeWarning → (M + Mᵀ)/2
 ├─ R_finite or R_mismatch → dynamic request
-├─ _prepare_suff_stat → _FitRequest
+├─ _prepare_request → _FitRequest
 └─ _fit
    ├─ dynamic → fit_dynamic → _native.ser_update for each effect
    ├─ design  → _native.fit_design_dense | _native.fit_design_csc
@@ -88,7 +88,7 @@ susie                                            individual.py
 │    dense → F-ordered float64, sparse → CSC copy, TrendDesign kept implicit
 ├─ _column_stats: column means and scales (centering stays implicit)
 ├─ working y, Xᵀy and diagonal → _DesignData
-├─ _prepare_suff_stat(XtX=None, Xty, yty, n, design) → _FitRequest
+├─ _prepare_request(XtX=None, Xty, yty, n, design) → _FitRequest
 └─ _fit → _native.fit_design_dense | fit_design_csc | fit_design_trend
         → credible_sets (correlations of members computed from X)
         → SusieResult with fitted values
@@ -156,9 +156,9 @@ function susie_rss(z or (bhat, shat), R or X, n, var_y, …):
                                 (z̃ is the Wald-adjusted z when z_method = "wald";
                                  var_y is 1 when not supplied)
     if the z-score matrix was asymmetric: warn and use (M + Mᵀ)/2
-    return _fit(_prepare_suff_stat(XtX, Xty, yty, n, …))
+    return _fit(_prepare_request(XtX, Xty, yty, n, …))
 
-function _prepare_suff_stat(XtX, Xty, yty, n, options):
+function _prepare_request(XtX, Xty, yty, n, options):
     check scalars, tolerances, priors and residual-variance bounds
     align identifiers and metadata; apply the maf filter
     if null_weight > 0: append a null column; normalize the prior weights

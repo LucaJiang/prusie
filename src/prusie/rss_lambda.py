@@ -14,8 +14,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from .control import SlotPrior
-from .individual import SusieInputs
 from .result import SusieResult
+from .workhorse import SusieInputs
 
 
 def susie_rss_lambda(
@@ -110,10 +110,11 @@ def susie_rss_lambda(
         The fitted RSS-lambda posterior. Initialization-only calls return
         :class:`SusieInputs`, accepted by :func:`susie_workhorse`.
     """
+    from ._request import _prepare_request
     from ._validation import _integer
-    from .api import _fit, _prepare_suff_stat
     from .individual import _validated_design
     from .posterior import _design_correlation
+    from .workhorse import _fit
 
     if (R is None) == (X is None):
         raise ValueError("Supply exactly one of R and X")
@@ -187,7 +188,7 @@ def susie_rss_lambda(
     # Validate before capping so an invalid request cannot become a valid count.
     L = min(_integer(10 if L is None else L, "L"), len(scores))
     effective_n = 2 if n is None else float(n)
-    request = _prepare_suff_stat(
+    request = _prepare_request(
         matrix,
         scores,
         effective_n - 1,

@@ -41,16 +41,10 @@ from .getters import (
     susie_get_residual_variance,
     susie_init_coef,
 )
-from .individual import (
-    SusieInputs,
-    calc_z,
-    compute_suff_stat,
-    susie,
-    susie_workhorse,
-    univariate_regression,
-)
+from .individual import calc_z, compute_suff_stat, susie, univariate_regression
 from .refinement import RefinementConfig, continue_fit, evaluate_objective, refine_fit
 from .result import InputQuality, SusieResult
+from .workhorse import SusieInputs, susie_workhorse
 
 if TYPE_CHECKING:
     from . import (
