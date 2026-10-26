@@ -35,7 +35,7 @@ Ordinary dense fitting requires only NumPy at run time. The optional `analysis`
 extra adds SciPy for sparse designs, advanced RSS models and posterior outcome
 configurations, and Matplotlib for figures. An installed package requires
 neither R nor Rust. The [installation guide](docs/install.md) also
-describes the earlier prerelease wheel for CPython 3.12 on Linux x86-64.
+describes installing a compatible local wheel without a Rust toolchain.
 
 ## Example
 
@@ -82,8 +82,8 @@ The performance report identifies the measured software, hardware, data and prot
 [Convergence and refinement](docs/post_analysis.md) ·
 [Sensitivity and LD](docs/sensitivity.md) · [API](docs/api.md)
 
-The [worked examples](docs/worked_examples.md) show how credible sets and PIPs
-change with prior assumptions and refinement. Browse the
+The official susieR [Toy example](docs/worked_examples.md) shows how credible sets
+and PIPs change under refinement. Browse the
 [documentation site](https://lucajiang.github.io/prusie/) for the deployed version.
 
 ## Citation and license
