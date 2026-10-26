@@ -3,7 +3,6 @@
 import ctypes
 import inspect
 import json
-import os
 import pickle
 import platform
 import re
@@ -15,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from prusie import _native, api, susie_rss
+from prusie import _native, susie_rss
 from prusie import _execution
 
 
@@ -214,80 +213,31 @@ def assert_fit_bits(actual, expected):
         bits_equal(getattr(actual, field), getattr(expected, field))
 
 
-def test_all_public_arguments_have_an_explicit_admission_partition():
-    assert set(inspect.signature(susie_rss).parameters) == _execution._ARGUMENTS
-    partition = (_execution._NONE | _execution._FALSE | _execution._ZERO
-                 | _execution._BOOL | _execution._NUMERIC | _execution._NULLABLE_NUMERIC
-                 | set(_execution._CHOICES)
-                 | {"z", "R", "n", "n_threads", "n_purity", "estimate_prior_method", "variant_ids"})
-    assert partition == _execution._ARGUMENTS
-    assert _execution._allowed(arguments(2))
-
-
-class Hook:
-    def __float__(self):
-        raise AssertionError("admission must not coerce")
-
-    def __eq__(self, other):
-        raise AssertionError("admission must check exact type before comparison")
-
-
-@pytest.mark.parametrize("field", sorted(_execution._ARGUMENTS - {"z", "R", "n", "n_threads"}))
-def test_custom_option_objects_fall_back_without_calling_hooks(field):
-    assert not _execution._allowed(arguments(2, **{field: Hook()}))
-
-
-@pytest.mark.parametrize("field,value", [
-    ("overwrite_ld", True), ("track_fit", "compact"), ("retain_data", True),
-    ("init_only", True), ("refine", True), ("check_input", True),
-    ("L_greedy", 1), ("R_finite", 200.), ("R_mismatch", "eb"),
-    ("maf", np.ones(2)), ("null_weight", 0.1), ("prior_weights", np.ones(2)),
-    ("scaled_prior_variance", np.ones(2)), ("estimate_residual_method", "NIG"),
-    ("prior_variance_grid", [0.1]), ("variant_metadata", {"x": [1, 2]}),
-    ("variant_ids", ["a", Hook()]), ("coverage", np.float64(0.95)),
-])
-def test_first_scope_exclusions_keep_parent_preparation(field, value):
-    assert not _execution._allowed(arguments(2, **{field: value}))
-
-
-def test_invalid_plain_controls_still_reach_original_validation():
-    assert _execution._allowed(arguments(2, L=-1, max_iter=0, coverage=2.,
-                                        estimate_prior_method="unknown", tol=-1.))
-
-
-@pytest.mark.parametrize("count,p", [(1, 1025), (4, 2), (np.int64(4), 1025)])
-def test_default_small_and_numpy_counts_do_not_create_an_owner(monkeypatch, count, p):
+@pytest.mark.parametrize("count,p", [(1, 1025), (4, 2)])
+def test_default_and_small_counts_do_not_create_an_owner(monkeypatch, count, p):
     def forbidden(*args, **kwargs):
         raise AssertionError("parent route must not create a preparation owner")
 
     monkeypatch.setattr(_native, "_new_fit_executor", forbidden)
     monkeypatch.setattr(_execution, "create_executor", forbidden)
-    monkeypatch.setattr(_execution, "_ordinary_hooks", forbidden)
     with warnings.catch_warnings(record=True):
         warnings.simplefilter("ignore")
         fit = susie_rss(**arguments(p, n_threads=count, L=1, max_iter=2, coverage=None))
     assert fit.params["n_threads"] == int(count)
 
 
-def test_warning_recording_is_distinct_from_custom_display_and_numpy_hooks(monkeypatch):
-    args = arguments()
-    with warnings.catch_warnings(record=True):
-        warnings.simplefilter("always")
-        owner = _execution.create_executor(args)
-        assert owner is not None
-        owner.close()
-        with monkeypatch.context() as patch:
-            patch.setattr(warnings, "showwarning", lambda *a, **k: None)
-            assert _execution.create_executor(args) is None
-        with monkeypatch.context() as patch:
-            patch.setattr(warnings, "_showwarnmsg_impl", lambda *a, **k: None)
-            assert _execution.create_executor(args) is None
-        previous = np.geterrcall()
-        try:
-            np.seterrcall(lambda *a: None)
-            assert _execution.create_executor(args) is None
-        finally:
-            np.seterrcall(previous)
+@pytest.mark.parametrize("layout", ["small", "fortran", "float32", "nonsquare"])
+def test_preparation_eligibility_depends_on_matrix_layout(layout):
+    matrix = np.eye(1025)
+    if layout == "small":
+        matrix = matrix[:2, :2].copy()
+    elif layout == "fortran":
+        matrix = np.asfortranarray(matrix)
+    elif layout == "float32":
+        matrix = matrix.astype(np.float32)
+    else:
+        matrix = matrix[:, :-1].copy()
+    assert not _execution._eligible_preparation(matrix, 4)
 
 
 def test_private_factory_is_inert_and_not_serializable():
@@ -306,7 +256,7 @@ def test_private_factory_is_inert_and_not_serializable():
                     reason="early parallel preparation has a Linux x86_64 contract")
 @pytest.mark.parametrize("count", [2, 4, 8])
 @pytest.mark.parametrize("asymmetric", [False, True])
-def test_shared_preparation_matches_same_count_parent_and_serializes(count, asymmetric):
+def test_shared_preparation_matches_same_count_parent_and_serializes(monkeypatch, count, asymmetric):
     args = arguments(n_threads=count, variant_ids=[str(i) for i in range(1025)],
                      L=2, max_iter=3, coverage=None)
     if asymmetric:
@@ -314,9 +264,10 @@ def test_shared_preparation_matches_same_count_parent_and_serializes(count, asym
     before = (args["R"].tobytes(), args["z"].tobytes())
     with warnings.catch_warnings(record=True):
         warnings.simplefilter("ignore")
-        # NumPy integer is an accepted count whose preparation intentionally
-        # stays on the unmodified parent path at this exact same native count.
-        parent = susie_rss(**{**args, "n_threads": np.int64(count)})
+        # Force only preparation to the serial helper at the same solver count.
+        with monkeypatch.context() as patch:
+            patch.setattr(_execution, "create_executor", lambda *args: None)
+            parent = susie_rss(**args)
         actual = susie_rss(**args)
         repeated = susie_rss(**args)
     assert_fit_bits(actual, parent)

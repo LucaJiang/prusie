@@ -3,18 +3,6 @@
 import numpy as np
 
 
-# Keep the complete public call snapshot explicit. A future parameter requires
-# review before it can enter a destructive call, including through nested views.
-_ARGUMENTS = frozenset("""z R n X z_method maf maf_thresh R_finite R_mismatch
-control bhat shat var_y z_ld_weight estimate_residual_variance prior_variance
-check_prior L scaled_prior_variance residual_variance estimate_prior_variance
-estimate_prior_method check_null_threshold prior_tol r_tol prior_weights
-null_weight standardize max_iter n_threads s_init model_init
-estimate_residual_method residual_variance_lowerbound residual_variance_upperbound
-prior_variance_grid mixture_weights convergence_method alpha0 beta0 L_greedy
-greedy_lbf_cutoff slot_prior median_abs_corr cs_extension_corr unmappable_effects
-init_only coverage min_abs_corr tol verbose track_fit check_input refine
-convergence retain_data n_purity variant_ids variant_metadata overwrite_ld""".split())
 _SCALARS = frozenset((bool, int, float, str, np.bool_, np.int8, np.int16,
     np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64, np.float16,
     np.float32, np.float64, np.longdouble, np.str_))
@@ -65,8 +53,6 @@ def _layout(matrix):
 
 def prepare(arguments):
     """Retain all arguments and reject hooks/overlaps before any coercion."""
-    if set(arguments) != _ARGUMENTS:
-        raise ValueError("overwrite_ld call contains an unreviewed argument")
     matrix = arguments["R"]
     layout = _layout(matrix)
     low, high = layout[3:5]

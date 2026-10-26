@@ -8,7 +8,7 @@ native IBSS solver and assembles a :class:`~prusie.result.SusieResult`.
 from __future__ import annotations
 
 import math
-import re
+import operator
 import warnings as warning_module
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -34,48 +34,12 @@ from .posterior import credible_sets, marginal_pip
 from .refinement import RefinementConfig, initial_options, make_prepared, refine_fit
 from .result import SusieResult
 
-_DEFAULT_WARNING_CALL = warning_module.warn
-_DEFAULT_SHOWWARNMSG = warning_module._showwarnmsg
 _FUSED_RSS_DTYPE = np.dtype(np.float64)
-
-
-def _ordinary_warning_filters():
-    # Matching a custom pattern or checking a category with a custom metaclass
-    # can run Python before repair, even when the warning sink only records.
-    filters = warning_module.filters
-    if type(filters) is not list:
-        return False
-    for entry in filters:
-        if type(entry) is not tuple or len(entry) != 5:
-            return False
-        action, message, category, module, lineno = entry
-        if (
-            type(action) is not str
-            or (message is not None and type(message) not in (str, re.Pattern))
-            or type(category) is not type
-            or (module is not None and type(module) not in (str, re.Pattern))
-            or type(lineno) is not int
-        ):
-            return False
-    return True
-
-
-def _ordinary_warning_sink():
-    # Standard display, list recording and logging capture are supported.
-    # Input-mutating callbacks and replacement of warn before import are outside
-    # the API contract; repair errors are still deferred until after _warn.
-    return (
-        _ordinary_warning_filters()
-        and warning_module.warn is _DEFAULT_WARNING_CALL
-        and warning_module._showwarnmsg is _DEFAULT_SHOWWARNMSG
-    )
 
 
 def _overwrite_prepare(arguments):
     from ._overwrite import prepare
 
-    if not _ordinary_overwrite_warning_sink():
-        raise ValueError("overwrite_ld requires ordinary warning handling without custom hooks")
     state = prepare(arguments)
     _thread_count(arguments["n_threads"])
     L = _integer(arguments["L"], "L")
@@ -120,29 +84,6 @@ def _overwrite_prepare(arguments):
         raise ValueError("n_purity must be a finite number or None")
     _metadata(arguments["variant_ids"], arguments["variant_metadata"], arguments["R"].shape[0])
     return state
-
-
-def _ordinary_overwrite_warning_sink():
-    """Admit the standard dispatcher/display or plain-list warning recording."""
-    import _warnings
-    from types import BuiltinMethodType, FunctionType
-
-    def standard(function, name):
-        return (type(function) is FunctionType
-                and function.__globals__ is vars(warning_module)
-                and function.__code__.co_name == name
-                and function.__code__.co_filename == warning_module._showwarning_orig.__code__.co_filename)
-
-    implementation = warning_module._showwarnmsg_impl
-    recording = (type(implementation) is BuiltinMethodType
-                 and type(implementation.__self__) is list
-                 and implementation.__name__ == "append")
-    return (_ordinary_warning_sink()
-            and warning_module.warn is _warnings.warn
-            and warning_module.showwarning is warning_module._showwarning_orig
-            and standard(warning_module.showwarning, "showwarning")
-            and standard(warning_module._showwarnmsg, "_showwarnmsg")
-            and (standard(implementation, "_showwarnmsg_impl") or recording))
 
 
 def _overwrite_recheck(state):
@@ -240,14 +181,16 @@ def _integer(value: int, name: str) -> int:
 
 
 def _thread_count(value: int) -> int:
-    """Resolve a per-call thread request without changing process-wide state."""
-    if (
-        isinstance(value, (bool, np.bool_))
-        or not isinstance(value, (int, np.integer))
-        or not 1 <= value <= 32
-    ):
+    """Resolve a per-call integer request without changing process-wide state."""
+    if isinstance(value, (bool, np.bool_)):
         raise ValueError("n_threads must be an integer between 1 and 32")
-    return int(value)
+    try:
+        count = operator.index(value)
+    except TypeError:
+        raise ValueError("n_threads must be an integer between 1 and 32") from None
+    if not 1 <= count <= 32:
+        raise ValueError("n_threads must be an integer between 1 and 32")
+    return count
 
 
 def _metadata(variant_ids, variant_metadata, m):
@@ -1525,8 +1468,8 @@ def susie_rss(
         ordinary z/R/n inputs and no retained/advanced model options. A finite
         scaled-asymmetry witness enables ordered in-place symmetrization into
         XtX; exact-symmetric and no-witness inputs stay unchanged. Unsupported
-        storage, options, custom hooks and overlaps with other arguments raise
-        before writes. Once writes begin, later errors or warning-as-error may
+        storage, options, custom input-conversion hooks and overlaps with other
+        arguments raise before writes. Once writes begin, later errors or warning-as-error may
         leave R changed. Reload the original LD before another call, including
         after an aborted call. The default never overwrites caller arrays.
     n : float, optional
@@ -1555,9 +1498,12 @@ def susie_rss(
         Maximum number of IBSS sweeps.
     n_threads : int, default 1
         Per-fit native thread limit from 1 to 32, as in :func:`susie_suff_stat`.
-        Eligible plain C-order z/R/n calls also share that private executor for
-        exact validation and owned symmetry repair when p ≥ 1024. Default one
-        and advanced/overwrite routes retain their ordinary preparation.
+        Eligible C-order float64 R inputs also use a private executor for exact
+        validation and owned symmetry repair when p ≥ 1024. Solver and output
+        options do not control eligibility for this matrix work. Preparation
+        workers join before later Python transformations or warning dispatch;
+        fitting then uses its own per-call executor. Default one and overwrite
+        routes retain their ordinary preparation.
 
     Other Parameters
     ----------------
@@ -1658,6 +1604,7 @@ def susie_rss(
     else:
         # The default path performs no argument snapshot or alias traversal.
         overwrite_state = None
+    n_threads = _thread_count(n_threads)
     requested_convergence_method = convergence_method
     if (R is None) == (X is None):
         raise ValueError("Supply exactly one of R or X")
@@ -1769,10 +1716,10 @@ def susie_rss(
         prevalidated_scale = n - 1
     repaired_rss = None
     repair_error = None
-    # Suitable arrays can be validated and repaired in one owned traversal for
-    # all standard warning handling. The warning is emitted at its original
-    # call site before any deferred repair error. Conversion hooks stay on the
-    # original path; callers must not mutate inputs during the call.
+    # Native preparation returns warning predicates and deferred repair errors
+    # as data. Its workers are joined before any later Python transformation or
+    # warning dispatch, independently of tracing, display or NumPy error hooks.
+    # Callers must not mutate inputs during the call.
     fused_rss = (
         n is not None
         and var_y is None
@@ -1781,7 +1728,6 @@ def susie_rss(
         and R.flags.c_contiguous
         and R.flags.aligned
         and type(z_method) is str
-        and _ordinary_warning_sink()
     )
     _executor = None
     try:
@@ -1801,24 +1747,28 @@ def susie_rss(
                         R, prevalidated_scale, proof_threads=1
                     )
                 else:
-                    # Default/small requests do not import the admission helper or
-                    # inspect hooks/FP controls. NumPy integer requests retain their
-                    # original serial preparation and ordinary core thread request.
-                    if type(n_threads) is int and 2 <= n_threads <= 32 and len(z) >= 1024:
+                    # Eligibility uses normalized preparation inputs only; solver
+                    # and output options cannot disable independent matrix work.
+                    if n_threads > 1 and len(z) >= 1024:
                         from ._execution import create_executor
 
-                        _executor = create_executor(locals())
+                        _executor = create_executor(R, n_threads)
                     if _executor is None:
                         symmetric, repaired_rss, repair_error = _native.validate_and_repair_rss(
                             R, prevalidated_scale, proof_threads=1
                         )
                     else:
-                        symmetric, repaired_rss, repair_error = _native._validate_and_repair_rss_with_executor(
-                            R, prevalidated_scale, _executor
-                        )
-                        if not _executor.has_started:
-                            # Initial architecture/FP admission failed. Keep the
-                            # entire parent's native fit, including its pool timing.
+                        try:
+                            symmetric, repaired_rss, repair_error = (
+                                _native._validate_and_repair_rss_with_executor(
+                                    R, prevalidated_scale, _executor
+                                )
+                            )
+                        finally:
+                            # Later NumPy operations may warn or invoke a caller
+                            # error callback. Do not keep preparation workers alive
+                            # across any of that Python work, even when no package
+                            # warning has been generated.
                             from ._execution import close_executor
 
                             close_executor(_executor)
@@ -1954,10 +1904,7 @@ def susie_rss(
         )
         request = replace(request, requested_convergence_method=requested_convergence_method,
                           params={**request.params, "overwrite_ld": overwrite_ld})
-        if _executor is None:
-            fit = _fit(request)
-        else:
-            fit = _fit(request, _executor=_executor)
+        fit = _fit(request)
         if init_only:
             return fit
         fit.params.update(

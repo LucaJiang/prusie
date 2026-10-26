@@ -10,7 +10,7 @@ import pytest
 from prusie import susie_rss
 from prusie import _native
 from prusie import api
-from prusie._overwrite import _ARGUMENTS
+_PUBLIC_ARGUMENTS = set(inspect.signature(susie_rss).parameters)
 
 
 def matrix(p=9, late=False):
@@ -121,7 +121,18 @@ def test_no_witness_keeps_valid_symmetric_extreme_despite_speculative_repair_ove
 
 
 def test_snapshot_covers_every_public_argument_and_default_never_walks(monkeypatch):
-    assert set(inspect.signature(susie_rss).parameters) == _ARGUMENTS
+    captured = []
+    original = api._overwrite_prepare
+
+    def capture(arguments):
+        captured.append(set(arguments))
+        return original(arguments)
+
+    monkeypatch.setattr(api, "_overwrite_prepare", capture)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        susie_rss(np.zeros(2), np.eye(2), 100, L=1, overwrite_ld=True)
+    assert captured == [_PUBLIC_ARGUMENTS]
     def forbidden(*args):
         raise AssertionError("default must not snapshot or walk aliases")
     monkeypatch.setattr(api, "_overwrite_prepare", forbidden)
@@ -175,7 +186,7 @@ def test_all_argument_aliases_including_zero_dimensional_and_nested_are_rejected
     bits(r, original)
 
 
-@pytest.mark.parametrize("name", sorted(_ARGUMENTS - {"R", "overwrite_ld"}))
+@pytest.mark.parametrize("name", sorted(_PUBLIC_ARGUMENTS - {"R", "overwrite_ld"}))
 def test_snapshot_rejects_overlap_in_every_other_public_argument(name):
     r = matrix()
     original = r.copy()
@@ -246,15 +257,17 @@ def test_conversion_and_truthiness_hooks_are_never_invoked():
 
 
 @pytest.mark.parametrize("attribute", ["warn", "showwarning", "_showwarnmsg", "_showwarnmsg_impl"])
-def test_custom_warning_hook_rejected_before_write(monkeypatch, attribute):
+def test_custom_warning_display_does_not_disable_overwrite(monkeypatch, attribute):
     r = matrix()
     before = r.copy()
     invoked = []
-    monkeypatch.setattr(warnings, attribute, lambda *a, **k: invoked.append(True))
-    with pytest.raises(ValueError, match="warning handling"):
-        susie_rss(np.zeros(9), r, 100, overwrite_ld=True)
-    assert invoked == []
-    bits(r, before)
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        monkeypatch.setattr(warnings, attribute, lambda *a, **k: invoked.append(True))
+        fit = susie_rss(np.zeros(9), r, 100, overwrite_ld=True, L=1)
+    assert invoked
+    assert fit.qc["ld_overwrite"]["action"] == "ordered_scaled_xtx"
+    bits(r, repair(before, 100))
 
 
 def test_import_under_recording_keeps_standard_display_supported():
