@@ -3736,8 +3736,8 @@
   "minimum_eigenvalue": 3.477986166282123e-08,
   "rank": 200,
   "r_tol": 1e-08,
-  "decomposition_seconds": 0.006654809229075909,
-  "elapsed_seconds": 0.7385107856243849,
+  "decomposition_seconds": 0.006995914503931999,
+  "elapsed_seconds": 0.802845518104732,
   "limitations": [
     "Diagnostic null model does not prove LD calibration or causal identity.",
     "Scale-mixture weights use a full-likelihood constrained solver with KKT checks; pinned R mixsqp may stop at suboptimal boundary weights and produce different flip likelihood ratios.",

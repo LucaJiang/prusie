@@ -501,7 +501,7 @@
       "s_init": "posterior_state",
       "refine": false,
       "retain_data": false,
-      "track_fit": false,
+      "track_fit": true,
       "convergence": {
         "criterion": "elbo",
         "alpha_tol": 0.0001,

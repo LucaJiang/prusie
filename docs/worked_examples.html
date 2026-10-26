@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="SuSiE fine-mapping with a Rust solver and Python API">
-<title>Two worked fine-mapping examples · prusie</title>
+<title>Toy example · prusie</title>
 <link rel="icon" href="assets/logos/favicon.ico" sizes="16x16 32x32 48x48" type="image/x-icon">
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/highlight.css">
@@ -16,141 +16,63 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
-<div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html" aria-current="page">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<div class="version"><span class="version-number">0.3.0</span><span class="version-badge">Stable</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html" aria-current="page">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
-<li><a href="#stable-signals-with-a-prior-sensitive-background">Stable signals with a prior-sensitive background</a></li>
 <li><a href="#a-stopped-fit-improved-by-refinement">A stopped fit improved by refinement</a><ul>
 <li><a href="#what-remains-unresolved">What remains unresolved</a></li>
-<li><a href="#sensitivity-beyond-the-displayed-candidates">Sensitivity beyond the displayed candidates</a></li>
+<li><a href="#sensitivity-and-ld-compatibility">Sensitivity and LD compatibility</a></li>
 </ul>
 </li>
 <li><a href="#choose-a-signal-detail">Choose a signal detail</a></li>
 <li><a href="#sources-and-reproducibility">Sources and reproducibility</a></li>
 </ul>
 </div>
-</details><h1 id="two-worked-fine-mapping-examples">Two worked fine-mapping examples</h1>
-<p>These examples show how to read the posterior, stopping evidence and sensitivity
-together. The stable example has persistent leading credible sets but a
-prior-sensitive background. The problem example reaches its initial stopping
-condition, then finds a better solution through refinement.</p>
-<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
-<thead>
-<tr>
-<th>Example</th>
-<th>Input</th>
-<th>Open the saved result</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Stable</td>
-<td>Packaged 500-variant synthetic toy data</td>
-<td><a href="examples/post_analysis/stable/index.html">Offline report</a>, <a href="examples/post_analysis/stable/figure_index.json">figure index</a></td>
-</tr>
-<tr>
-<td>Problem</td>
-<td>Official susieR 200-SNP <code>FinemappingConvergence</code> sufficient statistics</td>
-<td><a href="examples/post_analysis/problem/index.html">Offline report</a>, <a href="examples/post_analysis/problem/figure_index.json">figure index</a></td>
-</tr>
-</tbody>
-</table></div>
-<p>The baseline and refined fits use prusie 0.2.3rc6; additional sensitivity fits
-use 0.2.4.dev1. Values are rounded for display; linked tables retain full
-precision and variant IDs. See <a href="#sources-and-reproducibility">reproducibility</a>
-for the input and software identities.</p>
-<h2 id="stable-signals-with-a-prior-sensitive-background">Stable signals with a prior-sensitive background</h2>
-<p>The baseline stops after three sweeps with the requested and effective ELBO rule,
-at tolerance 0.001. It has two active components and two singleton CS,
-<code>{syn0100}</code> and <code>{syn0350}</code>. Their posterior masses are approximately 0.9697 and
-0.99994, and their effective numbers of variants are 1.146 and 1.001. Singleton
-purity is 1 by definition; it does not describe LD to surrounding variants.</p>
-<p>Refinement tests two exclusions in one round, using four inner fits. Neither
-refit started from an excluded-variant solution improves the ELBO by more than
-0.001, so no candidate is accepted. Before and after have the same ELBO,
-approximately −1363.854754, and identical PIPs. The <a href="post_analysis.html">refinement guide</a>
-defines the ELBO used in this comparison. This supports stability
-under the executed search, without establishing global optimality.</p>
-<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="The stable example's candidate PIP heatmap across baseline, larger L, fixed scaled prior variance and changed CS coverage." src="examples/post_analysis/stable/figure_5.png" /></div><figcaption><a href="examples/post_analysis/stable/figure_5.png">Open original figure</a></figcaption></figure>
-<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
-<thead>
-<tr>
-<th>Variant</th>
-<th style="text-align: right;">Baseline PIP</th>
-<th style="text-align: right;">Fixed scaled prior variance 0.05</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>syn0350</td>
-<td style="text-align: right;">0.99994</td>
-<td style="text-align: right;">0.99995</td>
-</tr>
-<tr>
-<td>syn0100</td>
-<td style="text-align: right;">0.9697</td>
-<td style="text-align: right;">0.9777</td>
-</tr>
-<tr>
-<td>syn0101</td>
-<td style="text-align: right;">0.03028</td>
-<td style="text-align: right;">0.02701</td>
-</tr>
-<tr>
-<td>syn0143</td>
-<td style="text-align: right;">5.318e-11</td>
-<td style="text-align: right;">0.2544</td>
-</tr>
-<tr>
-<td>syn0145</td>
-<td style="text-align: right;">2.066e-11</td>
-<td style="text-align: right;">0.1430</td>
-</tr>
-</tbody>
-</table></div>
-<p>Increasing L from 5 to 6 leaves all PIPs unchanged. Changing reported CS coverage
-from 0.95 to 0.90 also leaves them unchanged, because that operation reuses the
-posterior. Fixing <code>scaled_prior_variance=0.05</code> with
-<code>estimate_prior_variance=False</code> preserves both leading CS but changes the
-background substantially.</p>
-<p>The component table explains why these are distinct observations. The estimated
-baseline retains two active components; the fixed positive-variance setting
-retains all five, three without retained CS. Disabling estimation removes the
-step that could shrink unused component V to zero, so those extra components
-remain available to distribute probability. The rise at <code>syn0143</code> and <code>syn0145</code>
-is evidence of sensitivity to this model choice, not proof of additional causal
-signals. The parameter is <strong>scaled prior variance</strong>; working-scale V also depends
-on the response variance.</p>
-<p>All 500 variants are present in every setting. The LD diagnostic assesses all
-500 and flags none, with no conditional-only or unassessed rows. That recorded
-result does not remove the prior sensitivity above.</p>
-<p>Read the <a href="examples/post_analysis/stable/comparison.json">full comparison</a>,
-<a href="examples/post_analysis/stable/posterior_summary.json">component and CS summary</a>
-and <a href="examples/post_analysis/stable/ld_diagnostics.json">LD records</a> for the values
-underlying these statements.</p>
+</details><h1 id="toy-example">Toy example</h1>
+<p>The official susieR <code>FinemappingConvergence</code> fixture illustrates a fit that
+satisfies its stopping rule and then improves under refinement. It contains
+200 variants and sufficient statistics for a simulated response based on real
+genotypes; no individual genotypes are included. This is a solver example,
+not a biological association study.</p>
+<p><a href="examples/post_analysis/official/index.html">Open the offline report</a> or browse
+its <a href="examples/post_analysis/official/figure_index.json">figure index</a>.
+The saved analysis uses prusie 0.3.0; input checksums, parameters and exact
+Python source and native binary identities are in the
+<a href="examples/post_analysis/official/provenance.json">provenance</a>.</p>
+<p>Component IDs below are original <strong>zero-based fit rows</strong>: component 1 is the
+second row of <code>alpha</code>, corresponding to susieR's one-based component 2.
+Variant IDs are zero-based positional indices. Genomic positions, alleles,
+genome build and gene annotations are unavailable.</p>
 <h2 id="a-stopped-fit-improved-by-refinement">A stopped fit improved by refinement</h2>
-<p>The 200-variant baseline satisfies its ELBO stopping rule after ten sweeps. That
-is evidence about one trajectory. Refinement evaluates five exclusion attempts
-in two rounds, using ten inner fits, and accepts one candidate. The returned
-candidate satisfies its inner stopping rule after three sweeps.</p>
-<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Initial ten-sweep and returned three-sweep convergence trajectories with independent iteration axes." class="figure-complex" src="examples/post_analysis/problem/figure_2.png" /></div><figcaption><a href="examples/post_analysis/problem/figure_2.png">Open original figure</a></figcaption></figure>
-<p>The <strong>ELBO</strong> changes from
-−70832.271605 to −70814.813295, a gain of <strong>17.4583</strong>. The final logged sweep ELBO
-has a slightly different value and is not substituted in this comparison.
-Different starting solutions have different outcomes even though both satisfy
-their inner stopping rules.</p>
-<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Refinement candidate PIPs, candidate gains relative to each round's incumbent and the path of accepted objectives." class="figure-complex" src="examples/post_analysis/problem/figure_3.png" /></div><figcaption><a href="examples/post_analysis/problem/figure_3.png">Open original figure</a></figcaption></figure>
+<p>The baseline permits <code>L=10</code> single effects and satisfies its ELBO stopping rule
+after ten sweeps at <code>tol=0.001</code>. Refinement evaluates five credible-set exclusion
+attempts in two rounds, using ten inner fits, and accepts one candidate. The
+returned candidate satisfies its inner stopping rule after three sweeps.
+The example opts into tracking for both the baseline and refinement, so the
+report shows the accepted candidate's three original stage-B sweeps.</p>
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Baseline and accepted-candidate convergence trajectories, on separate sweep axes." class="figure-complex" src="examples/post_analysis/official/figure_2.png" /></div><figcaption><a href="examples/post_analysis/official/figure_2.png">Open original figure</a></figcaption></figure>
+<p>The search ranks candidates by their last logged ELBO under the original prior.
+Here it rises from −70832.271605 to −70814.813272, a gain of 17.458333.
+Its before/after values and gain are recorded in
+<a href="examples/post_analysis/official/analysis_summary.json">the analysis summary</a>
+under <code>refinement</code>; recomputed post-finalization ELBO is a separate diagnostic.
+The <a href="post_analysis.html#continue-first-then-consider-refinement">convergence and refinement guide</a>
+explains the search settings and objective convention. Satisfying an inner
+stopping rule does not establish a global optimum. The unsuccessful subsequent
+attempts establish only that no executed candidate exceeded the search's
+absolute improvement threshold.</p>
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Refinement changes candidate support; attempts are compared against their round's incumbent." class="figure-complex" src="examples/post_analysis/official/figure_3.png" /></div><figcaption><a href="examples/post_analysis/official/figure_3.png">Open original figure</a></figcaption></figure>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Variant</th>
 <th style="text-align: right;">Initial PIP</th>
 <th style="text-align: right;">Refined PIP</th>
-<th style="text-align: right;">L = 12 PIP</th>
+<th style="text-align: right;"><code>L=12</code> PIP</th>
 </tr>
 </thead>
 <tbody>
@@ -186,93 +108,96 @@ their inner stopping rules.</p>
 </tr>
 </tbody>
 </table></div>
-<p>The initial singleton CS <code>{35}</code> and <code>{32}</code> are replaced by <code>{33}</code>; the <code>{86,90}</code>
-CS remains. The stored refined PIPs at 32 and 35 are zero, and the stored value
-at 33 is one. These are observed numerical values, not missing variants; bounds
-mark initial probabilities that are close to, but below, one. The change in
-singleton support is substantial, rather than a redistribution within one
-unchanged CS.</p>
+<p>The initial singleton CS <code>{35}</code> and <code>{32}</code> are replaced by <code>{33}</code>, while
+<code>{86,90}</code> remains. Zeros and ones are stored PIPs; <code>&gt;0.9999</code> denotes an interior
+probability close to one. Full-precision values remain in the
+<a href="examples/post_analysis/official/comparison.json">comparison</a>.
+Neither CS membership nor CS count determines the true number of causal effects.</p>
 <h3 id="what-remains-unresolved">What remains unresolved</h3>
-<p>The refined <code>{86,90}</code> CS has mass greater than 0.9999, approximately 1.595 effective
-variants, and |r| = 0.9989. Its roughly 0.177/0.823 probability allocation leaves
-LD-limited resolution. The LD panel displays r² (approximately 0.9978 off the
-diagonal) on a fixed 0–1 scale. The report shows this pair separately from the concentrated
-singleton <code>{33}</code>.</p>
-<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Signal detail for the retained 86/90 pair, showing posterior concentration, cumulative mass and LD." class="figure-complex" src="examples/post_analysis/problem/figure_8.png" /></div><figcaption><a href="examples/post_analysis/problem/figure_8.png">Open original figure</a></figcaption></figure>
-<p>Variant 33 has genotype correlation about 0.532 with 90. That correlation is not
-a test of whether the two modeled effects are conditionally distinguishable.
-Neither the retained pair nor the number of CS determines the true number of
-causal effects. The result supports two distinct posterior summaries: a
-concentrated candidate at 33 and unresolved allocation within 86/90.</p>
-<h3 id="sensitivity-beyond-the-displayed-candidates">Sensitivity beyond the displayed candidates</h3>
-<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Baseline-first sensitivity comparison for the problem example." src="examples/post_analysis/problem/figure_5.png" /></div><figcaption><a href="examples/post_analysis/problem/figure_5.png">Open original figure</a></figcaption></figure>
-<p>L = 12 retains the initial three CS. Its largest PIP change over the full
-200-variant support occurs at variant <code>0</code>, outside the main candidate view:
-0.03856 → 0.04825, an absolute change of 0.009694. The complete table and summary
-retain this change. Nine active components without retained CS contribute to
-the L = 12 background; their broad overlaps are kept in the component evidence
-without treating them as identified signal splits or merges.</p>
-<p>All 200 variants are observed in every setting. All 200 receive a completed LD
-assessment, with none flagged. Variant 33 has the largest absolute conditional
-residual (about 3.872) but log LR about −90.95. Variant <code>0</code> has log LR about 3.560,
-but |adjusted z| about 0.644. Neither satisfies the joint rule
-<strong>log LR &gt; 2 and |adjusted z| &gt; 2</strong>. A residual label is therefore not an allele-flip
-claim. The LD matrix is close to singular; use the saved diagnostic warnings and
-input identity when assessing this result.</p>
-<p>Read the <a href="examples/post_analysis/problem/comparison.json">full comparison</a>,
-<a href="examples/post_analysis/problem/posterior_summary.json">posterior and search summary</a>
-and <a href="examples/post_analysis/problem/ld_diagnostics.json">LD diagnostics</a>. Paired R flip-flag agreement has not been established for these two examples.</p>
+<p>The refined component 1 CS <code>{86,90}</code> has posterior mass greater than 0.9999.
+Its component probabilities are approximately 0.177 and 0.823. Strong LD,
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>≈</mo><mn>0.9989</mn></mrow><annotation encoding="application/x-tex">r\approx0.9989</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4831em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.9989</span></span></span></span></span> and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>r</mi><mn>2</mn></msup><mo>≈</mo><mn>0.9978</mn></mrow><annotation encoding="application/x-tex">r^2\approx0.9978</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.9978</span></span></span></span></span>, limits resolution within this set.
+The effective number of candidates is about 1.595; it measures posterior
+concentration, not a causal count. Component 2 has the singleton CS <code>{33}</code>;
+singleton purity is 1 by definition and says nothing about surrounding LD.</p>
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Component 1 detail: unresolved allocation within the 86/90 CS, cumulative posterior mass and LD r²." class="figure-complex" src="examples/post_analysis/official/figure_6.png" /></div><figcaption><a href="examples/post_analysis/official/figure_6.png">Open original figure</a></figcaption></figure>
+<p>The report presents component 1 before component 2, preserving their identities.
+In the locus overview, separate LD panels use the top variant of <strong>each</strong> CS:
+90 for component 1 and 33 for component 2. A CS top maximizes its own component's
+<code>alpha</code> among its CS members; exact ties use lexical variant ID order, matching
+<code>summary["credible_sets"][i]["representative_rule"]</code>. Global marginal PIP does
+not select a CS top. Reference IDs, tied IDs, signed r and r² for all 200 variants
+are exported under <code>locus overview.ld_references</code> in
+<a href="examples/post_analysis/official/plot_data.json">plot data</a>.</p>
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="All 200 variants, retained CS and separate LD r² panels for variants 90 and 33." class="figure-complex" src="examples/post_analysis/official/figure_1.png" /></div><figcaption><a href="examples/post_analysis/official/figure_1.png">Open original figure</a></figcaption></figure>
+<p>The absolute LD correlation between 33 and 90 is about 0.532. That pairwise
+correlation alone does not establish whether modeled effects are conditionally
+distinguishable. PIP, alpha, r and r² are unitless; effect estimates use the scale
+of the supplied sufficient statistics. The association track shows a two-sided
+normal approximation applied to marginal t statistics derived from <code>XtX</code>,
+<code>Xty</code> and <code>yty</code> (degrees of freedom <code>n - 2</code>). These are not external GWAS z scores.</p>
+<h3 id="sensitivity-and-ld-compatibility">Sensitivity and LD compatibility</h3>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Baseline-first PIP comparison with refinement and L increased to 12." src="examples/post_analysis/official/figure_5.png" /></div><figcaption><a href="examples/post_analysis/official/figure_5.png">Open original figure</a></figcaption></figure>
+<p>Increasing <code>L</code> from 10 to 12 retains the baseline's three CS. The largest PIP
+change over all 200 variants occurs at variant <code>0</code>, outside the main candidate
+view: 0.03856 → 0.04825, an absolute change of 0.009694. Nine active components
+without retained CS contribute to the <code>L=12</code> background; diffuse overlap does
+not establish additional localized signals.</p>
+<p>The signed LD matrix is normalized from the same in-sample <code>XtX</code>. Diagnostics
+use the t-derived statistics with a normal approximation. The matrix is nearly
+singular; inspect its recorded regularization and
+<a href="examples/post_analysis/official/ld_diagnostics.json">LD diagnostic records</a>.
+A completed assessment flags none of the 200 variants under the recorded joint
+rule (log LR &gt; 2 and absolute adjusted z-score &gt; 2). This does not validate an
+external LD reference or prove allele alignment. Paired susieR flip-flag
+agreement has not been established.</p>
 <h2 id="choose-a-signal-detail">Choose a signal detail</h2>
-<p>Select a component according to the question it answers. This illustrative
-fragment requires the problem fit's posterior <code>summary</code> and aligned LD matrix
-<code>R</code>; they are not the quick-start toy result. Its two retained CS justify
-distinct detail views:</p>
+<p>Use the official refined fit's posterior <code>summary</code> and signed LD matrix <code>R</code>,
+with rows and columns in the order of <code>summary["variants"]</code>:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.viz</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_signal</span>
 
-<span class="n">singleton</span> <span class="o">=</span> <span class="n">plot_signal</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">variant_id</span><span class="o">=</span><span class="s2">&quot;33&quot;</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span>
-                        <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">ld_measure</span><span class="o">=</span><span class="s2">&quot;r2&quot;</span><span class="p">)</span>
-<span class="n">pair</span> <span class="o">=</span> <span class="n">plot_signal</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">variant_id</span><span class="o">=</span><span class="s2">&quot;90&quot;</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span>
-                   <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">ld_measure</span><span class="o">=</span><span class="s2">&quot;r2&quot;</span><span class="p">)</span>
+<span class="n">pair</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">pair_data</span> <span class="o">=</span> <span class="n">plot_signal</span><span class="p">(</span>
+    <span class="n">summary</span><span class="p">,</span> <span class="n">component_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">ld_measure</span><span class="o">=</span><span class="s2">&quot;r2&quot;</span>
+<span class="p">)</span>
+<span class="n">singleton</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">singleton_data</span> <span class="o">=</span> <span class="n">plot_signal</span><span class="p">(</span>
+    <span class="n">summary</span><span class="p">,</span> <span class="n">component_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">ld_measure</span><span class="o">=</span><span class="s2">&quot;r2&quot;</span>
+<span class="p">)</span>
 </code></pre></div>
 
-<p>Here <code>summary</code> and <code>R</code> are the problem result and aligned LD matrix. IDs in this
-example identify its saved variants; use your own CS members or component IDs
-for another fit. See the <a href="api.html#figures-and-local-style">API</a> for local style,
-full layouts and exported plotting data, and the
-<a href="sensitivity.html">sensitivity guide</a> for variant alignment and prior policies.</p>
+<p>The compact views retain all CS members, show component probabilities and full
+posterior cumulative mass, and display within-CS r². <code>variant_id="90"</code> can
+instead select the retained component with the highest alpha for that variant.
+The <a href="api.html#figures-and-local-style">plotting API</a> describes local styles and
+exported data. <code>plot_locus</code> uses one LD panel per CS by default; an explicit
+<code>reference_variant</code> selects a single reference, no retained CS falls back to the
+highest marginal PIP, and missing <code>R</code> produces an unassessed placeholder.</p>
 <h2 id="sources-and-reproducibility">Sources and reproducibility</h2>
-<details>
-<summary>Inputs, licenses, numerical provenance and rendering commands</summary>
-<p>The stable inputs are independently generated synthetic data; their
-<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/toy/metadata.json">generation metadata</a>
-and <a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/toy/LICENSE.txt">GPL-3.0-or-later notice</a>
-ship with the package. The problem fixture uses a simulated response with
-real-genotype-derived sufficient statistics, without individual genotypes;
-<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/convergence/metadata.json">source metadata</a>
-records the pinned upstream input and BSD-3-Clause license, with
-<a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/convergence/LICENSE.txt">upstream attribution</a>.</p>
-<p>The baseline and refined fits were produced with prusie 0.2.3rc6, and the
-additional sensitivity fits with 0.2.4.dev1. The
-<a href="examples/post_analysis/stable/provenance.json">stable provenance</a> and
-<a href="examples/post_analysis/problem/provenance.json">problem provenance</a> identify
-the inputs, source revisions and software versions. JSON and CSV downloads
-retain full precision. These inputs have no gene annotations.</p>
-<p>To regenerate the figures and reports from the saved posterior and diagnostics:</p>
+<p>The <a href="examples/post_analysis/official/metadata.json">fixture metadata</a> identifies
+upstream <code>FinemappingConvergence.RData</code> at susieR commit
+<code>1f9166cf88ed19c1d6acd4ee53a605ff9505a563</code>, with source SHA256
+<code>8b9ac71cd119cd8e9818340fb1152e422d9b7eaefac747058d8087f6c0b5139b</code>.
+The packaged reference is pinned to susieR 0.16.6 at
+<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>. Preserve the
+<a href="examples/post_analysis/official/LICENSE.txt">upstream attribution</a> and
+<a href="examples/post_analysis/official/BSD-3-Clause.txt">full BSD-3-Clause license</a>,
+reproduced from the repository third-party notices. The fixture’s original
+license stub is also retained unchanged.</p>
+<p>From a source checkout with the <code>analysis</code> extra installed, reproduce this
+single official example, including baseline, refinement, <code>L=12</code> sensitivity and
+LD diagnostics:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>examples/post_analysis.py<span class="w"> </span>--output-dir<span class="w"> </span>output/post-analysis<span class="w"> </span>--case<span class="w"> </span>official
+</code></pre></div>
+
+<p>To render the saved numerical results without fitting or running diagnostics:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>examples/post_analysis.py<span class="w"> </span>--saved-dir<span class="w"> </span>docs/examples/post_analysis<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--output-dir<span class="w"> </span>output/rendered-examples<span class="w"> </span>--case<span class="w"> </span>both
+<span class="w">  </span>--output-dir<span class="w"> </span>output/rendered-example<span class="w"> </span>--case<span class="w"> </span>official
 </code></pre></div>
 
-<p>The saved result directories include baseline, refined and alternative fits.</p>
-<p>To fit both examples anew from the source checkout with the analysis extra installed:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>examples/post_analysis.py<span class="w"> </span>--output-dir<span class="w"> </span>output/post-analysis<span class="w"> </span>--case<span class="w"> </span>both
-</code></pre></div>
-
-<p>This explicit command runs fits and diagnostics with the installed solver.
-Opening the saved reports above does not. Each report includes PNG/SVG, complete CSV tables, lossless JSON/NPZ,
-provenance and a figure index. The compact main figures are supplemented by a
-separate variance-details figure and full search tables.</p>
-</details></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
+<p>Opening the report runs no computations. Keep its directory together: it includes
+PNG/SVG figures, full-precision CSV tables, lossless JSON/NPZ records, input and
+software provenance, license files and a figure index. Rendering saved records
+preserves their numerical software identity and records the renderer separately.</p></article>
+<footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

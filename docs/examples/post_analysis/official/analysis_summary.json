@@ -154,7 +154,7 @@
         "fixed_point"
       ]
     },
-    "trajectory_available": false,
+    "trajectory_available": true,
     "pending": "The selected inner stopping condition was satisfied; this does not establish a global optimum."
   },
   "refinement": {
@@ -301,7 +301,7 @@
       }
     ]
   },
-  "evidence_sha256": "7fc3dd0d4af3b1f5463fa8ce94460db8b150782418d59d3d3d0a9bdbbd8f22c4",
+  "evidence_sha256": "95967f8197335e02977897f47f6ea3458abd2ae36d5d60b6046065499411a05e",
   "files": {
     "evidence": "evidence.json",
     "lossless_structure": "analysis.json",

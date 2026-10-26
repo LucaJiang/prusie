@@ -48351,7 +48351,7 @@
         "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
         "elbo_valid": true,
         "warnings": [],
-        "trace_available": false,
+        "trace_available": true,
         "config_resolution": {
           "source": "inherited_params"
         },
@@ -48404,7 +48404,7 @@
                 "niter": 15,
                 "stop_reason": "criterion_satisfied",
                 "ibss_converged": true,
-                "seconds": 0.01653820276260376,
+                "seconds": 0.01570313423871994,
                 "logged_elbo": -70814.80325423196,
                 "solver_settings": {
                   "convergence": {
@@ -48416,7 +48416,7 @@
                   },
                   "tol": 0.001,
                   "max_iter": 100,
-                  "track_fit": false
+                  "track_fit": true
                 },
                 "convergence": {
                   "stop_reason": "criterion_satisfied",
@@ -48571,7 +48571,7 @@
                   "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
                   "elbo_valid": true,
                   "warnings": [],
-                  "trace_available": false,
+                  "trace_available": true,
                   "config_resolution": {
                     "source": "inherited_params"
                   }
@@ -48583,7 +48583,7 @@
                 "niter": 3,
                 "stop_reason": "criterion_satisfied",
                 "ibss_converged": true,
-                "seconds": 0.01112679298967123,
+                "seconds": 0.012630111537873745,
                 "logged_elbo": -70814.81327158018,
                 "solver_settings": {
                   "convergence": {
@@ -48595,7 +48595,7 @@
                   },
                   "tol": 0.001,
                   "max_iter": 100,
-                  "track_fit": false
+                  "track_fit": true
                 },
                 "convergence": {
                   "stop_reason": "criterion_satisfied",
@@ -48750,7 +48750,7 @@
                   "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
                   "elbo_valid": true,
                   "warnings": [],
-                  "trace_available": false,
+                  "trace_available": true,
                   "config_resolution": {
                     "source": "inherited_params"
                   }
@@ -48779,7 +48779,7 @@
                 "niter": 9,
                 "stop_reason": "criterion_satisfied",
                 "ibss_converged": true,
-                "seconds": 0.013272001408040524,
+                "seconds": 0.015650403685867786,
                 "logged_elbo": -70814.8032840806,
                 "solver_settings": {
                   "convergence": {
@@ -48791,7 +48791,7 @@
                   },
                   "tol": 0.001,
                   "max_iter": 100,
-                  "track_fit": false
+                  "track_fit": true
                 },
                 "convergence": {
                   "stop_reason": "criterion_satisfied",
@@ -48946,7 +48946,7 @@
                   "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
                   "elbo_valid": true,
                   "warnings": [],
-                  "trace_available": false,
+                  "trace_available": true,
                   "config_resolution": {
                     "source": "inherited_params"
                   }
@@ -48958,7 +48958,7 @@
                 "niter": 3,
                 "stop_reason": "criterion_satisfied",
                 "ibss_converged": true,
-                "seconds": 0.011020542122423649,
+                "seconds": 0.016449496150016785,
                 "logged_elbo": -70814.81327161635,
                 "solver_settings": {
                   "convergence": {
@@ -48970,7 +48970,7 @@
                   },
                   "tol": 0.001,
                   "max_iter": 100,
-                  "track_fit": false
+                  "track_fit": true
                 },
                 "convergence": {
                   "stop_reason": "criterion_satisfied",
@@ -49125,7 +49125,7 @@
                   "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
                   "elbo_valid": true,
                   "warnings": [],
-                  "trace_available": false,
+                  "trace_available": true,
                   "config_resolution": {
                     "source": "inherited_params"
                   }
@@ -49156,7 +49156,7 @@
                 "niter": 17,
                 "stop_reason": "criterion_satisfied",
                 "ibss_converged": true,
-                "seconds": 0.014834985136985779,
+                "seconds": 0.023154688999056816,
                 "logged_elbo": -70843.33317391133,
                 "solver_settings": {
                   "convergence": {
@@ -49168,7 +49168,7 @@
                   },
                   "tol": 0.001,
                   "max_iter": 100,
-                  "track_fit": false
+                  "track_fit": true
                 },
                 "convergence": {
                   "stop_reason": "criterion_satisfied",
@@ -49312,7 +49312,7 @@
                   "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
                   "elbo_valid": true,
                   "warnings": [],
-                  "trace_available": false,
+                  "trace_available": true,
                   "config_resolution": {
                     "source": "inherited_params"
                   }
@@ -49324,7 +49324,7 @@
                 "niter": 17,
                 "stop_reason": "criterion_satisfied",
                 "ibss_converged": true,
-                "seconds": 0.015161391347646713,
+                "seconds": 0.032970541156828403,
                 "logged_elbo": -70832.27149205601,
                 "solver_settings": {
                   "convergence": {
@@ -49336,7 +49336,7 @@
                   },
                   "tol": 0.001,
                   "max_iter": 100,
-                  "track_fit": false
+                  "track_fit": true
                 },
                 "convergence": {
                   "stop_reason": "criterion_satisfied",
@@ -49480,7 +49480,7 @@
                   "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
                   "elbo_valid": true,
                   "warnings": [],
-                  "trace_available": false,
+                  "trace_available": true,
                   "config_resolution": {
                     "source": "inherited_params"
                   }
@@ -49509,7 +49509,7 @@
                 "niter": 10,
                 "stop_reason": "criterion_satisfied",
                 "ibss_converged": true,
-                "seconds": 0.004897658713161945,
+                "seconds": 0.005996677093207836,
                 "logged_elbo": -70832.25894861997,
                 "solver_settings": {
                   "convergence": {
@@ -49521,7 +49521,7 @@
                   },
                   "tol": 0.001,
                   "max_iter": 100,
-                  "track_fit": false
+                  "track_fit": true
                 },
                 "convergence": {
                   "stop_reason": "criterion_satisfied",
@@ -49665,7 +49665,7 @@
                   "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
                   "elbo_valid": true,
                   "warnings": [],
-                  "trace_available": false,
+                  "trace_available": true,
                   "config_resolution": {
                     "source": "inherited_params"
                   }
@@ -49677,7 +49677,7 @@
                 "niter": 3,
                 "stop_reason": "criterion_satisfied",
                 "ibss_converged": true,
-                "seconds": 0.0030343597754836082,
+                "seconds": 0.0034894952550530434,
                 "logged_elbo": -70832.2713900634,
                 "solver_settings": {
                   "convergence": {
@@ -49689,7 +49689,7 @@
                   },
                   "tol": 0.001,
                   "max_iter": 100,
-                  "track_fit": false
+                  "track_fit": true
                 },
                 "convergence": {
                   "stop_reason": "criterion_satisfied",
@@ -49833,7 +49833,7 @@
                   "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
                   "elbo_valid": true,
                   "warnings": [],
-                  "trace_available": false,
+                  "trace_available": true,
                   "config_resolution": {
                     "source": "inherited_params"
                   }
@@ -49864,7 +49864,7 @@
                 "niter": 17,
                 "stop_reason": "criterion_satisfied",
                 "ibss_converged": true,
-                "seconds": 0.007136231288313866,
+                "seconds": 0.009638752788305283,
                 "logged_elbo": -70843.33317391133,
                 "solver_settings": {
                   "convergence": {
@@ -49876,7 +49876,7 @@
                   },
                   "tol": 0.001,
                   "max_iter": 100,
-                  "track_fit": false
+                  "track_fit": true
                 },
                 "convergence": {
                   "stop_reason": "criterion_satisfied",
@@ -50020,7 +50020,7 @@
                   "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
                   "elbo_valid": true,
                   "warnings": [],
-                  "trace_available": false,
+                  "trace_available": true,
                   "config_resolution": {
                     "source": "inherited_params"
                   }
@@ -50032,7 +50032,7 @@
                 "niter": 17,
                 "stop_reason": "criterion_satisfied",
                 "ibss_converged": true,
-                "seconds": 0.007627496495842934,
+                "seconds": 0.009020674973726273,
                 "logged_elbo": -70832.27149205601,
                 "solver_settings": {
                   "convergence": {
@@ -50044,7 +50044,7 @@
                   },
                   "tol": 0.001,
                   "max_iter": 100,
-                  "track_fit": false
+                  "track_fit": true
                 },
                 "convergence": {
                   "stop_reason": "criterion_satisfied",
@@ -50188,7 +50188,7 @@
                   "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
                   "elbo_valid": true,
                   "warnings": [],
-                  "trace_available": false,
+                  "trace_available": true,
                   "config_resolution": {
                     "source": "inherited_params"
                   }
@@ -50953,7 +50953,7 @@
             "relative_elbo_formula": "delta_elbo / max(1, abs(previous_elbo))",
             "elbo_valid": true,
             "warnings": [],
-            "trace_available": false,
+            "trace_available": true,
             "config_resolution": {
               "source": "inherited_params"
             },
@@ -54701,8 +54701,8 @@
       "minimum_eigenvalue": 3.477986166282123e-08,
       "rank": 200,
       "r_tol": 1e-08,
-      "decomposition_seconds": 0.006654809229075909,
-      "elapsed_seconds": 0.7385107856243849,
+      "decomposition_seconds": 0.006995914503931999,
+      "elapsed_seconds": 0.802845518104732,
       "limitations": [
         "Diagnostic null model does not prove LD calibration or causal identity.",
         "Scale-mixture weights use a full-likelihood constrained solver with KKT checks; pinned R mixsqp may stop at suboptimal boundary weights and produce different flip likelihood ratios.",
@@ -55212,7 +55212,7 @@
           "s_init": "posterior_state",
           "refine": false,
           "retain_data": false,
-          "track_fit": false,
+          "track_fit": true,
           "convergence": {
             "criterion": "elbo",
             "alpha_tol": 0.0001,
@@ -71717,10 +71717,15 @@
         "native": "prusie-rust/0.3.0; susieR-reference/0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2"
       },
       "random_seed": "frozen upstream fixture; no new random generation",
-      "elapsed_seconds": 3.0082531543448567,
+      "elapsed_seconds": 3.480142184533179,
       "skipped": [
         "gene track: no physical coordinate metadata"
       ],
+      "tracking": {
+        "baseline": true,
+        "refinement": true,
+        "candidate_trajectory": "original IBSS sweeps"
+      },
       "fixture": {
         "description": "Official susieR FinemappingConvergence toy example: a simulated response with real-genotype-derived sufficient statistics. No individual genotypes are included.",
         "source_commit": "1f9166cf88ed19c1d6acd4ee53a605ff9505a563",
@@ -71739,34 +71744,23 @@
           "estimate_residual_variance": true
         }
       },
-      "source_identity": {
-        "checkout_head": "14743c1ba08bba4630591b627bde3e8307e14b60",
-        "source_files_sha256": {
-          "post_analysis.py": "8f42bc931487d1c9b5e686c61db25bb63f91ad573afb73a40da1bdefb1e35e16",
-          "report.py": "690313bcae42074b9c6876c7cd4bda891dd9a7ece9bf86646b98ab05c9cc1db3",
-          "_locus.py": "9c17e1d9ad89559d45dd67aa702f780d6f65cf2b912668fc895f5fdac26c28bf"
-        },
-        "native_sha256": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e",
-        "note": "Source hashes identify presentation changes; this record is not a final wheel freeze."
-      },
       "license_files": {
         "full_terms": "BSD-3-Clause.txt",
         "full_terms_source": "THIRD_PARTY_NOTICES.md / susieR",
         "attribution": "LICENSE.txt",
         "fixture_license_stub": "LICENSE-BSD-3-Clause.txt"
       },
-      "render_version": "0.3.0",
-      "render_source_identity": {
-        "checkout_head": "68c23b56c7d8e0e6ada6cc47516b0780cb346406",
+      "source_identity": {
+        "checkout_head": "34da8a0d7fe15ff7466937aaedffb4fa8f841e43",
         "source_files_sha256": {
-          "post_analysis.py": "1c8728bb9dd77e957cddb067e146153773d3f4f1484e072bbcae7bfe74c41d66",
+          "post_analysis.py": "315c45fef8af3478872a5c5c6e0ad052c4ed13e96d4a9fb38d3daebecb1f7bd8",
+          "refinement.py": "354bdfd80c9f9a1610c1374313a7dd777dd7c4feae6acf848570ad4498f3c922",
           "report.py": "aab8a15c6faf896cd6bbd7946a2ea09b9c283964ec01a89fafb7c43dfd25a24c",
           "_locus.py": "5745cdcf246b6328a74e9d4f5b804085ec84681c9195247080b519f875596add"
         },
         "native_sha256": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e",
-        "note": "Source hashes identify presentation changes; this record is not a final wheel freeze."
-      },
-      "rendering_scope": "Saved numerical fits/diagnostics reused; no refitting"
+        "note": "Source hashes identify the example, refinement tracking and presentation; this record is not a final wheel freeze."
+      }
     },
     "annotations": {
       "example_kind": "Official susieR FinemappingConvergence toy example: a simulated response with real-genotype-derived sufficient statistics. No individual genotypes are included.",
@@ -126528,7 +126522,7 @@
     {
       "id": "ev_4c91f7632c9ab7787ce0",
       "path": "/comparison/fit_settings/refined/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_0681ab87eed10eba59b1",
@@ -141883,12 +141877,12 @@
     {
       "id": "ev_56414df726caa4a5cab0",
       "path": "/ld_diagnostics/decomposition_seconds",
-      "value": 0.006654809229075909
+      "value": 0.006995914503931999
     },
     {
       "id": "ev_2f4cbcb80c23a4da6f26",
       "path": "/ld_diagnostics/elapsed_seconds",
-      "value": 0.7385107856243849
+      "value": 0.802845518104732
     },
     {
       "id": "ev_07297d94e4cd1c8eed48",
@@ -158543,7 +158537,7 @@
     {
       "id": "ev_260d256636438e35abee",
       "path": "/provenance/elapsed_seconds",
-      "value": 3.0082531543448567
+      "value": 3.480142184533179
     },
     {
       "id": "ev_c3db8d3ae402b3e22229",
@@ -158661,46 +158655,6 @@
       "value": "https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData"
     },
     {
-      "id": "ev_a254c72860db994eb53a",
-      "path": "/provenance/render_source_identity/checkout_head",
-      "value": "68c23b56c7d8e0e6ada6cc47516b0780cb346406"
-    },
-    {
-      "id": "ev_8f9090edade081a8ecb9",
-      "path": "/provenance/render_source_identity/native_sha256",
-      "value": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e"
-    },
-    {
-      "id": "ev_f0bae7a881a3b43a1017",
-      "path": "/provenance/render_source_identity/note",
-      "value": "Source hashes identify presentation changes; this record is not a final wheel freeze."
-    },
-    {
-      "id": "ev_a48ef4d87217e904850a",
-      "path": "/provenance/render_source_identity/source_files_sha256/_locus.py",
-      "value": "5745cdcf246b6328a74e9d4f5b804085ec84681c9195247080b519f875596add"
-    },
-    {
-      "id": "ev_81e749ed005dc189969d",
-      "path": "/provenance/render_source_identity/source_files_sha256/post_analysis.py",
-      "value": "1c8728bb9dd77e957cddb067e146153773d3f4f1484e072bbcae7bfe74c41d66"
-    },
-    {
-      "id": "ev_e507aef3ceb3dac47184",
-      "path": "/provenance/render_source_identity/source_files_sha256/report.py",
-      "value": "aab8a15c6faf896cd6bbd7946a2ea09b9c283964ec01a89fafb7c43dfd25a24c"
-    },
-    {
-      "id": "ev_e09340b8bbd6a6ab4d4d",
-      "path": "/provenance/render_version",
-      "value": "0.3.0"
-    },
-    {
-      "id": "ev_7646178b45f6f36dfed8",
-      "path": "/provenance/rendering_scope",
-      "value": "Saved numerical fits/diagnostics reused; no refitting"
-    },
-    {
       "id": "ev_ae4630f0676835cec55f",
       "path": "/provenance/skipped/0",
       "value": "gene track: no physical coordinate metadata"
@@ -158723,7 +158677,7 @@
     {
       "id": "ev_3ba879a805b6f9a9a97b",
       "path": "/provenance/source_identity/checkout_head",
-      "value": "14743c1ba08bba4630591b627bde3e8307e14b60"
+      "value": "34da8a0d7fe15ff7466937aaedffb4fa8f841e43"
     },
     {
       "id": "ev_174c5dcd9c4bea4a6c28",
@@ -158733,22 +158687,42 @@
     {
       "id": "ev_aaa3508bfad95288b4fa",
       "path": "/provenance/source_identity/note",
-      "value": "Source hashes identify presentation changes; this record is not a final wheel freeze."
+      "value": "Source hashes identify the example, refinement tracking and presentation; this record is not a final wheel freeze."
     },
     {
       "id": "ev_022990f74608d441864a",
       "path": "/provenance/source_identity/source_files_sha256/_locus.py",
-      "value": "9c17e1d9ad89559d45dd67aa702f780d6f65cf2b912668fc895f5fdac26c28bf"
+      "value": "5745cdcf246b6328a74e9d4f5b804085ec84681c9195247080b519f875596add"
     },
     {
       "id": "ev_f15c41fa771663f15a51",
       "path": "/provenance/source_identity/source_files_sha256/post_analysis.py",
-      "value": "8f42bc931487d1c9b5e686c61db25bb63f91ad573afb73a40da1bdefb1e35e16"
+      "value": "315c45fef8af3478872a5c5c6e0ad052c4ed13e96d4a9fb38d3daebecb1f7bd8"
+    },
+    {
+      "id": "ev_fe59e468d2c2cb57cb08",
+      "path": "/provenance/source_identity/source_files_sha256/refinement.py",
+      "value": "354bdfd80c9f9a1610c1374313a7dd777dd7c4feae6acf848570ad4498f3c922"
     },
     {
       "id": "ev_72b7dec6d55dee2fee99",
       "path": "/provenance/source_identity/source_files_sha256/report.py",
-      "value": "690313bcae42074b9c6876c7cd4bda891dd9a7ece9bf86646b98ab05c9cc1db3"
+      "value": "aab8a15c6faf896cd6bbd7946a2ea09b9c283964ec01a89fafb7c43dfd25a24c"
+    },
+    {
+      "id": "ev_db8d9af0221617f64ce9",
+      "path": "/provenance/tracking/baseline",
+      "value": true
+    },
+    {
+      "id": "ev_b8c250ab2e8e13a56433",
+      "path": "/provenance/tracking/candidate_trajectory",
+      "value": "original IBSS sweeps"
+    },
+    {
+      "id": "ev_c526927cadb130d3102a",
+      "path": "/provenance/tracking/refinement",
+      "value": true
     },
     {
       "id": "ev_9619bc39865922ac810f",
@@ -189953,7 +189927,7 @@
     {
       "id": "ev_877174bc2cc157f38bf4",
       "path": "/summary/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_c3baddfcbf5b63eef85b",
@@ -369013,7 +368987,7 @@
     {
       "id": "ev_a6df43c7918b98158b6e",
       "path": "/summary/refinement/after/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_b0141268066fcbe8746c",
@@ -372473,7 +372447,7 @@
     {
       "id": "ev_c986f7fc91d05e0e27d9",
       "path": "/summary/refinement/history/0/stages/A/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_d95ff7933192639ae4be",
@@ -372503,7 +372477,7 @@
     {
       "id": "ev_afef9eb08625b435345a",
       "path": "/summary/refinement/history/0/stages/A/seconds",
-      "value": 0.01653820276260376
+      "value": 0.01570313423871994
     },
     {
       "id": "ev_a77a9076977e76963770",
@@ -372543,7 +372517,7 @@
     {
       "id": "ev_750564a8a64d936778bb",
       "path": "/summary/refinement/history/0/stages/A/solver_settings/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_0324a80e75cc15a83dc9",
@@ -373188,7 +373162,7 @@
     {
       "id": "ev_4697b52022ea6b0406e1",
       "path": "/summary/refinement/history/0/stages/B/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_178702fc1cbd9d91eafb",
@@ -373213,7 +373187,7 @@
     {
       "id": "ev_94636589b0ff7db6ef41",
       "path": "/summary/refinement/history/0/stages/B/seconds",
-      "value": 0.01112679298967123
+      "value": 0.012630111537873745
     },
     {
       "id": "ev_e9ea271d6069e7f30d2e",
@@ -373253,7 +373227,7 @@
     {
       "id": "ev_6c0b06478134425ef204",
       "path": "/summary/refinement/history/0/stages/B/solver_settings/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_cd7af569d5d6134cb4d8",
@@ -373948,7 +373922,7 @@
     {
       "id": "ev_e89918e9d5b4bc2ef1a6",
       "path": "/summary/refinement/history/1/stages/A/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_dea8528f99900a1a2891",
@@ -373978,7 +373952,7 @@
     {
       "id": "ev_0f2431283135ba3df378",
       "path": "/summary/refinement/history/1/stages/A/seconds",
-      "value": 0.013272001408040524
+      "value": 0.015650403685867786
     },
     {
       "id": "ev_c86e1b2b1869d48c0f5e",
@@ -374018,7 +373992,7 @@
     {
       "id": "ev_c9fd7bcf965fbe85d9fa",
       "path": "/summary/refinement/history/1/stages/A/solver_settings/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_0a6363907c033949474f",
@@ -374663,7 +374637,7 @@
     {
       "id": "ev_abb6ca7718c811482f29",
       "path": "/summary/refinement/history/1/stages/B/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_d50d3e32c265782c0656",
@@ -374688,7 +374662,7 @@
     {
       "id": "ev_e0530d135b7c425a5fde",
       "path": "/summary/refinement/history/1/stages/B/seconds",
-      "value": 0.011020542122423649
+      "value": 0.016449496150016785
     },
     {
       "id": "ev_d5a31d313e6b74246786",
@@ -374728,7 +374702,7 @@
     {
       "id": "ev_21ba6e8be08daa2e3b18",
       "path": "/summary/refinement/history/1/stages/B/solver_settings/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_5bfccf10985e44bc999a",
@@ -375388,7 +375362,7 @@
     {
       "id": "ev_9f4544dba7821fde25eb",
       "path": "/summary/refinement/history/2/stages/A/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_9dbadd2079dcddc709a1",
@@ -375418,7 +375392,7 @@
     {
       "id": "ev_af8ffd4ad401e444e31c",
       "path": "/summary/refinement/history/2/stages/A/seconds",
-      "value": 0.014834985136985779
+      "value": 0.023154688999056816
     },
     {
       "id": "ev_c3a9812c4fd8c398c18b",
@@ -375458,7 +375432,7 @@
     {
       "id": "ev_023d5f1fecfe08676449",
       "path": "/summary/refinement/history/2/stages/A/solver_settings/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_fd1d08c7795aa11548b3",
@@ -376058,7 +376032,7 @@
     {
       "id": "ev_31e5af9c8f46073751de",
       "path": "/summary/refinement/history/2/stages/B/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_263bd2c7af9754451329",
@@ -376083,7 +376057,7 @@
     {
       "id": "ev_84c860e79643bb7fbf14",
       "path": "/summary/refinement/history/2/stages/B/seconds",
-      "value": 0.015161391347646713
+      "value": 0.032970541156828403
     },
     {
       "id": "ev_5372aafd224cdc1d349a",
@@ -376123,7 +376097,7 @@
     {
       "id": "ev_c937e38cf0a77c000de2",
       "path": "/summary/refinement/history/2/stages/B/solver_settings/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_73ee2298271aebda9daa",
@@ -376773,7 +376747,7 @@
     {
       "id": "ev_6963d3ad9161ee27dacb",
       "path": "/summary/refinement/history/3/stages/A/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_38f1db35fd0b6eb46626",
@@ -376803,7 +376777,7 @@
     {
       "id": "ev_8e3ea28782b8730443a9",
       "path": "/summary/refinement/history/3/stages/A/seconds",
-      "value": 0.004897658713161945
+      "value": 0.005996677093207836
     },
     {
       "id": "ev_e4a978764eb709cdd134",
@@ -376843,7 +376817,7 @@
     {
       "id": "ev_64552ec363c1b4cd8e26",
       "path": "/summary/refinement/history/3/stages/A/solver_settings/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_2181d3daab20b4cfd5d8",
@@ -377443,7 +377417,7 @@
     {
       "id": "ev_71e08742c7cd9acdc72d",
       "path": "/summary/refinement/history/3/stages/B/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_e5be675c361a4334f932",
@@ -377468,7 +377442,7 @@
     {
       "id": "ev_29ef307ea89ff32b423c",
       "path": "/summary/refinement/history/3/stages/B/seconds",
-      "value": 0.0030343597754836082
+      "value": 0.0034894952550530434
     },
     {
       "id": "ev_041c6f040978654f3fed",
@@ -377508,7 +377482,7 @@
     {
       "id": "ev_7b96eddbf4f947448078",
       "path": "/summary/refinement/history/3/stages/B/solver_settings/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_f86441526e45cf19fb5a",
@@ -378168,7 +378142,7 @@
     {
       "id": "ev_9cc3aa7d6b36e8044598",
       "path": "/summary/refinement/history/4/stages/A/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_a69c13ddbfe3e73a1713",
@@ -378198,7 +378172,7 @@
     {
       "id": "ev_560646cb23efa74c5936",
       "path": "/summary/refinement/history/4/stages/A/seconds",
-      "value": 0.007136231288313866
+      "value": 0.009638752788305283
     },
     {
       "id": "ev_b2875157736d7a54468d",
@@ -378238,7 +378212,7 @@
     {
       "id": "ev_0ade4b25549c99a1e048",
       "path": "/summary/refinement/history/4/stages/A/solver_settings/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_f81b37ab77ee2d9502d3",
@@ -378838,7 +378812,7 @@
     {
       "id": "ev_005cd1181e6eecb66ba4",
       "path": "/summary/refinement/history/4/stages/B/convergence/trace_available",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_14657c3bb7d26aeabd0b",
@@ -378863,7 +378837,7 @@
     {
       "id": "ev_c10bc522b32d37597c6e",
       "path": "/summary/refinement/history/4/stages/B/seconds",
-      "value": 0.007627496495842934
+      "value": 0.009020674973726273
     },
     {
       "id": "ev_86e9f4bd5b8931aca6b1",
@@ -378903,7 +378877,7 @@
     {
       "id": "ev_e49fe7c3bac5b7233a8f",
       "path": "/summary/refinement/history/4/stages/B/solver_settings/track_fit",
-      "value": false
+      "value": true
     },
     {
       "id": "ev_fb2c0ce3376e444547fe",
@@ -386956,6 +386930,6 @@
       "value": -3.4452043910148324
     }
   ],
-  "sha256": "7fc3dd0d4af3b1f5463fa8ce94460db8b150782418d59d3d3d0a9bdbbd8f22c4",
+  "sha256": "95967f8197335e02977897f47f6ea3458abd2ae36d5d60b6046065499411a05e",
   "transmission_scope": "Selected deterministic result tables, diagnostics and comparisons; supplied provenance and annotations are included and require privacy review. Dense fit histories, effect moments and raw fit matrices are not collected from results."
 }

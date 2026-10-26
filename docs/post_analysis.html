@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
-<div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html" aria-current="page">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<div class="version"><span class="version-number">0.3.0</span><span class="version-badge">Stable</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html" aria-current="page">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
@@ -32,82 +32,99 @@
 </ul>
 </div>
 </details><h1 id="convergence-and-refinement">Convergence and refinement</h1>
-<p>Read why a fit stopped, give an unfinished fit more iterations when appropriate,
-then search for a better solution and compare the returned results. A stopping
-rule describes one IBSS trajectory; refinement explores other starting solutions.</p>
+<p>A fit can satisfy its stopping rule while a better solution remains available
+under the same model. Refinement searches alternative starting solutions for a
+higher evidence lower bound (ELBO).</p>
+<p>Start by inspecting <a href="#convergence-diagnostics">why the fit stopped</a>.
+<code>continue_fit</code> runs more sweeps from the saved posterior; <code>refine_fit</code> searches
+for an improvement. Both require retained inputs. Compare PIPs and credible sets
+before and after the search to assess its effect on the fine-mapping results.</p>
 <h2 id="start-with-a-tracked-fit">Start with a tracked fit</h2>
+<p>To see how a fit approached its stopping rule, set <code>track_fit="compact"</code> when
+fitting. This records diagnostics after each complete pass through the
+single-effect components. In the official susieR <code>FinemappingConvergence</code> toy example below, tracking retains
+validated inputs for continuation and refinement.</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">prusie.viz</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_convergence</span><span class="p">,</span> <span class="n">plot_refinement</span>
 
-<span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_example</span><span class="p">()</span>
-<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span><span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">],</span>
-                       <span class="n">track_fit</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">retain_data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_convergence_example</span><span class="p">()</span>
+<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_suff_stat</span><span class="p">(</span>
+    <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span>
+    <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">],</span>
+    <span class="n">track_fit</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Stop:&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">convergence</span><span class="p">[</span><span class="s2">&quot;stop_reason&quot;</span><span class="p">],</span> <span class="s2">&quot;Iterations:&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="p">)</span>
 <span class="n">convergence_view</span> <span class="o">=</span> <span class="n">plot_convergence</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">)</span>
 </code></pre></div>
 
 <p>Expected output:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>Stop: criterion_satisfied Iterations: 3
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>Stop: criterion_satisfied Iterations: 10
 </code></pre></div>
 
-<p>Enable <code>track_fit</code> during fitting to retain iteration history. The compact plot
-shows logged ELBO, signed ΔELBO, Δalpha and ΔPIP. <code>layout="variance"</code> shows prior
-and residual variances separately; <code>layout="full"</code> includes all six metrics.
-<code>retain_data=True</code> preserves validated inputs for continuation and refinement.</p>
+<p>The compact plot shows the logged ELBO, its signed change, and the maximum
+absolute changes in component inclusion probabilities (<code>alpha</code>) and marginal
+PIPs between successive sweeps. <code>layout="variance"</code> shows the component prior
+variances and residual variance; <code>layout="full"</code> combines both views.</p>
 <h2 id="continue-first-then-consider-refinement">Continue first, then consider refinement</h2>
-<p>Reuse a completed fit. For an iteration-limit exit, an explicit continuation can
-give the same posterior more sweeps:</p>
+<p>If a fit reaches its iteration limit, more IBSS sweeps may be enough to satisfy
+its stopping rule. <code>continue_fit</code> starts from the saved posterior:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">fit_for_search</span> <span class="o">=</span> <span class="n">fit</span>
 <span class="k">if</span> <span class="n">fit</span><span class="o">.</span><span class="n">convergence</span><span class="p">[</span><span class="s2">&quot;stop_reason&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;iteration_limit&quot;</span><span class="p">:</span>
     <span class="n">fit_for_search</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">continue_fit</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">track_fit</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Ready for search:&quot;</span><span class="p">,</span> <span class="n">fit_for_search</span><span class="o">.</span><span class="n">ibss_converged</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;IBSS converged:&quot;</span><span class="p">,</span> <span class="n">fit_for_search</span><span class="o">.</span><span class="n">ibss_converged</span><span class="p">)</span>
 </code></pre></div>
 
-<p>This example prints <code>Ready for search: True</code> and reuses <code>fit</code>, because the
-initial fit already satisfied its rule. A continuation call starts from the
-supplied posterior, retains the original requested criterion and alpha/PIP,
-minimum-iteration and cycle controls, and inherits the ELBO tolerance when <code>tol</code>
-is omitted. Its <code>niter</code> counts the new call's sweeps. An explicit <code>tol</code> or
-<code>convergence=ConvergenceConfig(...)</code> overrides the corresponding controls.
-Investigate an objective anomaly or cycle before deciding to continue it.</p>
-<p>Now run one refinement search with explicit search settings:</p>
+<p>For the toy fit above, this branch is skipped because the stopping rule was
+already satisfied. <code>max_iter</code> gives the continuation call an additional sweep
+budget; its returned <code>niter</code> counts only those new sweeps. Unless overridden,
+the call inherits the requested convergence controls and fitting tolerance.
+Supply <code>tol</code> or <code>convergence=prusie.ConvergenceConfig(...)</code> to change the
+corresponding controls. Inspect the <a href="#convergence-diagnostics">convergence diagnostics</a>
+before extending a fit with an objective anomaly or recorded cycle.</p>
+<p>Refinement searches alternative starting solutions under the same model. It
+requires retained inputs and a valid baseline with a finite ELBO; neither the
+baseline nor the candidate IBSS fits need to have converged. Run a search with
+explicit settings:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">search_config</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">RefinementConfig</span><span class="p">(</span>
-    <span class="n">max_rounds</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">absolute_tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="n">relative_tol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-    <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">inner_tol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">candidate_budget</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">max_rounds</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">absolute_tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+    <span class="n">relative_tol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">max_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">inner_tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span>
+    <span class="n">candidate_budget</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="n">refined</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">refine_fit</span><span class="p">(</span><span class="n">fit_for_search</span><span class="p">,</span> <span class="n">search_config</span><span class="p">)</span>
+<span class="n">refined</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">refine_fit</span><span class="p">(</span><span class="n">fit_for_search</span><span class="p">,</span> <span class="n">search_config</span><span class="p">,</span> <span class="n">track_fit</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">)</span>
 <span class="n">search</span> <span class="o">=</span> <span class="n">refined</span><span class="o">.</span><span class="n">refinement</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Search:&quot;</span><span class="p">,</span> <span class="n">search</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Accepted attempts:&quot;</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;accepted&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">search</span><span class="p">[</span><span class="s2">&quot;history&quot;</span><span class="p">]),</span>
-      <span class="s2">&quot;of&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">search</span><span class="p">[</span><span class="s2">&quot;history&quot;</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span>
+    <span class="s2">&quot;Accepted attempts:&quot;</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;accepted&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">search</span><span class="p">[</span><span class="s2">&quot;history&quot;</span><span class="p">]),</span>
+    <span class="s2">&quot;of&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">search</span><span class="p">[</span><span class="s2">&quot;history&quot;</span><span class="p">]),</span>
+<span class="p">)</span>
 </code></pre></div>
 
-<p>For the packaged example:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>Search: no_improvement
-Accepted attempts: 0 of 2
-</code></pre></div>
-
-<p>Refinement requires a valid baseline with retained inputs, not necessarily a
-converged inner IBSS fit. It inherits the
-baseline's <strong>requested</strong> convergence configuration unless explicitly overridden;
-<code>search_config.inner_tol</code> separately sets the inner ELBO tolerance. A runtime
-alpha/PIP fallback after a NaN ELBO is recorded as the effective rule and
-does not replace the original request for later calls.</p>
-<p>Each refinement attempt first excludes one retained credible set by setting its
-prior weights to zero and fits from a cold start. It then restores the original
-prior and refits, starting from the excluded-variant solution. The saved search
-records call these steps A and B, respectively.</p>
-<p>Candidates are compared using the <strong>last logged ELBO with the original
-prior</strong>, before final component trimming, as in pinned susieR. The recomputed
-post-trimming objective is retained only as a validity check and diagnostic.
-A candidate must be valid and finite, but need not have converged internally.
-It must improve the logged ELBO by more than <code>absolute_tol</code>. An unsuccessful search does not
-establish global optimality.</p>
+<p>Refinement inherits the baseline's requested convergence controls, even after a
+runtime fallback; <code>convergence=...</code> overrides them. <code>inner_tol</code> sets <code>tol</code> for
+each inner fit, and <code>max_iter</code> limits its sweeps. <code>max_rounds</code> limits search
+rounds and <code>candidate_budget</code> limits exclusion attempts, each using at most two
+fits. <code>relative_tol=None</code> disables the relative-gain stopping rule.</p>
+<p>Stage A sets the prior weights of one retained credible set to zero and fits
+from a cold start. The zeroed weights are softened by ordinary prior
+stabilization. Stage B restores the original prior and starts from stage A's
+<code>alpha</code>, <code>mu</code> and <code>mu2</code>, resetting the prior and residual variances to the
+original model's initial values.</p>
+<p>The search ranks candidates by their last logged ELBO under the original prior,
+before final component trimming. The best valid, finite candidate in a round
+replaces the current fit only if its gain exceeds <code>absolute_tol</code>. The recomputed
+post-trimming ELBO is a validity check and diagnostic. An unsuccessful search
+does not establish a global optimum.</p>
 <h2 id="refinement-compared-with-susier">Refinement compared with susieR</h2>
-<p><code>refine=True</code> and <code>refine_fit</code> perform the same prusie search. The table compares
-the Gaussian model with susieR <strong>0.16.6</strong>, commit
-<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>. It describes algorithm choices;
-standard-fit R agreement alone does not validate refinement equivalence.</p>
+<p>When comparing refinement results, match the search settings as well as the
+model settings. For Gaussian RSS fits, <code>refine=True</code> calls <code>refine_fit</code>;
+other fitting routes can use a
+<a href="implementation.html#refinement-continuation-and-warm-starts">separate refitting search</a>.
+The table compares <code>refine_fit</code> without an explicit
+<code>RefinementConfig</code> with susieR <strong>0.16.6</strong>, commit
+<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -118,139 +135,138 @@ standard-fit R agreement alone does not validate refinement equivalence.</p>
 </thead>
 <tbody>
 <tr>
-<td>Excluded-variant fit (A)</td>
-<td>Cold fit; zero CS weights use the ordinary <code>log(pi + sqrt(eps))</code> convention</td>
-<td>Same stabilized zero weights, not hard exclusion</td>
+<td>Stage A</td>
+<td>Cold start; zero CS weights retain the ordinary <code>log(pi + sqrt(eps))</code> stabilization</td>
+<td>Same; zero weights do not impose strict exclusion</td>
 </tr>
 <tr>
-<td>Refit under the original prior (B)</td>
-<td>Restore original prior and model; initialize alpha/mu/mu2 from A, reset V and sigma² to original initialization</td>
-<td>Restore original prior; initialize alpha/mu/mu2 from A with ordinary variance initialization</td>
+<td>Stage B</td>
+<td>Restore the original prior; transfer A's <code>alpha</code>, <code>mu</code> and <code>mu2</code>; reset <code>V</code> and <code>sigma2</code> to original initial values</td>
+<td>Same posterior transfer, with ordinary variance initialization</td>
 </tr>
 <tr>
-<td>Candidate ELBO</td>
-<td>Last logged ELBO; A's objective is diagnostic only</td>
-<td>Same</td>
+<td>Ranking objective</td>
+<td>Stage B's last logged ELBO under the original prior</td>
+<td>Same, through <code>susie_get_objective</code></td>
 </tr>
 <tr>
 <td>Required absolute gain</td>
-<td>Fit <code>tol</code> by default; explicit configs can override <code>absolute_tol</code></td>
-<td>Strictly greater than fit <code>tol</code>, default <code>1e-4</code></td>
-</tr>
-<tr>
-<td>Relative round stop</td>
-<td>By default, accepted gain divided by <code>max(1, abs(new objective))</code>, compared with fit <code>tol</code></td>
+<td>Strictly greater than the original fit's <code>tol</code></td>
 <td>Same</td>
 </tr>
 <tr>
-<td>Convergence eligibility</td>
-<td>No inner convergence requirement; outer status determines <code>converged</code> after an executed search, with inner status recorded separately</td>
-<td>No explicit baseline/A/B convergence eligibility test; the outer search overwrites <code>converged</code></td>
+<td>Relative stop after acceptance</td>
+<td>Accepted gain divided by <code>max(1, abs(new ELBO))</code> is below the original fit's <code>tol</code></td>
+<td>Same</td>
 </tr>
 <tr>
-<td>Search bound</td>
-<td>100 rounds by default; optional explicit candidate budget</td>
-<td>100 outer rounds; no separate candidate budget</td>
+<td>Inner IBSS convergence</td>
+<td>Not required for the baseline or candidates; outer search status can replace <code>converged</code></td>
+<td>Not required; the outer search replaces <code>converged</code></td>
 </tr>
 <tr>
-<td>Invalid or failed candidate</td>
-<td>Record failed stage, reject candidate, retain incumbent; require a finite recomputed objective</td>
-<td>No per-candidate exception recovery or nonfinite filtering in <code>run_refine</code>; underlying fitting/objective errors propagate</td>
+<td>Search limits</td>
+<td>100 rounds; an explicit configuration can also set <code>candidate_budget</code></td>
+<td>100 rounds; no separate attempt budget</td>
+</tr>
+<tr>
+<td>Candidate validity and errors</td>
+<td>Require finite logged and recomputed ELBOs; record and reject caught fitting or validation errors while retaining the current best fit</td>
+<td>No per-candidate error recovery or nonfinite filtering in <code>run_refine</code>; errors propagate</td>
 </tr>
 </tbody>
 </table></div>
-<p>Without an explicit <code>RefinementConfig</code>, both APIs forward the original fit's
-iteration budget and tolerance. An explicitly constructed config is a custom
-search and may intentionally override these settings; the example above does so.
-For exact definitions, see the
+<p>Without an explicit configuration, prusie forwards the original fit's <code>max_iter</code>
+and <code>tol</code> to each inner fit, as susieR does. Constructing <code>RefinementConfig()</code>
+instead selects <code>max_rounds=10</code>, <code>absolute_tol=1e-3</code>, <code>max_iter=100</code>,
+<code>inner_tol=1e-4</code> and <code>relative_tol=None</code>. These settings can differ from the
+baseline's; the preceding example also sets an attempt budget.</p>
+<p>Use <code>refinement["status"]</code> to read the search outcome. When <code>refine_fit</code>
+overwrites <code>converged</code>, it saves the preceding flag in
+<code>convergence["inner_ibss_converged"]</code>. Agreement of fits without refinement does
+not establish numerical equivalence of refinement. For the algorithm
+definitions, see the
 <a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/refinement.py">prusie implementation</a>,
 <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/refinement.R">pinned R search</a>
 and <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/susie_get_functions.R">pinned R objective accessor</a>.
-The saved <a href="worked_examples.html">worked examples</a> report executed prusie searches
-with their own source identities and settings; their search outcomes should be
-read separately from the <a href="numerical_accuracy.html">standard-fit comparison</a>.</p>
+The <a href="worked_examples.html">Toy example</a> documents this official fixture with its
+software versions and settings. Read its outcome separately from the
+<a href="numerical_accuracy.html">comparison of fits without refinement</a>.</p>
 <h2 id="compare-before-and-after">Compare before and after</h2>
-<p>Reuse the <code>refined</code> result and the configuration above; these plotting calls do
-not repeat the search:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">convergence_figure</span> <span class="o">=</span> <span class="n">plot_convergence</span><span class="p">(</span><span class="n">fit_for_search</span><span class="p">,</span> <span class="n">after</span><span class="o">=</span><span class="n">refined</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">)</span>
-<span class="n">search_figure</span> <span class="o">=</span> <span class="n">plot_refinement</span><span class="p">(</span><span class="n">fit_for_search</span><span class="p">,</span> <span class="n">refined</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">)</span>
+<p>Compare changes in variant support alongside the objective gains that led to
+acceptance. Reuse <code>fit_for_search</code> and <code>refined</code> from above; these plotting calls
+do not repeat the search:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">convergence_figure</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">plot_convergence</span><span class="p">(</span>
+    <span class="n">fit_for_search</span><span class="p">,</span> <span class="n">after</span><span class="o">=</span><span class="n">refined</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span>
+<span class="p">)</span>
+<span class="n">search_figure</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">plot_refinement</span><span class="p">(</span><span class="n">fit_for_search</span><span class="p">,</span> <span class="n">refined</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Same PIPs:&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">((</span><span class="n">fit_for_search</span><span class="o">.</span><span class="n">pip</span> <span class="o">==</span> <span class="n">refined</span><span class="o">.</span><span class="n">pip</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()))</span>
 </code></pre></div>
 
-<p>This example prints <code>Same PIPs: True</code>; the returned trajectory is labelled
-<strong>After search (unchanged)</strong>. Before and after have independent iteration axes.
-The refinement figure compares candidate PIPs, ELBO gains relative to the best
-fit at the start of each round, and the ELBO of accepted solutions. Full records distinguish
-failed, unconverged, below-threshold, valid but unselected, and accepted candidates.</p>
-<p>The <a href="worked_examples.html#a-stopped-fit-improved-by-refinement">problem example</a>
-illustrates a different outcome: its initial fit satisfies the stopping rule,
-yet refinement improves the ELBO by 17.4583. The final logged
-sweep ELBO precedes finalization; use the finalized ELBO for candidate comparisons.</p>
+<p>This official example prints <code>Same PIPs: False</code>: refinement accepts a higher-ELBO
+solution under the same model. Tracking captures the baseline's ten sweeps and
+the accepted candidate's three original stage-B sweeps. Separate fits use
+independent sweep axes.</p>
+<p>The refinement plot compares the two fits' PIPs, each attempt's ELBO gain over
+the best fit at the start of its round, and the sequence of best ELBOs. These
+gains use the last logged ELBO under the original prior. The compact layout
+displays selected variants; <code>candidates_only=False</code> shows all variants.
+<code>layout="full"</code> adds credible-set memberships and attempt records.</p>
+<p>Read <code>accepted</code>, <code>reason</code> and <code>stages</code> in <code>refined.refinement["history"]</code> to
+distinguish selection from inner IBSS convergence. Refinement defaults to
+<code>track_fit=False</code>; enable it explicitly to save candidate trajectories. It
+does not reconstruct a trajectory for an already fitted result.</p>
+<p>The <a href="worked_examples.html#a-stopped-fit-improved-by-refinement">saved Toy example</a>
+shows changed PIPs and credible sets after the initial fit satisfies its
+stopping rule. Its own record defines the ELBO comparison used there.</p>
 <h2 id="convergence-diagnostics">Convergence diagnostics</h2>
-<p><code>fit.convergence</code> contains requested/effective criterion, thresholds, iteration
-count, stop reason, last distances and recorded events. <code>fit.converged</code> and
-<code>fit.ibss_converged</code> describe the returned <strong>inner IBSS</strong> fit, independently of
-search status.</p>
-<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
-<thead>
-<tr>
-<th>Evidence</th>
-<th>Reading question</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Logged ELBO and signed ΔELBO</td>
-<td>Is the recorded objective still improving, flat, decreasing or nonfinite?</td>
-</tr>
-<tr>
-<td>Maximum absolute Δalpha</td>
-<td>Are the component probabilities still moving?</td>
-</tr>
-<tr>
-<td>Maximum absolute ΔPIP</td>
-<td>Is marginal variant inclusion still moving?</td>
-</tr>
-<tr>
-<td>Requested/effective criterion</td>
-<td>Which condition was selected, and did a fallback occur?</td>
-</tr>
-<tr>
-<td>Stop reason</td>
-<td>Was the criterion satisfied, an eligible cycle stop taken, the iteration cap reached, or a numerical failure detected?</td>
-</tr>
-</tbody>
-</table></div>
-<p>For biological variant <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi></mrow><annotation encoding="application/x-tex">j</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.854em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.05724em;">j</span></span></span></span></span>, marginal PIP combines active components:</p>
-<div aria-label="Mathematical formula; scroll horizontally if needed" class="arithmatex" role="region" tabindex="0"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow><mi>j</mi></msub><mo>=</mo><mn>1</mn><mo>−</mo><munder><mo>∏</mo><mrow><mi>l</mi><mo>:</mo><msub><mi>V</mi><mi>l</mi></msub><mo>&gt;</mo><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi></mrow></mrow></munder><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><msub><mi>α</mi><mrow><mi>l</mi><mi>j</mi></mrow></msub><mo stretchy="false">)</mo><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">
-\mathrm{PIP}_j = 1-\prod_{l:V_l&gt;\mathrm{prior\_tol}}(1-\alpha_{lj}).
-</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">PIP</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:2.5691em;vertical-align:-1.5191em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.05em;"><span style="top:-1.8479em;margin-left:0em;"><span class="pstrut" style="height:3.05em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span><span class="mrel mtight">:</span><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3448em;"><span style="top:-2.3488em;margin-left:-0.2222em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1512em;"><span></span></span></span></span></span></span><span class="mrel mtight">&gt;</span><span class="mord mtight"><span class="mord mathrm mtight">prior_tol</span></span></span></span></span><span style="top:-3.05em;"><span class="pstrut" style="height:3.05em;"></span><span><span class="mop op-symbol large-op">∏</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.5191em;"><span></span></span></span></span></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0037em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord">.</span></span></span></span></span></div>
-<p>The null column is excluded. Component allocations can move while marginal PIPs
-stay similar. Exact distances compare consecutive complete IBSS sweeps:</p>
-<div aria-label="Mathematical formula; scroll horizontally if needed" class="arithmatex" role="region" tabindex="0"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi mathvariant="normal">Δ</mi><mi>α</mi></msub><mo>=</mo><munder><mrow><mi>max</mi><mo>⁡</mo></mrow><mrow><mi>l</mi><mo separator="true">,</mo><mi>j</mi></mrow></munder><mi mathvariant="normal">∣</mi><msubsup><mi>α</mi><mrow><mi>l</mi><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>−</mo><msubsup><mi>α</mi><mrow><mi>l</mi><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>t</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msubsup><mi mathvariant="normal">∣</mi><mo separator="true">,</mo><mspace width="2em"/><msub><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow></msub><mo>=</mo><munder><mrow><mi>max</mi><mo>⁡</mo></mrow><mi>j</mi></munder><mi mathvariant="normal">∣</mi><msubsup><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow><mi>j</mi><mrow><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>−</mo><msubsup><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow><mi>j</mi><mrow><mo stretchy="false">(</mo><mi>t</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msubsup><mi mathvariant="normal">∣</mi><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">
-\Delta_\alpha=\max_{l,j}|\alpha^{(t)}_{lj}-\alpha^{(t-1)}_{lj}|,\qquad
+<p>Read the stopping rule alongside changes in variant support. <code>fit.convergence</code>
+records the requested and effective criteria, thresholds and stop reason;
+<code>fit.convergence["last"]</code> holds the final sweep's metrics and events.
+<code>fit.trace</code> holds the per-sweep records when tracking is enabled.</p>
+<p>For the returned fit's inner IBSS status, read
+<code>fit.convergence["ibss_converged"]</code>. The property <code>fit.ibss_converged</code> aliases
+<code>fit.converged</code>, which refinement can overwrite with its search outcome.
+Read <code>fit.refinement["status"]</code> separately.</p>
+<p>Component probabilities can move while marginal PIPs stay similar. For sweep
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">t</span></span></span></span></span>, the maximum absolute changes are</p>
+<div aria-label="Mathematical formula; scroll horizontally if needed" class="arithmatex" role="region" tabindex="0"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi mathvariant="normal">Δ</mi><mi>α</mi></msub><mo>=</mo><munder><mrow><mi>max</mi><mo>⁡</mo></mrow><mrow><mi mathvariant="normal">ℓ</mi><mo separator="true">,</mo><mi>j</mi></mrow></munder><mi mathvariant="normal">∣</mi><msubsup><mi>α</mi><mrow><mi mathvariant="normal">ℓ</mi><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>−</mo><msubsup><mi>α</mi><mrow><mi mathvariant="normal">ℓ</mi><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>t</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msubsup><mi mathvariant="normal">∣</mi><mo separator="true">,</mo><mspace width="2em"/><msub><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow></msub><mo>=</mo><munder><mrow><mi>max</mi><mo>⁡</mo></mrow><mi>j</mi></munder><mi mathvariant="normal">∣</mi><msubsup><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow><mi>j</mi><mrow><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>−</mo><msubsup><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow><mi>j</mi><mrow><mo stretchy="false">(</mo><mi>t</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msubsup><mi mathvariant="normal">∣</mi><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">
+\Delta_\alpha=\max_{\ell,j}|\alpha^{(t)}_{\ell j}-\alpha^{(t-1)}_{\ell j}|,\qquad
 \Delta_{\mathrm{PIP}}=\max_j|\mathrm{PIP}^{(t)}_j-\mathrm{PIP}^{(t-1)}_j|.
-</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord">Δ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0037em;">α</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.933em;vertical-align:-0.8882em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.4306em;"><span style="top:-2.3479em;margin-left:0em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span><span class="mop">max</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.8882em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0448em;"><span style="top:-2.3987em;margin-left:-0.0037em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span style="top:-3.2198em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mathnormal mtight">t</span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4374em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.4822em;vertical-align:-0.4374em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0448em;"><span style="top:-2.3987em;margin-left:-0.0037em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span style="top:-3.2198em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4374em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mpunct">,</span><span class="mspace" style="margin-right:2em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord">Δ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathrm mtight">PIP</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.9086em;vertical-align:-0.8638em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.4306em;"><span style="top:-2.3723em;margin-left:0em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span><span class="mop">max</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.8638em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">∣</span><span class="mord"><span class="mord"><span class="mord mathrm">PIP</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0448em;"><span style="top:-2.4231em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.2198em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mathnormal mtight">t</span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.413em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.4578em;vertical-align:-0.413em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">PIP</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0448em;"><span style="top:-2.4231em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.2198em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.413em;"><span></span></span></span></span></span></span><span class="mord">∣.</span></span></span></span></span></div>
-<p>The first recorded sweep has no preceding sweep, so its distances are unavailable.
-Each PIP uses that iteration's component activity. Alpha distance includes any
-null column; PIP distance does not.</p>
-<p>The default finite-ELBO rule, starting at iteration two, is
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">L</mi><mi mathvariant="normal">B</mi><mi mathvariant="normal">O</mi></mrow><mo>&lt;</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi></mrow></mrow><annotation encoding="application/x-tex">0\leq\Delta\mathrm{ELBO}&lt;\mathrm{tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7804em;vertical-align:-0.136em;"></span><span class="mord">0</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord">Δ</span><span class="mord"><span class="mord mathrm">ELBO</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord"><span class="mord mathrm">tol</span></span></span></span></span></span>. A negative increment does not satisfy it.
-The <code>alpha_pip</code> rule requires both probability distances below their separate
-absolute tolerances; <code>joint</code> requires those conditions and the finite-ELBO rule.
-<code>min_iter=2</code> is the default; a larger value delays successful convergence and
-any cycle stop until that sweep. Repetition of alpha/PIP at lags two through five
-is <strong>diagnostic only for a finite objective in <code>elbo</code> mode</strong>. It cannot stop that
-fit or override an already satisfied convergence criterion.
-Select a different requested rule explicitly when fitting or continuing:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">rule</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">ConvergenceConfig</span><span class="p">(</span><span class="n">criterion</span><span class="o">=</span><span class="s2">&quot;joint&quot;</span><span class="p">,</span> <span class="n">alpha_tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
-                                 <span class="n">pip_tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">min_iter</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">cycle_lag</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord">Δ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0037em;">α</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.933em;vertical-align:-0.8882em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.4306em;"><span style="top:-2.3479em;margin-left:0em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">ℓ</span><span class="mpunct mtight">,</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span><span class="mop">max</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.8882em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0448em;"><span style="top:-2.3987em;margin-left:-0.0037em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">ℓ</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span style="top:-3.2198em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mathnormal mtight">t</span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4374em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.4822em;vertical-align:-0.4374em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0448em;"><span style="top:-2.3987em;margin-left:-0.0037em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">ℓ</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span style="top:-3.2198em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4374em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mpunct">,</span><span class="mspace" style="margin-right:2em;"></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord">Δ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathrm mtight">PIP</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.9086em;vertical-align:-0.8638em;"></span><span class="mop op-limits"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.4306em;"><span style="top:-2.3723em;margin-left:0em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span><span class="mop">max</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.8638em;"><span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">∣</span><span class="mord"><span class="mord"><span class="mord mathrm">PIP</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0448em;"><span style="top:-2.4231em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.2198em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mathnormal mtight">t</span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.413em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.4578em;vertical-align:-0.413em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">PIP</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0448em;"><span style="top:-2.4231em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span><span style="top:-3.2198em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mopen mtight">(</span><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span><span class="mclose mtight">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.413em;"><span></span></span></span></span></span></span><span class="mord">∣.</span></span></span></span></span></div>
+<p>Here <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>α</mi><mrow><mi mathvariant="normal">ℓ</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\alpha_{\ell j}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7167em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0037em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">ℓ</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span></span></span></span> is the probability that component <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">ℓ</mi></mrow><annotation encoding="application/x-tex">\ell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord">ℓ</span></span></span></span></span> selects variant
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>j</mi></mrow><annotation encoding="application/x-tex">j</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.854em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.05724em;">j</span></span></span></span></span>. Alpha distance includes any null column; PIP distance excludes it. PIPs
+combine components with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo><mrow><mi mathvariant="monospace">p</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">i</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">_</mi><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">V_\ell&gt;\mathtt{prior\_tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.2222em;"></span><span class="mord"><span class="mord mathtt">prior_tol</span></span></span></span></span></span>, as described under
+<a href="model.html#pip-and-credible-sets">PIP and credible sets</a>. The first sweep has no
+preceding sweep, so its distances are unavailable.</p>
+<p>The ordinary ELBO rule requires a finite objective and a finite signed increment
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>≤</mo><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">L</mi><mi mathvariant="normal">B</mi><mi mathvariant="normal">O</mi></mrow><mo>&lt;</mo><mrow><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">0\leq\Delta\mathrm{ELBO}&lt;\mathtt{tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7804em;vertical-align:-0.136em;"></span><span class="mord">0</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord">Δ</span><span class="mord"><span class="mord mathrm">ELBO</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6111em;"></span><span class="mord"><span class="mord mathtt">tol</span></span></span></span></span></span>. A negative increment does not satisfy
+it or trigger a posterior fallback. Relative ELBO change is a diagnostic, rather
+than this stopping condition.</p>
+<p><code>ConvergenceConfig</code> selects <code>elbo</code>, <code>alpha_pip</code> or <code>joint</code>. The <code>alpha_pip</code> rule
+requires <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="normal">Δ</mi><mi>α</mi></msub><mo>&lt;</mo><mrow><mi mathvariant="monospace">a</mi><mi mathvariant="monospace">l</mi><mi mathvariant="monospace">p</mi><mi mathvariant="monospace">h</mi><mi mathvariant="monospace">a</mi><mi mathvariant="monospace">_</mi><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">\Delta_\alpha&lt;\mathtt{alpha\_tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord">Δ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0037em;">α</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.2222em;"></span><span class="mord"><span class="mord mathtt">alpha_tol</span></span></span></span></span></span> and
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow></msub><mo>&lt;</mo><mrow><mi mathvariant="monospace">p</mi><mi mathvariant="monospace">i</mi><mi mathvariant="monospace">p</mi><mi mathvariant="monospace">_</mi><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">\Delta_{\mathrm{PIP}}&lt;\mathtt{pip\_tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord">Δ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathrm mtight">PIP</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.2222em;"></span><span class="mord"><span class="mord mathtt">pip_tol</span></span></span></span></span></span>; both tolerances default to <code>1e-4</code>.
+The <code>joint</code> rule also requires the ELBO condition. For example:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">rule</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">ConvergenceConfig</span><span class="p">(</span>
+    <span class="n">criterion</span><span class="o">=</span><span class="s2">&quot;joint&quot;</span><span class="p">,</span> <span class="n">alpha_tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">pip_tol</span><span class="o">=</span><span class="mf">1e-6</span>
+<span class="p">)</span>
 </code></pre></div>
 
-<p>Pass <code>convergence=rule</code> to the desired operation; merely creating this object
-leaves the completed example unchanged. Plot legends distinguish selected
-stopping thresholds from diagnostic-only thresholds. Relative ELBO change is
-reported separately and is not the default stopping condition.</p>
+<p>Pass <code>convergence=rule</code> when fitting, continuing or refining. <code>min_iter=2</code> is
+the default; a larger value delays successful convergence and cycle stops.
+Cycle detection checks for repeated alpha and PIP states up to <code>cycle_lag</code>
+sweeps earlier (default 5). Repetition at lags greater than one is diagnostic
+only under a finite ELBO in <code>elbo</code> mode. In explicit <code>alpha_pip</code> or <code>joint</code>
+mode, an eligible cycle stops with <code>cycle_detected</code> and inner IBSS convergence
+false if the requested success condition has not already held.</p>
+<p>The <a href="model.html#stopping-rules">PIP stopping rule</a>, selected with
+<code>convergence_method="pip"</code> or automatically for some models, uses <code>tol</code> for
+both distances. An eligible cycle counts as convergence and averages <code>alpha</code>
+over the cycle. That rule also seeds the preceding PIP at its first check using
+the current component variances; later PIPs retain their own sweep's activity.</p>
+<p>The following nonfinite-objective rules describe the native Gaussian loop.
+The dynamic RSS path has its own posterior-validity checks; see
+<a href="implementation.html#convergence-outcomes">convergence outcomes</a>.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -260,123 +276,108 @@ reported separately and is not the default stopping condition.</p>
 </thead>
 <tbody>
 <tr>
-<td>First finite ELBO, following the initial −∞ sentinel</td>
-<td>No convergence check or fallback; a preceding completed sweep is required</td>
-</tr>
-<tr>
-<td>Finite ELBO with a negative or nonfinite increment</td>
-<td>Does not satisfy the ELBO condition; no alpha/PIP fallback</td>
-</tr>
-<tr>
 <td>NaN ELBO in <code>elbo</code> mode</td>
-<td>At or after <code>min_iter</code>, use the labelled <code>alpha_pip_nonfinite_fallback</code> rule; success requires both posterior distances</td>
+<td>At or after <code>min_iter</code>, record <code>alpha_pip_nonfinite_fallback</code> and use posterior checks; the default ELBO fit without a <code>convergence</code> configuration uses the PIP rule above</td>
 </tr>
 <tr>
 <td>NaN ELBO in <code>alpha_pip</code> mode</td>
-<td>Use the explicitly requested posterior rule and record the nonfinite objective</td>
+<td>Apply the requested posterior rule and record the nonfinite objective</td>
 </tr>
 <tr>
 <td>NaN ELBO in <code>joint</code> mode</td>
 <td>Stop with <code>numerical_failure</code> and <code>converged=False</code>, even before <code>min_iter</code></td>
 </tr>
 <tr>
-<td>Infinite computed ELBO in any mode</td>
-<td>Raise <code>ValueError</code>, as in the pinned R fitter</td>
+<td>Infinite computed ELBO</td>
+<td>Raise <code>ValueError</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>A nonfinite objective cannot win refinement selection. <code>criterion_satisfied</code>
-means the effective rule succeeded; inspect that rule and objective validity
-before interpreting the fit. If no stopping condition holds at <code>max_iter</code>, the
-reason is <code>iteration_limit</code> and <code>converged=False</code>.</p>
+<p>If a NaN ELBO accompanies nonfinite posterior arrays, fitting raises an error.
+A nonfinite objective cannot win refinement selection. Read
+<code>criterion_satisfied</code> with the effective rule and objective validity. If no
+stopping condition holds at <code>max_iter</code>, the inner fit reports <code>iteration_limit</code>
+and convergence false.</p>
 <h2 id="technical-details">Technical details</h2>
 <details>
-<summary>Iteration phases, finalization and objective conventions</summary>
-<p>Metrics are recorded after each complete sequential sweep, before any residual
-variance update. Posterior-mean distance uses
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover accent="true"><mi>b</mi><mo>ˉ</mo></mover><mi>j</mi></msub><mo>=</mo><msub><mo>∑</mo><mi>l</mi></msub><msub><mi>α</mi><mrow><mi>l</mi><mi>j</mi></mrow></msub><msub><mi>μ</mi><mrow><mi>l</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\bar b_j=\sum_l\alpha_{lj}\mu_{lj}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.1173em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8312em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">b</span></span><span style="top:-3.2634em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.25em;"><span class="mord">ˉ</span></span></span></span></span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0497em;vertical-align:-0.2997em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1864em;"><span style="top:-2.4003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2997em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0037em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal">μ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span></span></span></span> on the working predictor scale. Signed
-variance changes, top variants, entropy, activity and events accompany the
-metrics. Online component entropy includes null; posterior resolution instead
-normalizes biological alpha and reports null mass separately. Relative ELBO
-change is <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">L</mi><mi mathvariant="normal">B</mi><mi mathvariant="normal">O</mi></mrow><mi mathvariant="normal">/</mi><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo separator="true">,</mo><mi mathvariant="normal">∣</mi><msub><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">L</mi><mi mathvariant="normal">B</mi><mi mathvariant="normal">O</mi></mrow><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mi mathvariant="normal">∣</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\Delta\mathrm{ELBO}/\max(1,|\mathrm{ELBO}_{t-1}|)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">Δ</span><span class="mord"><span class="mord mathrm">ELBO</span></span><span class="mord">/</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">max</span><span class="mopen">(</span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">∣</span><span class="mord"><span class="mord"><span class="mord mathrm">ELBO</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2083em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mclose">)</span></span></span></span></span>.</p>
-<p>After a non-stopping sweep, residual variance may be updated. Final trimming
-zeros components with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi>l</mi></msub><mo>&lt;</mo><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">_</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi></mrow></mrow><annotation encoding="application/x-tex">V_l&lt;\mathrm{prior\_tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.01968em;">l</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0044em;vertical-align:-0.31em;"></span><span class="mord"><span class="mord mathrm">prior_tol</span></span></span></span></span></span>, including at the iteration
-limit. Stored <code>elbo</code> and <code>XtXr</code> retain their pre-finalization values;
-<code>evaluate_objective(fit)</code> explicitly recomputes likelihood, KL and fitted
-products from the complete saved state. <code>convergence['finalization']</code> separates
-trim changes from iterations. The CS activity threshold remains <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span>;
-a custom PIP <code>prior_tol</code> can therefore produce different boundary activity.</p>
-<p>Ordinary SER uses <code>log(pi + sqrt(eps))</code>; trimmed V=0 components contribute zero
-KL. This convention and the recorded phase explain small logged-versus-final
-objective differences. Stage A's hard-exclusion weights remain exactly zero;
-B restores the original ordinary-prior convention.</p>
+<summary>Iteration phases and objective values</summary>
+<p>Online metrics describe each completed sweep before any residual-variance
+update, cycle averaging or final trimming. For ordinary Gaussian fits,
+posterior-mean distance uses
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover accent="true"><mi>b</mi><mo>ˉ</mo></mover><mi>j</mi></msub><mo>=</mo><msub><mo>∑</mo><mi mathvariant="normal">ℓ</mi></msub><msub><mi>α</mi><mrow><mi mathvariant="normal">ℓ</mi><mi>j</mi></mrow></msub><msub><mi>μ</mi><mrow><mi mathvariant="normal">ℓ</mi><mi>j</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\bar b_j=\sum_\ell\alpha_{\ell j}\mu_{\ell j}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.1173em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8312em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal">b</span></span><span style="top:-3.2634em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.25em;"><span class="mord">ˉ</span></span></span></span></span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0497em;vertical-align:-0.2997em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1864em;"><span style="top:-2.4003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2997em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.0037em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">ℓ</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mord"><span class="mord mathnormal">μ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">ℓ</span><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span></span></span></span> on the working predictor
+scale. The relative ELBO increment is
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">L</mi><mi mathvariant="normal">B</mi><mi mathvariant="normal">O</mi></mrow><mi mathvariant="normal">/</mi><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo separator="true">,</mo><mi mathvariant="normal">∣</mi><msub><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">L</mi><mi mathvariant="normal">B</mi><mi mathvariant="normal">O</mi></mrow><mrow><mi>t</mi><mo>−</mo><mn>1</mn></mrow></msub><mi mathvariant="normal">∣</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\Delta\mathrm{ELBO}/\max(1,|\mathrm{ELBO}_{t-1}|)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">Δ</span><span class="mord"><span class="mord mathrm">ELBO</span></span><span class="mord">/</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">max</span><span class="mopen">(</span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">∣</span><span class="mord"><span class="mord"><span class="mord mathrm">ELBO</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2083em;"><span></span></span></span></span></span></span><span class="mord">∣</span><span class="mclose">)</span></span></span></span></span>.
+Online component entropy includes the null column; <code>summarize</code> instead
+normalizes alpha over biological variants and reports null mass separately.</p>
+<p>An iteration-limit exit can return a residual variance updated after the last
+ELBO. Final trimming zeros <code>V</code>, <code>mu</code> and <code>mu2</code> for components with
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&lt;</mo><mrow><mi mathvariant="monospace">p</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">i</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">_</mi><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">V_\ell&lt;\mathtt{prior\_tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.2222em;"></span><span class="mord"><span class="mord mathtt">prior_tol</span></span></span></span></span></span>, retaining their rows. In the retained Gaussian
+path, stored <code>elbo</code> and <code>XtXr</code> are not recomputed after trimming.
+<code>fit.convergence["finalization"]</code> records trimming distances and the returned
+residual variance. <a href="results.html#iterations-and-finalization">Results</a> describes
+these phases and the separate PIP and credible-set activity thresholds.</p>
+<p><code>evaluate_objective(fit)</code> recomputes the ELBO from retained inputs and the
+returned posterior, without using cached KL, Bayes factors or fitted products.
+It can materialize an additional dense working matrix. Ordinary prior
+stabilization is <code>log(pi + sqrt(eps))</code>, where <code>pi</code> is a normalized prior weight
+and <code>eps</code> is float64 machine epsilon. Components with <code>V=0</code> contribute zero KL.
+Refinement stage A uses this same softened zero-weight convention.</p>
 </details>
 <details>
-<summary>Warm-start validation and legacy configuration recovery</summary>
-<p>Tracking, initialization, refinement or <code>retain_data=True</code> retains validated
-input snapshots and scale metadata. Their content signature is computed once
-and reused by <code>continue_fit</code> and <code>refine_fit</code>. Ordinary unretained fits have
-<code>data_signature=None</code>; missing signatures never establish matching inputs.
-Set <code>retain_data=True</code> before later continuation. New fits using <code>s_init</code> do not
-require an input signature. Caller-array changes cannot alter retained inputs.</p>
-<p><code>continue_fit</code> reuses the retained context and starts from the saved posterior.
-<code>save_analysis</code> preserves an available signature, but excludes the private
-snapshot. To warm-start a restored retained-origin result, pass the original
-inputs and <code>s_init=restored</code> to the fitting interface; new inputs are fully
-validated. A restored ordinary result can initialize a new fit, but cannot
-continue without the original private retained context.</p>
-<p>Supplied variant IDs/order, allele labels, null layout and working scales must
-agree. An explicit working-coordinate mapping needs <code>alpha</code>, <code>mu</code>, <code>mu2</code>;
-identity metadata is optional but checked when provided. Optional V and sigma2
-are checked; supplied V initializes even fixed-prior fits, while sigma2 is
-resumed only when residual variance is estimated, as in R. Growing L prioritizes
-credible-set components and adds uniform, zero-mean rows; requesting fewer
-effects than the state retains its existing effect count.
-Fitted crossproducts are rebuilt from the current posterior and inputs; old KL,
-BF and fitted caches are not reused as current values.</p>
-<p>Requested controls are read from <code>params['convergence']</code>, with labelled recovery
-from diagnostics or retained options for older results. If no original controls
-were recorded, compatibility defaults are identified rather than presented as
-inheritance. Per-stage <code>solver_settings</code> and <code>convergence</code> record the resolved
-controls for refinement runs; older saved files may lack these fields.</p>
+<summary>Retained inputs and warm starts</summary>
+<p>For <a href="api.html#convergence-and-post-analysis">supported Gaussian models</a>,
+<code>retain_data=True</code> keeps read-only input snapshots and scale metadata.
+Tracking, initialization and refinement also imply retention within this scope.
+Continuation and refinement share these owned inputs and their cached content
+signature, <code>data_signature</code>. Later changes to caller arrays do not alter the
+snapshot. Ordinary unretained fits have <code>data_signature=None</code>; a missing
+signature cannot establish input identity.</p>
+<p><code>save_analysis</code> preserves an available signature but excludes the private input
+snapshot. A <a href="example.html#save-and-reload-a-result">reloaded fit</a> can initialize a
+new fit when inputs are supplied again with <code>model_init=restored</code> (<code>s_init</code> is
+an alias). It cannot be passed directly to <code>continue_fit</code>.</p>
+<p>A new fit can use a posterior without a retained-data signature.
+Working-coordinate mappings require <code>alpha</code>, <code>mu</code> and <code>mu2</code>; supplied variant
+IDs/order, allele labels, scales and null layout must agree with the new inputs.
+Supplied <code>V</code> initializes even fixed-prior fits; <code>sigma2</code> is resumed only when
+residual variance is estimated. Increasing <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span></span></span></span></span> preserves existing row order and
+adds uniform alpha rows with zero moments. Requesting fewer effects preserves
+the state's effect count. Fitted products are rebuilt from the posterior and
+inputs; old KL, Bayes factors and fitted caches are not reused.</p>
 </details>
 <details>
-<summary>Tracking detail, cycle detection and refinement budgets</summary>
-<p>Compact tracking (<code>True</code> or <code>'compact'</code>) records exact online distances and
-component summaries. Its alpha display retains rows with maximum alpha at least
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">/</mi><mi>p</mi></mrow><annotation encoding="application/x-tex">2/p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">2/</span><span class="mord mathnormal">p</span></span></span></span></span> and entries at least <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi mathvariant="normal">/</mi><mi>p</mi></mrow><annotation encoding="application/x-tex">1/p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1/</span><span class="mord mathnormal">p</span></span></span></span></span>, where <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span> includes any internal null column.
-Thresholds, omitted mass and <code>lossy=True</code> are recorded. This display cannot
-reconstruct the posterior. <code>'dense'</code> also records full alpha and moments and is
-intended for small debugging inputs.</p>
-<p>A lag-one fixed point is distinct from a short cycle. <code>cycle_lag=5</code> retains the
-default diagnostic history in every mode; <code>cycle_lag=1</code> disables lag-greater-than-one
-detection. Lagged repetition is recorded independently of the stopping decision.
-In explicit <code>alpha_pip</code> or <code>joint</code> mode, or the NaN-ELBO fallback, an eligible
-lag-two-through-five cycle stops only when the requested success criterion has
-not already held and <code>min_iter</code> has been reached. Such an exit reports
-<code>cycle_detected</code> and leaves IBSS convergence false. Finite-ELBO mode continues.
-Every mode retains the complete current posterior; components are not averaged.
-<code>track_fit=False</code>, <code>'compact'</code> and <code>'dense'</code> change recorded history, not fitted
-values or stopping decisions.</p>
-<p>Every search round freezes an incumbent and its CS list. Stage A zeros excluded
-variant weights and normalizes the remaining full prior, including null. Stage B
-transfers alpha/mu/mu2, then resets V and sigma2 to the original model initialization.
-Candidates share immutable inputs and own their posterior arrays. A failed final
-attempt does not replace an earlier accepted best.</p>
-<p>The default absolute improvement threshold avoids accepting numerical noise.
-The optional relative threshold is disabled by default; after an accepted gain,
-it can stop further rounds when the gain divided by
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>max</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>1</mn><mo separator="true">,</mo><mi mathvariant="normal">∣</mi><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">u</mi><mi mathvariant="normal">m</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">t</mi><mtext> </mtext><mi mathvariant="normal">o</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">j</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">v</mi><mi mathvariant="normal">e</mi></mrow><mi mathvariant="normal">∣</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\max(1,|\mathrm{incumbent\ objective}|)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mop">max</span><span class="mopen">(</span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">∣</span><span class="mord"><span class="mord mathrm">incumbent</span><span class="mspace"> </span><span class="mord mathrm">objective</span></span><span class="mord">∣</span><span class="mclose">)</span></span></span></span></span> is below the requested value.
-A candidate budget counts exclusion attempts, each using at most two fits.
-Round or candidate limits report <code>budget_exhausted</code>. No CS, no improvement,
-unsupported baseline, all candidates failed and exhausted budgets remain
-separate outcomes from IBSS stopping.</p>
+<summary>Tracking detail and search records</summary>
+<p>Compact tracking (<code>True</code> or <code>"compact"</code>) records exact online distances and a
+lossy alpha display. Let <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>q</mi></mrow><annotation encoding="application/x-tex">q</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span></span></span></span></span> be <code>alpha.shape[1]</code>, including any null column.
+The display retains rows whose maximum alpha is at least <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">/</mi><mi>q</mi></mrow><annotation encoding="application/x-tex">2/q</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">2/</span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span></span></span></span></span> and entries
+at least <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi mathvariant="normal">/</mi><mi>q</mi></mrow><annotation encoding="application/x-tex">1/q</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1/</span><span class="mord mathnormal" style="margin-right:0.03588em;">q</span></span></span></span></span>. Thresholds, omitted mass and <code>lossy=True</code> are recorded; these
+entries cannot reconstruct the posterior. <code>"dense"</code> also stores full <code>alpha</code>,
+<code>mu</code> and <code>mu2</code>. Tracking level changes the stored history, rather than the fit
+or stopping rule. <a href="#convergence-diagnostics">Cycle handling</a> depends on that rule.</p>
+<p><code>refine_fit(..., track_fit=True)</code> records both stages of each candidate in
+<code>refinement["history"][i]["stages"][phase]["trace"]</code>. An accepted result's
+<code>trace</code> contains its original stage-B trajectory. If no candidate is accepted,
+the returned copy keeps the input fit's trace. Candidate traces are not saved
+by default, even if the baseline was tracked.</p>
+<p>Requested controls are read from <code>params["convergence"]</code>, with labelled recovery
+from diagnostics or retained options for older results. If those controls are
+unavailable, the record identifies compatibility defaults. Completed inner fits
+record their resolved controls in the stage's <code>solver_settings</code> and
+<code>convergence</code> entries.</p>
+<p>Each search round keeps its incumbent and credible-set list fixed. Candidates
+share the retained inputs and own their posterior arrays; a later failed
+attempt does not discard an earlier accepted best. <code>refinement["config"]</code>
+records the resolved search settings; the
+<a href="#refinement-compared-with-susier">default comparison</a> explains how an explicit
+configuration changes them. The candidate budget counts exclusion attempts,
+each using at most two fits. Round or candidate limits report
+<code>budget_exhausted</code>; read search status separately from IBSS stopping.</p>
 </details>
 <p>Continue with <a href="sensitivity.html#compare-explicit-settings">sensitivity and LD diagnostics</a>
 to compare modeling or input choices. The <a href="example.html#write-an-offline-report">quick start</a>
 and <a href="api.html#figures-and-local-style">plotting API</a> cover reports, persistence and
 local styles.</p></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
+<footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

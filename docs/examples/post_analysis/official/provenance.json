@@ -12,6 +12,11 @@
     "tol": 0.001,
     "estimate_residual_variance": true
   },
+  "tracking": {
+    "baseline": true,
+    "refinement": true,
+    "candidate_trajectory": "original IBSS sweeps"
+  },
   "initial_state": "cold start; refinement stage B uses stage A posterior moments",
   "reference_sources": [
     "https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData"
@@ -22,10 +27,7 @@
     "native": "prusie-rust/0.3.0; susieR-reference/0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2"
   },
   "random_seed": "frozen upstream fixture; no new random generation",
-  "elapsed_seconds": 3.0082531543448567,
-  "skipped": [
-    "gene track: no physical coordinate metadata"
-  ],
+  "elapsed_seconds": 3.480142184533179,
   "fixture": {
     "description": "Official susieR FinemappingConvergence toy example: a simulated response with real-genotype-derived sufficient statistics. No individual genotypes are included.",
     "source_commit": "1f9166cf88ed19c1d6acd4ee53a605ff9505a563",
@@ -44,32 +46,24 @@
       "estimate_residual_variance": true
     }
   },
-  "source_identity": {
-    "checkout_head": "14743c1ba08bba4630591b627bde3e8307e14b60",
-    "source_files_sha256": {
-      "post_analysis.py": "8f42bc931487d1c9b5e686c61db25bb63f91ad573afb73a40da1bdefb1e35e16",
-      "report.py": "690313bcae42074b9c6876c7cd4bda891dd9a7ece9bf86646b98ab05c9cc1db3",
-      "_locus.py": "9c17e1d9ad89559d45dd67aa702f780d6f65cf2b912668fc895f5fdac26c28bf"
-    },
-    "native_sha256": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e",
-    "note": "Source hashes identify presentation changes; this record is not a final wheel freeze."
-  },
   "license_files": {
     "full_terms": "BSD-3-Clause.txt",
     "full_terms_source": "THIRD_PARTY_NOTICES.md / susieR",
     "attribution": "LICENSE.txt",
     "fixture_license_stub": "LICENSE-BSD-3-Clause.txt"
   },
-  "render_version": "0.3.0",
-  "render_source_identity": {
-    "checkout_head": "68c23b56c7d8e0e6ada6cc47516b0780cb346406",
+  "source_identity": {
+    "checkout_head": "34da8a0d7fe15ff7466937aaedffb4fa8f841e43",
     "source_files_sha256": {
-      "post_analysis.py": "1c8728bb9dd77e957cddb067e146153773d3f4f1484e072bbcae7bfe74c41d66",
+      "post_analysis.py": "315c45fef8af3478872a5c5c6e0ad052c4ed13e96d4a9fb38d3daebecb1f7bd8",
+      "refinement.py": "354bdfd80c9f9a1610c1374313a7dd777dd7c4feae6acf848570ad4498f3c922",
       "report.py": "aab8a15c6faf896cd6bbd7946a2ea09b9c283964ec01a89fafb7c43dfd25a24c",
       "_locus.py": "5745cdcf246b6328a74e9d4f5b804085ec84681c9195247080b519f875596add"
     },
     "native_sha256": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e",
-    "note": "Source hashes identify presentation changes; this record is not a final wheel freeze."
+    "note": "Source hashes identify the example, refinement tracking and presentation; this record is not a final wheel freeze."
   },
-  "rendering_scope": "Saved numerical fits/diagnostics reused; no refitting"
+  "skipped": [
+    "gene track: no physical coordinate metadata"
+  ]
 }
