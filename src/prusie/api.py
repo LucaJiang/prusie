@@ -76,7 +76,10 @@ def _overwrite_prepare(arguments):
         if np.any(weights < 0) or not np.isfinite(weights.sum()) or weights.sum() <= 0:
             raise ValueError("prior_weights must be nonnegative with a finite positive sum")
     if arguments["estimate_prior_variance"] and arguments["estimate_prior_method"] not in (
-        "optim", "EM", "simple", "fixed_mixture"
+        "optim",
+        "EM",
+        "simple",
+        "fixed_mixture",
     ):
         raise ValueError("estimate_prior_method must be 'optim', 'EM', or 'simple'")
     value = arguments["n_purity"]
@@ -141,7 +144,9 @@ def _validated_matrix(
     return np.ascontiguousarray(array), symmetric
 
 
-def _symmetrize_matrix(array, name, scale=1.0, collected=None, *, _prepared=None, _repair_error=None):
+def _symmetrize_matrix(
+    array, name, scale=1.0, collected=None, *, _prepared=None, _repair_error=None
+):
     if collected is None:
         collected = []
     _warn(f"{name} is not symmetric; using ({name} + t({name}))/2.", collected)
@@ -1598,12 +1603,8 @@ def susie_rss(
     if type(overwrite_ld) not in (bool, np.bool_):
         raise ValueError("overwrite_ld must be bool or numpy.bool_")
     overwrite_ld = bool(overwrite_ld)
-    if overwrite_ld:
-        # Snapshot exactly the public arguments before coercion can hide aliases.
-        overwrite_state = _overwrite_prepare(locals())
-    else:
-        # The default path performs no argument snapshot or alias traversal.
-        overwrite_state = None
+    # Snapshot public arguments only for the opt-in destructive path, before coercion.
+    overwrite_state = _overwrite_prepare(locals()) if overwrite_ld else None
     n_threads = _thread_count(n_threads)
     requested_convergence_method = convergence_method
     if (R is None) == (X is None):
@@ -1743,8 +1744,8 @@ def susie_rss(
                 R = native_array(R)
                 if overwrite_ld:
                     _overwrite_recheck(overwrite_state)
-                    symmetric, repaired_rss, repair_error, overwrite_action = _native.validate_and_overwrite_rss(
-                        R, prevalidated_scale, proof_threads=1
+                    symmetric, repaired_rss, repair_error, overwrite_action = (
+                        _native.validate_and_overwrite_rss(R, prevalidated_scale, proof_threads=1)
                     )
                 else:
                     # Eligibility uses normalized preparation inputs only; solver
@@ -1781,7 +1782,9 @@ def susie_rss(
             var_y = _scalar(var_y, "var_y", strict=True)
         if n is None:
             _warn(
-                ("n is missing: using the upstream large-sample noncentrality-parameter likelihood"),
+                "n is missing: using the upstream large-sample "
+                # Keep the warning text unchanged without joining this into a long line.
+                "noncentrality-parameter likelihood",
                 extra_warnings,
             )
             XtX, Xty, yty, effective_n = R, z, 1.0, 2.0
@@ -1817,8 +1820,12 @@ def susie_rss(
                 # Keep the original helper stack depth for module-based warning
                 # filters and the original warning-before-repair-error priority.
                 XtX = _symmetrize_matrix(
-                    XtX, "XtX", rss_matrix_scale, extra_warnings,
-                    _prepared=repaired_rss, _repair_error=repair_error,
+                    XtX,
+                    "XtX",
+                    rss_matrix_scale,
+                    extra_warnings,
+                    _prepared=repaired_rss,
+                    _repair_error=repair_error,
                 )
             else:
                 XtX = _symmetrize_matrix(XtX, "XtX", rss_matrix_scale, extra_warnings)
@@ -1902,8 +1909,11 @@ def susie_rss(
             maf=maf,
             maf_thresh=maf_thresh,
         )
-        request = replace(request, requested_convergence_method=requested_convergence_method,
-                          params={**request.params, "overwrite_ld": overwrite_ld})
+        request = replace(
+            request,
+            requested_convergence_method=requested_convergence_method,
+            params={**request.params, "overwrite_ld": overwrite_ld},
+        )
         fit = _fit(request)
         if init_only:
             return fit

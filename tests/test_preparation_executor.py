@@ -14,24 +14,36 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from prusie import _native, susie_rss
-from prusie import _execution
+from prusie import _execution, _native, susie_rss
 
 
 def arguments(p=1025, **updates):
-    result = {name: parameter.default
-              for name, parameter in inspect.signature(susie_rss).parameters.items()}
-    result.update(z=np.linspace(-2., 2., p), R=np.eye(p), n=1000., n_threads=4)
+    result = {
+        name: parameter.default
+        for name, parameter in inspect.signature(susie_rss).parameters.items()
+    }
+    result.update(z=np.linspace(-2.0, 2.0, p), R=np.eye(p), n=1000.0, n_threads=4)
     result.update(updates)
     return result
 
 
 def native_options(p, count=4):
-    return dict(l=2, prior_variance=0.2, residual_variance=1.,
-                prior_weights=[1 / p] * p, estimate_prior_variance=False,
-                estimate_prior_method="optim", estimate_residual_variance=False,
-                check_null_threshold=0., max_iter=3, tol=1e-4,
-                check_prior=False, prior_tol=1e-9, null_index=None, n_threads=count)
+    return dict(
+        l=2,
+        prior_variance=0.2,
+        residual_variance=1.0,
+        prior_weights=[1 / p] * p,
+        estimate_prior_variance=False,
+        estimate_prior_method="optim",
+        estimate_residual_variance=False,
+        check_null_threshold=0.0,
+        max_iter=3,
+        tol=1e-4,
+        check_prior=False,
+        prior_tol=1e-9,
+        null_index=None,
+        n_threads=count,
+    )
 
 
 def task_ids():
@@ -41,10 +53,15 @@ def task_ids():
 def parse_task_stat(raw):
     """Parse identity/exit flags without assuming comm contains no spaces or ')'."""
     first, last = raw.index("("), raw.rindex(")")
-    fields = raw[last + 1:].split()
-    return dict(tid=int(raw[:first].strip()), comm=raw[first + 1:last],
-                state=fields[0], flags=int(fields[6]), starttime=int(fields[19]),
-                raw_stat=raw)
+    fields = raw[last + 1 :].split()
+    return dict(
+        tid=int(raw[:first].strip()),
+        comm=raw[first + 1 : last],
+        state=fields[0],
+        flags=int(fields[6]),
+        starttime=int(fields[19]),
+        raw_stat=raw,
+    )
 
 
 def read_task_record(tid):
@@ -81,8 +98,9 @@ def assert_worker_tasks_disappear(tids, known=None, *, read=None, now=None, paus
     now = time.monotonic if now is None else now
     pause = time.sleep if pause is None else pause
     pending = set(tids)
-    identities = {} if known is None else {
-        tid: worker_identity(record) for tid, record in known.items()}
+    identities = (
+        {} if known is None else {tid: worker_identity(record) for tid, record in known.items()}
+    )
     assert known is None or set(known) == pending
     started = now()
     history = []
@@ -105,8 +123,14 @@ def assert_worker_tasks_disappear(tids, known=None, *, read=None, now=None, paus
 
 
 def observer_record(**updates):
-    record = dict(tid=123, starttime=456, comm="prusie-kernel-0", flags=0x4,
-                  state="R", raw_stat="deterministic observer fixture")
+    record = dict(
+        tid=123,
+        starttime=456,
+        comm="prusie-kernel-0",
+        flags=0x4,
+        state="R",
+        raw_stat="deterministic observer fixture",
+    )
     record.update(updates)
     return record
 
@@ -127,22 +151,31 @@ def test_task_stat_parser_preserves_identity_and_exit_flags():
     assert record["raw_stat"] == raw
 
 
-@pytest.mark.parametrize("record", [
-    observer_record(flags=0), observer_record(tid=124),
-    observer_record(comm="unrelated-worker"),
-])
+@pytest.mark.parametrize(
+    "record",
+    [
+        observer_record(flags=0),
+        observer_record(tid=124),
+        observer_record(comm="unrelated-worker"),
+    ],
+)
 def test_teardown_observer_rejects_live_or_unowned_tasks_without_waiting(record):
     with pytest.raises(AssertionError):
-        assert_worker_tasks_disappear({123}, read=lambda tid: record,
-                                      now=lambda: 0., pause=unexpected_observer_pause)
+        assert_worker_tasks_disappear(
+            {123}, read=lambda tid: record, now=lambda: 0.0, pause=unexpected_observer_pause
+        )
 
 
 @pytest.mark.parametrize("updates", [{"starttime": 457}, {"comm": "prusie-kernel-1"}])
 def test_teardown_observer_rejects_known_identity_changes_without_waiting(updates):
     with pytest.raises(AssertionError):
-        assert_worker_tasks_disappear({123}, {123: observer_record()},
-                                      read=lambda tid: observer_record(**updates),
-                                      now=lambda: 0., pause=unexpected_observer_pause)
+        assert_worker_tasks_disappear(
+            {123},
+            {123: observer_record()},
+            read=lambda tid: observer_record(**updates),
+            now=lambda: 0.0,
+            pause=unexpected_observer_pause,
+        )
 
 
 @pytest.mark.parametrize("updates", [{"starttime": 457}, {"flags": 0}])
@@ -150,8 +183,9 @@ def test_teardown_observer_rejects_changed_or_live_task_after_exiting_sample(upd
     records = iter([observer_record(), observer_record(**updates)])
     pauses = []
     with pytest.raises(AssertionError):
-        assert_worker_tasks_disappear({123}, read=lambda tid: next(records),
-                                      now=lambda: 0., pause=pauses.append)
+        assert_worker_tasks_disappear(
+            {123}, read=lambda tid: next(records), now=lambda: 0.0, pause=pauses.append
+        )
     assert pauses == [0.001]
 
 
@@ -159,28 +193,31 @@ def test_teardown_observer_rejects_changed_or_live_task_after_exiting_sample(upd
 def test_teardown_observer_accepts_only_exiting_tail_then_disappearance(known):
     records = iter([observer_record(), None])
     pauses = []
-    assert_worker_tasks_disappear({123}, known, read=lambda tid: next(records),
-                                  now=lambda: 0., pause=pauses.append)
+    assert_worker_tasks_disappear(
+        {123}, known, read=lambda tid: next(records), now=lambda: 0.0, pause=pauses.append
+    )
     assert pauses == [0.001]
 
 
 def test_teardown_observer_accepts_listed_then_absent_without_inventing_flags():
     pauses = []
-    assert_worker_tasks_disappear({123}, read=lambda tid: None,
-                                  now=lambda: 0., pause=pauses.append)
+    assert_worker_tasks_disappear(
+        {123}, read=lambda tid: None, now=lambda: 0.0, pause=pauses.append
+    )
     assert pauses == []
 
 
 def test_teardown_observer_rejects_persistent_exiting_task_at_fixed_deadline():
-    clock, pauses = [0.], []
+    clock, pauses = [0.0], []
 
     def advance(duration):
         pauses.append(duration)
         clock[0] += duration
 
     with pytest.raises(AssertionError, match="remain after 1 s"):
-        assert_worker_tasks_disappear({123}, read=lambda tid: observer_record(),
-                                      now=lambda: clock[0], pause=advance)
+        assert_worker_tasks_disappear(
+            {123}, read=lambda tid: observer_record(), now=lambda: clock[0], pause=advance
+        )
     assert clock[0] == 1.0
     assert 0 < len(pauses) <= 1001 and max(pauses) <= 0.001
 
@@ -198,7 +235,7 @@ def bits_equal(actual, expected):
             bits_equal(actual[key], expected[key])
     elif isinstance(actual, (list, tuple)):
         assert type(actual) is type(expected) and len(actual) == len(expected)
-        for left, right in zip(actual, expected):
+        for left, right in zip(actual, expected, strict=False):
             bits_equal(left, right)
     elif isinstance(actual, float):
         assert actual.hex() == expected.hex()
@@ -207,9 +244,27 @@ def bits_equal(actual, expected):
 
 
 def assert_fit_bits(actual, expected):
-    for field in ("alpha", "mu", "mu2", "pip", "V", "elbo", "KL", "XtXr",
-                  "lbf", "lbf_variable", "sigma2", "niter", "converged", "sets",
-                  "params", "qc", "warnings", "variant_ids", "convergence"):
+    for field in (
+        "alpha",
+        "mu",
+        "mu2",
+        "pip",
+        "V",
+        "elbo",
+        "KL",
+        "XtXr",
+        "lbf",
+        "lbf_variable",
+        "sigma2",
+        "niter",
+        "converged",
+        "sets",
+        "params",
+        "qc",
+        "warnings",
+        "variant_ids",
+        "convergence",
+    ):
         bits_equal(getattr(actual, field), getattr(expected, field))
 
 
@@ -252,13 +307,18 @@ def test_private_factory_is_inert_and_not_serializable():
     owner.close()
 
 
-@pytest.mark.skipif(sys.platform != "linux" or platform.machine() != "x86_64",
-                    reason="early parallel preparation has a Linux x86_64 contract")
+@pytest.mark.skipif(
+    sys.platform != "linux" or platform.machine() != "x86_64",
+    reason="early parallel preparation has a Linux x86_64 contract",
+)
 @pytest.mark.parametrize("count", [2, 4, 8])
 @pytest.mark.parametrize("asymmetric", [False, True])
-def test_shared_preparation_matches_same_count_parent_and_serializes(monkeypatch, count, asymmetric):
-    args = arguments(n_threads=count, variant_ids=[str(i) for i in range(1025)],
-                     L=2, max_iter=3, coverage=None)
+def test_shared_preparation_matches_same_count_parent_and_serializes(
+    monkeypatch, count, asymmetric
+):
+    args = arguments(
+        n_threads=count, variant_ids=[str(i) for i in range(1025)], L=2, max_iter=3, coverage=None
+    )
     if asymmetric:
         args["R"][0, -1], args["R"][-1, 0] = 0.025, -0.03125
     before = (args["R"].tobytes(), args["z"].tobytes())
@@ -278,13 +338,19 @@ def test_shared_preparation_matches_same_count_parent_and_serializes(monkeypatch
     assert_fit_bits(actual, restored)
 
 
-@pytest.mark.skipif(sys.platform != "linux" or platform.machine() != "x86_64",
-                    reason="native early worker ownership is Linux x86_64")
+@pytest.mark.skipif(
+    sys.platform != "linux" or platform.machine() != "x86_64",
+    reason="native early worker ownership is Linux x86_64",
+)
 def test_native_helper_workers_are_joined_before_close_returns():
     matrix = np.eye(1025)
     before = task_ids()
     owner = _native._new_fit_executor(4)
-    assert _native._validate_and_repair_rss_with_executor(matrix, 999., owner) == (True, None, None)
+    assert _native._validate_and_repair_rss_with_executor(matrix, 999.0, owner) == (
+        True,
+        None,
+        None,
+    )
     assert owner.has_started
     own_workers = task_ids() - before
     assert len(own_workers) == 4
@@ -296,11 +362,11 @@ def test_native_helper_workers_are_joined_before_close_returns():
 @pytest.mark.parametrize("count", [2, 4, 8])
 def test_owned_output_and_deferred_repair_error_match_original_bits(count):
     matrix = np.eye(1025)
-    matrix[0, 1], matrix[1, 0] = 1., 0.9
-    matrix[31, 35], matrix[35, 31] = -0., 0.
-    matrix[1023, 1024], matrix[1024, 1023] = np.nextafter(0., 1.), -np.nextafter(0., 1.)
+    matrix[0, 1], matrix[1, 0] = 1.0, 0.9
+    matrix[31, 35], matrix[35, 31] = -0.0, 0.0
+    matrix[1023, 1024], matrix[1024, 1023] = np.nextafter(0.0, 1.0), -np.nextafter(0.0, 1.0)
     before = matrix.tobytes()
-    for scale in (999., 1e308):
+    for scale in (999.0, 1e308):
         owner = _native._new_fit_executor(count)
         expected = _native.validate_and_repair_rss(matrix, scale, proof_threads=1)
         try:
@@ -312,20 +378,23 @@ def test_owned_output_and_deferred_repair_error_match_original_bits(count):
             owner.close()
 
 
-@pytest.mark.parametrize("fault,scale,error", [
-    ("raw_nan", 999., "R must contain only finite"),
-    ("raw_negative", 999., "R diagonal must be nonnegative"),
-    ("scaled_overflow", 1e308, "XtX must contain only finite"),
-])
+@pytest.mark.parametrize(
+    "fault,scale,error",
+    [
+        ("raw_nan", 999.0, "R must contain only finite"),
+        ("raw_negative", 999.0, "R diagonal must be nonnegative"),
+        ("scaled_overflow", 1e308, "XtX must contain only finite"),
+    ],
+)
 def test_private_helper_preserves_parent_error_priority_and_closes(fault, scale, error):
     matrix = np.eye(1025)
     matrix[0, 1] = 0.125
     if fault == "raw_nan":
-        matrix[1, 0], matrix[-1, -1] = np.nan, -1.
+        matrix[1, 0], matrix[-1, -1] = np.nan, -1.0
     elif fault == "raw_negative":
-        matrix[0, 0] = -1.
+        matrix[0, 0] = -1.0
     else:
-        matrix[0, 1] = 2.
+        matrix[0, 1] = 2.0
     owner = _native._new_fit_executor(4)
     with pytest.raises(ValueError, match=error):
         _native.validate_and_repair_rss(matrix, scale, proof_threads=1)
@@ -336,10 +405,10 @@ def test_private_helper_preserves_parent_error_priority_and_closes(fault, scale,
 
 @pytest.mark.parametrize("problem", ["parse", "dimensions", "closed", "count"])
 def test_private_native_failure_does_not_leave_helper_workers(problem):
-    matrix, scores = np.eye(1025), np.linspace(-1., 1., 1025)
+    matrix, scores = np.eye(1025), np.linspace(-1.0, 1.0, 1025)
     before = task_ids() if sys.platform == "linux" else set()
     owner = _native._new_fit_executor(4)
-    _native._validate_and_repair_rss_with_executor(matrix, 1., owner)
+    _native._validate_and_repair_rss_with_executor(matrix, 1.0, owner)
     own_workers = task_ids() - before if before else set()
     identities = capture_worker_records(own_workers) if before else None
     options = native_options(1025)
@@ -352,7 +421,7 @@ def test_private_native_failure_does_not_leave_helper_workers(problem):
     else:
         options["n_threads"] = 8
     with pytest.raises((ValueError, KeyError, RuntimeError)):
-        _native._fit_with_executor(matrix, scores, 999., 1000., options, owner)
+        _native._fit_with_executor(matrix, scores, 999.0, 1000.0, options, owner)
     owner.close()
     if before:
         assert_worker_tasks_disappear(own_workers, identities)
@@ -413,8 +482,9 @@ def test_parallel_and_parent_warning_stacks_use_the_same_original_callsite():
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             susie_rss(**{**args, "n_threads": count})
-        signatures.append([(str(row.message), row.category, row.filename, row.lineno)
-                           for row in caught])
+        signatures.append(
+            [(str(row.message), row.category, row.filename, row.lineno) for row in caught]
+        )
     assert signatures[0] == signatures[1]
     assert any("symmetric" in row[0] for row in signatures[0])
 
@@ -433,33 +503,35 @@ def test_cleanup_preserves_baseexception_and_reports_unmasked_cleanup_failure():
             _execution.close_executor(FailingClose())
 
 
-@pytest.mark.skipif(sys.platform != "linux" or platform.machine() != "x86_64",
-                    reason="Linux x86_64 caller-control boundary")
+@pytest.mark.skipif(
+    sys.platform != "linux" or platform.machine() != "x86_64",
+    reason="Linux x86_64 caller-control boundary",
+)
 def test_nonstandard_rounding_keeps_parent_and_changed_controls_replace_workers():
     library = ctypes.CDLL(None)
     library.fegetround.restype = ctypes.c_int
     library.fesetround.argtypes = [ctypes.c_int]
     original = library.fegetround()
-    matrix, scores = np.eye(1025), np.linspace(-1., 1., 1025)
+    matrix, scores = np.eye(1025), np.linspace(-1.0, 1.0, 1025)
     owner = _native._new_fit_executor(4)
     try:
         assert library.fesetround(0x400) == 0  # Linux FE_DOWNWARD.
-        expected = _native.validate_and_repair_rss(matrix, 999., proof_threads=1)
-        actual = _native._validate_and_repair_rss_with_executor(matrix, 999., owner)
+        expected = _native.validate_and_repair_rss(matrix, 999.0, proof_threads=1)
+        actual = _native._validate_and_repair_rss_with_executor(matrix, 999.0, owner)
         assert actual == expected and not owner.has_started
         owner.close()
         assert library.fegetround() == 0x400
         assert library.fesetround(0) == 0  # FE_TONEAREST before early preparation.
         owner = _native._new_fit_executor(4)
         before = task_ids()
-        _native._validate_and_repair_rss_with_executor(matrix, 1., owner)
+        _native._validate_and_repair_rss_with_executor(matrix, 1.0, owner)
         assert owner.has_started
         early_workers = task_ids() - before
         identities = capture_worker_records(early_workers)
         assert library.fesetround(0x400) == 0
         options = native_options(1025)
-        expected = _native.fit(matrix, scores, 999., 1000., options)
-        actual = _native._fit_with_executor(matrix, scores, 999., 1000., options, owner)
+        expected = _native.fit(matrix, scores, 999.0, 1000.0, options)
+        actual = _native._fit_with_executor(matrix, scores, 999.0, 1000.0, options, owner)
         bits_equal(actual, expected)
         assert library.fegetround() == 0x400
         assert_worker_tasks_disappear(early_workers, identities)

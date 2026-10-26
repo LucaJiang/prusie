@@ -14,11 +14,7 @@ def test_rss_lambda_public_L_default():
 
 @pytest.mark.parametrize(
     "route,p,options,expected_L",
-    [
-        (route, p, {}, min(10, p))
-        for route in ("R", "X")
-        for p in (3, 10, 12)
-    ]
+    [(route, p, {}, min(10, p)) for route in ("R", "X") for p in (3, 10, 12)]
     + [
         ("R", 12, {"L": 3}, 3),
         ("R", 12, {"L": 11}, 11),

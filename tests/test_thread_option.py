@@ -1,4 +1,5 @@
 """Per-fit thread requests preserve input ownership and deterministic results."""
+
 import inspect
 import os
 import warnings
@@ -7,7 +8,7 @@ import numpy as np
 import pytest
 
 import prusie
-from prusie import _native, api
+from prusie import _native
 
 
 def fit_small(name, **options):
@@ -15,15 +16,25 @@ def fit_small(name, **options):
     if name == "susie_rss":
         return prusie.susie_rss([2.0, -1.0], np.eye(2), 100, **common)
     if name == "susie_suff_stat":
-        return prusie.susie_suff_stat(99 * np.eye(2), [20.0, -10.0], 99.0, 100,
-                                     residual_variance=1, estimate_residual_variance=False, **common)
+        return prusie.susie_suff_stat(
+            99 * np.eye(2),
+            [20.0, -10.0],
+            99.0,
+            100,
+            residual_variance=1,
+            estimate_residual_variance=False,
+            **common,
+        )
     if name == "susie":
-        return prusie.susie([[1., 2.], [3., 1.], [2., 4.], [4., 3.]],
-                            [1., 3., 2., 4.], residual_variance=1,
-                            estimate_residual_variance=False, **common)
+        return prusie.susie(
+            [[1.0, 2.0], [3.0, 1.0], [2.0, 4.0], [4.0, 3.0]],
+            [1.0, 3.0, 2.0, 4.0],
+            residual_variance=1,
+            estimate_residual_variance=False,
+            **common,
+        )
     if name == "susie_rss_lambda":
-        return prusie.susie_rss_lambda([2.0, -1.0], np.eye(2), 100,
-                                       lambda_=0.1, **common)
+        return prusie.susie_rss_lambda([2.0, -1.0], np.eye(2), 100, lambda_=0.1, **common)
     raise AssertionError(name)
 
 
@@ -58,8 +69,15 @@ def test_public_default_overrides_hidden_thread_environment_without_mutating_it(
     monkeypatch.setenv("PRUSIE_NUM_THREADS", "32")
     monkeypatch.setenv("RAYON_NUM_THREADS", "17")
     monkeypatch.setenv("OMP_NUM_THREADS", "7")
-    before = {key: os.environ.get(key) for key in
-              ("PRUSIE_NUM_THREADS", "RAYON_NUM_THREADS", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS")}
+    before = {
+        key: os.environ.get(key)
+        for key in (
+            "PRUSIE_NUM_THREADS",
+            "RAYON_NUM_THREADS",
+            "OMP_NUM_THREADS",
+            "OPENBLAS_NUM_THREADS",
+        )
+    }
     calls = []
     original_fit = _native.fit
     original_validation = _native.validate_rss_matrix
@@ -85,8 +103,15 @@ def test_public_default_overrides_hidden_thread_environment_without_mutating_it(
         # Check both fused C preparation and the general F validation route.
         # Even an explicit product request does not parallelize validation.
         options = {} if requested == 1 else dict(n_threads=requested)
-        fit = prusie.susie_rss([2., -1.], np.array(np.eye(2), order=layout), 100,
-                               L=1, max_iter=3, coverage=None, **options)
+        fit = prusie.susie_rss(
+            [2.0, -1.0],
+            np.array(np.eye(2), order=layout),
+            100,
+            L=1,
+            max_iter=3,
+            coverage=None,
+            **options,
+        )
     assert fit.params["n_threads"] == requested
     assert ("fit", requested) in calls
     assert ("fused_validation" if layout == "C" else "validation", 1) in calls
@@ -99,24 +124,25 @@ def test_parallel_products_are_deterministic_and_do_not_mutate_inputs(count):
     # declared parallel-kernel threshold. This is a deterministic unit fixture.
     matrix = np.eye(1025)
     matrix.flags.writeable = False
-    scores = np.linspace(-3., 3., 1025)
+    scores = np.linspace(-3.0, 3.0, 1025)
     before_matrix, before_scores = matrix.tobytes(), scores.tobytes()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        first = prusie.susie_rss(scores, matrix, 1000, L=2, max_iter=3,
-                                 coverage=None, n_threads=count)
-        second = prusie.susie_rss(scores, matrix, 1000, L=2, max_iter=3,
-                                  coverage=None, n_threads=count)
+        first = prusie.susie_rss(
+            scores, matrix, 1000, L=2, max_iter=3, coverage=None, n_threads=count
+        )
+        second = prusie.susie_rss(
+            scores, matrix, 1000, L=2, max_iter=3, coverage=None, n_threads=count
+        )
     np.testing.assert_array_equal(first.alpha.view(np.uint64), second.alpha.view(np.uint64))
     assert matrix.tobytes() == before_matrix
     assert scores.tobytes() == before_scores
     assert np.isfinite(first.alpha).all()
-    np.testing.assert_allclose(first.alpha.sum(axis=1), 1., rtol=0, atol=1e-12)
+    np.testing.assert_allclose(first.alpha.sum(axis=1), 1.0, rtol=0, atol=1e-12)
 
 
 def test_initialization_specification_retains_thread_request():
-    specification = prusie.susie_rss([2., -1.], np.eye(2), 100,
-                                     L=1, init_only=True, n_threads=4)
+    specification = prusie.susie_rss([2.0, -1.0], np.eye(2), 100, L=1, init_only=True, n_threads=4)
     assert specification.params["n_threads"] == 4
     fit = prusie.susie_workhorse(specification)
     assert fit.params["n_threads"] == 4

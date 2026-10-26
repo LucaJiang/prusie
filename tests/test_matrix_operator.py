@@ -29,9 +29,7 @@ def options():
 def test_factorized_native_preserves_orientation_and_no_information(order, multiplier):
     # Deliberately asymmetric to detect an unintended transpose at this thin
     # boundary; public matrix symmetry validation is tested separately.
-    raw = multiplier * np.array(
-        [[2.0, 3.0, 0.0], [1.0, 7.0, 0.0], [0.0, 0.0, 0.0]], order=order
-    )
+    raw = multiplier * np.array([[2.0, 3.0, 0.0], [1.0, 7.0, 0.0], [0.0, 0.0, 0.0]], order=order)
     scales = np.array([2.0, 0.5, 1.0])
     inverse = 1.0 / scales
     prepared = ((raw * 8.0) * inverse[None, :]) / scales[:, None]

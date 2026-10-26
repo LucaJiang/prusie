@@ -40,7 +40,11 @@ def test_signed_zero_subnormal_and_overflow_preserve_expression():
             actual = _native.symmetrize_matrix(values, scale)
             np.testing.assert_array_equal(actual, expected)
             finite = np.isfinite(expected)
-            np.testing.assert_array_equal(actual[finite].view(np.uint64), expected[finite].view(np.uint64))
-    with pytest.warns(RuntimeWarning, match="not symmetric"):
-        with pytest.raises(ValueError, match="finite"):
-            _symmetrize_matrix(values, "XtX", 2.0)
+            np.testing.assert_array_equal(
+                actual[finite].view(np.uint64), expected[finite].view(np.uint64)
+            )
+    with (
+        pytest.warns(RuntimeWarning, match="not symmetric"),
+        pytest.raises(ValueError, match="finite"),
+    ):
+        _symmetrize_matrix(values, "XtX", 2.0)

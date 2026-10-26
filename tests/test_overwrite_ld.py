@@ -1,4 +1,5 @@
 """Exact storage, alias and failure contracts of explicit RSS overwrite."""
+
 import inspect
 import subprocess
 import sys
@@ -7,9 +8,8 @@ import warnings
 import numpy as np
 import pytest
 
-from prusie import susie_rss
-from prusie import _native
-from prusie import api
+from prusie import _native, api, susie_rss
+
 _PUBLIC_ARGUMENTS = set(inspect.signature(susie_rss).parameters)
 
 
@@ -26,7 +26,7 @@ def repair(r, n):
     x = np.multiply(r, float(n) - 1)
     y = np.multiply(r.T, float(n) - 1)
     np.add(x, y, out=x)
-    np.divide(x, 2., out=x)
+    np.divide(x, 2.0, out=x)
     return x
 
 
@@ -37,31 +37,62 @@ def bits(a, b):
 
 
 def same_fit(a, b):
-    for field in ("alpha", "mu", "mu2", "V", "pip", "elbo", "KL", "XtXr",
-                  "lbf", "lbf_variable", "X_column_scale_factors"):
+    for field in (
+        "alpha",
+        "mu",
+        "mu2",
+        "V",
+        "pip",
+        "elbo",
+        "KL",
+        "XtXr",
+        "lbf",
+        "lbf_variable",
+        "X_column_scale_factors",
+    ):
         bits(getattr(a, field), getattr(b, field))
     assert (a.niter, a.converged, a.sigma2) == (b.niter, b.converged, b.sigma2)
     assert a.convergence == b.convergence
     bits(a.sets["cs_index"], b.sets["cs_index"])
-    for left, right in zip(a.sets["cs"], b.sets["cs"]):
+    for left, right in zip(a.sets["cs"], b.sets["cs"], strict=False):
         bits(left, right)
     assert a.params["n"] == b.params["n"] == a.params["input_n"]
 
 
-@pytest.mark.parametrize("p,late", [(2, False), (3, True), (4, False), (7, True),
-    (8, False), (9, True), (31, False), (32, True), (33, False), (65, True)])
+@pytest.mark.parametrize(
+    "p,late",
+    [
+        (2, False),
+        (3, True),
+        (4, False),
+        (7, True),
+        (8, False),
+        (9, True),
+        (31, False),
+        (32, True),
+        (33, False),
+        (65, True),
+    ],
+)
 @pytest.mark.parametrize("standardize", [False, True])
 def test_exact_posterior_and_consumed_buffer_match_owned_parent(p, late, standardize):
     original = matrix(p, late)
     r = original.copy()
     alias = r.view()
     z = np.zeros(p)
-    z[:2] = [2., -0.5]
+    z[:2] = [2.0, -0.5]
     prior = np.ones(p)
-    args = dict(z=z, n=100, L=2, max_iter=10, check_prior=False,
-                prior_weights=prior, standardize=standardize,
-                variant_ids=[f"s{i}" for i in range(p)],
-                variant_metadata={"position": np.arange(p)})
+    args = dict(
+        z=z,
+        n=100,
+        L=2,
+        max_iter=10,
+        check_prior=False,
+        prior_weights=prior,
+        standardize=standardize,
+        variant_ids=[f"s{i}" for i in range(p)],
+        variant_metadata={"position": np.arange(p)},
+    )
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
         parent = susie_rss(R=original, **args)
@@ -69,18 +100,17 @@ def test_exact_posterior_and_consumed_buffer_match_owned_parent(p, late, standar
     same_fit(parent, child)
     bits(r, repair(original, 100))
     bits(alias, r)
-    bits(z[:2], [2., -0.5])
+    bits(z[:2], [2.0, -0.5])
     bits(prior, np.ones(p))
     assert not parent.params["overwrite_ld"] and child.params["overwrite_ld"] is True
-    assert child.qc["ld_overwrite"] == dict(action="ordered_scaled_xtx", original_rss_scale=99.)
+    assert child.qc["ld_overwrite"] == dict(action="ordered_scaled_xtx", original_rss_scale=99.0)
 
 
 @pytest.mark.parametrize("threads", [1, 2, 4, 8])
 def test_overwrite_retains_thread_option_and_same_count_determinism(threads):
     r = matrix(1025)
     original = r.copy()
-    args = dict(z=np.zeros(len(r)), n=100, L=1, max_iter=2, check_prior=False,
-                n_threads=threads)
+    args = dict(z=np.zeros(len(r)), n=100, L=1, max_iter=2, check_prior=False, n_threads=threads)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
         parent = susie_rss(R=original, **args)
@@ -92,18 +122,24 @@ def test_overwrite_retains_thread_option_and_same_count_determinism(threads):
     assert child.params["n_threads"] == threads
 
 
-@pytest.mark.parametrize("kind,action", [("unit", "symmetric_no_write"),
-    ("diagonal", "no_witness_eager_no_write"), ("rounded", "no_witness_eager_no_write")])
+@pytest.mark.parametrize(
+    "kind,action",
+    [
+        ("unit", "symmetric_no_write"),
+        ("diagonal", "no_witness_eager_no_write"),
+        ("rounded", "no_witness_eager_no_write"),
+    ],
+)
 def test_all_successful_no_write_actions_preserve_original_bits(kind, action):
     r = np.eye(2)
     n, method = 100, "wald"
     if kind == "diagonal":
-        r *= 2.
+        r *= 2.0
     if kind == "rounded":
-        r[0, 1] = np.nextafter(0., 1.)
+        r[0, 1] = np.nextafter(0.0, 1.0)
         n, method = 1.5, "score"
     original = r.copy()
-    args = dict(z=[0., 0.], n=n, z_method=method, L=1, max_iter=2)
+    args = dict(z=[0.0, 0.0], n=n, z_method=method, L=1, max_iter=2)
     parent = susie_rss(R=original, **args)
     child = susie_rss(R=r, overwrite_ld=True, **args)
     same_fit(parent, child)
@@ -114,7 +150,7 @@ def test_all_successful_no_write_actions_preserve_original_bits(kind, action):
 def test_no_witness_keeps_valid_symmetric_extreme_despite_speculative_repair_overflow():
     r = np.eye(2) * 1e308
     original = r.copy()
-    symmetric, prepared, error, action = _native.validate_and_overwrite_rss(r, 1.)
+    symmetric, prepared, error, action = _native.validate_and_overwrite_rss(r, 1.0)
     assert symmetric and prepared is None and error is None
     assert action == "no_witness_eager_no_write"
     bits(r, original)
@@ -133,11 +169,13 @@ def test_snapshot_covers_every_public_argument_and_default_never_walks(monkeypat
         warnings.simplefilter("ignore")
         susie_rss(np.zeros(2), np.eye(2), 100, L=1, overwrite_ld=True)
     assert captured == [_PUBLIC_ARGUMENTS]
+
     def forbidden(*args):
         raise AssertionError("default must not snapshot or walk aliases")
+
     monkeypatch.setattr(api, "_overwrite_prepare", forbidden)
-    susie_rss([0., 0.], np.eye(2), 100, L=1, overwrite_ld=False)
-    prepared = susie_rss([0., 0.], np.eye(2), 100, L=1, init_only=True)
+    susie_rss([0.0, 0.0], np.eye(2), 100, L=1, overwrite_ld=False)
+    prepared = susie_rss([0.0, 0.0], np.eye(2), 100, L=1, init_only=True)
     assert prepared.params["overwrite_ld"] is False
 
 
@@ -150,21 +188,46 @@ def test_flag_is_strict_boolean(flag):
     bits(r, before)
 
 
-@pytest.mark.parametrize("kind", ["F", "strided", "readonly", "float32", "endian",
-    "metadata", "external", "subclass", "misaligned", "empty", "nonsquare"])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "F",
+        "strided",
+        "readonly",
+        "float32",
+        "endian",
+        "metadata",
+        "external",
+        "subclass",
+        "misaligned",
+        "empty",
+        "nonsquare",
+    ],
+)
 def test_unsupported_storage_rejected_before_writes(kind):
     r = matrix(9)
-    if kind == "F": r = np.asfortranarray(r)
-    elif kind == "strided": r = np.eye(18)[::2, ::2]
-    elif kind == "readonly": r.flags.writeable = False
-    elif kind == "float32": r = r.astype(np.float32)
-    elif kind == "endian": r = r.astype(">f8")
-    elif kind == "metadata": r = r.view(np.dtype("f8", metadata={"source": "x"}))
-    elif kind == "external": r = np.ndarray((9, 9), dtype="f8", buffer=bytearray(r.tobytes()))
-    elif kind == "subclass": r = r.view(type("Special", (np.ndarray,), {}))
-    elif kind == "misaligned": r = np.ndarray((9, 9), dtype="f8", buffer=bytearray(9 * 9 * 8 + 1), offset=1)
-    elif kind == "empty": r = np.empty((0, 0))
-    elif kind == "nonsquare": r = np.zeros((9, 8))
+    if kind == "F":
+        r = np.asfortranarray(r)
+    elif kind == "strided":
+        r = np.eye(18)[::2, ::2]
+    elif kind == "readonly":
+        r.flags.writeable = False
+    elif kind == "float32":
+        r = r.astype(np.float32)
+    elif kind == "endian":
+        r = r.astype(">f8")
+    elif kind == "metadata":
+        r = r.view(np.dtype("f8", metadata={"source": "x"}))
+    elif kind == "external":
+        r = np.ndarray((9, 9), dtype="f8", buffer=bytearray(r.tobytes()))
+    elif kind == "subclass":
+        r = r.view(type("Special", (np.ndarray,), {}))
+    elif kind == "misaligned":
+        r = np.ndarray((9, 9), dtype="f8", buffer=bytearray(9 * 9 * 8 + 1), offset=1)
+    elif kind == "empty":
+        r = np.empty((0, 0))
+    elif kind == "nonsquare":
+        r = np.zeros((9, 8))
     before = r.tobytes()
     with pytest.raises(ValueError, match="overwrite_ld"):
         susie_rss(np.zeros(len(r)), r, 100, overwrite_ld=True)
@@ -176,9 +239,12 @@ def test_all_argument_aliases_including_zero_dimensional_and_nested_are_rejected
     r = matrix()
     original = r.copy()
     value = r[0]
-    if name == "tol": value = r[:1, :1].reshape(())
-    if name == "prior_weights": value = [r[0]]
-    if name == "variant_metadata": value = {"nested": [r[0]]}
+    if name == "tol":
+        value = r[:1, :1].reshape(())
+    if name == "prior_weights":
+        value = [r[0]]
+    if name == "variant_metadata":
+        value = {"nested": [r[0]]}
     args = dict(z=np.zeros(len(r)), R=r, n=100, overwrite_ld=True)
     args[name] = value
     with pytest.raises(ValueError, match="overlaps"):
@@ -201,7 +267,7 @@ def test_disjoint_views_of_same_numpy_owner_are_allowed():
     owner = np.empty(9 * 9 + 9)
     r, z = owner[:81].reshape(9, 9), owner[81:]
     r[:] = matrix()
-    z[:] = 0.
+    z[:] = 0.0
     original = r.copy()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
@@ -222,13 +288,30 @@ def test_mmap_and_plain_views_of_mmap_are_rejected(tmp_path, as_plain_view):
     assert r.tobytes() == original
 
 
-@pytest.mark.parametrize("option,value", [("track_fit", "compact"), ("retain_data", True),
-    ("check_input", True), ("refine", True), ("init_only", True), ("var_y", 1.),
-    ("null_weight", 0.1), ("R_mismatch", "eb"), ("unmappable_effects", False),
-    ("n_threads", True), ("max_iter", 0), ("tol", np.array(1e-4)),
-    ("variant_metadata", {"x": np.zeros(())}), ("tol", -1.),
-    ("prior_weights", [1.]), ("estimate_prior_method", "unknown"),
-    ("variant_ids", ["one"]), ("min_abs_corr", 2.), ("R_finite", np.bool_(False))])
+@pytest.mark.parametrize(
+    "option,value",
+    [
+        ("track_fit", "compact"),
+        ("retain_data", True),
+        ("check_input", True),
+        ("refine", True),
+        ("init_only", True),
+        ("var_y", 1.0),
+        ("null_weight", 0.1),
+        ("R_mismatch", "eb"),
+        ("unmappable_effects", False),
+        ("n_threads", True),
+        ("max_iter", 0),
+        ("tol", np.array(1e-4)),
+        ("variant_metadata", {"x": np.zeros(())}),
+        ("tol", -1.0),
+        ("prior_weights", [1.0]),
+        ("estimate_prior_method", "unknown"),
+        ("variant_ids", ["one"]),
+        ("min_abs_corr", 2.0),
+        ("R_finite", np.bool_(False)),
+    ],
+)
 def test_unsupported_options_rejected_before_write(option, value):
     r = matrix()
     before = r.copy()
@@ -239,17 +322,23 @@ def test_unsupported_options_rejected_before_write(option, value):
 
 def test_conversion_and_truthiness_hooks_are_never_invoked():
     called = []
+
     class Hook:
         def __array__(self, *args, **kwargs):
             called.append("array")
             return np.zeros(9)
+
         def __bool__(self):
             called.append("bool")
             return True
+
     r = matrix()
     before = r.copy()
-    for args in (dict(z=Hook(), overwrite_ld=True), dict(z=np.zeros(9), overwrite_ld=Hook()),
-                 dict(z=np.zeros(9), overwrite_ld=True, prior_weights=[Hook()])):
+    for args in (
+        dict(z=Hook(), overwrite_ld=True),
+        dict(z=np.zeros(9), overwrite_ld=Hook()),
+        dict(z=np.zeros(9), overwrite_ld=True, prior_weights=[Hook()]),
+    ):
         with pytest.raises(ValueError):
             susie_rss(R=r, n=100, **args)
     assert called == []
@@ -297,25 +386,36 @@ def test_warning_as_error_consumes_complete_ordered_xtx_before_abort():
     bits(r, expected)
 
 
-@pytest.mark.parametrize("defect,scale,error", [("nan", 99., "R must contain only finite"),
-    ("negative", 99., "R diagonal must be nonnegative"),
-    ("scaled", 1e308, "XtX must contain only finite"),
-    ("repair", 1., "XtX must contain only finite")])
+@pytest.mark.parametrize(
+    "defect,scale,error",
+    [
+        ("nan", 99.0, "R must contain only finite"),
+        ("negative", 99.0, "R diagonal must be nonnegative"),
+        ("scaled", 1e308, "XtX must contain only finite"),
+        ("repair", 1.0, "XtX must contain only finite"),
+    ],
+)
 def test_error_priority_and_deferred_warning_match_parent(defect, scale, error):
     r = matrix()
-    if defect == "nan": r[-1, -1] = np.nan; r[2, 2] = -1.
-    elif defect == "negative": r[-1, -1] = -1.
-    elif defect == "scaled": r[-1, -1] = 2.
-    else: r[0, 1], r[1, 0] = 1e308, 1.1e308
+    if defect == "nan":
+        r[-1, -1] = np.nan
+        r[2, 2] = -1.0
+    elif defect == "negative":
+        r[-1, -1] = -1.0
+    elif defect == "scaled":
+        r[-1, -1] = 2.0
+    else:
+        r[0, 1], r[1, 0] = 1e308, 1.1e308
     outputs = []
     for overwrite in (False, True):
         trial = r.copy()
         with warnings.catch_warnings(record=True) as messages:
             warnings.simplefilter("always", RuntimeWarning)
             with pytest.raises(ValueError, match=error):
-                susie_rss(np.zeros(9), trial, scale + 1., overwrite_ld=overwrite)
+                susie_rss(np.zeros(9), trial, scale + 1.0, overwrite_ld=overwrite)
         outputs.append([str(w.message) for w in messages])
-        if not overwrite: bits(trial, r)
+        if not overwrite:
+            bits(trial, r)
     assert outputs[0] == outputs[1]
     assert bool(outputs[1]) == (defect == "repair")
 
@@ -336,6 +436,12 @@ def test_later_numerical_fit_failure_may_consume_workspace():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
         with pytest.raises(ValueError, match="prior variance is unreasonably large"):
-            susie_rss(np.ones(9), r, 100, overwrite_ld=True,
-                      scaled_prior_variance=1e12, estimate_prior_variance=False)
+            susie_rss(
+                np.ones(9),
+                r,
+                100,
+                overwrite_ld=True,
+                scaled_prior_variance=1e12,
+                estimate_prior_variance=False,
+            )
     bits(r, expected)

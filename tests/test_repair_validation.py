@@ -49,14 +49,18 @@ def test_error_message_and_priority_match_reference(bad, position, name):
     scale = 2.0
     with pytest.raises(ValueError) as expected:
         reference_repair(values, name, scale)
-    with pytest.warns(RuntimeWarning, match="not symmetric"):
-        with pytest.raises(ValueError) as actual:
-            _symmetrize_matrix(values, name, scale)
+    with (
+        pytest.warns(RuntimeWarning, match="not symmetric"),
+        pytest.raises(ValueError) as actual,
+    ):
+        _symmetrize_matrix(values, name, scale)
     assert str(actual.value) == str(expected.value)
 
 
 def test_negative_diagonal_remains_rejected():
     values = np.array([[-1.0, 0.2], [0.3, 1.0]])
-    with pytest.warns(RuntimeWarning, match="not symmetric"):
-        with pytest.raises(ValueError, match="^XtX diagonal must be nonnegative$"):
-            _symmetrize_matrix(values, "XtX")
+    with (
+        pytest.warns(RuntimeWarning, match="not symmetric"),
+        pytest.raises(ValueError, match=r"^XtX diagonal must be nonnegative$"),
+    ):
+        _symmetrize_matrix(values, "XtX")

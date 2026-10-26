@@ -1,10 +1,12 @@
 """Exact owned RSS repair parity, retaining the parent's scalar oracle."""
+
 import importlib.util
 import os
 import warnings
 
 import numpy as np
 import pytest
+
 from prusie import _native
 from prusie.api import _symmetrize_matrix
 
@@ -31,12 +33,27 @@ def scalar_parent(a, scale):
                             flags[3] &= sx >= 0
                             flags[6] &= value >= 0
                         out[i, j] = out[j, i] = value
-    for valid, message in zip(flags[:4], ["R must contain only finite values", "R diagonal must be nonnegative", "XtX must contain only finite values", "XtX diagonal must be nonnegative"]):
+    for valid, message in zip(
+        flags[:4],
+        [
+            "R must contain only finite values",
+            "R diagonal must be nonnegative",
+            "XtX must contain only finite values",
+            "XtX diagonal must be nonnegative",
+        ],
+        strict=False,
+    ):
         if not valid:
             raise ValueError(message)
     if flags[4]:
         return True, None, None
-    error = "XtX must contain only finite values" if not flags[5] else "XtX diagonal must be nonnegative" if not flags[6] else None
+    error = (
+        "XtX must contain only finite values"
+        if not flags[5]
+        else "XtX diagonal must be nonnegative"
+        if not flags[6]
+        else None
+    )
     return False, out, error
 
 
@@ -80,12 +97,26 @@ def layout(a, order):
 
 @pytest.mark.parametrize("n", [4, 5, 7, 8, 9, 15, 16, 17, 31, 32, 33, 34, 35, 63, 64, 65, 66, 67])
 @pytest.mark.parametrize("order", ["C", "F", "strided", "negative"])
-@pytest.mark.parametrize("scale", [0., -0., 1., -1., 99., np.finfo(float).max, np.finfo(float).tiny, np.nextafter(0., 1.), np.inf, np.nan])
+@pytest.mark.parametrize(
+    "scale",
+    [
+        0.0,
+        -0.0,
+        1.0,
+        -1.0,
+        99.0,
+        np.finfo(float).max,
+        np.finfo(float).tiny,
+        np.nextafter(0.0, 1.0),
+        np.inf,
+        np.nan,
+    ],
+)
 def test_parent_flags_returned_repair_bits_and_input_invariance(n, order, scale, installed_parent):
     k = np.arange(n * n).reshape(n, n)
-    a = layout(((17 * k + k // n * 11) % 67) / 128. - .25, order)
-    np.fill_diagonal(a, 1.)
-    a[0, 1], a[1, 0] = -0., np.nextafter(0., 1.)
+    a = layout(((17 * k + k // n * 11) % 67) / 128.0 - 0.25, order)
+    np.fill_diagonal(a, 1.0)
+    a[0, 1], a[1, 0] = -0.0, np.nextafter(0.0, 1.0)
     original = a.copy().view(np.uint64)
     expected = outcome(scalar_parent, a, scale)
     actual = outcome(_native.validate_and_repair_rss, a, scale)
@@ -97,35 +128,37 @@ def test_parent_flags_returned_repair_bits_and_input_invariance(n, order, scale,
 
 @pytest.mark.parametrize("order", ["C", "F"])
 @pytest.mark.parametrize("position", range(81))
-@pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf, -1., -0., np.finfo(float).max])
+@pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf, -1.0, -0.0, np.finfo(float).max])
 def test_each_position_error_priority(position, value, order, installed_parent):
     a = np.array(np.eye(9), order=order)
     a.flat[position] = value
-    actual = outcome(_native.validate_and_repair_rss, a, -2.)
-    assert_outcome(actual, outcome(scalar_parent, a, -2.))
+    actual = outcome(_native.validate_and_repair_rss, a, -2.0)
+    assert_outcome(actual, outcome(scalar_parent, a, -2.0))
     if installed_parent is not None:
-        assert_outcome(actual, outcome(installed_parent.validate_and_repair_rss, a, -2.))
+        assert_outcome(actual, outcome(installed_parent.validate_and_repair_rss, a, -2.0))
 
 
 def test_symmetric_general_repair_overflow_is_suppressed():
-    a = np.full((5, 5), 2.)
-    assert _native.validate_and_repair_rss(a, np.finfo(float).max / 2.) == (True, None, None)
+    a = np.full((5, 5), 2.0)
+    assert _native.validate_and_repair_rss(a, np.finfo(float).max / 2.0) == (True, None, None)
 
 
 def test_warning_precedes_deferred_repair_error_and_early_errors_do_not_warn():
     a = np.eye(5)
-    a[0, 1], a[1, 0] = 1., .9
+    a[0, 1], a[1, 0] = 1.0, 0.9
     symmetric, repair, error = _native.validate_and_repair_rss(a, np.finfo(float).max)
     assert not symmetric and error == "XtX must contain only finite values"
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         with pytest.raises(ValueError, match="XtX must contain only finite values"):
-            _symmetrize_matrix(a, "XtX", np.finfo(float).max, [], _prepared=repair, _repair_error=error)
+            _symmetrize_matrix(
+                a, "XtX", np.finfo(float).max, [], _prepared=repair, _repair_error=error
+            )
     assert len(caught) == 1 and "symmetric" in str(caught[0].message)
-    a[0, 0] = -1.
+    a[0, 0] = -1.0
     a[2, 3] = np.nan
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         with pytest.raises(ValueError, match="R must contain only finite values"):
-            _native.validate_and_repair_rss(a, 99.)
+            _native.validate_and_repair_rss(a, 99.0)
     assert not caught

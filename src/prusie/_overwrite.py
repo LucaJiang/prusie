@@ -2,14 +2,50 @@
 
 import numpy as np
 
-
-_SCALARS = frozenset((bool, int, float, str, np.bool_, np.int8, np.int16,
-    np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64, np.float16,
-    np.float32, np.float64, np.longdouble, np.str_))
+_SCALARS = frozenset(
+    (
+        bool,
+        int,
+        float,
+        str,
+        np.bool_,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.float16,
+        np.float32,
+        np.float64,
+        np.longdouble,
+        np.str_,
+    )
+)
 _VECTORS = frozenset(("z", "scaled_prior_variance", "prior_weights", "variant_ids"))
-_NONE = frozenset("""X maf control bhat shat var_y s_init model_init
-prior_variance_grid mixture_weights alpha0 beta0 L_greedy slot_prior
-median_abs_corr cs_extension_corr convergence""".split())
+_NONE = frozenset(
+    [
+        "X",
+        "maf",
+        "control",
+        "bhat",
+        "shat",
+        "var_y",
+        "s_init",
+        "model_init",
+        "prior_variance_grid",
+        "mixture_weights",
+        "alpha0",
+        "beta0",
+        "L_greedy",
+        "slot_prior",
+        "median_abs_corr",
+        "cs_extension_corr",
+        "convergence",
+    ]
+)
 _FALSE = frozenset(("refine", "retain_data", "track_fit", "init_only", "check_input"))
 
 
@@ -18,7 +54,7 @@ def _span(array):
     if not array.size:
         return pointer, pointer
     low = high = 0
-    for size, stride in zip(array.shape, array.strides):
+    for size, stride in zip(array.shape, array.strides, strict=False):
         offset = (size - 1) * stride
         low += min(0, offset)
         high += max(0, offset)
@@ -28,12 +64,19 @@ def _span(array):
 def _layout(matrix):
     if type(matrix) is not np.ndarray:
         raise ValueError("overwrite_ld requires a plain NumPy ndarray R")
-    if (matrix.dtype != np.dtype(np.float64) or matrix.dtype.metadata is not None
-        or not matrix.dtype.isnative or matrix.ndim != 2 or not matrix.shape[0]
-        or matrix.shape[0] != matrix.shape[1] or not matrix.flags.c_contiguous
-        or not matrix.flags.aligned or not matrix.flags.writeable
+    if (
+        matrix.dtype != np.dtype(np.float64)
+        or matrix.dtype.metadata is not None
+        or not matrix.dtype.isnative
+        or matrix.ndim != 2
+        or not matrix.shape[0]
+        or matrix.shape[0] != matrix.shape[1]
+        or not matrix.flags.c_contiguous
+        or not matrix.flags.aligned
+        or not matrix.flags.writeable
         or matrix.strides != (matrix.shape[0] * 8, 8)
-        or matrix.size > np.iinfo(np.intp).max // 8):
+        or matrix.size > np.iinfo(np.intp).max // 8
+    ):
         raise ValueError("overwrite_ld requires square writable aligned native float64 C-order R")
     owner = matrix
     seen = set()
@@ -100,8 +143,11 @@ def prepare(arguments):
     for name in ("maf_thresh", "z_ld_weight", "null_weight"):
         if type(arguments[name]) not in _SCALARS or arguments[name] != 0:
             raise ValueError(f"overwrite_ld requires {name}=0")
-    for name, expected in (("R_mismatch", "none"), ("estimate_residual_method", "MoM"),
-                           ("unmappable_effects", "none")):
+    for name, expected in (
+        ("R_mismatch", "none"),
+        ("estimate_residual_method", "MoM"),
+        ("unmappable_effects", "none"),
+    ):
         if type(arguments[name]) is not str or arguments[name] != expected:
             raise ValueError(f"overwrite_ld requires {name}={expected!r}")
     if arguments["R_finite"] is not None and arguments["R_finite"] is not False:
@@ -130,12 +176,29 @@ def prepare(arguments):
                 raise ValueError("overwrite_ld requires plain vector metadata")
             if any(type(item) not in _SCALARS for item in vector):
                 raise ValueError(f"overwrite_ld requires a flat plain vector for {name}")
-    strings = {"z_method", "R_mismatch", "estimate_residual_method",
-               "convergence_method", "unmappable_effects", "estimate_prior_method"}
-    booleans = _FALSE | {"estimate_residual_variance", "check_prior",
-                        "estimate_prior_variance", "standardize", "verbose", "overwrite_ld"}
+    strings = {
+        "z_method",
+        "R_mismatch",
+        "estimate_residual_method",
+        "convergence_method",
+        "unmappable_effects",
+        "estimate_prior_method",
+    }
+    booleans = _FALSE | {
+        "estimate_residual_variance",
+        "check_prior",
+        "estimate_prior_variance",
+        "standardize",
+        "verbose",
+        "overwrite_ld",
+    }
     for name, value in arguments.items():
-        if name == "R" or value is None or name in _VECTORS or name in ("variant_metadata", "R_finite"):
+        if (
+            name == "R"
+            or value is None
+            or name in _VECTORS
+            or name in ("variant_metadata", "R_finite")
+        ):
             continue
         if name in booleans:
             if type(value) not in (bool, np.bool_):
@@ -149,9 +212,10 @@ def prepare(arguments):
         value = arguments[name]
         if type(value) in (str, np.str_):
             raise ValueError(f"overwrite_ld requires numeric values for {name}")
-        if type(value) in (list, tuple, np.ndarray):
-            if any(type(item) in (str, np.str_) for item in value):
-                raise ValueError(f"overwrite_ld requires numeric values for {name}")
+        if type(value) in (list, tuple, np.ndarray) and any(
+            type(item) in (str, np.str_) for item in value
+        ):
+            raise ValueError(f"overwrite_ld requires numeric values for {name}")
     return arguments, layout, arrays
 
 
