@@ -41,15 +41,17 @@ def summary():
 
 
 def test_text_and_report_do_not_fit_compute_ld_or_import_plotting(monkeypatch, tmp_path):
-    import prusie.api
     import prusie.ld
     import prusie.refinement
+    import prusie.rss
+    import prusie.suff_stat
 
     def fail(*args, **kwargs):
         raise AssertionError("A display helper initiated a statistical computation")
 
     for module, names in (
-        (prusie.api, ("susie_rss", "susie_suff_stat")),
+        (prusie.rss, ("susie_rss",)),
+        (prusie.suff_stat, ("susie_suff_stat",)),
         (prusie.ld, ("diagnose_ld", "estimate_s_rss", "kriging_rss")),
         (prusie.refinement, ("refine_fit", "continue_fit", "evaluate_objective")),
         (np.linalg, ("eigh", "eigvalsh")),

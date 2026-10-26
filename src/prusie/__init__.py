@@ -11,7 +11,6 @@ from importlib import import_module
 from typing import TYPE_CHECKING, Any
 
 from ._types import CredibleSetAudit, FitParameters, InputChecks
-from .api import susie_rss, susie_ss, susie_suff_stat
 from .constructors import susie_auto, susie_trendfilter
 from .control import (
     RSSControl,
@@ -44,6 +43,8 @@ from .getters import (
 from .individual import calc_z, compute_suff_stat, susie, univariate_regression
 from .refinement import RefinementConfig, continue_fit, evaluate_objective, refine_fit
 from .result import InputQuality, SusieResult
+from .rss import susie_rss
+from .suff_stat import susie_ss, susie_suff_stat
 from .workhorse import SusieInputs, susie_workhorse
 
 if TYPE_CHECKING:

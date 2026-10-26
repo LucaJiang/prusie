@@ -8,7 +8,8 @@ import warnings
 import numpy as np
 import pytest
 
-from prusie import _native, api, susie_rss
+from prusie import _native, susie_rss
+from prusie import rss as api
 
 _PUBLIC_ARGUMENTS = set(inspect.signature(susie_rss).parameters)
 

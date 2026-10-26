@@ -72,7 +72,7 @@ def test_module_warning_filter_keeps_original_helper_stack():
     with warnings.catch_warnings(record=True):
         warnings.simplefilter("always")
         warnings.filterwarnings(
-            "error", message="XtX is not symmetric", category=RuntimeWarning, module=r"prusie\.api"
+            "error", message="XtX is not symmetric", category=RuntimeWarning, module=r"prusie\.rss"
         )
         with pytest.raises(RuntimeWarning, match="XtX is not symmetric"):
             susie_rss(

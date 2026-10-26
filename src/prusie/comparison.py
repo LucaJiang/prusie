@@ -1007,8 +1007,8 @@ def run_sensitivity(
     supplied, equality of its z-scores and LD with ``inputs`` cannot be
     verified and is reported as not assessed.
     """
-    from .api import susie_rss
     from .diagnostics import ConvergenceConfig, resolve_convergence
+    from .rss import susie_rss
 
     fit_function = susie_rss if fit_function is None else fit_function
     if not isinstance(inputs, dict) or not isinstance(plan, (list, tuple)):

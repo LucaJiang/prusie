@@ -96,11 +96,11 @@ def test_proxies_are_direct_and_do_not_change_formal_cs():
 
 
 def test_posterior_filter_reextract_does_not_run_ibss(monkeypatch):
-    import prusie.api
+    import prusie.rss
 
-    monkeypatch.setattr(prusie.api, "susie_rss", lambda *a, **k: pytest.fail("summary ran IBSS"))
+    monkeypatch.setattr(prusie.rss, "susie_rss", lambda *a, **k: pytest.fail("summary ran IBSS"))
     monkeypatch.setattr(
-        prusie.api._native, "fit", lambda *a, **k: pytest.fail("summary ran native IBSS")
+        prusie.rss._native, "fit", lambda *a, **k: pytest.fail("summary ran native IBSS")
     )
     fit = toy_fit([[0.7, 0.2, 0.1]], R=np.ones((3, 3)))
     summary = summarize(fit, np.ones((3, 3)), coverage=0.95, min_abs_corr=0.2)
