@@ -220,7 +220,7 @@ class SusieResult:
 
     @property
     def ibss_converged(self) -> bool:
-        """Convergence of the returned IBSS fit, independent of any refinement."""
+        """Alias of converged; the recorded inner flag is in convergence."""
         return self.converged
 
     @property
@@ -252,7 +252,12 @@ class SusieResult:
 
     @property
     def coef(self) -> np.ndarray:
-        """Posterior mean effects ∑_ℓ α_ℓj μ_ℓj / d_j on the input predictor scale."""
+        """Posterior mean effects on the input scale, including slot activity."""
+        if self.slot_weights is not None:
+            mean = np.sum((self.alpha * self.mu) * self.slot_weights[:, None], axis=0)
+            return (
+                mean[: len(self.variant_ids)] / self.X_column_scale_factors[: len(self.variant_ids)]
+            )
         return (
             np.sum(self.alpha * self.mu, axis=0)[: len(self.variant_ids)]
             / self.X_column_scale_factors[: len(self.variant_ids)]

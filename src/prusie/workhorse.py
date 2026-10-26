@@ -158,7 +158,14 @@ def _fit(request: _FitRequest, *, _executor=None) -> SusieResult | SusieInputs:
         covariance_multiplier=_rss_matrix_scale,
         audit=cs_audit,
     )
-    intercept = y_mean_value - float(np.sum(means * np.sum(alpha * native["mu"], axis=0) / scales))
+    slot_weights = native.get("slot_weights")
+    if slot_weights is None:
+        intercept = y_mean_value - float(
+            np.sum(means * np.sum(alpha * native["mu"], axis=0) / scales)
+        )
+    else:
+        mean = np.sum((alpha * native["mu"]) * slot_weights[:, None], axis=0)
+        intercept = y_mean_value - float(np.sum(means * mean / scales))
     summary, trace = convergence_summary(native, options, control)
     summary["config_resolution"] = resolution.copy()
     summary["legacy_requested_config"] = control.options()

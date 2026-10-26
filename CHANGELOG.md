@@ -27,6 +27,13 @@
   result schemas with `py.typed`. Analysis imports are lazy: importing `prusie`
   does not load SciPy or Matplotlib.
 - Add the `portable-math` build feature for the existing scalar fallback.
+- Include fitted slot-activity probabilities in posterior mean coefficients,
+  intercepts and individual-level predictions. This corrects these exports for
+  slot-prior models without changing alpha, PIP or the fitted model. Historical
+  R intercept exports also omitted these weights and remain preserved references.
+- Make refinement plot metadata retain the recorded objective definition and
+  label the effective PIP stopping thresholds with the fitting tolerance.
+  Clarify convergence docstrings without changing solver stopping rules.
 - Default `susie_rss_lambda` to `L=10`, validate explicit L before capping it
   at the retained variant count, and exclude an added null column from that cap.
   Explicit `L=None` remains an alias for 10.

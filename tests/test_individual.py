@@ -16,6 +16,53 @@ CASES = [
     for name, case in FIXTURE["cases"].items()
     if case["api"] in ("susie", "susie_ss") and case["status"] == "ok"
 ]
+SLOT_CASES = [
+    name for name in CASES if (FIXTURE["cases"][name].get("special") or "").startswith("slot")
+]
+
+
+@pytest.mark.parametrize("name", SLOT_CASES)
+@pytest.mark.parametrize("sparse_design", [False, True])
+@pytest.mark.parametrize("standardize", [False, True])
+def test_slot_prior_predictions_are_activity_weighted_posterior_means(
+    name, sparse_design, standardize
+):
+    case = FIXTURE["cases"][name]
+    data = FIXTURE["datasets"][case["data"]]
+    X, y = np.asarray(data["X"]), np.asarray(data["y"])
+    special = case["special"]
+    prior = (
+        prusie.slot_prior_betabinom(a_beta=1, b_beta=2)
+        if special == "slot_betabinom"
+        else prusie.slot_prior_poisson(
+            3, nu=8, update_schedule="batch" if special.endswith("batch") else "sequential"
+        )
+    )
+    options = dict(
+        L=3,
+        max_iter=100,
+        tol=0.001,
+        estimate_residual_variance=False,
+        residual_variance=1,
+        n_purity="auto",
+    )
+    options.update(case["options"] or {})
+    options.update(slot_prior=prior, standardize=standardize)
+    fit = prusie.susie(sparse.csc_matrix(X) if sparse_design else X, y, **options)
+    assert np.any(fit.slot_weights < 0.99), "Exercise an uncertain component's activity"
+    centered = (X - X.mean(axis=0)) / fit.X_column_scale_factors
+    # Average each component's conditional prediction over its activity event.
+    contributions = centered @ (fit.alpha * fit.mu).T
+    prediction = y.mean() + contributions @ fit.slot_weights
+    np.testing.assert_allclose(fit.fitted, prediction, atol=1e-12, rtol=0)
+    np.testing.assert_allclose(X @ fit.coef + fit.intercept, prediction, atol=1e-12, rtol=0)
+    np.testing.assert_allclose(
+        fit.intercept, y.mean() - X.mean(axis=0) @ fit.coef, atol=1e-12, rtol=0
+    )
+    if standardize:
+        # Preserve the original component-alpha reference; the historical R
+        # intercept export also omitted activity and remains unchanged on disk.
+        np.testing.assert_allclose(fit.alpha, case["reference"]["alpha"], atol=1e-5, rtol=0)
 
 
 @pytest.mark.parametrize("name", CASES)
