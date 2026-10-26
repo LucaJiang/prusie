@@ -78,19 +78,19 @@ protocol, and [numerical accuracy](numerical_accuracy.md) for validation.
 
 ## Sensitivity and refinement
 
-![Candidate PIPs under four settings: leading credible sets persist while a fixed prior variance changes PIPs elsewhere.](examples/post_analysis/stable/figure_5.png)
+![PIPs before refinement, after refinement and with a larger component limit in the official susieR example.](examples/post_analysis/official/figure_5.png)
 
-Fixing the scaled prior variance at a positive value preserves the two leading
-credible sets but raises PIP at other variants: `syn0143` changes from about
-5.3e-11 to 0.2544. All five components retain positive prior variance, including
-three without a credible set. The [worked examples](worked_examples.md) explain
-this sensitivity and a second example in which refinement finds a higher ELBO.
+The official susieR [Toy example](worked_examples.md) shows a fit that meets its
+stopping rule and then improves under refinement. Posterior support moves from
+two singleton credible sets to a different singleton, while a pair of variants
+in strong LD remains unresolved. The saved report presents every retained
+credible set and the LD to each set's top variant.
 
 ## Documentation
 
 <div class="start-links" markdown="1">
 
-[Quick start](example.md) [Reading results](results.md) [Worked examples](worked_examples.md)
+[Quick start](example.md) [Reading results](results.md) [Toy example](worked_examples.md)
 
 </div>
 
