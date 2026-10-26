@@ -111,6 +111,7 @@ def test_instrumentation_and_numpy_scalars_preserve_path_and_alpha(
                 prior_tol=np.float64(1e-9),
                 tol=np.float64(1e-4),
                 standardize=np.bool_(True),
+                z_method=np.str_("wald"),
             )
         args = case(**updates)
         original_matrix = args["R"].copy()

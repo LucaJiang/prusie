@@ -170,7 +170,10 @@ def prepare(arguments):
         raise ValueError("overwrite_ld requires R_finite=None or False")
     if arguments["convergence_method"] is not None and arguments["convergence_method"] != "elbo":
         raise ValueError("overwrite_ld supports only elbo convergence")
-    if type(arguments["z_method"]) is not str or arguments["z_method"] not in ("wald", "score"):
+    if type(arguments["z_method"]) not in (str, np.str_) or arguments["z_method"] not in (
+        "wald",
+        "score",
+    ):
         raise ValueError("overwrite_ld requires plain wald or score z_method")
     if arguments["z"] is None or arguments["n"] is None:
         raise ValueError("overwrite_ld requires z and n")
@@ -220,7 +223,7 @@ def prepare(arguments):
             if type(value) not in (bool, np.bool_):
                 raise ValueError(f"overwrite_ld requires a bool for {name}")
         elif name in strings or (name == "n_purity" and value == "auto"):
-            if type(value) is not str:
+            if type(value) is not str and not (name == "z_method" and type(value) is np.str_):
                 raise ValueError(f"overwrite_ld requires a plain string for {name}")
         elif type(value) in (bool, np.bool_, str, np.str_):
             raise ValueError(f"overwrite_ld requires a numeric scalar for {name}")
