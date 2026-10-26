@@ -141,7 +141,12 @@ def test_report_reading_order_safe_local_exports_and_no_fact_dom(tmp_path):
     assert "query" in page and "analysis_summary.json" in page
 
 
-def test_refinement_reports_uniform_objective_accepted_candidates_and_stage_controls(tmp_path):
+@pytest.mark.parametrize(
+    "objective_definition", [None, "last_logged_elbo; original prior; susieR refinement"]
+)
+def test_refinement_reports_recorded_objective_accepted_candidates_and_stage_controls(
+    tmp_path, objective_definition
+):
     summary = example_summary()
     control = {
         "convergence": {"criterion": "joint", "alpha_tol": 2e-6},
@@ -177,7 +182,11 @@ def test_refinement_reports_uniform_objective_accepted_candidates_and_stage_cont
             },
         ],
     }
+    if objective_definition is not None:
+        summary["refinement"]["objective_definition"] = objective_definition
     compact = analysis_summary(summary)
+    expected_definition = objective_definition or "not_assessed"
+    assert compact["refinement"]["objective_definition"] == expected_definition
     assert compact["refinement"]["improvement"] == 3.0
     assert compact["refinement"]["attempts"] == 2
     assert compact["refinement"]["accepted_attempts"] == 1
@@ -189,7 +198,9 @@ def test_refinement_reports_uniform_objective_accepted_candidates_and_stage_cont
     assert search["history"][0]["stages"]["B"]["solver_settings"] == control
     write_report(summary, tmp_path)
     page = (tmp_path / "index.html").read_text()
-    assert "Accepted attempts" in page and "post-trim" in page
+    assert "Accepted attempts" in page
+    assert "Recorded search objective: " + expected_definition in page
+    assert "Recomputed post-finalization ELBO is a separate diagnostic" in page
     assert "negative rejected candidate" in page
 
 
