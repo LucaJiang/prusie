@@ -562,7 +562,7 @@ def analysis_summary(
         before_objective=before_objective,
         after_objective=after_objective,
         improvement=improvement,
-        objective_definition=refinement.get("objective_definition", "not_assessed"),
+        objective_definition=refinement.get("objective_definition") or "not recorded",
         before_logged_elbo=before.get("logged_elbo"),
         after_logged_elbo=after.get("logged_elbo"),
         config=_plain(refinement.get("config", {})),

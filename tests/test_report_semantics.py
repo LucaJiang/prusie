@@ -142,7 +142,7 @@ def test_report_reading_order_safe_local_exports_and_no_fact_dom(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "objective_definition", [None, "last_logged_elbo; original prior; susieR refinement"]
+    "objective_definition", ["missing", None, "last_logged_elbo; original prior; susieR refinement"]
 )
 def test_refinement_reports_recorded_objective_accepted_candidates_and_stage_controls(
     tmp_path, objective_definition
@@ -182,10 +182,12 @@ def test_refinement_reports_recorded_objective_accepted_candidates_and_stage_con
             },
         ],
     }
-    if objective_definition is not None:
+    if objective_definition != "missing":
         summary["refinement"]["objective_definition"] = objective_definition
     compact = analysis_summary(summary)
-    expected_definition = objective_definition or "not_assessed"
+    expected_definition = (
+        objective_definition if objective_definition not in ("missing", None) else "not recorded"
+    )
     assert compact["refinement"]["objective_definition"] == expected_definition
     assert compact["refinement"]["improvement"] == 3.0
     assert compact["refinement"]["attempts"] == 2

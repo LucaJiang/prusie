@@ -13,6 +13,8 @@
   stderr replacement, tracing, profiling and logging warning capture do not
   change preparation eligibility. Warnings are emitted on the calling thread
   after preparation workers join, with their original text and order.
+  Equal native float64 dtypes restored by serialization have the same
+  preparation eligibility as freshly allocated arrays.
 - Add opt-in `overwrite_ld=True` for the restricted ordinary z/R/n route.
   It may consume LD and its aliases as an XtX workspace, including when a later
   error occurs. The default preserves inputs. `fit.params['overwrite_ld']` and
@@ -38,6 +40,12 @@
   referenced to its own component's highest-alpha member. Reports identify
   zero-based component rows and preserve the recorded refinement objective.
   Use the official susieR convergence fixture for the Toy example report.
+  With `R` and no explicit reference, caller-supplied `axes` must contain
+  `3 + max(1, number_of_CS)` tracks, plus one for a gene track. Missing `R`
+  or an explicit `reference_variant` uses one LD track. With `R`, malformed
+  CS summaries lacking member IDs or finite component alpha raise `ValueError`.
+  Report top-ten selections exclude zero-PIP variants; an absent or empty
+  refinement objective definition is labelled "not recorded".
 - Default `susie_rss_lambda` to `L=10`, validate explicit L before capping it
   at the retained variant count, and exclude an added null column from that cap.
   Explicit `L=None` remains an alias for 10.

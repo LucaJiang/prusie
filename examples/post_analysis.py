@@ -102,6 +102,10 @@ def write_source_assets(output):
     output.mkdir(parents=True, exist_ok=True)
     for name in ("metadata.json", "LICENSE.txt", "LICENSE-BSD-3-Clause.txt"):
         shutil.copyfile(files("prusie").joinpath("data/convergence", name), output / name)
+    (output / "README.txt").write_text(
+        "LICENSE.txt and LICENSE-BSD-3-Clause.txt preserve the two identical attribution "
+        "stubs from the frozen fixture. BSD-3-Clause.txt supplies the complete license terms.\n"
+    )
     notices = Path(__file__).resolve().parents[1] / "THIRD_PARTY_NOTICES.md"
     terms = notices.read_text().split("### susieR\n", 1)[1].split("### R Brent_fmin", 1)[0]
     full = terms[terms.index("Copyright (c)") :].strip() + "\n"
