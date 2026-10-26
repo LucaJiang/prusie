@@ -1,175 +1,225 @@
 # Inputs, alignment and priors
 
-Align association statistics and LD to the same variant order and effect
-alleles before fitting. prusie checks numerical arrays; the study design,
-allele harmonization and covariate adjustment belong to the input preparation.
+Choose the input route that matches the available study data and apply any
+required covariate adjustment before fitting. For association summary
+statistics, align the summaries and linkage disequilibrium (LD) matrix to the
+same variant order and effect alleles.
+
+prusie checks array shapes and numerical values, but these checks do not
+establish allele alignment or agreement between reference LD and the study.
+[Statistical model](model.md#from-summaries-to-working-sufficient-statistics)
+explains how the supplied summaries determine the working likelihood and
+effect scale.
 
 ## Supported model and input routes
 
-prusie fits Gaussian SuSiE on CPU in float64, using individual-level data,
-summary statistics or centered sufficient statistics. Choose the route that preserves the scale
-information available for the study:
+prusie fits Gaussian SuSiE on CPU using float64 arithmetic. The input route
+determines how regression quantities and effect scales are obtained:
 
-| Inputs | Working representation and coefficient interpretation |
-| --- | --- |
-| `X`, `y` via `susie` | Dense or sparse individual data, with optional centering and standardization |
-| `z`, `R`, `n` | Finite-sample Wald-adjusted summaries on a standardized working scale |
-| `bhat`, `shat`, `R`, `n` | Forms signed z as bhat/shat, then uses the same standardized route |
-| `bhat`, `shat`, `R`, `n`, `var_y` | Reconstructs predictor crossproducts using the known phenotype sample variance; `coef` returns original-scale coefficients |
-| `z`, `R`, `n`, `var_y` | Sets response sum of squares and initial variance scales; leaves z-based crossproducts unchanged |
-| `z` or `bhat/shat`, `R`, with n omitted | Noncentrality-parameter likelihood; emits a warning and uses `prior_variance` |
-| `XtX`, `Xty`, `yty`, `n` | Centered sufficient statistics via `susie_suff_stat` |
-| Summaries and reference `X` via `susie_rss` | Reference rows may differ from association n; ordinary single-panel products are matrix-free |
-| `z`, `R` via `susie_rss_lambda` | RSS with fixed or estimated regularization |
-| Summaries via `susie_ser` | One-effect regression without LD |
+| Entry point | Inputs | Interpretation |
+| --- | --- | --- |
+| `susie` | `X`, `y` | Individual-level regression with optional centering and predictor standardization |
+| `susie_suff_stat` | `XtX`, `Xty`, `yty`, `n` | Sufficient statistics from the same centered data |
+| `susie_rss` | `z` or both `bhat` and `shat`, plus `R`, `n` | Standardized working scale; Wald adjustment by default |
+| `susie_rss` | `bhat`, `shat`, `R`, `n`, `var_y` | Reconstructs regression scale; `coef` returns effects per original predictor unit in phenotype units |
+| `susie_rss` | `z`, `R`, `n`, `var_y` | Sets `yty` and default initial variances; leaves z-based `XtX` and `Xty` unchanged |
+| `susie_rss` | `z` or both `bhat` and `shat`, plus `R`, without `n` | Noncentrality effects; warns and uses `prior_variance` |
+| `susie_rss_lambda` | `z`, `R` or reference `X`, and `lambda_` | RSS with a fixed or estimated isotropic covariance component |
+| `susie_ser` | `z` or both `bhat` and `shat` | Single-effect regression without LD |
 
-For individual-level data, rows are observations and columns are predictors.
-SciPy sparse input remains sparse. `na_rm=True` removes missing-outcome rows;
-predictor entries must be finite. `intercept=True` centers predictors and outcome.
-Do not pass unadjusted genotypes and outcomes when covariate adjustment is required
-by the scientific analysis: perform that adjustment before fitting.
+For `susie`, rows of `X` are observations and columns are predictors.
+`intercept=True` centers `X` and `y`; `standardize=True` enables predictor
+standardization. SciPy sparse input stays sparse. `na_rm=True` removes rows
+with missing outcomes; predictor entries must be finite.
 
-Advanced RSS options include score-statistic preparation, multiple reference
-panels, mismatch variance and finite-reference corrections. These are explicit
-model choices; they are not automatic repairs of the ordinary RSS input route.
-Reference `X` is converted to dense correlation matrices for finite-reference or
-mismatch corrections, panel lists, RSS-lambda, and effect reconstruction using
-`bhat`, `shat` and `var_y`.
-See [the API](api.md#shared-fitting-options) for their controls.
+Single-panel `susie_rss` accepts either `z` or both `bhat` and `shat`; effect
+estimates give `z = bhat / shat`. With known `n`, `z_method="wald"` applies
+the finite-sample Wald adjustment; `z_method="score"` skips it. Supply `var_y`
+as the measured sample phenotype variance. Without `n`, it is checked and
+recorded but does not change the likelihood. The
+[model derivation](model.md#from-summaries-to-working-sufficient-statistics)
+explains these transformations and their scale assumptions.
 
-The [model page](model.md#from-summaries-to-working-sufficient-statistics)
-derives each transformation. Provide either z or both bhat and shat. `var_y`
-is a measured sample phenotype variance, not a value inferred from a trait name
-or normalized-looking statistics. In missing-n mode it is checked and recorded
-but does not change the working likelihood.
+`susie_rss` also accepts reference genotypes `X` instead of `R`; the reference
+row count may differ from the association sample size `n`. Ordinary
+single-panel products do not require dense LD. Finite-reference or mismatch
+corrections, multiple panels, RSS-lambda, and reconstruction using `bhat`,
+`shat` and `var_y` form dense matrices from reference `X`.
+
+Multiple reference panels require `n` and a shared `z` vector. They and the
+`R_finite` and `R_mismatch` options change the RSS model and require aligned
+inputs. See [additional model options](model.md#additional-model-options)
+and [API controls](api.md#shared-fitting-options).
 
 ## Shapes and numerical checks
 
-For $p$ biological variants, z or bhat and `variant_ids` have length $p$;
-R has shape $(p,p)$. `shat` is either a strictly positive scalar shared by all
-variants or a length-$p$ vector of positive standard errors. Positive infinite
-standard errors are accepted: a finite bhat then produces z = 0. Missing
-effect estimates or standard errors remain invalid. IDs are distinct
-nonempty strings. `variant_metadata` contains aligned length-$p$ columns copied
-into the result; metadata does not itself establish allele correctness.
+For `susie_rss` with `R` and for `susie_suff_stat`, let $p$ be the number of
+input variants. The vectors `z`, `bhat` and `Xty` have length $p$, and `R`
+and `XtX` have shape $(p,p)$. Supplied `variant_ids` are converted to strings
+and must contain $p$ distinct nonempty IDs. Each `variant_metadata` column
+must have length $p$ and is copied into the result.
 
-`R` should contain **signed correlation r**; supplying correctly scaled LD
-remains the caller's responsibility. Singular LD is allowed. Every entry must
-be finite and diagonal entries nonnegative. As in ordinary dense susieR RSS,
-the fitter does not impose a separate unit-diagonal or correlation-range check.
-For ordinary z/R input, symmetry follows susieR 0.16.6's dense
-numeric path: off-diagonal entries of the working `XtX = (n - 1) * R` must
-compare exactly equal. There is no numerical symmetry tolerance. With missing
-n, this check applies to `XtX = R`. If the check fails, the API issues a
-`RuntimeWarning` and uses `(XtX + XtX.T) / 2` internally before fitting.
-Scaling precedes averaging. With bhat, shat, n and var_y, the reconstructed
-original-scale XtX is always averaged, as in susieR. Caller arrays are never
-modified. No ridge adjustment or eigenvalue clipping is applied.
+For RSS effect-estimate inputs, `bhat` must be finite. `shat` is a strictly
+positive scalar or a length-$p$ vector of positive standard errors, without
+missing values. Positive infinity is accepted: a finite `bhat` then gives
+`z = 0`. For z-score input, missing values (`NaN`) are replaced with zero
+with a `RuntimeWarning`; infinite z-scores are rejected.
 
-`susie_suff_stat` requires a finite predictor crossproduct `XtX`,
-nonnegative finite `yty`, and $n>1$. Missing z-scores and missing `Xty`
-entries are replaced with zero with a warning. Infinite summaries
-are rejected. With `check_input=True`, `Xty` must be finite before the optional
-projection check. Zero `yty` requires zero `Xty` and an explicitly fixed positive
-residual variance. These quantities describe the same centered data.
-`X_colmeans` and `y_mean` recover an original-scale intercept; missing means
-leave it NaN. Predictor standardization is enabled by default, and `coef`
-reverses its stored scales. Direct XtX uses the same exact check, warning and
-internal averaging. Basic finite/diagonal checks always run, including after
-averaging; overflow is rejected even where R's constructor permits it.
-`check_input=True` adds an eigendecomposition, rejects negative eigenvalues at
-or below `-r_tol`, and warns when the squared projection fraction onto eigenvectors
-with eigenvalues at most machine epsilon exceeds machine epsilon. This check
-has no absolute response-magnitude floor; zero eigenvalues remain legal when
-`r_tol=0`. It does not
-apply a positive-semidefinite repair or certify its external provenance.
+`susie_suff_stat` requires crossproducts from the same centered data, a finite
+nonnegative `yty`, and finite $n>1$. With the default `check_input=False`,
+missing `Xty` entries are replaced with zero with a `RuntimeWarning`;
+`check_input=True` rejects them. Infinite `Xty` entries are always rejected.
+For `yty=0`, `Xty` must be zero, `residual_variance` must be explicitly
+positive, and `estimate_residual_variance=False` is required. `X_colmeans`
+and `y_mean` recover the original-scale intercept; omitting either leaves it
+`NaN`. See [data, notation and scale](model.md#data-notation-and-scale) for
+centering, standardization and coefficient units.
+
+`R` must represent signed LD correlations. Singular LD is allowed. Matrix
+entries must be finite and diagonals nonnegative; ordinary RSS does not
+separately check for a unit diagonal or entries in $[-1,1]$. Supplying
+correctly scaled LD remains the caller's responsibility.
+
+For ordinary z-score RSS, symmetry is checked exactly on the working
+`XtX = (n - 1) * R`, or `XtX = R` without `n`. Unequal off-diagonal pairs
+trigger a `RuntimeWarning` and averaging as `(XtX + XtX.T) / 2`, with scaling
+performed before averaging. Direct `XtX` uses the same exact check and
+averaging rule. With `bhat`, `shat`, `n` and `var_y`, the reconstructed
+`XtX` is always averaged. Finite-value and diagonal checks also apply to the
+averaged matrix; overflow raises `ValueError`.
+
+Caller arrays are preserved by default. The opt-in `overwrite_ld=True` can
+consume `R` even if the call later fails. Reload the original LD before reuse;
+[Optional LD workspace](api.md#optional-ld-workspace) gives the supported
+inputs and preservation contract.
+
+Shape, finite-value and diagonal checks always run. `check_input=True` adds
+an eigendecomposition before predictor standardization. It rejects negative
+eigenvalues at or below `-r_tol`; zero eigenvalues remain legal, including
+with `r_tol=0`. Let $\epsilon$ be float64 machine epsilon. A `RuntimeWarning`
+is issued when the fraction of squared `Xty` norm projected onto eigenvectors
+with eigenvalues at most $\epsilon$ exceeds $\epsilon$. This relative check
+has no absolute cutoff on `Xty` magnitude. No ridge adjustment, eigenvalue
+clipping or positive-semidefinite repair is applied.
 
 ## Variant order and alleles
 
-Preserve genome build, counted allele, association effect allele, population,
-reference sample selection and SNP order in the analysis record. Resolve
-ambiguous strand or palindromic alleles from appropriate evidence before
-fitting. A permutation must be applied to both R axes, every association vector
-and every metadata column.
+`variant_ids` label the input order; the fitter does not match association
+summaries to LD by ID. Apply each permutation or subset to both axes of `R`
+or `XtX`, all variant-level vectors (including `prior_weights` and `maf`),
+IDs and metadata columns. For `X`, apply the selection to its columns.
 
-If allele recoding multiplies each effect by $d_j\in\{-1,+1\}$, apply the same
-signs to z and both LD axes:
+Record genome build, counted allele, association effect allele, population,
+reference sample selection and variant order. Resolve ambiguous strand or
+palindromic alleles using appropriate evidence before fitting; the fitter
+does not infer allele orientation.
 
-This illustrative fragment assumes aligned NumPy arrays `z`, `R` and a vector
-`signs` containing the required +1 or −1 recoding for each variant:
+For aligned NumPy arrays `z` and `R`, let `signs` be a length-$p$ vector
+containing `-1` for variants whose effect allele is reversed and `+1`
+otherwise. Apply the signs to z-scores and both LD axes:
 
 ```python
 z_new = signs * z
 R_new = signs[:, None] * R * signs[None, :]
 ```
 
-For effect-estimate inputs, recode bhat in the same way and leave shat unchanged.
-Update the allele metadata consistently. The API does not infer these signs or
-automatically filter variants. Explicit `maf`/`maf_thresh` filtering applies before fitting.
+For effect-estimate inputs, multiply `bhat` by the same `signs` and leave
+`shat` unchanged. Update the allele metadata consistently.
+
+Filtering is explicit. When `maf` is supplied, `susie_rss` and
+`susie_suff_stat` retain variants with `maf > maf_thresh` (default
+`maf_thresh=0.0`), applying the same selection to the working matrix,
+summary vector, prior weights, IDs and metadata.
 
 ## Priors and zero-information columns
 
-`scaled_prior_variance` accepts a nonnegative scalar or length-L vector,
-including values above one. With missing n, the likelihood instead uses
-`prior_variance`, and the unused `scaled_prior_variance` is ignored. An omitted
-`null_weight` or `null_weight=None` means no added null column. `tol=None`
-resolves to the ordinary Gaussian default `1e-4`.
+Let $L$ be the requested maximum number of single-effect components.
+In `susie`, `susie_suff_stat` and `susie_rss`, `scaled_prior_variance`
+accepts a finite nonnegative scalar or length-$L$ vector, including values
+above one. The
+[model definition](model.md#a-sum-of-single-effects) explains its scale.
+Without `n`, `susie_rss` uses `prior_variance` and ignores
+`scaled_prior_variance`.
 
-Warm starts can initialize a new fit on different summaries. A minimal
-`s_init` mapping contains working-coordinate `alpha`, `mu` and `mu2`; supplied
-variant/allele/scale metadata is checked rather than silently reordered or
-transformed. New fits do not require a retained-data hash. Continuation still
-requires the original retained data and its integrity checks. If the initial
-state has more effects than requested L, its effect count is retained, as in
-pinned susieR. Initialization retains original component row order; credible-set
-return order does not reorder the supplied alpha matrix.
+`prior_weights` supply one weight per input variant, in the supplied order.
+They must be finite and nonnegative with a positive finite total; default
+weights are uniform. Normalization gives prior location probabilities
+$\pi_j$, shared across components.
 
-`prior_weights` are finite nonnegative variant weights with a positive finite
-total. Default weights are uniform. With a null weight $w_0$, the raw vector
-is augmented as $((1-w_0)w_1,\ldots,(1-w_0)w_p,w_0)$, then the **whole** vector
-is normalized. Consequently the final null probability equals `null_weight`
-when the biological weights already sum to one. Arbitrarily rescaling raw
-weights in the presence of a null column can change that probability. The
-null column is appended internally with zero crossproducts; provide only
-biological IDs and metadata. For `susie_rss_lambda`, the null column does not
-increase the cap on `L`: the cap is the variant count after MAF filtering.
+A positive `null_weight` appends a column with zero crossproducts. Write
+$w_0=\mathtt{null\_weight}$, with $0<w_0<1$. For $p$ retained variants with
+weights $w_1,\ldots,w_p$ before normalization, the augmented vector is
 
-SER computes log weights using $\log(\pi_j+\sqrt{\epsilon})$, where
-$\epsilon$ is float64 machine epsilon. Thus zero supplied weights are smoothed
-rather than enforcing absolute exclusion. The likelihood uses sampling
-variances floored at machine epsilon. A nonfinite marginal estimate or sampling
-variance, as produced by a zero-information column, receives log BF zero and
-zero conditional moments. Ordinary positive-variance updates follow the
-[Gaussian formulas](model.md#one-single-effect-regression). A zero V also has
-zero conditional moments for an informative column.
+$$
+\bigl((1-w_0)w_1,\ldots,(1-w_0)w_p,w_0\bigr).
+$$
 
-These priors enter fitting. `lbf_variable` contains Bayes factors before variant
-weighting; posterior probabilities already incorporate the weights. Active
-component thresholds and final trimming are specified once in
-[Results](results.md#iterations-and-finalization).
+The whole vector is normalized. The normalized null prior equals $w_0$ when
+the variant weights sum to one; rescaling unnormalized weights can change
+it. For these three fitters, `null_weight=0` (the default) or `None` adds no
+column. Supply only biological variant IDs and
+metadata. For `susie_rss_lambda`, the cap on $L$ remains the variant count
+after MAF filtering, excluding the null column.
+
+The ordinary Gaussian SER uses $\log(\pi_j+\sqrt{\epsilon})$ for prior
+weighting, where $\epsilon$ is float64 machine epsilon. A supplied zero
+weight can therefore receive positive posterior probability. To exclude a
+variant, remove it consistently from the inputs as described under
+[Variant order and alleles](#variant-order-and-alleles).
+
+A zero working crossproduct diagonal produces nonfinite internal marginal
+quantities. The ordinary Gaussian SER assigns that column log BF zero and
+zero conditional moments; its posterior location probability can remain
+positive. For finite sampling variances, log Bayes-factor calculations use
+a floor of $\epsilon$.
+
+`lbf_variable` stores log Bayes factors before variant weighting; posterior
+probabilities incorporate the weights. [Results](results.md#iterations-and-finalization)
+describes component activity thresholds and final trimming.
+
+`model_init` (alias `s_init`) accepts a previous fit or a working-coordinate
+mapping containing `alpha`, `mu` and `mu2`. New fits may use different
+summaries; supplied IDs, allele labels, scales and null layout are checked
+for agreement. Component rows keep their input order. If the state has more
+components than requested $L$, its count is retained with a warning. Source
+data retention is unnecessary for a new fit;
+[continuation](post_analysis.md#continue-first-then-consider-refinement)
+requires the original retained context and integrity checks.
 
 ## Choosing variance and iteration settings
 
-RSS fixes residual variance by default, appropriate when using external LD.
-Estimating it requires in-sample LD consistent with the association summaries;
-requesting it through RSS emits a warning. Sufficient-statistic fitting enables
-estimation by default. A nonpositive or nonfinite estimate raises an error.
+For the ordinary Gaussian model, `susie_rss` fixes residual variance by
+default. Estimating it requires in-sample LD consistent with the association
+summaries; requesting estimation emits a warning. `susie` and
+`susie_suff_stat` enable estimation by default. A nonpositive or nonfinite
+residual-variance estimate raises `ValueError` before
+`residual_variance_lowerbound` and `residual_variance_upperbound` are applied.
+See [residual-variance updates](model.md#elbo-and-residual-variance)
+for the update and its order relative to stopping.
 
-With `check_prior=True`, the prior-variance sanity check uses the **current**
-residual variance at the post-sweep check, before that sweep's optional residual
-variance update. In working sufficient-statistic coordinates $Q$ and $u$,
-informative columns have $z_j^2=u_j^2/(Q_{jj}\sigma^2)$. The check rejects a
-component variance above $100\max_j z_j^2$. Zero-information columns do not
-provide a finite marginal z. This check is a diagnostic for extreme fitted
-variance or summary/LD inconsistency, not proof that the input LD is appropriate.
+In the ordinary solver, `check_prior=True` (the `susie_rss` default) checks
+component prior variances after each sweep, before updating residual variance.
+Let $\mathbf Q$ and
+$\mathbf g$ denote the working predictor and predictor–response crossproducts,
+and $\sigma^2$ the current residual variance. When any $Q_{jj}>0$, the check
+rejects a component prior variance exceeding
 
-The public RSS iteration limit is 50 and the sufficient-statistic limit is 100;
-these are caps, with early stopping controlled by `tol`. Both default to
-`tol=0.0001`. [API](api.md#shared-fitting-options) lists parameter defaults and
-errors; [Results](results.md#iterations-and-finalization) explains the returned
-status. The settings of numerical comparisons are recorded separately on
-[Numerical accuracy](numerical_accuracy.md).
+$$
+100\max_{j:Q_{jj}>0}\frac{g_j^2}{Q_{jj}\sigma^2}.
+$$
 
-A dense float64 matrix requires $8p^2$ bytes before working arrays and results.
-See [Optimization](optimization.md#memory) for copies,
-layouts and additional storage.
+Passing this diagnostic does not establish allele alignment or agreement
+between LD and the association study.
+
+`susie_rss` defaults to `max_iter=50` and `susie_suff_stat` to
+`max_iter=100`. These cap IBSS sweeps per fit; stopping can occur earlier.
+Both default to `tol=1e-4`. Passing `tol=None` selects `1e-6` with
+`estimate_residual_method="NIG"` and `1e-4` otherwise. See
+[stopping rules](model.md#stopping-rules) and
+[entry-point defaults](model.md#defaults-by-entry-point) for model-specific
+settings, and [Results](results.md#iterations-and-finalization) for returned
+status and finalization.
+
+A dense float64 matrix with $p$ variants requires $8p^2$ bytes before working
+arrays and results. See [memory use](optimization.md#memory) for copies and
+additional storage.
