@@ -1,87 +1,47 @@
-# Two worked fine-mapping examples
+# Toy example
 
-These examples show how to read the posterior, stopping evidence and sensitivity
-together. The stable example has persistent leading credible sets but a
-prior-sensitive background. The problem example reaches its initial stopping
-condition, then finds a better solution through refinement.
+The official susieR `FinemappingConvergence` fixture illustrates a fit that
+satisfies its stopping rule and then improves under refinement. It contains
+200 variants and sufficient statistics for a simulated response based on real
+genotypes; no individual genotypes are included. This is a solver example,
+not a biological association study.
 
-| Example | Input | Open the saved result |
-| --- | --- | --- |
-| Stable | Packaged 500-variant synthetic toy data | [Offline report](examples/post_analysis/stable/index.html), [figure index](examples/post_analysis/stable/figure_index.json) |
-| Problem | Official susieR 200-SNP `FinemappingConvergence` sufficient statistics | [Offline report](examples/post_analysis/problem/index.html), [figure index](examples/post_analysis/problem/figure_index.json) |
+[Open the offline report](examples/post_analysis/official/index.html) or browse
+its [figure index](examples/post_analysis/official/figure_index.json).
+The saved analysis uses prusie 0.3.0; input checksums, parameters and exact
+Python source and native binary identities are in the
+[provenance](examples/post_analysis/official/provenance.json).
 
-The baseline and refined fits use prusie 0.2.3rc6; additional sensitivity fits
-use 0.2.4.dev1. Values are rounded for display; linked tables retain full
-precision and variant IDs. See [reproducibility](#sources-and-reproducibility)
-for the input and software identities.
-
-## Stable signals with a prior-sensitive background
-
-The baseline stops after three sweeps with the requested and effective ELBO rule,
-at tolerance 0.001. It has two active components and two singleton CS,
-`{syn0100}` and `{syn0350}`. Their posterior masses are approximately 0.9697 and
-0.99994, and their effective numbers of variants are 1.146 and 1.001. Singleton
-purity is 1 by definition; it does not describe LD to surrounding variants.
-
-Refinement tests two exclusions in one round, using four inner fits. Neither
-refit started from an excluded-variant solution improves the ELBO by more than
-0.001, so no candidate is accepted. Before and after have the same ELBO,
-approximately −1363.854754, and identical PIPs. The [refinement guide](post_analysis.md)
-defines the ELBO used in this comparison. This supports stability
-under the executed search, without establishing global optimality.
-
-![The stable example's candidate PIP heatmap across baseline, larger L, fixed scaled prior variance and changed CS coverage.](examples/post_analysis/stable/figure_5.png)
-
-| Variant | Baseline PIP | Fixed scaled prior variance 0.05 |
-| --- | ---: | ---: |
-| syn0350 | 0.99994 | 0.99995 |
-| syn0100 | 0.9697 | 0.9777 |
-| syn0101 | 0.03028 | 0.02701 |
-| syn0143 | 5.318e-11 | 0.2544 |
-| syn0145 | 2.066e-11 | 0.1430 |
-
-Increasing L from 5 to 6 leaves all PIPs unchanged. Changing reported CS coverage
-from 0.95 to 0.90 also leaves them unchanged, because that operation reuses the
-posterior. Fixing `scaled_prior_variance=0.05` with
-`estimate_prior_variance=False` preserves both leading CS but changes the
-background substantially.
-
-The component table explains why these are distinct observations. The estimated
-baseline retains two active components; the fixed positive-variance setting
-retains all five, three without retained CS. Disabling estimation removes the
-step that could shrink unused component V to zero, so those extra components
-remain available to distribute probability. The rise at `syn0143` and `syn0145`
-is evidence of sensitivity to this model choice, not proof of additional causal
-signals. The parameter is **scaled prior variance**; working-scale V also depends
-on the response variance.
-
-All 500 variants are present in every setting. The LD diagnostic assesses all
-500 and flags none, with no conditional-only or unassessed rows. That recorded
-result does not remove the prior sensitivity above.
-
-Read the [full comparison](examples/post_analysis/stable/comparison.json),
-[component and CS summary](examples/post_analysis/stable/posterior_summary.json)
-and [LD records](examples/post_analysis/stable/ld_diagnostics.json) for the values
-underlying these statements.
+Component IDs below are original **zero-based fit rows**: component 1 is the
+second row of `alpha`, corresponding to susieR's one-based component 2.
+Variant IDs are zero-based positional indices. Genomic positions, alleles,
+genome build and gene annotations are unavailable.
 
 ## A stopped fit improved by refinement
 
-The 200-variant baseline satisfies its ELBO stopping rule after ten sweeps. That
-is evidence about one trajectory. Refinement evaluates five exclusion attempts
-in two rounds, using ten inner fits, and accepts one candidate. The returned
-candidate satisfies its inner stopping rule after three sweeps.
+The baseline permits `L=10` single effects and satisfies its ELBO stopping rule
+after ten sweeps at `tol=0.001`. Refinement evaluates five credible-set exclusion
+attempts in two rounds, using ten inner fits, and accepts one candidate. The
+returned candidate satisfies its inner stopping rule after three sweeps.
+It has no saved iteration trace; the report labels that trajectory as
+unrecorded rather than reconstructing it.
 
-![Initial ten-sweep and returned three-sweep convergence trajectories with independent iteration axes.](examples/post_analysis/problem/figure_2.png){.figure-complex}
+![Baseline convergence trajectory and the explicitly unrecorded accepted-candidate trace.](examples/post_analysis/official/figure_2.png){.figure-complex}
 
-The **ELBO** changes from
-−70832.271605 to −70814.813295, a gain of **17.4583**. The final logged sweep ELBO
-has a slightly different value and is not substituted in this comparison.
-Different starting solutions have different outcomes even though both satisfy
-their inner stopping rules.
+The search ranks candidates by their last logged ELBO under the original prior.
+Here it rises from −70832.271605 to −70814.813272, a gain of 17.458333.
+Its before/after values and gain are recorded in
+[the analysis summary](examples/post_analysis/official/analysis_summary.json)
+under `refinement`; recomputed post-finalization ELBO is a separate diagnostic.
+The [convergence and refinement guide](post_analysis.md#continue-first-then-consider-refinement)
+explains the search settings and objective convention. Satisfying an inner
+stopping rule does not establish a global optimum. The unsuccessful subsequent
+attempts establish only that no executed candidate exceeded the search's
+absolute improvement threshold.
 
-![Refinement candidate PIPs, candidate gains relative to each round's incumbent and the path of accepted objectives.](examples/post_analysis/problem/figure_3.png){.figure-complex}
+![Refinement changes candidate support; attempts are compared against their round's incumbent.](examples/post_analysis/official/figure_3.png){.figure-complex}
 
-| Variant | Initial PIP | Refined PIP | L = 12 PIP |
+| Variant | Initial PIP | Refined PIP | `L=12` PIP |
 | --- | ---: | ---: | ---: |
 | 32 | >0.9999 | 0 | >0.9999 |
 | 33 | 0.03660 | 1 | 0.04627 |
@@ -89,113 +49,113 @@ their inner stopping rules.
 | 86 | 0.2114 | 0.1772 | 0.2192 |
 | 90 | 0.8214 | 0.8228 | 0.8232 |
 
-The initial singleton CS `{35}` and `{32}` are replaced by `{33}`; the `{86,90}`
-CS remains. The stored refined PIPs at 32 and 35 are zero, and the stored value
-at 33 is one. These are observed numerical values, not missing variants; bounds
-mark initial probabilities that are close to, but below, one. The change in
-singleton support is substantial, rather than a redistribution within one
-unchanged CS.
+The initial singleton CS `{35}` and `{32}` are replaced by `{33}`, while
+`{86,90}` remains. Zeros and ones are stored PIPs; `>0.9999` denotes an interior
+probability close to one. Full-precision values remain in the
+[comparison](examples/post_analysis/official/comparison.json).
+Neither CS membership nor CS count determines the true number of causal effects.
 
 ### What remains unresolved
 
-The refined `{86,90}` CS has mass greater than 0.9999, approximately 1.595 effective
-variants, and |r| = 0.9989. Its roughly 0.177/0.823 probability allocation leaves
-LD-limited resolution. The LD panel displays r² (approximately 0.9978 off the
-diagonal) on a fixed 0–1 scale. The report shows this pair separately from the concentrated
-singleton `{33}`.
+The refined component 1 CS `{86,90}` has posterior mass greater than 0.9999.
+Its component probabilities are approximately 0.177 and 0.823. Strong LD,
+$r\approx0.9989$ and $r^2\approx0.9978$, limits resolution within this set.
+The effective number of candidates is about 1.595; it measures posterior
+concentration, not a causal count. Component 2 has the singleton CS `{33}`;
+singleton purity is 1 by definition and says nothing about surrounding LD.
 
-![Signal detail for the retained 86/90 pair, showing posterior concentration, cumulative mass and LD.](examples/post_analysis/problem/figure_8.png){.figure-complex}
+![Component 1 detail: unresolved allocation within the 86/90 CS, cumulative posterior mass and LD r².](examples/post_analysis/official/figure_6.png){.figure-complex}
 
-Variant 33 has genotype correlation about 0.532 with 90. That correlation is not
-a test of whether the two modeled effects are conditionally distinguishable.
-Neither the retained pair nor the number of CS determines the true number of
-causal effects. The result supports two distinct posterior summaries: a
-concentrated candidate at 33 and unresolved allocation within 86/90.
+The report presents component 1 before component 2, preserving their identities.
+In the locus overview, separate LD panels use the top variant of **each** CS:
+90 for component 1 and 33 for component 2. A CS top maximizes its own component's
+`alpha` among its CS members; exact ties use lexical variant ID order, matching
+`summary["credible_sets"][i]["representative_rule"]`. Global marginal PIP does
+not select a CS top. Reference IDs, tied IDs, signed r and r² for all 200 variants
+are exported under `locus overview.ld_references` in
+[plot data](examples/post_analysis/official/plot_data.json).
 
-### Sensitivity beyond the displayed candidates
+![All 200 variants, retained CS and separate LD r² panels for variants 90 and 33.](examples/post_analysis/official/figure_1.png){.figure-complex}
 
-![Baseline-first sensitivity comparison for the problem example.](examples/post_analysis/problem/figure_5.png)
+The absolute LD correlation between 33 and 90 is about 0.532. That pairwise
+correlation alone does not establish whether modeled effects are conditionally
+distinguishable. PIP, alpha, r and r² are unitless; effect estimates use the scale
+of the supplied sufficient statistics. The association track shows a two-sided
+normal approximation applied to marginal t statistics derived from `XtX`,
+`Xty` and `yty` (degrees of freedom `n - 2`). These are not external GWAS z scores.
 
-L = 12 retains the initial three CS. Its largest PIP change over the full
-200-variant support occurs at variant `0`, outside the main candidate view:
-0.03856 → 0.04825, an absolute change of 0.009694. The complete table and summary
-retain this change. Nine active components without retained CS contribute to
-the L = 12 background; their broad overlaps are kept in the component evidence
-without treating them as identified signal splits or merges.
+### Sensitivity and LD compatibility
 
-All 200 variants are observed in every setting. All 200 receive a completed LD
-assessment, with none flagged. Variant 33 has the largest absolute conditional
-residual (about 3.872) but log LR about −90.95. Variant `0` has log LR about 3.560,
-but |adjusted z| about 0.644. Neither satisfies the joint rule
-**log LR > 2 and |adjusted z| > 2**. A residual label is therefore not an allele-flip
-claim. The LD matrix is close to singular; use the saved diagnostic warnings and
-input identity when assessing this result.
+![Baseline-first PIP comparison with refinement and L increased to 12.](examples/post_analysis/official/figure_5.png)
 
-Read the [full comparison](examples/post_analysis/problem/comparison.json),
-[posterior and search summary](examples/post_analysis/problem/posterior_summary.json)
-and [LD diagnostics](examples/post_analysis/problem/ld_diagnostics.json). Paired R flip-flag agreement has not been established for these two examples.
+Increasing `L` from 10 to 12 retains the baseline's three CS. The largest PIP
+change over all 200 variants occurs at variant `0`, outside the main candidate
+view: 0.03856 → 0.04825, an absolute change of 0.009694. Nine active components
+without retained CS contribute to the `L=12` background; diffuse overlap does
+not establish additional localized signals.
+
+The signed LD matrix is normalized from the same in-sample `XtX`. Diagnostics
+use the t-derived statistics with a normal approximation. The matrix is nearly
+singular; inspect its recorded regularization and
+[LD diagnostic records](examples/post_analysis/official/ld_diagnostics.json).
+A completed assessment flags none of the 200 variants under the recorded joint
+rule (log LR > 2 and absolute adjusted z-score > 2). This does not validate an
+external LD reference or prove allele alignment. Paired susieR flip-flag
+agreement has not been established.
 
 ## Choose a signal detail
 
-Select a component according to the question it answers. This illustrative
-fragment requires the problem fit's posterior `summary` and aligned LD matrix
-`R`; they are not the quick-start toy result. Its two retained CS justify
-distinct detail views:
+Use the official refined fit's posterior `summary` and signed LD matrix `R`,
+with rows and columns in the order of `summary["variants"]`:
 
 ```python
 from prusie.viz import plot_signal
 
-singleton = plot_signal(summary, variant_id="33", R=R,
-                        layout="compact", ld_measure="r2")
-pair = plot_signal(summary, variant_id="90", R=R,
-                   layout="compact", ld_measure="r2")
+pair, _, pair_data = plot_signal(
+    summary, component_id=1, R=R, layout="compact", ld_measure="r2"
+)
+singleton, _, singleton_data = plot_signal(
+    summary, component_id=2, R=R, layout="compact", ld_measure="r2"
+)
 ```
 
-Here `summary` and `R` are the problem result and aligned LD matrix. IDs in this
-example identify its saved variants; use your own CS members or component IDs
-for another fit. See the [API](api.md#figures-and-local-style) for local style,
-full layouts and exported plotting data, and the
-[sensitivity guide](sensitivity.md) for variant alignment and prior policies.
+The compact views retain all CS members, show component probabilities and full
+posterior cumulative mass, and display within-CS r². `variant_id="90"` can
+instead select the retained component with the highest alpha for that variant.
+The [plotting API](api.md#figures-and-local-style) describes local styles and
+exported data. `plot_locus` uses one LD panel per CS by default; an explicit
+`reference_variant` selects a single reference, no retained CS falls back to the
+highest marginal PIP, and missing `R` produces an unassessed placeholder.
 
 ## Sources and reproducibility
 
-<details markdown="1">
-<summary>Inputs, licenses, numerical provenance and rendering commands</summary>
+The [fixture metadata](examples/post_analysis/official/metadata.json) identifies
+upstream `FinemappingConvergence.RData` at susieR commit
+`1f9166cf88ed19c1d6acd4ee53a605ff9505a563`, with source SHA256
+`8b9ac71cd119cd8e9818340fb1152e422d9b7eaefac747058d8087f6c0b5139b`.
+The packaged reference is pinned to susieR 0.16.6 at
+`8e56a8e038e989856d106d9ca5175cc664fea9d2`. Preserve the
+[upstream attribution](examples/post_analysis/official/LICENSE.txt) and
+[full BSD-3-Clause license](examples/post_analysis/official/BSD-3-Clause.txt),
+reproduced from the repository third-party notices. The fixture’s original
+license stub is also retained unchanged.
 
-The stable inputs are independently generated synthetic data; their
-[generation metadata](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/toy/metadata.json)
-and [GPL-3.0-or-later notice](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/toy/LICENSE.txt)
-ship with the package. The problem fixture uses a simulated response with
-real-genotype-derived sufficient statistics, without individual genotypes;
-[source metadata](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/convergence/metadata.json)
-records the pinned upstream input and BSD-3-Clause license, with
-[upstream attribution](https://github.com/LucaJiang/prusie/blob/main/src/prusie/data/convergence/LICENSE.txt).
+From a source checkout with the `analysis` extra installed, reproduce this
+single official example, including baseline, refinement, `L=12` sensitivity and
+LD diagnostics:
 
-The baseline and refined fits were produced with prusie 0.2.3rc6, and the
-additional sensitivity fits with 0.2.4.dev1. The
-[stable provenance](examples/post_analysis/stable/provenance.json) and
-[problem provenance](examples/post_analysis/problem/provenance.json) identify
-the inputs, source revisions and software versions. JSON and CSV downloads
-retain full precision. These inputs have no gene annotations.
+```sh
+python examples/post_analysis.py --output-dir output/post-analysis --case official
+```
 
-To regenerate the figures and reports from the saved posterior and diagnostics:
+To render the saved numerical results without fitting or running diagnostics:
 
 ```sh
 python examples/post_analysis.py --saved-dir docs/examples/post_analysis \
-  --output-dir output/rendered-examples --case both
+  --output-dir output/rendered-example --case official
 ```
 
-The saved result directories include baseline, refined and alternative fits.
-
-To fit both examples anew from the source checkout with the analysis extra installed:
-
-```sh
-python examples/post_analysis.py --output-dir output/post-analysis --case both
-```
-
-This explicit command runs fits and diagnostics with the installed solver.
-Opening the saved reports above does not. Each report includes PNG/SVG, complete CSV tables, lossless JSON/NPZ,
-provenance and a figure index. The compact main figures are supplemented by a
-separate variance-details figure and full search tables.
-
-</details>
+Opening the report runs no computations. Keep its directory together: it includes
+PNG/SVG figures, full-precision CSV tables, lossless JSON/NPZ records, input and
+software provenance, license files and a figure index. Rendering saved records
+preserves their numerical software identity and records the renderer separately.
