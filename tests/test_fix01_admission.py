@@ -55,27 +55,51 @@ def instrumentation(name, monkeypatch):
 
 @pytest.mark.parametrize("mode", ["stderr", "logging", "trace", "profile", "numpy"])
 @pytest.mark.parametrize("overwrite", [False, True])
-def test_instrumentation_and_numpy_scalars_preserve_path_and_alpha(monkeypatch, mode, overwrite):
+@pytest.mark.parametrize("asymmetric", [False, True])
+def test_instrumentation_and_numpy_scalars_preserve_path_and_alpha(
+    monkeypatch, caplog, mode, overwrite, asymmetric
+):
     paths = []
+    warning_messages = []
+    original_warn = warnings.warn
     original_parallel = _native._validate_and_repair_rss_with_executor
     original_overwrite = _native.validate_and_overwrite_rss
 
-    def parallel(*args, **kwargs):
-        paths.append("parallel")
-        return original_parallel(*args, **kwargs)
+    def parallel(matrix, scale, owner):
+        result = original_parallel(matrix, scale, owner)
+        paths.append(("parallel", owner.has_started))
+        return result
 
     def destructive(*args, **kwargs):
-        paths.append("overwrite")
-        return original_overwrite(*args, **kwargs)
+        result = original_overwrite(*args, **kwargs)
+        paths.append(("overwrite", result[3]))
+        return result
+
+    def warn(message, *args, **kwargs):
+        warning_messages.append(str(message))
+        return original_warn(message, *args, **kwargs)
+
+    def case(**updates):
+        result = request(**updates)
+        if asymmetric:
+            result["R"][0, 1], result["R"][1, 0] = 0.125, 0.25
+        return result
 
     monkeypatch.setattr(_native, "_validate_and_repair_rss_with_executor", parallel)
     monkeypatch.setattr(_native, "validate_and_overwrite_rss", destructive)
-    expected_path = "overwrite" if overwrite else "parallel"
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        baseline = susie_rss(**request(overwrite_ld=overwrite))
+    monkeypatch.setattr(warnings, "warn", warn)
+    expected_path = (
+        ("overwrite", "ordered_scaled_xtx" if asymmetric else "symmetric_no_write")
+        if overwrite
+        else ("parallel", _native._parallel_preparation_available())
+    )
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter("always")
+        baseline = susie_rss(**case(overwrite_ld=overwrite))
         assert paths == [expected_path]
+        baseline_warnings = warning_messages.copy()
         paths.clear()
+        warning_messages.clear()
         updates = dict(overwrite_ld=overwrite)
         if mode == "numpy":
             updates.update(
@@ -88,9 +112,20 @@ def test_instrumentation_and_numpy_scalars_preserve_path_and_alpha(monkeypatch, 
                 tol=np.float64(1e-4),
                 standardize=np.bool_(True),
             )
+        args = case(**updates)
+        original_matrix = args["R"].copy()
         with instrumentation(mode, monkeypatch):
-            actual = susie_rss(**request(**updates))
+            actual = susie_rss(**args)
     assert paths == [expected_path]
+    assert warning_messages == baseline_warnings
+    if asymmetric:
+        assert any("not symmetric" in message for message in warning_messages)
+        if mode == "logging":
+            assert any("not symmetric" in record.message for record in caplog.records)
+    if overwrite and asymmetric:
+        assert args["R"].tobytes() != original_matrix.tobytes()
+    else:
+        np.testing.assert_array_equal(args["R"].view(np.uint64), original_matrix.view(np.uint64))
     assert_alpha_bits(actual, baseline)
 
 
