@@ -260,6 +260,8 @@ pub(crate) fn rss_pairs_parallel(
     )
 }
 
+// Tests add write-count and panic-injection arguments to the explicit repair inputs.
+#[cfg_attr(test, allow(clippy::too_many_arguments))]
 fn rss_pairs_parallel_impl(
     pool: &rayon::ThreadPool,
     values: &[f64],
@@ -416,6 +418,8 @@ struct PairMasks {
 // blocks beginning at (i,j) and (j,i) are complete and in bounds; SSE2 exists.
 #[cfg(target_arch = "x86_64")]
 #[inline]
+// Tile coordinates, arithmetic inputs and disjoint repair state remain explicit.
+#[allow(clippy::too_many_arguments)]
 unsafe fn pair_tile4(
     base: *const f64,
     n: usize,

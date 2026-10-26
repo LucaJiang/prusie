@@ -74,9 +74,12 @@ pub struct Snapshot {
     pub cycle_pip_distance: Option<f64>,
     pub events: Vec<String>,
 }
+/// Attempt sweep, exact column groups, estimated groups and dense product count.
+pub type ExactActivationDiagnostics = (Option<usize>, Option<usize>, Option<usize>, usize);
+
 #[derive(Default)]
 pub struct Diagnostics {
-    pub exact_activation: Option<(Option<usize>, Option<usize>, Option<usize>, usize)>,
+    pub exact_activation: Option<ExactActivationDiagnostics>,
     pub trace: Vec<Snapshot>,
     pub last: Option<Snapshot>,
     pub stop_reason: String,

@@ -17,6 +17,8 @@ pub(crate) fn rss_proof_parallel(
     }
     #[cfg(target_arch = "x86_64")]
     {
+        // This ordered comparison rejects NaN and preserves the proof's arithmetic.
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
         if !(scale.abs() <= f64::MAX * 0.5) {
             return Some(false);
         }
@@ -121,6 +123,8 @@ mod tests {
     use super::*;
 
     fn oracle(values: &[f64], n: usize, scale: f64) -> bool {
+        // Preserve the independent oracle's ordered NaN-rejecting comparison.
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
         if !(scale.abs() <= f64::MAX * 0.5) {
             return false;
         }

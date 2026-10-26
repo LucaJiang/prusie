@@ -1,4 +1,5 @@
 //! Dense matrix products and exact diagonal scaling.
+use crate::diagnostics::ExactActivationDiagnostics;
 use ndarray::{ArrayView2, ShapeBuilder};
 /// Accumulate four nonzero columns at a time, keeping each output element in a
 /// register. Columns are added in ascending order using f64 arithmetic;
@@ -289,7 +290,7 @@ pub(crate) fn scaled_multiply_with_pool(
 pub(crate) trait GramOperator {
     fn diagonal(&self) -> &[f64];
     fn begin_sweep(&mut self, _iteration: usize) {}
-    fn exact_diagnostics(&self) -> Option<(Option<usize>, Option<usize>, Option<usize>, usize)> {
+    fn exact_diagnostics(&self) -> Option<ExactActivationDiagnostics> {
         None
     }
     fn apply(&mut self, vector: &[f64], output: &mut [f64]);
@@ -313,7 +314,7 @@ impl GramOperator for DenseGram<'_> {
     fn begin_sweep(&mut self, iteration: usize) {
         self.activation.sweep = iteration + 1;
     }
-    fn exact_diagnostics(&self) -> Option<(Option<usize>, Option<usize>, Option<usize>, usize)> {
+    fn exact_diagnostics(&self) -> Option<ExactActivationDiagnostics> {
         Some((
             self.activation.attempt_sweep,
             self.exact.as_ref().map(|x| x.groups()),

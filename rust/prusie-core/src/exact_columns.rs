@@ -30,6 +30,8 @@ fn signature(column: &[f64], sign: f64, sampled: bool) -> u64 {
 }
 
 #[inline(always)]
+// Keep the explicit four-element comparisons and separately checked remainder.
+#[allow(clippy::chunks_exact_to_as_chunks)]
 fn equal_signed(column: &[f64], reference: &[f64], sign: f64) -> bool {
     let mut left = column.chunks_exact(4);
     let mut right = reference.chunks_exact(4);

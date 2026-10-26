@@ -40,6 +40,8 @@ fn positive_pairwise_sum(values: &mut [f64]) -> f64 {
         for j in 0..pairs {
             values[j] = values[2 * j] + values[2 * j + 1];
         }
+        // Keep the parity test paired with the remainder in the unchanged tree update.
+        #[allow(clippy::manual_is_multiple_of)]
         if length % 2 != 0 {
             values[pairs] = values[length - 1];
         }
@@ -452,7 +454,9 @@ pub(crate) fn single_effect<'a>(
         }
     }
     // End the objective's mutable storage borrow before posterior construction.
+    #[allow(clippy::drop_non_drop)]
     drop(likelihood);
+    #[allow(clippy::drop_non_drop)]
     drop(context);
     let shat2 = &sampling.shat2;
     if let Some(groups) = &sampling.groups {

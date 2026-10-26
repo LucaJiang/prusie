@@ -9,6 +9,17 @@ use numpy::{IntoPyArray, PyArray1, PyArray2, PyArrayMethods, PyUntypedArrayMetho
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+/// Scaled-symmetry flag, optional owned repair and deferred validation error.
+type RssRepairResult<'py> = (bool, Option<Bound<'py, PyArray2<f64>>>, Option<String>);
+
+/// RSS preparation result with the declared caller-buffer action.
+type RssOverwriteResult<'py> = (
+    bool,
+    Option<Bound<'py, PyArray2<f64>>>,
+    Option<String>,
+    &'static str,
+);
+
 #[pyfunction]
 #[pyo3(signature = (array, name, correlation=false, scale=1.0))]
 fn validate_matrix(
@@ -449,7 +460,7 @@ fn validate_and_repair_rss<'py>(
     array: Bound<'py, PyArray2<f64>>,
     scale: f64,
     proof_threads: usize,
-) -> PyResult<(bool, Option<Bound<'py, PyArray2<f64>>>, Option<String>)> {
+) -> PyResult<RssRepairResult<'py>> {
     ensure_layout(&array)?;
     let input = array
         .try_readonly()
@@ -587,7 +598,7 @@ fn _validate_and_repair_rss_with_executor<'py>(
     array: Bound<'py, PyArray2<f64>>,
     scale: f64,
     executor: &Bound<'py, crate::executor::FitExecutor>,
-) -> PyResult<(bool, Option<Bound<'py, PyArray2<f64>>>, Option<String>)> {
+) -> PyResult<RssRepairResult<'py>> {
     let result = parallel_repair_impl(py, array, scale, executor);
     if result.is_err() {
         crate::executor::close_after_error(executor);
@@ -600,7 +611,7 @@ fn parallel_repair_impl<'py>(
     array: Bound<'py, PyArray2<f64>>,
     scale: f64,
     executor: &Bound<'py, crate::executor::FitExecutor>,
-) -> PyResult<(bool, Option<Bound<'py, PyArray2<f64>>>, Option<String>)> {
+) -> PyResult<RssRepairResult<'py>> {
     use prusie_core::input_validation::RssPairLayout;
     use prusie_core::PreparationAttempt;
 
@@ -723,12 +734,7 @@ fn validate_and_overwrite_rss<'py>(
     array: Bound<'py, PyArray2<f64>>,
     scale: f64,
     proof_threads: usize,
-) -> PyResult<(
-    bool,
-    Option<Bound<'py, PyArray2<f64>>>,
-    Option<String>,
-    &'static str,
-)> {
+) -> PyResult<RssOverwriteResult<'py>> {
     ensure_layout(&array)?;
     // Read the C-API writeability flag directly, without invoking Python hooks.
     // SAFETY: Bound<PyArray2<f64>> retains the live PyArrayObject under the GIL.
