@@ -289,10 +289,10 @@ during that search.
 Within a native Gaussian fit, the sampling variances and their groups are
 reused until $\sigma^2$ changes. For Bayes factors, finite sampling variances
 are floored at float64 machine epsilon. Grouping compares these floored
-values by exact equality. With at most 16 distinct values, each group of
-floored variance $s^2$ reuses the log term
+values by exact equality. With at most 16 distinct values, the log term
 $-\tfrac12\log(1+V_\ell/s^2)$ and factor
-$V_\ell/\{s^2(V_\ell+s^2)\}$ are computed once per group. Ordinary z-score
+$V_\ell/\{s^2(V_\ell+s^2)\}$ are computed once per group for each tested
+$V_\ell$. Ordinary z-score
 RSS supplied with a unit-diagonal `R` has one group of informative variants.
 For a toy example with a common sampling variance:
 
