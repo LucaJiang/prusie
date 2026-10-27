@@ -1,95 +1,60 @@
 # Numerical accuracy
 
+Numerical comparisons assess how closely prusie's fitted SuSiE posteriors agree
+with susieR when both implementations receive the same inputs and fitting
+settings. This page compares prusie 0.3.0 with susieR 0.16.6, using the complete
+`alpha` matrix of single-effect posterior inclusion probabilities as the primary
+[agreement criterion](#component-posterior-validation).
+
+The evidence includes fixed-reference checks, fresh susieR fits for FinnGen
+type 2 diabetes GWAS loci and GTEx Whole_Blood eQTL analyses, and an
+[independent toy example](#independent-toy-example). Results apply to the tested
+configurations; numerical agreement is separate from the statistical calibration
+of [variant inclusion probabilities and credible sets](model.md#pip-and-credible-sets).
+
 ## Component posterior validation
 
-Current core validation uses susieR 0.16.6, commit
-`8e56a8e038e989856d106d9ca5175cc664fea9d2`, with identical arguments and verified
-variant order. The acceptance criterion is maximum absolute difference `1e-5`
-(relative tolerance zero) across the **complete final alpha matrix**, including
-inactive components and components without credible sets. Rows retain their
-original component order; they are never permuted to improve agreement.
-Each row must be finite, lie in [0, 1], and sum to one within `1e-10`.
+Comparisons use susieR 0.16.6, commit
+`8e56a8e038e989856d106d9ca5175cc664fea9d2`, with matched inputs, model settings
+and verified variant order. The numerical criterion is a maximum absolute
+difference of `1e-5`, with `rtol=0`, across the complete final `alpha` matrix.
+Both matrices must have the same shape and retain their original component rows
+and variant columns, including inactive components and components without
+credible sets. Every entry must be finite and in $[0,1]$, and each row must sum
+to one within `1e-10`.
 
-PIPs, credible-set memberships, moments, variances, Bayes factors, objectives,
-iteration counts and convergence flags remain diagnostics. Small differences
-near activity thresholds can change these summaries even when alpha agrees.
-The implementation uses mathematically equivalent float64 arithmetic rather
-than reproducing R rounding. No thresholds or stopping tolerances are relaxed
-for validation.
+Marginal posterior inclusion probabilities (PIPs), credible-set memberships,
+posterior moments, variances, Bayes factors, ELBOs, iteration counts and
+convergence flags are additional diagnostics. Small differences near component
+activity or credible-set thresholds can change the reported summaries even
+when `alpha` passes. The fitting thresholds and stopping tolerances stay at
+the specified values. See [Computational compatibility](model.md#computational-compatibility)
+for the floating-point assumptions and full criterion.
 
-The current ordinary build passes all 415 fitted configurations with identical
-arguments and verified variant order:
+The fixed-reference validation covers 184 RSS cases, each tested with
+`n_threads=1`, `2`, `4` and `8`, and with both `overwrite_ld=False` and
+`overwrite_ld=True`. All 1,472 case–setting comparisons pass, with a maximum
+absolute alpha difference from the fixed R reference of $9.65\times10^{-8}$.
+Each setting is fitted twice from independently reloaded inputs, giving 2,944
+prusie calls. Repeated calls and the saved same-setting prusie comparison arrays
+agree bit for bit in `alpha`. The [machine-readable summary](assets/benchmark/v030_summary.json)
+records the settings, errors and identities of these separate R and prusie
+references.
 
-| Panel | Fitted configurations | Maximum absolute alpha difference |
-| --- | --- | --- |
-| Bundled examples | 7 | 3.55e-09 |
-| Parameter cases | 54 | 4.6e-09 |
-| Core feature cases | 69 | 7.02e-06 |
-| NIG interactions | 2 | 5.5e-13 |
-| Real analyses | 200 | 1.32e-08 |
-| Real RSS model options | 60 | 7.93e-09 |
-| Dense scaling fixtures | 6 | 2.6e-11 |
-| Targeted regressions | 17 | 5e-09 |
-
-Six expected invalid-model errors also match. Auxiliary-function boundaries
-are checked separately. This finite panel does not establish agreement for
-every combination of model options or identical stochastic draws across
-languages. The historical tables below retain their original source and
-acceptance criteria.
-
-## Recorded earlier 0.2.4.dev2 snapshot
-
-Comparisons against susieR 0.16.6 at commit `8e56a8e038e989856d106d9ca5175cc664fea9d2`
-use compute commit `ff379ada284a63a3cf1770d43faacc6b929dc923`. All 100 GWAS and 100 eQTL
-locus analyses have maximum absolute PIP difference ≤1e-5 with zero relative tolerance,
-plus input, model and probability validity checks. Iteration counts, convergence
-flags and credible-set component/member identities agree in all 200 cases.
-CS order is immaterial; sets are matched by their original component IDs.
-
-| Quantity | GWAS maximum absolute difference | eQTL maximum absolute difference |
-| --- | --- | --- |
-| PIP | 9.14e-09 | 1.22e-08 |
-| alpha | 9.140027e-9 | 1.22e-08 |
-| mu | 5.260663e-10 | 2.340635e-8 |
-| mu2 | 1.394811e-10 | 3.704008e-9 |
-| V | 4.078631e-6 | 1.486289e-7 |
-| sigma2 | 0 | 0 |
-| ELBO | 1.000124e-5 | 3.917756e-8 |
-| KL | 7.010086e-8 | 1.171606e-7 |
-| lbf | 2.821602e-5 | 2.743060e-7 |
-| lbf_variable | 2.821542e-5 | 3.389438e-7 |
-
-Intermediate fields are retained as diagnostics using absolute and relative
-tolerances of 10⁻⁶. Region25/GWAS exceeds that diagnostic rule for V and
-lbf_variable; its PIP passes the stated PIP criterion. Maximum credible-set
-coverage differences are 2.14e-9 (GWAS) and 2.59e-9 (eQTL); maximum purity
-difference is 8.88e-16 in both groups. These results describe standard fits with
-the [fixed real-panel settings](performance.md#methods).
-
-A separate parameter panel executes the same pinned R reference for 58 outcomes:
-54 returned fits and four expected prior-guard errors. It covers RSS and sufficient
-statistics, fixed and estimated residual variance, optim/EM/simple/fixed prior
-variance, nonuniform priors, standardization and stopping regressions. All 54
-returned fits pass PIP and validity checks; the four error cases match the
-expected prior-guard rejection in both implementations. A restricted independent NumPy reference also passes
-31 supported comparisons; it rejects unsupported boundary inputs explicitly.
-The preserved cycling example converges in 49 sweeps in both implementations,
-with zero maximum PIP difference. Refinement is tested separately and retains
-the [documented search differences](post_analysis.md#refinement-compared-with-susier).
-
-## Earlier measurements: 0.2.3rc4
-
-The earlier comparison uses prusie 0.2.3rc4 and susieR 0.16.6 at commit
-`8e56a8e038e989856d106d9ca5175cc664fea9d2`. It reanalyzes saved full fits from
-6 October 2026 using the matched inputs and parameters described in
-[performance methods](performance.md#methods). The records identify the measured source and binary.
-
-The panel covers ordinary RSS fits with fixed residual variance and optimized
-prior variance, as specified in those methods. It does not test refinement,
-alternate convergence criteria or the current development snapshot's stopping
-and estimated-residual-variance checks.
+These fixed-reference checks use `refine=False` and are separate from the
+[fresh-R real-data comparisons](#variant-inclusion-probabilities) and
+[independent toy example](#independent-toy-example). The results cover the tested
+inputs, model settings and platforms; [refinement](post_analysis.md#refinement-compared-with-susier)
+and stochastic draws across languages require separate validation.
 
 ## Variant inclusion probabilities
+
+The primary real-data comparison fits FinnGen R13 type 2 diabetes GWAS loci
+and GTEx v11 Whole_Blood eQTL analyses with prusie and fresh susieR 0.16.6.
+prusie uses `n_threads=1` and `refine=False`. Both implementations receive
+matched summary statistics, LD and model settings; see the
+[input provenance](reproducibility.md#real-gwas-and-eqtl-inputs) and
+[fitting methods](performance.md#methods).
 
 <!-- generated:maxima:start -->
 
@@ -101,16 +66,17 @@ and estimated-residual-variance checks.
 The gate remains absolute alpha error ≤ 1e-5, with relative tolerance zero. Iteration-limit exceedances remain failures of this numerical threshold.
 <!-- generated:maxima:end -->
 
-The numerical criterion is absolute PIP difference ≤10⁻⁵ with zero relative
-tolerance, together with input/model/probability validity. The table reports
-observed elementwise maxima, rather than that threshold. Each maximum is
-traceable to a zero-based variant index, both fitted values and hashes of the
-two raw fit records in the [machine summary](assets/r_comparison_summary.json).
+The table reports observed maximum absolute differences over the complete
+returned arrays. Pass/fail status follows the
+[alpha criterion](#component-posterior-validation); PIP differences are
+additional diagnostics. The [per-case table](assets/benchmark/v030_primary.tsv)
+gives the errors and numerical status of each primary comparison.
 
-![Each analysis's maximum absolute PIP difference against its variant count, separated into GWAS and eQTL.](assets/pip_accuracy.svg)
+![Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, with separate GWAS and eQTL panels.](assets/benchmark/v030_numerical_agreement.svg)
 
-The vertical axis is symmetric-log with a linear interval below 10⁻¹⁴; exact
-zeros are retained at zero. [Vector PDF](assets/pip_accuracy.pdf).
+The vertical axes use a symmetric-log scale that retains exact zeros. The
+dashed lines mark the alpha acceptance limit in the top panels.
+[Vector PDF](assets/benchmark/v030_numerical_agreement.pdf).
 
 <!-- generated:limits:start -->
 
@@ -122,7 +88,22 @@ zeros are retained at zero. [Vector PDF](assets/pip_accuracy.pdf).
 All completed positive timing pairs enter the performance summaries, independently of convergence, alpha agreement and credible-set presence. Per-case records list every status.
 <!-- generated:limits:end -->
 
-## Posterior arrays, Bayes factors and objective
+The only gene exceeding the alpha criterion is `ENSG00000110203.10`. Its
+maximum absolute alpha difference is $1.26768\times10^{-5}$ in the primary
+comparison and in the separate `n_threads=2`, `4` and `8` comparisons. In all
+observed fits for this gene, both backends reached `max_iter=100` with
+`converged=False`. All four settings remain recorded as threshold failures.
+No exceedance involved a converged backend. The
+[full summary](assets/benchmark/v030_summary.json) retains the individual
+outcomes and probability-validity checks.
+
+## Reference integrity and posterior diagnostics
+
+The first table checks whether fresh susieR `alpha` matrices reproduce the
+stored R references exactly, comparing both values and bit patterns. This is
+separate from the [alpha tolerance](#component-posterior-validation) used to
+compare prusie with fresh susieR. The second table lists the four settings with
+alpha threshold failures described [above](#variant-inclusion-probabilities).
 
 <!-- generated:errors:start -->
 
@@ -142,15 +123,22 @@ Fresh R is checked before timing against the stored frozen alpha values. Every n
 | ENSG00000110203.10 | threads8 | 1.26768e-05 | 100 / False | 100 / False | True |
 <!-- generated:errors:end -->
 
-PIP and alpha differences have probability units. Conditional effects are on
-the fitted standardized predictor/phenotype scale for these z-input analyses;
-mu2 is a second moment, not a variance. Component and variant log Bayes factors
-use natural logarithms. Their numerical differences are recorded separately
-from PIP. ELBO is the iteration objective before final low-variance trimming;
-V, moments, Bayes factors and KL follow the finalization semantics described in
-[results](results.md).
+Every primary case has a stored R reference. The nonzero R-versus-R differences
+remain exact-integrity mismatches, even at rounding scale. The
+[per-case table](assets/benchmark/v030_primary.tsv) retains each primary case's
+bitwise status and maximum absolute difference.
+
+The full real-data comparison does not provide error bounds for posterior
+moments, variances, log Bayes factors or ELBOs. See the
+[posterior field definitions](results.md#posterior-fields) for their meanings
+and working scales, and [iterations and finalization](results.md#iterations-and-finalization)
+for the relation between recorded objectives and returned arrays.
 
 ## Credible sets
+
+The real-data fits construct [credible sets](model.md#pip-and-credible-sets)
+with target posterior mass `coverage=0.95` and minimum absolute LD correlation
+`min_abs_corr=0.5`.
 
 <!-- generated:cs:start -->
 
@@ -164,33 +152,41 @@ V, moments, Bayes factors and KL follow the finalization semantics described in
 This full-panel campaign records set counts; it does not compare full member identities, returned mass or purity. The separate packaged example and regression suites check those quantities.
 <!-- generated:cs:end -->
 
-The requested mass is 0.95. Returned mass is the sum of the selected alpha
-entries in the original component; purity uses every selected pair's absolute
-correlation. The retained numerical records include independent checks of PIP
-identity, alpha normalization, actual set mass and purity, including empty sets.
-Convergence and the presence of a credible set are different properties.
+Matching aggregate counts do not establish agreement of individual sets.
+Credible-set presence also does not establish convergence. Interpret the counts
+alongside the [recorded convergence flags](assets/benchmark/v030_records.jsonl.gz)
+and the [credible-set fields](results.md#credible-set-fields).
 
 ## Independent toy example
+
+The packaged toy example checks numerical agreement on a single simulated
+dataset, using a separate susieR reference. Load its summary statistics and LD
+with `prusie.load_example()`.
 
 <!-- generated:toy:start -->
 The independent 500-variant toy example converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
 <!-- generated:toy:end -->
 
-![Signed association statistics and fitted PIPs for the independent synthetic toy example, with its two true effect positions marked.](assets/toy_fit.svg)
+![Signed z-scores (top) and prusie and susieR PIPs (bottom) for the synthetic toy example.](assets/toy_fit.svg)
 
-The dashed lines mark the two simulated nonzero effects. This single toy
-example has its own newly executed reference, generation script and packaged
-inputs. See the [toy example tutorial](example.md) and [vector PDF](assets/toy_fit.pdf).
+The dashed lines mark the simulated nonzero effects. Credible-set memberships
+also match the R reference for this example. See the [toy example tutorial](example.md)
+for the simulation method, fitting options and packaged reference, and the
+[vector PDF](assets/toy_fit.pdf).
 
 ## Reproduce the comparisons
 
-[Retained records](assets/r_comparison_numerical.json) include the real panel
-and a separately identified older synthetic regression panel. The older fixture
-and references remain byte-for-byte regression inputs. The installed package's
-independent toy example is checked against its separate packaged R reference
-by `tests/test_packaged_example.py`.
+The [public summary](assets/benchmark/v030_summary.json),
+[primary comparison table](assets/benchmark/v030_primary.tsv) and
+[full per-case records](assets/benchmark/v030_records.jsonl.gz) provide numerical
+errors, convergence diagnostics and reference-integrity results. Follow the
+[regeneration instructions](reproducibility.md#tables-and-figures) to rebuild
+the tables and figures from retained measurements without refitting.
 
-The [reproducibility guide](reproducibility.md) distinguishes regeneration from
-saved records, offline frozen-reference checks, and live-R fitting.
-The internal benchmark comparator compares original component IDs and retains all
-field diagnostics. Existing frozen references and tolerances are unchanged.
+The [offline toy checks](reproducibility.md#toy-example) compare a prusie fit
+with the packaged R reference. The [fresh susieR comparison](reproducibility.md#r-comparison)
+fits both implementations using matched inputs and settings. Repeating the
+real-data comparisons requires the separately obtained
+[association summaries and LD](reproducibility.md#real-gwas-and-eqtl-inputs),
+with the same variant order and fitting settings. Preserve the frozen inputs
+and reference files when running new checks.
