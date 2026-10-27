@@ -13,6 +13,14 @@ agreement with susieR is assessed numerically; see
 [Performance](performance.md) reports runtimes and memory for the inputs,
 settings and hardware measured there.
 
+The [paired cumulative measurements](performance.md#earlier-measurements)
+compare 184 fixed cases using eight retained complete calls per case. The
+historical-baseline and intermediate-baseline total times divided by the
+measured 0.3.0 total are 1.73 and 1.06, respectively. Cumulative totals do not
+replace the per-panel acceptance checks: the large-p comparison with the
+previously optimized baseline remains unresolved under the robustness
+criterion. The performance page records its result and limitations.
+
 ## Principles
 
 The optimizations reduce the work needed to evaluate the SuSiE updates while
@@ -430,6 +438,13 @@ candidate-by-all-variant correlation blocks. Purity from a design matrix
 forms the requested blocks as described under
 [Individual-level designs](#individual-level-designs).
 
+In the [real-data overwrite series](performance.md#ld-overwrite), enabling
+`overwrite_ld` lowered full-process peak RSS in 183 of 200 GWAS cases and
+raised it in 17. The median paired False/True peak ratio was 1.72. This is a
+measured process peak, including inputs and interpreter, rather than the
+matrix-size arithmetic above. The [LD workspace contract](api.md#optional-ld-workspace)
+describes ownership requirements and when the caller must reload its array.
+
 ## Threads
 
 IBSS components remain sequential: each update uses the latest residual
@@ -459,6 +474,17 @@ The option leaves process-wide Rayon and BLAS settings unchanged. NumPy
 matrix operations, including those in dynamic RSS, follow their own BLAS
 threading settings, so `n_threads=1` does not limit every operation in the
 Python process to one thread.
+
+For an eligible dense fit, 2–4 threads are useful starting points; measure
+on the intended workload and keep BLAS at one thread when assessing this
+option. In the [paired measurements](performance.md#earlier-measurements),
+four threads improved all applicable cases in the 87-case, 80-case and
+17-case panels (87, 78 and 17 applicable cases). In the separate, concurrently
+loaded real-data series, four threads had median one-thread/four-thread
+time ratios of 1.93 for GWAS and 1.63 for eQTL, with slower cases in both
+panels. [Thread scaling](performance.md#thread-scaling) gives all counts and
+the separately measured eight-thread results. When running several fits
+concurrently, account for the worker threads in each fit.
 
 ## What prusie does not do
 
