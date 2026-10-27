@@ -155,6 +155,10 @@ files. Peak process RSS includes loading costs. Curves connect measured sizes.
 - Measured CPython 3.12 wheel SHA-256: `b4627f9116b4fbbbe6338c40d965d21e1e0e63e8ecaf4c148af7b4cd7bac65f3`
 - Native extension SHA-256: `a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e`
 - Statistical reference: susieR 0.16.6, `8e56a8e038e989856d106d9ca5175cc664fea9d2`.
+- Qualified release commit: `6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7`
+- Qualified release wheel SHA-256: `85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59`
+
+The retained measurements used refine=False and the measured wheel above. The qualified release adds opt-in refinement tracing and report handling. Its native extension and ordinary fitting modules are byte-identical, but the release wheel was not separately timed or memory-profiled.
 <!-- current:identity:end -->
 
 Download the [locus summaries](assets/benchmark/real_summary.json),
