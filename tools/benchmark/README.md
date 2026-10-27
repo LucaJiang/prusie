@@ -14,6 +14,10 @@ measure peak RSS, including interpreter, imports, inputs and the returned fit.
 Thread scaling, opt-in LD overwrite and nested windows of one real T2D locus
 are separate series. The 184-case M1 comparison uses the distinct paired v10
 protocol; its measurements and acceptance decisions are reported separately.
+Each M1 window retains eight rounds. The predeclared single quality retry adds
+one complete window and pools 16 rounds only for unresolved comparisons; it
+does not retry a trustworthy rejection. The public M1 records retain the
+first-window decisions and identify the rounds used by each final comparison.
 
 The small `v030_*.tsv` tables under `docs/assets/benchmark/` contain per-case
 summaries. `v030_records.jsonl.gz` preserves all retained observations, numerical
@@ -34,6 +38,9 @@ option accepts comma-separated repository-relative paths. Figure generation is
 separate so that checking text does not redraw all plots. The private archive
 importer, `python tools/benchmark/v030.py import --run MEASUREMENT_ARCHIVE`, checks
 the complete fixed panel and emits only the selected public measurement fields.
+It authenticates each task against the retained measurement freeze, preserving
+that wheel identity independently of later qualified package builds. Per-task
+software hashes also retain controller-only resumption history.
 
 Headline speed-up is the sum of all seven retained R times divided by the
 corresponding prusie total, separately for GWAS and eQTL. The geometric mean of

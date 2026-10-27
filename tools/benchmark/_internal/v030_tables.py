@@ -224,6 +224,7 @@ def render(root, pages=None, check=False):
                     "largep": "Large-p (17)",
                 }.get(item["panel"], item["panel"]),
                 d["state"],
+                d["rounds"],
                 f"{d['applicable_cases']} / {d['cases']}",
                 " / ".join(str(runtime.get(key, "—")) for key in ("wins", "ties", "regressions")),
                 " / ".join(
@@ -242,6 +243,7 @@ def render(root, pages=None, check=False):
                 "New M1 comparison",
                 "Fixed panel",
                 "v10 decision",
+                "Retained rounds",
                 "Applicable / all cases",
                 "v10 paired-round runtime W / T / R",
                 "Case-median runtime W / T / R",
@@ -255,7 +257,11 @@ def render(root, pages=None, check=False):
         "The v10 runtime count uses the median of paired-round time ratios; the additional "
         "case-median count compares the two within-case median times. These can differ. "
         "Memory counts compare within-case medians of incremental peaks. "
-        "W / T / R means lower, equal and higher candidate measurements.\n",
+        "W / T / R means lower, equal and higher candidate measurements. "
+        "A comparison with 16 retained rounds uses the protocol's single quality retry, "
+        "pooling both complete windows only for comparisons whose first-window decision "
+        "was unresolved. Other comparisons retain the original eight rounds. Initial "
+        "decisions remain in the public M1 records.\n",
     )
     fragment(
         "docs/numerical_accuracy.md",

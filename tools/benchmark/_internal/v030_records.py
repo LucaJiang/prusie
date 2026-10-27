@@ -117,8 +117,14 @@ def backend(directory, name):
     )
 
 
+def measurement_freeze(run):
+    """Use the immutable measured build when a later opt-in feature is qualified."""
+    retained = run / "status/measurement_freeze.json"
+    return read(retained if retained.exists() else run / "status/code_freeze.json")
+
+
 def load_task(run, row, kind, count, overwrite, window):
-    freeze = read(run / "status/code_freeze.json")
+    freeze = measurement_freeze(run)
     root = Path(freeze.get("m2_output_root", str(run / "measurements/M2")))
     assert root.resolve().is_relative_to(run / "measurements")
     directory = root / row["panel"] / row["case_id"] / kind
@@ -189,6 +195,11 @@ def load_task(run, row, kind, count, overwrite, window):
         result_sha256=digest(result_path) if result_path.exists() else None,
         hardware=request["identity"].get("hardware") if result else None,
         signature_sha256=result.get("signature_sha256"),
+        measurement_software_sha256=(
+            {Path(path).name: value for path, value in request["identity"]["scripts"].items()}
+            if result
+            else None
+        ),
         alpha_pass=result.get("alpha_pass"),
         validity_failure_count=len(result.get("validity_failures", [])),
         **errors,
@@ -322,16 +333,52 @@ def group_summary(rows):
 
 def export_m1(run):
     comparisons, rows, bindings, identities = [], [], {}, {}
+    initial_bindings, initial_decisions = {}, []
     environments = {}
     for window in ("cumulative", "scaling", "overwrite"):
         path = (
-            Path(read(run / "status/code_freeze.json").get("m1_root", str(run / "m1")))
+            Path(measurement_freeze(run).get("m1_root", str(run / "m1")))
             / window
             / "window1.aggregate.json"
         )
-        data = read(path)
-        assert data["state"] == "SLURM_V10_COMPLETE"
+        initial = read(path)
+        assert initial["state"] == "SLURM_V10_COMPLETE"
+        initial_bindings[window] = digest(path)
         plan = read(path.parent / "bundle/plan.json")
+        pooled = path.parent / "pooled.aggregate.json"
+        if pooled.exists():
+            authorization = read(path.parent / "quality_retry.json")
+            assert authorization["one_retry_only"]
+            assert authorization["original_aggregate_sha256"] == initial_bindings[window]
+            assert authorization["plan_sha256"] == digest(path.parent / "bundle/plan.json")
+            path = pooled
+        data = read(path)
+        assert data["state"] == "SLURM_V10_COMPLETE" and data["all_raw_outputs_verified"]
+        assert data["plan_sha256"] == digest(path.parent / "bundle/plan.json")
+        if pooled.exists():
+            assert data["windows"] == ["window1", "window2"]
+            assert data["pool_comparisons"] == authorization["nontrustworthy_comparisons"]
+        for item in initial["comparisons"]:
+            decision = item["decision"]
+            initial_decisions.append(
+                dict(
+                    window=window,
+                    comparison=item["id"],
+                    panel=item["panel"],
+                    state=decision["state"],
+                    rounds=decision["rounds"],
+                    accepted=decision["accepted"],
+                    trustworthy=decision["trustworthy"],
+                    cases=decision["cases"],
+                    applicable_cases=decision["applicable_cases"],
+                    runtime_counts={
+                        key: decision["runtime"][key] for key in ("wins", "ties", "regressions")
+                    },
+                    runtime_agreement=decision["runtime"]["decision_agreement"],
+                    memory_agreement=decision["memory"]["decision_agreement"],
+                    veto_agreement=decision["runtime"]["complete_veto_quality"]["veto_agreement"],
+                )
+            )
         probes = [
             p for p in (run / "m1/preflight").glob("*.json") if digest(p) == plan["topology_sha256"]
         ]
@@ -340,12 +387,15 @@ def export_m1(run):
         environments[window] = {k: topology[k] for k in ("cpu_model", "glibc", "python")} | dict(
             lanes=plan["lanes"],
             retained_rounds=plan["rounds"],
+            retained_rounds_by_comparison={
+                item["id"]: item["decision"]["rounds"] for item in data["comparisons"]
+            },
             numa_domains=len({n for row in topology["l3_domains"] for n in row["numa_nodes"]}),
             l3_domains=len(topology["l3_domains"]),
         )
         bindings[window] = digest(path)
         backends = read(
-            Path(read(run / "status/code_freeze.json").get("m1_root", str(run / "m1")))
+            Path(measurement_freeze(run).get("m1_root", str(run / "m1")))
             / window
             / "bundle/backends.json"
         )["backends"]
@@ -385,6 +435,7 @@ def export_m1(run):
                 }
                 | {
                     "case_median_runtime_counts": median_counts,
+                    "windows": item["windows"],
                     "decision": {
                         k: decision[k]
                         for k in (
@@ -426,6 +477,8 @@ def export_m1(run):
     return dict(
         protocol="v10",
         source_aggregate_sha256=bindings,
+        source_window1_aggregate_sha256=initial_bindings,
+        initial_window1_decisions=initial_decisions,
         backend_identities=identities,
         environments=environments,
         comparisons=comparisons,
@@ -440,7 +493,7 @@ def export_m1(run):
 def export(run, output):
     run, output = Path(run).resolve(), Path(output)
     manifest = read(run / "inputs/m2_manifest.json")
-    freeze = read(run / "status/code_freeze.json")
+    freeze = measurement_freeze(run)
     tasks = list(expected_tasks(manifest["rows"]))
     records = [load_task(run, *task) for task in tasks]
     assert not any(r["task_state"] == "MISSING" for r in records), (
@@ -461,6 +514,15 @@ def export(run, output):
         source_panel_sha256=sorted(manifest["source_panels"].values()),
         protocol=manifest["protocol"],
         maximum_physical_cores=64,
+        measurement_software_versions=[
+            dict(sha256=json.loads(value), tasks=count)
+            for value, count in sorted(
+                Counter(
+                    json.dumps(row["measurement_software_sha256"], sort_keys=True)
+                    for row in records
+                ).items()
+            )
+        ],
         panels={
             "GWAS": "FinnGen R13 type 2 diabetes, n=486019",
             "eQTL": "GTEx v11 Whole_Blood, n=800",
