@@ -323,6 +323,13 @@ or stopping rule. [Cycle handling](#convergence-diagnostics) depends on that rul
 the returned copy keeps the input fit's trace. Candidate traces are not saved
 by default, even if the baseline was tracked.
 
+The fitting-entry shortcut `refine=True` leaves its candidate fits untracked,
+even with entry-level `track_fit=True`. Use an explicit `refine_fit` call for
+candidate trajectories. Tracking retains both stages of every attempted
+candidate. Dense tracking deep-copies full `alpha`, `mu` and `mu2` arrays for
+each sweep into the search history, so memory and saved JSON size can grow
+substantially with the number of rounds, credible sets and sweeps.
+
 Requested controls are read from `params["convergence"]`, with labelled recovery
 from diagnostics or retained options for older results. If those controls are
 unavailable, the record identifies compatibility defaults. Completed inner fits
