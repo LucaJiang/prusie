@@ -36,6 +36,10 @@
   intercepts and individual-level predictions. This corrects these exports for
   slot-prior models without changing alpha, PIP or the fitted model. Historical
   R intercept exports also omitted these weights and remain preserved references.
+- Add opt-in `refine_fit(..., track_fit=True)` (or `"compact"` / `"dense"`)
+  to retain original candidate sweep trajectories. Accepted results keep the
+  original stage-B trace; the default remains untracked. The Toy report shows
+  its accepted candidate's three recorded sweeps.
 - Make refinement plot metadata retain the recorded objective definition and
   label the effective PIP stopping thresholds with the fitting tolerance.
   Clarify convergence docstrings without changing solver stopping rules.
