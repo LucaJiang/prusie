@@ -299,6 +299,14 @@ The following helpers use retained working inputs:
 | `refine_fit` | Search alternative starting solutions for a higher logged ELBO; return a result with the search record in `refinement` |
 | `evaluate_objective` | Recompute ELBO, KL and fitted products from the post-trimming posterior without running IBSS |
 
+`refine_fit(..., track_fit=False)` leaves candidate sweeps unrecorded by default.
+Use `True`, `"compact"` or `"dense"` to save each completed stage's trace in
+`refinement["history"][i]["stages"][phase]["trace"]`. An accepted result keeps
+its original stage-B trace; if no candidate is accepted, it keeps the input
+fit's trace. The fitting-entry shortcut `refine=True` does not forward
+`track_fit` to its search: entry-level tracking applies to the initial fit.
+Call `refine_fit` explicitly to track the candidates.
+
 Retention supports static, materialized Gaussian sufficient-statistic and RSS
 fits with default or `ConvergenceConfig` stopping. Matrix-free designs, dynamic
 RSS (including RSS-lambda and multiple panels), mixture/NIG/slot models,
