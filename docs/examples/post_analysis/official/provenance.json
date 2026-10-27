@@ -12,11 +12,6 @@
     "tol": 0.001,
     "estimate_residual_variance": true
   },
-  "tracking": {
-    "baseline": true,
-    "refinement": true,
-    "candidate_trajectory": "original IBSS sweeps"
-  },
   "initial_state": "cold start; refinement stage B uses stage A posterior moments",
   "reference_sources": [
     "https://github.com/stephenslab/susieR/blob/1f9166cf88ed19c1d6acd4ee53a605ff9505a563/data/FinemappingConvergence.RData"
@@ -28,6 +23,14 @@
   },
   "random_seed": "frozen upstream fixture; no new random generation",
   "elapsed_seconds": 3.480142184533179,
+  "skipped": [
+    "gene track: no physical coordinate metadata"
+  ],
+  "tracking": {
+    "baseline": true,
+    "refinement": true,
+    "candidate_trajectory": "original IBSS sweeps"
+  },
   "fixture": {
     "description": "Official susieR FinemappingConvergence toy example: a simulated response with real-genotype-derived sufficient statistics. No individual genotypes are included.",
     "source_commit": "1f9166cf88ed19c1d6acd4ee53a605ff9505a563",
@@ -63,7 +66,17 @@
     "native_sha256": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e",
     "note": "Source hashes identify the example, refinement tracking and presentation; this record is not a final wheel freeze."
   },
-  "skipped": [
-    "gene track: no physical coordinate metadata"
-  ]
+  "render_version": "0.3.0",
+  "render_source_identity": {
+    "checkout_head": "3decc836dda8b56d27cb79a5bb112bff84dc5fe0",
+    "source_files_sha256": {
+      "post_analysis.py": "315c45fef8af3478872a5c5c6e0ad052c4ed13e96d4a9fb38d3daebecb1f7bd8",
+      "refinement.py": "354bdfd80c9f9a1610c1374313a7dd777dd7c4feae6acf848570ad4498f3c922",
+      "report.py": "9d046254c15de0771914f8a8077016dff87e7edf85602b99d39573dfffe65847",
+      "_locus.py": "5745cdcf246b6328a74e9d4f5b804085ec84681c9195247080b519f875596add"
+    },
+    "native_sha256": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e",
+    "note": "Source hashes identify the example, refinement tracking and presentation; this record is not a final wheel freeze."
+  },
+  "rendering_scope": "Saved numerical fits/diagnostics reused; no refitting"
 }

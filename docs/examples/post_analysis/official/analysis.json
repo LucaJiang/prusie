@@ -1144293,6 +1144293,118 @@
                   ]
                 ]
               }
+            ],
+            [
+              {
+                "type": "scalar",
+                "value": "render_version"
+              },
+              {
+                "type": "scalar",
+                "value": "0.3.0"
+              }
+            ],
+            [
+              {
+                "type": "scalar",
+                "value": "render_source_identity"
+              },
+              {
+                "type": "mapping",
+                "items": [
+                  [
+                    {
+                      "type": "scalar",
+                      "value": "checkout_head"
+                    },
+                    {
+                      "type": "scalar",
+                      "value": "3decc836dda8b56d27cb79a5bb112bff84dc5fe0"
+                    }
+                  ],
+                  [
+                    {
+                      "type": "scalar",
+                      "value": "source_files_sha256"
+                    },
+                    {
+                      "type": "mapping",
+                      "items": [
+                        [
+                          {
+                            "type": "scalar",
+                            "value": "post_analysis.py"
+                          },
+                          {
+                            "type": "scalar",
+                            "value": "315c45fef8af3478872a5c5c6e0ad052c4ed13e96d4a9fb38d3daebecb1f7bd8"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "scalar",
+                            "value": "refinement.py"
+                          },
+                          {
+                            "type": "scalar",
+                            "value": "354bdfd80c9f9a1610c1374313a7dd777dd7c4feae6acf848570ad4498f3c922"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "scalar",
+                            "value": "report.py"
+                          },
+                          {
+                            "type": "scalar",
+                            "value": "9d046254c15de0771914f8a8077016dff87e7edf85602b99d39573dfffe65847"
+                          }
+                        ],
+                        [
+                          {
+                            "type": "scalar",
+                            "value": "_locus.py"
+                          },
+                          {
+                            "type": "scalar",
+                            "value": "5745cdcf246b6328a74e9d4f5b804085ec84681c9195247080b519f875596add"
+                          }
+                        ]
+                      ]
+                    }
+                  ],
+                  [
+                    {
+                      "type": "scalar",
+                      "value": "native_sha256"
+                    },
+                    {
+                      "type": "scalar",
+                      "value": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e"
+                    }
+                  ],
+                  [
+                    {
+                      "type": "scalar",
+                      "value": "note"
+                    },
+                    {
+                      "type": "scalar",
+                      "value": "Source hashes identify the example, refinement tracking and presentation; this record is not a final wheel freeze."
+                    }
+                  ]
+                ]
+              }
+            ],
+            [
+              {
+                "type": "scalar",
+                "value": "rendering_scope"
+              },
+              {
+                "type": "scalar",
+                "value": "Saved numerical fits/diagnostics reused; no refitting"
+              }
             ]
           ]
         }
