@@ -219,6 +219,20 @@ def render(root, pages=None, check=False):
         identity,
         "current",
     )
+    comparison_labels = {
+        "C1_V030_vs_BASE": "0.3.0 vs intermediate baseline",
+        "C2_V030_vs_MAIN": "0.3.0 vs historical baseline",
+        "C3_V030_vs_ENG01": "0.3.0 vs previously optimized baseline",
+        "C4_t2_vs_t1": "n_threads=2 vs 1",
+        "C4_t4_vs_t1": "n_threads=4 vs 1",
+        "C4_t8_vs_t1": "n_threads=8 vs 1",
+        "C5_true_vs_false": "overwrite_ld=True vs False",
+    }
+    role_labels = {
+        "default-veto": "non-regression check",
+        "thread-option": "four-thread option",
+        "memory-only": "memory comparison",
+    }
     gate_rows = []
     for item in m1["comparisons"]:
         if item["id"].startswith("AA_"):
@@ -228,7 +242,7 @@ def render(root, pages=None, check=False):
         memory = d.get("memory", {})
         gate_rows.append(
             [
-                item["id"],
+                comparison_labels[item["id"]],
                 {
                     "panel": "Primary (87)",
                     "fresh_panel": "Confirmation (80)",
@@ -243,7 +257,7 @@ def render(root, pages=None, check=False):
                     for key in ("wins", "ties", "regressions")
                 ),
                 " / ".join(str(memory.get(key, "—")) for key in ("wins", "ties", "regressions")),
-                "diagnostic" if item["diagnostic_only"] else item["kind"],
+                "descriptive" if item["diagnostic_only"] else role_labels[item["kind"]],
             ]
         )
     fragment(
@@ -251,7 +265,7 @@ def render(root, pages=None, check=False):
         "earlier",
         table(
             [
-                "New M1 comparison",
+                "Comparison",
                 "Fixed panel",
                 "v10 decision",
                 "Retained rounds",
@@ -264,7 +278,7 @@ def render(root, pages=None, check=False):
             gate_rows,
         )
         + "\nThese are new paired Burgundy measurements. Cumulative totals do not replace "
-        "the fixed-panel majority, stratified veto and robustness gates. "
+        "the fixed-panel majority, stratified non-regression check and robustness criteria. "
         "The v10 runtime count uses the median of paired-round time ratios; the additional "
         "case-median count compares the two within-case median times. These can differ. "
         "Memory counts compare within-case medians of incremental peaks. "
@@ -272,7 +286,7 @@ def render(root, pages=None, check=False):
         "A comparison with 16 retained rounds uses the protocol's single quality retry, "
         "pooling both complete windows only for comparisons whose first-window decision "
         "was unresolved. Other comparisons retain the original eight rounds. Initial "
-        "decisions remain in the public M1 records.\n",
+        "decisions remain in the paired measurement records.\n",
     )
     fragment(
         "docs/numerical_accuracy.md",
