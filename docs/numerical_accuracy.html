@@ -16,374 +16,319 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
-<div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html" aria-current="page">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<div class="version"><span class="version-number">0.3.0</span><span class="version-badge">Stable</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html" aria-current="page">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
 <li><a href="#component-posterior-validation">Component posterior validation</a></li>
-<li><a href="#recorded-earlier-024dev2-snapshot">Recorded earlier 0.2.4.dev2 snapshot</a></li>
-<li><a href="#earlier-measurements-023rc4">Earlier measurements: 0.2.3rc4</a></li>
 <li><a href="#variant-inclusion-probabilities">Variant inclusion probabilities</a></li>
-<li><a href="#posterior-arrays-bayes-factors-and-objective">Posterior arrays, Bayes factors and objective</a></li>
+<li><a href="#reference-integrity-and-posterior-diagnostics">Reference integrity and posterior diagnostics</a></li>
 <li><a href="#credible-sets">Credible sets</a></li>
 <li><a href="#independent-toy-example">Independent toy example</a></li>
 <li><a href="#reproduce-the-comparisons">Reproduce the comparisons</a></li>
 </ul>
 </div>
 </details><h1 id="numerical-accuracy">Numerical accuracy</h1>
+<p>Numerical comparisons assess how closely prusie's fitted SuSiE posteriors agree
+with susieR when both implementations receive the same inputs and fitting
+settings. This page compares prusie 0.3.0 with susieR 0.16.6, using the complete
+<code>alpha</code> matrix of single-effect posterior inclusion probabilities as the primary
+<a href="#component-posterior-validation">agreement criterion</a>.</p>
+<p>The evidence includes fixed-reference checks, fresh susieR fits for FinnGen
+type 2 diabetes GWAS loci and GTEx Whole_Blood eQTL analyses, and an
+<a href="#independent-toy-example">independent toy example</a>. Results apply to the tested
+configurations; numerical agreement is separate from the statistical calibration
+of <a href="model.html#pip-and-credible-sets">variant inclusion probabilities and credible sets</a>.</p>
 <h2 id="component-posterior-validation">Component posterior validation</h2>
-<p>Current core validation uses susieR 0.16.6, commit
-<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>, with identical arguments and verified
-variant order. The acceptance criterion is maximum absolute difference <code>1e-5</code>
-(relative tolerance zero) across the <strong>complete final alpha matrix</strong>, including
-inactive components and components without credible sets. Rows retain their
-original component order; they are never permuted to improve agreement.
-Each row must be finite, lie in [0, 1], and sum to one within <code>1e-10</code>.</p>
-<p>PIPs, credible-set memberships, moments, variances, Bayes factors, objectives,
-iteration counts and convergence flags remain diagnostics. Small differences
-near activity thresholds can change these summaries even when alpha agrees.
-The implementation uses mathematically equivalent float64 arithmetic rather
-than reproducing R rounding. No thresholds or stopping tolerances are relaxed
-for validation.</p>
-<p>The current ordinary build passes all 415 fitted configurations with identical
-arguments and verified variant order:</p>
-<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
-<thead>
-<tr>
-<th>Panel</th>
-<th>Fitted configurations</th>
-<th>Maximum absolute alpha difference</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Bundled examples</td>
-<td>7</td>
-<td>3.55e-09</td>
-</tr>
-<tr>
-<td>Parameter cases</td>
-<td>54</td>
-<td>4.6e-09</td>
-</tr>
-<tr>
-<td>Core feature cases</td>
-<td>69</td>
-<td>7.02e-06</td>
-</tr>
-<tr>
-<td>NIG interactions</td>
-<td>2</td>
-<td>5.5e-13</td>
-</tr>
-<tr>
-<td>Real analyses</td>
-<td>200</td>
-<td>1.32e-08</td>
-</tr>
-<tr>
-<td>Real RSS model options</td>
-<td>60</td>
-<td>7.93e-09</td>
-</tr>
-<tr>
-<td>Dense scaling fixtures</td>
-<td>6</td>
-<td>2.6e-11</td>
-</tr>
-<tr>
-<td>Targeted regressions</td>
-<td>17</td>
-<td>5e-09</td>
-</tr>
-</tbody>
-</table></div>
-<p>Six expected invalid-model errors also match. Auxiliary-function boundaries
-are checked separately. This finite panel does not establish agreement for
-every combination of model options or identical stochastic draws across
-languages. The historical tables below retain their original source and
-acceptance criteria.</p>
-<h2 id="recorded-earlier-024dev2-snapshot">Recorded earlier 0.2.4.dev2 snapshot</h2>
-<p>Comparisons against susieR 0.16.6 at commit <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>
-use compute commit <code>ff379ada284a63a3cf1770d43faacc6b929dc923</code>. All 100 GWAS and 100 eQTL
-locus analyses have maximum absolute PIP difference ≤1e-5 with zero relative tolerance,
-plus input, model and probability validity checks. Iteration counts, convergence
-flags and credible-set component/member identities agree in all 200 cases.
-CS order is immaterial; sets are matched by their original component IDs.</p>
-<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
-<thead>
-<tr>
-<th>Quantity</th>
-<th>GWAS maximum absolute difference</th>
-<th>eQTL maximum absolute difference</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>PIP</td>
-<td>9.14e-09</td>
-<td>1.22e-08</td>
-</tr>
-<tr>
-<td>alpha</td>
-<td>9.140027e-9</td>
-<td>1.22e-08</td>
-</tr>
-<tr>
-<td>mu</td>
-<td>5.260663e-10</td>
-<td>2.340635e-8</td>
-</tr>
-<tr>
-<td>mu2</td>
-<td>1.394811e-10</td>
-<td>3.704008e-9</td>
-</tr>
-<tr>
-<td>V</td>
-<td>4.078631e-6</td>
-<td>1.486289e-7</td>
-</tr>
-<tr>
-<td>sigma2</td>
-<td>0</td>
-<td>0</td>
-</tr>
-<tr>
-<td>ELBO</td>
-<td>1.000124e-5</td>
-<td>3.917756e-8</td>
-</tr>
-<tr>
-<td>KL</td>
-<td>7.010086e-8</td>
-<td>1.171606e-7</td>
-</tr>
-<tr>
-<td>lbf</td>
-<td>2.821602e-5</td>
-<td>2.743060e-7</td>
-</tr>
-<tr>
-<td>lbf_variable</td>
-<td>2.821542e-5</td>
-<td>3.389438e-7</td>
-</tr>
-</tbody>
-</table></div>
-<p>Intermediate fields are retained as diagnostics using absolute and relative
-tolerances of 10⁻⁶. Region25/GWAS exceeds that diagnostic rule for V and
-lbf_variable; its PIP passes the stated PIP criterion. Maximum credible-set
-coverage differences are 2.14e-9 (GWAS) and 2.59e-9 (eQTL); maximum purity
-difference is 8.88e-16 in both groups. These results describe standard fits with
-the <a href="performance.html#methods">fixed real-panel settings</a>.</p>
-<p>A separate parameter panel executes the same pinned R reference for 58 outcomes:
-54 returned fits and four expected prior-guard errors. It covers RSS and sufficient
-statistics, fixed and estimated residual variance, optim/EM/simple/fixed prior
-variance, nonuniform priors, standardization and stopping regressions. All 54
-returned fits pass PIP and validity checks; the four error cases match the
-expected prior-guard rejection in both implementations. A restricted independent NumPy reference also passes
-31 supported comparisons; it rejects unsupported boundary inputs explicitly.
-The preserved cycling example converges in 49 sweeps in both implementations,
-with zero maximum PIP difference. Refinement is tested separately and retains
-the <a href="post_analysis.html#refinement-compared-with-susier">documented search differences</a>.</p>
-<h2 id="earlier-measurements-023rc4">Earlier measurements: 0.2.3rc4</h2>
-<p>The earlier comparison uses prusie 0.2.3rc4 and susieR 0.16.6 at commit
-<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>. It reanalyzes saved full fits from
-6 October 2026 using the matched inputs and parameters described in
-<a href="performance.html#methods">performance methods</a>. The records identify the measured source and binary.</p>
-<p>The panel covers ordinary RSS fits with fixed residual variance and optimized
-prior variance, as specified in those methods. It does not test refinement,
-alternate convergence criteria or the current development snapshot's stopping
-and estimated-residual-variance checks.</p>
+<p>Comparisons use susieR 0.16.6, commit
+<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>, with matched inputs, model settings
+and verified variant order. The numerical criterion is a maximum absolute
+difference of <code>1e-5</code>, with <code>rtol=0</code>, across the complete final <code>alpha</code> matrix.
+Both matrices must have the same shape and retain their original component rows
+and variant columns, including inactive components and components without
+credible sets. Every entry must be finite and in <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0,1]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mclose">]</span></span></span></span></span>, and each row must sum
+to one within <code>1e-10</code>.</p>
+<p>Marginal posterior inclusion probabilities (PIPs), credible-set memberships,
+posterior moments, variances, Bayes factors, ELBOs, iteration counts and
+convergence flags are additional diagnostics. Small differences near component
+activity or credible-set thresholds can change the reported summaries even
+when <code>alpha</code> passes. The fitting thresholds and stopping tolerances stay at
+the specified values. See <a href="model.html#computational-compatibility">Computational compatibility</a>
+for the floating-point assumptions and full criterion.</p>
+<p>The fixed-reference validation covers 184 RSS cases, each tested with
+<code>n_threads=1</code>, <code>2</code>, <code>4</code> and <code>8</code>, and with both <code>overwrite_ld=False</code> and
+<code>overwrite_ld=True</code>. All 1,472 case–setting comparisons pass, with a maximum
+absolute alpha difference from the fixed R reference of <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>9.65</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">9.65\times10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">9.65</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span>.
+Each setting is fitted twice from independently reloaded inputs, giving 2,944
+prusie calls. Repeated calls and the saved same-setting prusie comparison arrays
+agree bit for bit in <code>alpha</code>. The <a href="assets/benchmark/v030_summary.json">machine-readable summary</a>
+records the settings, errors and identities of these separate R and prusie
+references.</p>
+<p>These fixed-reference checks use <code>refine=False</code> and are separate from the
+<a href="#variant-inclusion-probabilities">fresh-R real-data comparisons</a> and
+<a href="#independent-toy-example">independent toy example</a>. The results cover the tested
+inputs, model settings and platforms; <a href="post_analysis.html#refinement-compared-with-susier">refinement</a>
+and stochastic draws across languages require separate validation.</p>
 <h2 id="variant-inclusion-probabilities">Variant inclusion probabilities</h2>
+<p>The primary real-data comparison fits FinnGen R13 type 2 diabetes GWAS loci
+and GTEx v11 Whole_Blood eQTL analyses with prusie and fresh susieR 0.16.6.
+prusie uses <code>n_threads=1</code> and <code>refine=False</code>. Both implementations receive
+matched summary statistics, LD and model settings; see the
+<a href="reproducibility.html#real-gwas-and-eqtl-inputs">input provenance</a> and
+<a href="performance.html#methods">fitting methods</a>.</p>
 <!-- generated:maxima:start -->
 
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Analysis</th>
-<th>Analyses</th>
-<th>Variants per analysis</th>
-<th>Maximum absolute PIP difference</th>
-<th>Trace: case / variant index (zero-based)</th>
+<th>Cases</th>
+<th>Alpha passes / failures / unavailable</th>
+<th>Maximum &#124;Δalpha&#124;</th>
+<th>Maximum &#124;ΔPIP&#124;</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>GWAS</td>
-<td>100</td>
-<td>103–4162</td>
-<td>9.14e-09</td>
-<td>region16/gwas / 49</td>
+<td>200</td>
+<td>200 / 0 / 0</td>
+<td>6.58e-08</td>
+<td>6.58e-08</td>
 </tr>
 <tr>
 <td>eQTL</td>
-<td>100</td>
-<td>103–4162</td>
-<td>1.22e-08</td>
-<td>region31/eqtl / 238</td>
+<td>14157</td>
+<td>14156 / 1 / 0</td>
+<td>1.27e-05</td>
+<td>1.27e-05</td>
 </tr>
 </tbody>
 </table></div>
-<p>Across the evaluated GWAS analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 9.14e-09. Across the evaluated eQTL analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 1.22e-08.</p>
+<p>The gate remains absolute alpha error ≤ 1e-5, with relative tolerance zero. Iteration-limit exceedances remain failures of this numerical threshold.</p>
 <!-- generated:maxima:end -->
 
-<p>The numerical criterion is absolute PIP difference ≤10⁻⁵ with zero relative
-tolerance, together with input/model/probability validity. The table reports
-observed elementwise maxima, rather than that threshold. Each maximum is
-traceable to a zero-based variant index, both fitted values and hashes of the
-two raw fit records in the <a href="assets/r_comparison_summary.json">machine summary</a>.</p>
-<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Each analysis's maximum absolute PIP difference against its variant count, separated into GWAS and eQTL." src="assets/pip_accuracy.svg" /></div><figcaption><a href="assets/pip_accuracy.svg">Open original figure</a></figcaption></figure>
-<p>The vertical axis is symmetric-log with a linear interval below 10⁻¹⁴; exact
-zeros are retained at zero. <a href="assets/pip_accuracy.pdf">Vector PDF</a>.</p>
+<p>The table reports observed maximum absolute differences over the complete
+returned arrays. Pass/fail status follows the
+<a href="#component-posterior-validation">alpha criterion</a>; PIP differences are
+additional diagnostics. The <a href="assets/benchmark/v030_primary.tsv">per-case table</a>
+gives the errors and numerical status of each primary comparison.</p>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, with separate GWAS and eQTL panels." src="assets/benchmark/v030_numerical_agreement.svg" /></div><figcaption><a href="assets/benchmark/v030_numerical_agreement.svg">Open original figure</a></figcaption></figure>
+<p>The vertical axes use a symmetric-log scale that retains exact zeros. The
+dashed lines mark the alpha acceptance limit in the top panels.
+<a href="assets/benchmark/v030_numerical_agreement.pdf">Vector PDF</a>.</p>
 <!-- generated:limits:start -->
-<p>region25/gwas: prusie 100 iterations, susieR 100 iterations, both unconverged. Both calls completed and their outputs enter the numerical maxima and timing summaries.</p>
+
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Analysis</th>
+<th>prusie iteration-limit cases</th>
+<th>R iteration-limit cases</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GWAS</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>eQTL</td>
+<td>224</td>
+<td>224</td>
+</tr>
+</tbody>
+</table></div>
+<p>All completed positive timing pairs enter the performance summaries, independently of convergence, alpha agreement and credible-set presence. Per-case records list every status.</p>
 <!-- generated:limits:end -->
 
-<h2 id="posterior-arrays-bayes-factors-and-objective">Posterior arrays, Bayes factors and objective</h2>
+<p>The only gene exceeding the alpha criterion is <code>ENSG00000110203.10</code>. Its
+maximum absolute alpha difference is <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.26768</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.26768\times10^{-5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">1.26768</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span></span></span></span></span> in the primary
+comparison and in the separate <code>n_threads=2</code>, <code>4</code> and <code>8</code> comparisons. In all
+observed fits for this gene, both backends reached <code>max_iter=100</code> with
+<code>converged=False</code>. All four settings remain recorded as threshold failures.
+No exceedance involved a converged backend. The
+<a href="assets/benchmark/v030_summary.json">full summary</a> retains the individual
+outcomes and probability-validity checks.</p>
+<h2 id="reference-integrity-and-posterior-diagnostics">Reference integrity and posterior diagnostics</h2>
+<p>The first table checks whether fresh susieR <code>alpha</code> matrices reproduce the
+stored R references exactly, comparing both values and bit patterns. This is
+separate from the <a href="#component-posterior-validation">alpha tolerance</a> used to
+compare prusie with fresh susieR. The second table lists the four settings with
+alpha threshold failures described <a href="#variant-inclusion-probabilities">above</a>.</p>
 <!-- generated:errors:start -->
 
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
-<th>Quantity</th>
-<th>Scale / units</th>
-<th>GWAS maximum absolute difference</th>
-<th>eQTL maximum absolute difference</th>
+<th>Analysis</th>
+<th>Fresh/frozen R: non-bitwise cases</th>
+<th>Fresh/frozen R: unequal-value cases</th>
+<th>Integrity unavailable</th>
+<th>Maximum fresh/frozen &#124;Δalpha&#124;</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>alpha</td>
-<td>Probability</td>
-<td>9.14e-09</td>
-<td>1.22e-08</td>
-</tr>
-<tr>
-<td>mu</td>
-<td>Standardized effect</td>
-<td>5.26e-10</td>
-<td>2.34e-08</td>
-</tr>
-<tr>
-<td>mu2</td>
-<td>Squared standardized effect</td>
-<td>1.39e-10</td>
-<td>3.7e-09</td>
-</tr>
-<tr>
-<td>lbf_variable</td>
-<td>Natural-log BF</td>
-<td>2.82e-05</td>
-<td>3.39e-07</td>
-</tr>
-<tr>
-<td>lbf</td>
-<td>Natural-log BF</td>
-<td>2.82e-05</td>
-<td>2.74e-07</td>
-</tr>
-<tr>
-<td>V</td>
-<td>Squared effect</td>
-<td>4.08e-06</td>
-<td>1.49e-07</td>
-</tr>
-<tr>
-<td>sigma2</td>
-<td>Phenotype variance</td>
+<td>GWAS</td>
+<td>200</td>
+<td>200</td>
 <td>0</td>
+<td>5e-16</td>
+</tr>
+<tr>
+<td>eQTL</td>
+<td>14101</td>
+<td>14101</td>
 <td>0</td>
-</tr>
-<tr>
-<td>elbo</td>
-<td>Natural-log objective</td>
-<td>1e-05</td>
-<td>3.92e-08</td>
-</tr>
-<tr>
-<td>KL</td>
-<td>Natural-log divergence</td>
-<td>7.01e-08</td>
-<td>1.17e-07</td>
+<td>5.55e-16</td>
 </tr>
 </tbody>
 </table></div>
-<p>Maxima are computed elementwise across every valid analysis, including iteration-limit outputs. The machine summary includes the case, array index, both values at the maximum and reference magnitude for each field. ELBO traces are compared only with matching shapes; per-case records retain any shape mismatch.</p>
+<p>Fresh R is checked before timing against the stored frozen alpha values. Every nonzero difference remains recorded; the full-precision new R alpha is used for the prusie comparison. Frozen decimal serialization can prevent bitwise identity.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Setting</th>
+<th>Maximum &#124;Δalpha&#124;</th>
+<th>prusie: iterations / converged</th>
+<th>R: iterations / converged</th>
+<th>Both at iteration limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ENSG00000110203.10</td>
+<td>primary</td>
+<td>1.26768e-05</td>
+<td>100 / False</td>
+<td>100 / False</td>
+<td>True</td>
+</tr>
+<tr>
+<td>ENSG00000110203.10</td>
+<td>threads2</td>
+<td>1.26768e-05</td>
+<td>100 / False</td>
+<td>100 / False</td>
+<td>True</td>
+</tr>
+<tr>
+<td>ENSG00000110203.10</td>
+<td>threads4</td>
+<td>1.26768e-05</td>
+<td>100 / False</td>
+<td>100 / False</td>
+<td>True</td>
+</tr>
+<tr>
+<td>ENSG00000110203.10</td>
+<td>threads8</td>
+<td>1.26768e-05</td>
+<td>100 / False</td>
+<td>100 / False</td>
+<td>True</td>
+</tr>
+</tbody>
+</table></div>
 <!-- generated:errors:end -->
 
-<p>PIP and alpha differences have probability units. Conditional effects are on
-the fitted standardized predictor/phenotype scale for these z-input analyses;
-mu2 is a second moment, not a variance. Component and variant log Bayes factors
-use natural logarithms. Their numerical differences are recorded separately
-from PIP. ELBO is the iteration objective before final low-variance trimming;
-V, moments, Bayes factors and KL follow the finalization semantics described in
-<a href="results.html">results</a>.</p>
+<p>Every primary case has a stored R reference. The nonzero R-versus-R differences
+remain exact-integrity mismatches, even at rounding scale. The
+<a href="assets/benchmark/v030_primary.tsv">per-case table</a> retains each primary case's
+bitwise status and maximum absolute difference.</p>
+<p>The full real-data comparison does not provide error bounds for posterior
+moments, variances, log Bayes factors or ELBOs. See the
+<a href="results.html#posterior-fields">posterior field definitions</a> for their meanings
+and working scales, and <a href="results.html#iterations-and-finalization">iterations and finalization</a>
+for the relation between recorded objectives and returned arrays.</p>
 <h2 id="credible-sets">Credible sets</h2>
+<p>The real-data fits construct <a href="model.html#pip-and-credible-sets">credible sets</a>
+with target posterior mass <code>coverage=0.95</code> and minimum absolute LD correlation
+<code>min_abs_corr=0.5</code>.</p>
 <!-- generated:cs:start -->
 
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Analysis</th>
-<th>prusie sets</th>
-<th>susieR sets</th>
-<th>Component/member differences</th>
-<th>Maximum mass difference</th>
-<th>Maximum purity difference</th>
+<th>Backend</th>
+<th>Cases with recorded counts</th>
+<th>Credible sets (first retained fit)</th>
+<th>Empty-CS cases</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>GWAS</td>
-<td>154</td>
-<td>154</td>
-<td>0</td>
-<td>2.14e-09</td>
-<td>8.88e-16</td>
+<td>prusie</td>
+<td>200</td>
+<td>1139</td>
+<td>7</td>
+</tr>
+<tr>
+<td>GWAS</td>
+<td>susieR</td>
+<td>200</td>
+<td>1139</td>
+<td>7</td>
 </tr>
 <tr>
 <td>eQTL</td>
-<td>97</td>
-<td>97</td>
-<td>0</td>
-<td>2.59e-09</td>
-<td>8.88e-16</td>
+<td>prusie</td>
+<td>14157</td>
+<td>14207</td>
+<td>5049</td>
+</tr>
+<tr>
+<td>eQTL</td>
+<td>susieR</td>
+<td>14157</td>
+<td>14207</td>
+<td>5049</td>
 </tr>
 </tbody>
 </table></div>
-<p>Sets are matched by original component ID and compared as member sets; returned ordering does not affect the comparison. All actual masses, purity statistics and zero-based members are retained.</p>
+<p>This full-panel campaign records set counts; it does not compare full member identities, returned mass or purity. The separate packaged example and regression suites check those quantities.</p>
 <!-- generated:cs:end -->
 
-<p>The requested mass is 0.95. Returned mass is the sum of the selected alpha
-entries in the original component; purity uses every selected pair's absolute
-correlation. The retained numerical records include independent checks of PIP
-identity, alpha normalization, actual set mass and purity, including empty sets.
-Convergence and the presence of a credible set are different properties.</p>
+<p>Matching aggregate counts do not establish agreement of individual sets.
+Credible-set presence also does not establish convergence. Interpret the counts
+alongside the <a href="assets/benchmark/v030_records.jsonl.gz">recorded convergence flags</a>
+and the <a href="results.html#credible-set-fields">credible-set fields</a>.</p>
 <h2 id="independent-toy-example">Independent toy example</h2>
+<p>The packaged toy example checks numerical agreement on a single simulated
+dataset, using a separate susieR reference. Load its summary statistics and LD
+with <code>prusie.load_example()</code>.</p>
 <!-- generated:toy:start -->
-<p>The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
+<p>The independent 500-variant toy example converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
 <!-- generated:toy:end -->
 
-<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Signed association statistics and fitted PIPs for the independent synthetic toy example, with its two true effect positions marked." src="assets/toy_fit.svg" /></div><figcaption><a href="assets/toy_fit.svg">Open original figure</a></figcaption></figure>
-<p>The dashed lines mark the two simulated nonzero effects. This single toy
-example has its own newly executed reference, generation script and packaged
-inputs. See the <a href="example.html">toy example tutorial</a> and <a href="assets/toy_fit.pdf">vector PDF</a>.</p>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Signed z-scores (top) and prusie and susieR PIPs (bottom) for the synthetic toy example." src="assets/toy_fit.svg" /></div><figcaption><a href="assets/toy_fit.svg">Open original figure</a></figcaption></figure>
+<p>The dashed lines mark the simulated nonzero effects. Credible-set memberships
+also match the R reference for this example. See the <a href="example.html">toy example tutorial</a>
+for the simulation method, fitting options and packaged reference, and the
+<a href="assets/toy_fit.pdf">vector PDF</a>.</p>
 <h2 id="reproduce-the-comparisons">Reproduce the comparisons</h2>
-<p><a href="assets/r_comparison_numerical.json">Retained records</a> include the real panel
-and a separately identified older synthetic regression panel. The older fixture
-and references remain byte-for-byte regression inputs. The installed package's
-independent toy example is checked against its separate packaged R reference
-by <code>tests/test_packaged_example.py</code>.</p>
-<p>The <a href="reproducibility.html">reproducibility guide</a> distinguishes regeneration from
-saved records, offline frozen-reference checks, and live-R fitting.
-The internal benchmark comparator compares original component IDs and retains all
-field diagnostics. Existing frozen references and tolerances are unchanged.</p></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
+<p>The <a href="assets/benchmark/v030_summary.json">public summary</a>,
+<a href="assets/benchmark/v030_primary.tsv">primary comparison table</a> and
+<a href="assets/benchmark/v030_records.jsonl.gz">full per-case records</a> provide numerical
+errors, convergence diagnostics and reference-integrity results. Follow the
+<a href="reproducibility.html#tables-and-figures">regeneration instructions</a> to rebuild
+the tables and figures from retained measurements without refitting.</p>
+<p>The <a href="reproducibility.html#toy-example">offline toy checks</a> compare a prusie fit
+with the packaged R reference. The <a href="reproducibility.html#r-comparison">fresh susieR comparison</a>
+fits both implementations using matched inputs and settings. Repeating the
+real-data comparisons requires the separately obtained
+<a href="reproducibility.html#real-gwas-and-eqtl-inputs">association summaries and LD</a>,
+with the same variant order and fitting settings. Preserve the frozen inputs
+and reference files when running new checks.</p></article>
+<footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

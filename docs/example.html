@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
-<div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html" aria-current="page">Quick start</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<div class="version"><span class="version-number">0.3.0</span><span class="version-badge">Stable</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html" aria-current="page">Quick start</a><a href="worked_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
@@ -32,19 +32,26 @@
 </ul>
 </div>
 </details><h1 id="quick-start-fit-read-and-report">Quick start: fit, read and report</h1>
-<p>This tutorial loads the packaged synthetic toy example, fits the model once and
-uses that posterior for PIPs, credible sets, figures and an offline report. The
-example has 500 correlated predictors, two of which have nonzero effects, and
-can be used offline after <a href="install.html">installation</a>.</p>
+<p>This toy example uses posterior inclusion probabilities (PIPs) and credible sets
+to summarize evidence about which variants carry an effect. It fits a SuSiE
+model once and uses the same posterior for figures and an offline report. The
+packaged synthetic data contain 500 correlated predictors, two with nonzero
+effects, and are available offline after <a href="install.html">installation</a>.</p>
 <h2 id="load-inputs-and-fit">Load inputs and fit</h2>
+<p>Load the packaged summary statistics and linkage disequilibrium (LD) matrix,
+then fit SuSiE-RSS:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 
 <span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_example</span><span class="p">()</span>
 <span class="n">inputs</span> <span class="o">=</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">]</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;R&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;n&quot;</span><span class="p">])</span>
-<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">],</span>
-                       <span class="n">track_fit</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">retain_data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span>
+    <span class="o">**</span><span class="n">inputs</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">],</span>
+    <span class="n">track_fit</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span>
+    <span class="n">retain_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Converged:&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">converged</span><span class="p">,</span> <span class="s2">&quot;Iterations:&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="p">)</span>
 </code></pre></div>
 
@@ -53,24 +60,33 @@ can be used offline after <a href="install.html">installation</a>.</p>
 Converged: True Iterations: 3
 </code></pre></div>
 
-<p>This call fits the model. <code>track_fit</code> records the per-sweep convergence
-metrics, and <code>retain_data</code> keeps the validated inputs needed for continuation or
-refinement. The example uses L = 5 single effects, ELBO tolerance 0.001, requested
-credible-set coverage 0.95, minimum absolute correlation 0.5, an estimated prior
-variance and a fixed residual variance of 1. These settings differ from the
-<a href="api.html">API defaults</a>.</p>
-<p>For your own data, supply signed z-scores aligned to the effect allele, the
-signed LD correlation matrix R and the sample size, in the same variant order.
-Read <a href="inputs.html">inputs</a> before replacing these arrays; r² is a display
-quantity and cannot replace signed r in the model.</p>
+<p><code>example["parameters"]</code> allows up to five single-effect components (<code>L=5</code>),
+with <code>max_iter=100</code> and ELBO tolerance <code>tol=0.001</code>. Prior variances are
+estimated and residual variance is fixed at 1. The credible-set thresholds,
+<code>coverage=0.95</code> and <code>min_abs_corr=0.5</code>, match the
+<a href="api.html#shared-fitting-options">API defaults</a>.</p>
+<p><code>track_fit="compact"</code> records per-sweep metrics in <code>fit.trace</code> for the
+convergence plot below. <code>retain_data=True</code> keeps prepared inputs for
+<a href="post_analysis.html">continuation or refinement</a>.</p>
+<p>For your own data, align the signed z-scores and both axes of <code>R</code> to the same
+variant order and effect alleles. Keep <code>variant_ids</code> in that order and supply
+the study sample size as <code>n</code>. The LD matrix must contain signed correlations
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span>; <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>r</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">r^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> cannot replace them. Read the
+<a href="inputs.html#variant-order-and-alleles">input requirements</a> before replacing the
+example inputs.</p>
 <h2 id="read-pips-and-credible-sets">Read PIPs and credible sets</h2>
+<p>A PIP combines inclusion across active single-effect components; a credible set
+summarizes uncertainty within one component. Find the variant with the highest
+PIP and list the retained sets:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">lead</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Lead: </span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">[</span><span class="n">lead</span><span class="p">]</span><span class="si">}</span><span class="s2">, PIP=</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">[</span><span class="n">lead</span><span class="p">]</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">component</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;cs_index&quot;</span><span class="p">]):</span>
     <span class="n">members</span> <span class="o">=</span> <span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">[</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Component </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">component</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">members</span><span class="p">)</span><span class="si">}</span><span class="s2">; &quot;</span>
-          <span class="sa">f</span><span class="s2">&quot;mass=</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s1">&#39;coverage&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">; &quot;</span>
-          <span class="sa">f</span><span class="s2">&quot;minimum |r|=</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s1">&#39;purity&#39;</span><span class="p">][</span><span class="s1">&#39;min_abs_corr&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Component </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">component</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">members</span><span class="p">)</span><span class="si">}</span><span class="s2">; &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;mass=</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s1">&#39;coverage&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">; &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;minimum |r|=</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s1">&#39;purity&#39;</span><span class="p">][</span><span class="s1">&#39;min_abs_corr&#39;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
 </code></pre></div>
 
 <p>Expected output:</p>
@@ -79,12 +95,18 @@ Component 0: syn0100; mass=0.969674; minimum |r|=1
 Component 1: syn0350; mass=0.999937; minimum |r|=1
 </code></pre></div>
 
-<p>Here each credible set contains a single variant. A PIP combines inclusion over
-all active single effects, whereas the mass of a credible set refers to one
-single effect. The purity of a single-variant set is 1 by definition and says
-nothing about LD with neighboring variants. <a href="results.html">Reading results</a>
-explains these quantities and the effect indices.</p>
+<p><code>fit.sets["coverage"]</code> records each set's attained posterior mass within its
+component; it can exceed the requested <code>coverage=0.95</code>. The component IDs in
+<code>fit.sets["cs_index"]</code> refer to original, zero-based rows of <code>fit.alpha</code> and
+need not be consecutive.</p>
+<p>Both sets here contain one variant, so their purity is 1 by convention. This
+says nothing about LD with neighboring variants. See
+<a href="results.html#credible-set-fields">credible-set fields</a> for the returned fields
+and filtering rules.</p>
 <h2 id="summarize-the-fitted-posterior">Summarize the fitted posterior</h2>
+<p><code>summarize</code> organizes the existing posterior into tables of variants,
+single-effect components and credible sets without refitting. Supplying <code>R</code>
+adds LD proxies and relationships between credible sets:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;R&quot;</span><span class="p">],</span> <span class="n">z</span><span class="o">=</span><span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">prusie</span><span class="o">.</span><span class="n">summary_text</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Stop:&quot;</span><span class="p">,</span> <span class="n">summary</span><span class="p">[</span><span class="s2">&quot;convergence&quot;</span><span class="p">][</span><span class="s2">&quot;stop_reason&quot;</span><span class="p">])</span>
@@ -95,30 +117,32 @@ explains these quantities and the effect indices.</p>
 Stop: criterion_satisfied
 </code></pre></div>
 
-<p><code>summarize</code> builds variant, single-effect, credible-set and resolution tables
-from the fit. Print the complete <code>prusie.summary_text(summary)</code> to include the
-leading PIPs and the status of the analysis. This fit has no refinement search
-or LD diagnostic, so these are reported as not requested and not assessed.</p>
+<p>Print <code>prusie.summary_text(summary)</code> without <code>.splitlines()[0]</code> to read
+credible-set details, leading PIPs and the recorded analysis status. For this
+fit it reports refinement as not requested and LD diagnostics as not assessed.
+Supplying <code>R</code> for tables does not run an
+<a href="sensitivity.html#diagnose-consistency-of-z-and-ld">LD consistency diagnostic</a>.</p>
 <h2 id="write-an-offline-report">Write an offline report</h2>
-<p>With the <a href="install.html#optional-analysis-tools">analysis extra</a> installed, figures
-and a report can be produced from the same <code>fit</code> and <code>summary</code>:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.viz</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_locus</span><span class="p">,</span> <span class="n">plot_convergence</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_report</span>
+<p>Save the posterior summaries and figures in an offline report. Install the
+<a href="install.html#optional-analysis-tools">analysis extra</a> to run the plotting calls:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_report</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">prusie.viz</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_convergence</span><span class="p">,</span> <span class="n">plot_locus</span>
 
 <span class="n">report</span> <span class="o">=</span> <span class="n">write_report</span><span class="p">(</span>
-    <span class="n">summary</span><span class="p">,</span> <span class="s2">&quot;output/analysis&quot;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Synthetic fine-mapping example&quot;</span><span class="p">,</span>
-    <span class="n">figures</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Locus overview&quot;</span><span class="p">:</span> <span class="n">plot_locus</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;R&quot;</span><span class="p">],</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">),</span>
-             <span class="s2">&quot;Convergence&quot;</span><span class="p">:</span> <span class="n">plot_convergence</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">)},</span>
+    <span class="n">summary</span><span class="p">,</span>
+    <span class="s2">&quot;output/analysis&quot;</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Synthetic fine-mapping example&quot;</span><span class="p">,</span>
+    <span class="n">figures</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;Locus overview&quot;</span><span class="p">:</span> <span class="n">plot_locus</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;R&quot;</span><span class="p">],</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;Convergence&quot;</span><span class="p">:</span> <span class="n">plot_convergence</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">),</span>
+    <span class="p">},</span>
 <span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Open output/analysis/index.html&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="p">[</span><span class="s2">&quot;html&quot;</span><span class="p">])</span>
 </code></pre></div>
 
-<p>Open <code>output/analysis/index.html</code> locally. The report lists the candidate
-variants and their resolution first, followed by the stopping status and the
-supplied figures. These calls use the existing posterior;
-<a href="post_analysis.html">continuation, refinement</a> and
-<a href="sensitivity.html#diagnose-consistency-of-z-and-ld">LD diagnostics</a> are separate
-computations.</p>
+<p>Open the printed path in your browser. The report starts with credible sets
+and candidate variants, then shows analysis status and the supplied figures.
+The plotting and report functions use the existing posterior.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -128,76 +152,101 @@ computations.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>summary.txt</code>, <code>analysis_summary.json</code></td>
-<td>Short text and structured summaries</td>
+<td><code>index.html</code></td>
+<td>Offline HTML report</td>
 </tr>
 <tr>
-<td><code>index.html</code>, <code>figure_index.json</code>, PNG/SVG</td>
-<td>Offline report and named figure mapping</td>
+<td><code>summary.txt</code>, <code>analysis_summary.json</code></td>
+<td>Text and compact structured summaries</td>
 </tr>
 <tr>
 <td><code>tables/*.csv</code>, <code>plot_data.json</code></td>
-<td>Full tables and the supplied figures' plotted data</td>
+<td>Full tables and the supplied figures' plotted values</td>
+</tr>
+<tr>
+<td><code>figure_index.json</code>, <code>*.png</code>, <code>*.svg</code></td>
+<td>Figure labels, file mapping and image exports</td>
 </tr>
 <tr>
 <td><code>evidence.json</code></td>
-<td>Full-precision facts with stable IDs and JSON paths</td>
+<td>Full-precision scalar facts with stable IDs and JSON pointers</td>
 </tr>
 <tr>
 <td><code>analysis.json</code>, <code>arrays.npz</code></td>
-<td>Lossless saved analysis structure and arrays</td>
+<td>Reloadable summary, supplied diagnostics and metadata</td>
 </tr>
 </tbody>
 </table></div>
-<p>Copy the whole report directory to keep its links valid. The GitHub file viewer
-shows the HTML source; download the directory to open the report.</p>
+<p><a href="#save-and-reload-a-result">Save the fitted result separately</a> to retain its
+posterior arrays. Copy or download the whole report directory to keep its
+export links valid.</p>
 <h2 id="save-and-reload-a-result">Save and reload a result</h2>
-<p>The lossless storage functions keep array dtypes, identifiers and metadata:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_analysis</span><span class="p">,</span> <span class="n">load_analysis</span>
+<p>Save the posterior arrays, variant identifiers and result metadata in
+<code>analysis.json</code> and <code>arrays.npz</code>, preserving array dtypes. Loading a saved fit
+reconstructs a <code>SusieResult</code>:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_analysis</span><span class="p">,</span> <span class="n">save_analysis</span>
 
-<span class="n">saved</span> <span class="o">=</span> <span class="n">save_analysis</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="s2">&quot;output/fit&quot;</span><span class="p">)</span>
+<span class="n">save_analysis</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="s2">&quot;output/fit&quot;</span><span class="p">)</span>
 <span class="n">restored</span> <span class="o">=</span> <span class="n">load_analysis</span><span class="p">(</span><span class="s2">&quot;output/fit&quot;</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PIPs identical:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">restored</span><span class="o">.</span><span class="n">pip</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">))</span>
 </code></pre></div>
 
-<p>The expected output is <code>PIPs identical: True</code>. The same function reads a report
-directory into its saved analysis mapping. Saved fits do not include the
-retained inputs; to start a new fit from a reloaded result, supply the original
-inputs together with <code>s_init=restored</code>. The <a href="post_analysis.html#technical-details">warm-start details</a>
-describe the checks applied.</p>
+<p>The expected output is <code>PIPs identical: True</code>. Keep both files together.
+<code>load_analysis("output/analysis")</code> reads the report's saved mapping, whose
+<code>"summary"</code> entry contains the analysis tables.</p>
+<p>Saved fits exclude the retained input snapshot, so <code>prusie.continue_fit(restored)</code>
+cannot run directly. To warm-start a new <code>susie_rss</code> fit, supply the original
+inputs and fitting options with <code>s_init=restored</code>; see
+<a href="post_analysis.html#technical-details">warm-start validation</a> for the alignment
+and scale checks.</p>
 <p>Continue with <a href="results.html">reading results</a>, <a href="post_analysis.html">convergence and refinement</a>,
-<a href="sensitivity.html">sensitivity and LD</a> or the <a href="worked_examples.html">two worked examples</a>.</p>
+<a href="sensitivity.html">sensitivity and LD</a> or the <a href="worked_examples.html">Toy example</a>.</p>
 <h2 id="advanced-export-and-example-provenance">Advanced export and example provenance</h2>
 <details>
 <summary>Manual arrays and metadata export</summary>
-<p>The storage functions above suffice for ordinary use. For exchange with other
-tools, selected arrays and metadata can be written explicitly:</p>
+<p>Use <a href="#save-and-reload-a-result">Save and reload a result</a> for a reloadable
+<code>SusieResult</code>. For exchange with other tools, export selected arrays and
+metadata explicitly:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;fine-mapping-result&quot;</span><span class="p">)</span>
 <span class="n">out</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">np</span><span class="o">.</span><span class="n">savez_compressed</span><span class="p">(</span><span class="n">out</span> <span class="o">/</span> <span class="s2">&quot;posterior.npz&quot;</span><span class="p">,</span> <span class="n">pip</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span>
-                    <span class="n">mu</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="n">mu2</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">mu2</span><span class="p">,</span> <span class="n">lbf_variable</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">lbf_variable</span><span class="p">,</span>
-                    <span class="n">V</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">V</span><span class="p">,</span> <span class="n">elbo</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">elbo</span><span class="p">,</span> <span class="n">variant_ids</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">)</span>
-<span class="n">sets</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;component&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="s2">&quot;members&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
-         <span class="s2">&quot;posterior_mass&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">])}</span>
-        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;cs_index&quot;</span><span class="p">])]</span>
-<span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;prusie_version&quot;</span><span class="p">:</span> <span class="n">prusie</span><span class="o">.</span><span class="n">__version__</span><span class="p">,</span> <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">params</span><span class="p">,</span>
-            <span class="s2">&quot;converged&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">converged</span><span class="p">,</span> <span class="s2">&quot;niter&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="p">,</span> <span class="s2">&quot;sets&quot;</span><span class="p">:</span> <span class="n">sets</span><span class="p">,</span>
-            <span class="s2">&quot;generation&quot;</span><span class="p">:</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">]}</span>
-<span class="p">(</span><span class="n">out</span> <span class="o">/</span> <span class="s2">&quot;metadata.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="n">np</span><span class="o">.</span><span class="n">savez_compressed</span><span class="p">(</span>
+    <span class="n">out</span> <span class="o">/</span> <span class="s2">&quot;posterior.npz&quot;</span><span class="p">,</span>
+    <span class="n">pip</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="n">mu2</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">mu2</span><span class="p">,</span>
+    <span class="n">lbf_variable</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">lbf_variable</span><span class="p">,</span> <span class="n">V</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">V</span><span class="p">,</span> <span class="n">elbo</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">elbo</span><span class="p">,</span>
+    <span class="n">variant_ids</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">sets</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;component&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">component</span><span class="p">),</span>
+        <span class="s2">&quot;members&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">variant_ids</span><span class="p">[</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;cs&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+        <span class="s2">&quot;posterior_mass&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]),</span>
+    <span class="p">}</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">component</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">sets</span><span class="p">[</span><span class="s2">&quot;cs_index&quot;</span><span class="p">])</span>
+<span class="p">]</span>
+<span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;prusie_version&quot;</span><span class="p">:</span> <span class="n">prusie</span><span class="o">.</span><span class="n">__version__</span><span class="p">,</span>
+    <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">params</span><span class="p">,</span>
+    <span class="s2">&quot;converged&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">converged</span><span class="p">,</span>
+    <span class="s2">&quot;niter&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="p">,</span>
+    <span class="s2">&quot;sets&quot;</span><span class="p">:</span> <span class="n">sets</span><span class="p">,</span>
+    <span class="s2">&quot;generation&quot;</span><span class="p">:</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">],</span>
+<span class="p">}</span>
+<span class="p">(</span><span class="n">out</span> <span class="o">/</span> <span class="s2">&quot;metadata.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
 </code></pre></div>
 
 </details>
 <details>
 <summary>Generation, frozen reference and numerical agreement</summary>
-<p>The example has 1000 simulated observations of 500 Gaussian predictors. The
-z-scores are the marginal regression estimates divided by their standard
-errors, and R is the sample Pearson correlation of the same standardized
-predictors. The data are synthetic; no human study or genome build is implied.</p>
+<p>The packaged inputs come from 1000 simulated observations of 500 Gaussian
+predictors. Signed z-scores are marginal regression estimates divided by their
+standard errors, and <code>R</code> is the sample Pearson correlation matrix of the same
+centered, sample-standardized predictors. The data are synthetic; no human
+study or genome build is implied.</p>
 <!-- generated:toy:start -->
-<p>The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
+<p>The independent 500-variant toy example converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.</p>
 <!-- generated:toy:end -->
 <!-- generated:toy-cs:start -->
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
@@ -226,23 +275,26 @@ predictors. The data are synthetic; no human study or genome build is implied.</
 </table></div>
 <!-- generated:toy-cs:end -->
 <figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Signed z and fitted PIPs, with the two synthetic true effects marked." class="figure-complex" src="assets/toy_fit.svg" /></div><figcaption><a href="assets/toy_fit.svg">Open original figure</a></figcaption></figure>
-<p><code>tools/generate_example.py</code> uses NumPy PCG64 with seed 20261007, a stationary
-AR(1) correlation of 0.85 between adjacent predictors, sample-standardized
-predictors, nonzero coefficients 0.35 and −0.30 at zero-based indices 99 and
-349, and independent standard Gaussian noise. The coordinates are arbitrary
-synthetic positions at intervals of 1000 units. <code>tools/generate_example.py --check</code>
-verifies the exact SHA-256 hashes of the frozen files and compares regenerated
-values within bounds on floating-point rounding error; see the
-<a href="reproducibility.html#regeneration-checks">regeneration criteria</a>.</p>
-<p>The packaged reference was fitted separately with susieR 0.16.6 using the same
-inputs and options. The hashes of inputs and reference, the parameters, the
-convergence status and the credible sets are distributed with the data. The
+<p><code>tools/generate_example.py</code> uses NumPy PCG64 with seed 20261007. It generates
+Gaussian AR(1) predictors with adjacent population correlation 0.85, then
+centers and sample-standardizes them. Nonzero coefficients are 0.35 and −0.30
+at zero-based indices 99 and 349; the response also includes independent
+standard Gaussian noise. Stored positions are arbitrary synthetic coordinates
+spaced 1000 units apart.</p>
+<p><code>tools/generate_example.py --check</code> compares regenerated arrays and generation
+metadata with the packaged data, allowing documented bounds on floating-point
+rounding error. <code>load_example()</code> separately verifies SHA-256 hashes of the
+packaged inputs and metadata. See the
+<a href="reproducibility.html#regeneration-checks">regeneration checks</a>.</p>
+<p>The packaged reference was fitted separately with susieR 0.16.6 using matching
+inputs and fitting options. Input and reference-array hashes, parameters,
+convergence status and credible sets are distributed with the data. The
 dataset and generation script are licensed under GPL-3.0-or-later.
 <a href="reproducibility.html">Reproducibility</a> gives commands for offline checks and for
 refitting with R; <a href="numerical_accuracy.html">numerical accuracy</a> reports the
 measured differences.</p>
 </details></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
+<footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

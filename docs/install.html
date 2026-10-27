@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
-<div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html" aria-current="page">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<div class="version"><span class="version-number">0.3.0</span><span class="version-badge">Stable</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html" aria-current="page">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
@@ -30,76 +30,77 @@
 </ul>
 </div>
 </details><h1 id="installation">Installation</h1>
-<p>prusie is installed from source for CPython 3.10–3.13. NumPy (≥1.26, &lt;3)
-supports ordinary dense fitting. Install the analysis extra below for sparse
-designs, advanced RSS models and auxiliary functions that use SciPy.
-Fitting does not call R.</p>
-<p>This checkout contains <strong>0.2.4.dev2</strong> (development version). Record the package
-version and source revision with each analysis.</p>
+<p>Build prusie 0.3.0 <a href="#build-from-source">from source</a> using CPython 3.10–3.13.
+NumPy (≥1.26, &lt;3) is its only required Python dependency. Fitting uses a compiled
+Rust extension and does not require R.</p>
+<p>Install the <a href="#optional-analysis-tools">analysis extra</a> for sparse input, LD
+diagnostics and plotting. Record the package version and source revision with
+each analysis.</p>
 <h2 id="build-from-source">Build from source</h2>
-<p>Building requires the Rust toolchain pinned in <code>rust-toolchain.toml</code> (1.98.1),
-a C compiler and archiver and the Python development headers. The build uses maturin 1.10.2
-and the locked Cargo dependencies.</p>
-<p>The pinned PyO3 0.23.5 supports CPython up to 3.13, and the package metadata
-therefore requires Python ≥3.10, &lt;3.14. Support for newer interpreters would
-require an updated binding and its validation.</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="nb">cd</span><span class="w"> </span>prusie<span class="w">  </span><span class="c1"># source checkout for the version documented here</span>
-python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<p>Install the Rust toolchain pinned in <code>rust-toolchain.toml</code> (1.98.1) and your
+platform's linker tools. The default native GNU/Linux x86-64 build also uses a
+C compiler and <code>ar</code> for the vector-math helper. pip uses maturin 1.10.2, pinned in
+<code>pyproject.toml</code>, as the build backend.</p>
+<p>From the source checkout, run these commands in a POSIX shell:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
 .<span class="w"> </span>.venv/bin/activate
-python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>.
+python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>.<span class="w"> </span>--config-settings<span class="o">=</span>build-args<span class="o">=</span><span class="s2">&quot;--locked&quot;</span>
 </code></pre></div>
 
-<p>pip and Cargo need network access or locally cached build dependencies. Install
-the pinned Rust toolchain with your usual Rust installer before building. The
-extension does not require a BLAS development library. The portable scalar
-solver requires no system vector-math library.</p>
-<p>To build without the optional GNU/Linux vector-math shim, enable the compile-time
-<code>portable-math</code> feature:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>.<span class="w"> </span>--config-settings<span class="o">=</span>build-args<span class="o">=</span><span class="s2">&quot;--features portable-math&quot;</span>
+<p><code>--locked</code> requires the dependency versions recorded in <code>Cargo.lock</code>. pip and
+Cargo need network access or locally available dependencies. The extension does
+not require BLAS development libraries.</p>
+<p>To disable the optional vector-math helper, add <code>portable-math</code>:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>.<span class="w"> </span>--config-settings<span class="o">=</span>build-args<span class="o">=</span><span class="s2">&quot;--locked --features portable-math&quot;</span>
 </code></pre></div>
 
-<p>This selects the existing scalar fallback; it is not a bitwise cross-platform
-reproducibility guarantee. See <a href="implementation.html#numerical-reproducibility">numerical reproducibility</a>.</p>
+<p>This uses scalar exponentials and keeps RSS preparation sequential; see
+<a href="implementation.html#native-threading">native threading</a>. It does not guarantee
+bitwise identical results across platforms; see
+<a href="implementation.html#numerical-reproducibility">numerical reproducibility</a>.</p>
 <h2 id="use-a-prebuilt-wheel">Use a prebuilt wheel</h2>
-<p>The <a href="https://github.com/LucaJiang/prusie/releases/tag/v0.2.3rc6">v0.2.3rc6 prerelease</a>
-provides a CPython 3.12 wheel for Linux x86-64, tagged <code>manylinux_2_34</code>
-(glibc ≥2.34), a source distribution and <code>SHA256SUMS</code>. These files belong to
-that earlier version and do not contain the development version described here.</p>
-<p>Download the matching file and verify it against <code>SHA256SUMS</code>. For that wheel:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./prusie-0.2.3rc6-cp312-cp312-manylinux_2_34_x86_64.whl
+<p>Use a prusie 0.3.0 wheel that matches your Python interpreter and platform.
+For example, the following filename identifies a wheel for CPython 3.12 on
+Linux x86-64 with glibc ≥2.34. From the directory containing the wheel:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./prusie-0.3.0-cp312-cp312-manylinux_2_34_x86_64.whl
 </code></pre></div>
 
-<p>Installing a compatible wheel requires neither Cargo nor a compiler; a source
-distribution requires the build toolchain above. The API documented here
-requires a build of this source revision. The version and platform tags of a wheel identify
-its code and supported environment.</p>
-<p>The CI matrix includes CPython 3.10–3.13 on Linux and CPython 3.12 on macOS and
-Windows, plus a Linux <code>portable-math</code> build.
-See <a href="contributing.html">contributing</a> for package validation commands.</p>
+<p>If a checksum is supplied, verify it before installation. The wheel contains
+the compiled extension, so installing prusie itself does not require Rust or a
+compiler. A source distribution still requires the
+<a href="#build-from-source">build toolchain</a>.</p>
+<p>See <a href="contributing.html#building-packages">contributing</a> for package-building and
+validation commands.</p>
 <h2 id="optional-analysis-tools">Optional analysis tools</h2>
-<p>To install the plotting and LD-diagnostic dependencies from the same checkout:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span>
+<p>The <code>analysis</code> extra adds SciPy (≥1.11) and Matplotlib (≥3.7). From the same
+source checkout:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span><span class="w"> </span>--config-settings<span class="o">=</span>build-args<span class="o">=</span><span class="s2">&quot;--locked&quot;</span>
 </code></pre></div>
 
-<p>The analysis extra adds Matplotlib and SciPy. Ordinary dense Gaussian fitting
-needs only NumPy; sparse input, dynamic RSS and posterior outcome configurations
-also use SciPy. Reports are written for offline reading, and figures and diagnostics
-are computed only when requested.
-Plotting functions live in <code>prusie.viz</code>; reports live in <code>prusie.report</code>.
-These modules are loaded on demand rather than by <code>import prusie</code>.</p>
+<p>If using <code>portable-math</code>, include <code>--features portable-math</code> in these build
+arguments.</p>
+<p>SciPy is used for sparse input, LD diagnostics, RSS models with reference
+uncertainty or mismatch, multi-panel RSS, and
+<code>prusie.susie_post_outcome_configuration</code>. Plotting functions in <code>prusie.viz</code>
+use Matplotlib; <code>prusie.report</code> writes offline reports. Both modules are loaded
+on demand. See the <a href="api.html#summaries-comparisons-and-reports">analysis and plotting API</a>.</p>
 <h2 id="run-the-installed-example">Run the installed example</h2>
-<p>The following works from any directory after installation:</p>
+<p>To check the installation, fit the packaged synthetic toy example:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 
 <span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_example</span><span class="p">()</span>
 <span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span><span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">converged</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Version:&quot;</span><span class="p">,</span> <span class="n">prusie</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Converged:&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">converged</span><span class="p">,</span> <span class="s2">&quot;IBSS sweeps:&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Maximum PIP:&quot;</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">pip</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
 </code></pre></div>
 
-<p>The package contains the inputs, metadata and frozen reference fit of this
-example, so neither a source checkout, R nor network access is needed to load
-and fit it. Continue with the <a href="example.html">toy example tutorial</a>.</p></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
+<p><code>load_example()</code> reads inputs and metadata from the installed package, so this
+example can run from any directory without a source checkout, R or network
+access. It needs no optional analysis dependencies. Continue with the
+<a href="example.html">toy example tutorial</a> to interpret PIPs and credible sets and add
+figures and an offline report.</p></article>
+<footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

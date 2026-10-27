@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
-<div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html" aria-current="page">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<div class="version"><span class="version-number">0.3.0</span><span class="version-badge">Stable</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html" aria-current="page">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
@@ -34,87 +34,241 @@
 </ul>
 </div>
 </details><h1 id="reproducibility">Reproducibility</h1>
-<p>The repository includes measurement records for regenerating the published
-tables and figures, and toy inputs for running the examples offline.
-Real association inputs are obtained separately from their source studies.</p>
+<p>Reproducing a fine-mapping fit from summary statistics requires the same
+aligned association summaries, LD matrix, variant order and fitting settings.
+The <a href="#real-gwas-and-eqtl-inputs">real GWAS and eQTL inputs</a> must be obtained
+separately from their sources.</p>
+<p>The repository includes <a href="#tables-and-figures">measurement records</a> for
+regenerating the published benchmark tables and figures, and a
+<a href="#toy-example">packaged toy example</a> that runs offline.</p>
 <h2 id="tables-and-figures">Tables and figures</h2>
-<p>From a checkout with Node.js and the <a href="contributing.html#editing-and-building-documentation">documentation tools</a>:</p>
+<p>The published benchmark tables and figures can be regenerated from retained
+measurements without R or the association inputs. From the repository root,
+with Node.js available for
+<a href="contributing.html#editing-and-building-documentation">documentation rendering</a>,
+run:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>tools/docs-requirements.txt
 python<span class="w"> </span>tools/model_examples.py
+python<span class="w"> </span>tools/benchmark/v030.py<span class="w"> </span>figures
 python<span class="w"> </span>tools/generate_results.py
 python<span class="w"> </span>tools/build_docs.py
 </code></pre></div>
 
-<p><code>docs/assets/benchmark/</code> contains the prusie 0.2.4.dev2 measurements.
-<code>docs/assets/benchmark_records.json</code> contains the earlier 0.2.3rc4 records.
-The generator reads these records to produce displayed tables and the earlier
-comparison figures. It leaves the dev2 source records unchanged. To redraw the
-dev2 figures:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/benchmark/reproduce.py<span class="w"> </span>--render-records<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--output-dir<span class="w"> </span>output/benchmark-figures
-</code></pre></div>
-
-<p>Records contain case/backend statuses, repeats, numerical comparisons and
-software identities. Anonymous locus labels and aggregate results are public;
+<p><code>tools/model_examples.py</code> updates the explanatory calculations. The figure
+command writes SVG and PDF files to <code>docs/assets/benchmark/</code>.
+<code>tools/generate_results.py</code> updates the generated measurement tables and text.
+Add <code>--check</code> to <code>tools/model_examples.py</code> or
+<code>tools/generate_results.py</code> to check its generated Markdown without rewriting it.</p>
+<p>The current 0.3.0 records are in <code>docs/assets/benchmark/</code>:</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="assets/benchmark/v030_summary.json">v030_summary.json</a></td>
+<td>Aggregate results, protocol and software identities.</td>
+</tr>
+<tr>
+<td><a href="assets/benchmark/v030_records.jsonl.gz">v030_records.jsonl.gz</a></td>
+<td>Per-case timing repeats, memory measurements, numerical and convergence diagnostics, and host-load summaries.</td>
+</tr>
+<tr>
+<td><a href="assets/benchmark/v030_m1.json">v030_m1.json</a></td>
+<td>Separate paired optimization measurements and acceptance decisions.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Compact per-case summaries are provided in
+<a href="assets/benchmark/v030_primary.tsv">v030_primary.tsv</a>,
+<a href="assets/benchmark/v030_threads.tsv">v030_threads.tsv</a>,
+<a href="assets/benchmark/v030_overwrite.tsv">v030_overwrite.tsv</a> and
+<a href="assets/benchmark/v030_windows.tsv">v030_windows.tsv</a>.</p>
+<p>These public records contain case identifiers and measurement results;
 association vectors and LD matrices are not included. The
-<a href="performance.html#reproducibility">performance page</a> links the measured binary hashes.</p>
+<a href="performance.html#reproducibility">performance page</a> gives the measured binary
+hashes and the separately qualified release identity.</p>
 <h2 id="toy-example">Toy example</h2>
-<p>The wheel includes <code>prusie/data/toy</code>: arrays, metadata, checksums and the R
-reference. <code>load_example()</code> reads these installed resources:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">importlib.resources</span><span class="w"> </span><span class="kn">import</span> <span class="n">files</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<p>Use the packaged synthetic toy example to repeat a small fit offline. The
+wheel includes inputs, metadata, checksums and a separate susieR reference
+under <code>prusie/data/toy</code>. The <a href="example.html">toy example tutorial</a> describes the
+data and analysis.</p>
+<p><code>prusie.load_example()</code> verifies the SHA-256 hashes of <code>inputs.npz</code> and
+<code>metadata.json</code>, then returns inputs, fitting parameters and generation
+metadata. Inspect the reference metadata separately:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">importlib.resources</span><span class="w"> </span><span class="kn">import</span> <span class="n">files</span>
 
 <span class="n">resources</span> <span class="o">=</span> <span class="n">files</span><span class="p">(</span><span class="s2">&quot;prusie&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;data/toy&quot;</span><span class="p">)</span>
 <span class="n">reference</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">resources</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;reference.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">reference</span><span class="p">[</span><span class="s2">&quot;susieR_version&quot;</span><span class="p">],</span> <span class="n">reference</span><span class="p">[</span><span class="s2">&quot;susieR_commit&quot;</span><span class="p">])</span>
 </code></pre></div>
 
-<p>From a checkout with prusie installed:</p>
+<p>From a checkout with prusie and pytest installed:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>examples/quickstart.py
 python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_packaged_example.py
 python<span class="w"> </span>tools/generate_example.py<span class="w"> </span>--check
 </code></pre></div>
 
-<p>The check needs no R installation. To regenerate the inputs in a new directory,
-use <code>python tools/generate_example.py --output-dir NEW_DIRECTORY</code> with NumPy 2.2.6.</p>
+<p>These commands need no R installation.</p>
 <h3 id="regeneration-checks">Regeneration checks</h3>
-<p><code>--check</code> compares regenerated arrays by name, shape, dtype and value. True effects and coordinates must match exactly. Metadata retains the
-original NumPy version.</p>
-<p>With one thread, OpenBLAS 0.3.29 kernels SkylakeX, Haswell and Sandybridge produce
-maximum differences of 1.60e-14 for z, 1.12e-15 for R, 5.56e-16 for marginal
-effects and 2.09e-17 for their standard errors. Regeneration tolerances are
-8e-14, 5e-15, 3e-15 and 1e-16, respectively, with zero relative tolerance.
-Compressed archive bytes may differ after regeneration; the original files
-and provenance remain frozen. Current comparisons use complete final alpha
-matrices in original component and variant order, with absolute tolerance 1e-5
-and zero relative tolerance. PIP differences are retained as diagnostics.</p>
+<p><code>tools/generate_example.py --check</code> regenerates the checkout's arrays in memory
+and checks their names, shapes, dtypes, finiteness and values. It uses zero
+relative tolerance and the following absolute tolerances:</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Array</th>
+<th>Absolute tolerance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>z-scores (<code>z</code>)</td>
+<td><code>8e-14</code></td>
+</tr>
+<tr>
+<td>LD correlations (<code>R</code>)</td>
+<td><code>5e-15</code></td>
+</tr>
+<tr>
+<td>Marginal effects (<code>bhat</code>)</td>
+<td><code>3e-15</code></td>
+</tr>
+<tr>
+<td>Standard errors (<code>shat</code>)</td>
+<td><code>1e-16</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>True effects (<code>true_beta</code>) and synthetic coordinates (<code>position</code>) must match
+exactly. Generation metadata must also match, apart from the running NumPy
+version. The frozen metadata records NumPy 2.2.6 and is left unchanged.</p>
+<p>To regenerate the inputs in a separate directory, run:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/generate_example.py<span class="w"> </span>--output-dir<span class="w"> </span>new-toy-inputs
+</code></pre></div>
+
+<p>New metadata records the NumPy version used. The check compares array content
+independently of compressed archive encoding. Preserve the original inputs
+and reference files.</p>
 <h3 id="r-comparison">R comparison</h3>
-<p>Install susieR 0.16.6 at the recorded commit and jsonlite in your R library.
-Verify the package version, then run:</p>
+<p>For a fresh comparison, install jsonlite and susieR 0.16.6 at the commit
+recorded in <code>reference.json</code>. Verify both the package version and source
+commit, then choose a new output directory:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/benchmark/reproduce.py<span class="w"> </span>--rscript<span class="w"> </span>Rscript<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--validation-only<span class="w"> </span>--output-dir<span class="w"> </span>new-reference-comparison
 </code></pre></div>
 
-<p>The <a href="https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md">comparison guide</a>
-describes the timing protocol, process memory measurements and portable input
-format. Write new references to a new output directory.</p>
+<p><code>--validation-only</code> fits both implementations on the toy inputs and writes
+results and numerical comparisons below the new directory. It omits the
+timing and memory series and requires no BLAS-probe compilation. The comparison
+applies the
+<a href="model.html#computational-compatibility">complete-alpha validation criterion</a>;
+PIP and credible-set differences remain diagnostics. The
+<a href="https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md">comparison guide</a>
+describes the output records, timing and memory protocols, and portable input
+format.</p>
 <h2 id="real-gwas-and-eqtl-inputs">Real GWAS and eQTL inputs</h2>
-<p>The measurements use one FinnGen R10
-study and one BLUEPRINT monocyte eQTL dataset across 100 windows, representing
-83 genes. They use external FIN/EUR reference LD and share study participants
-across loci.</p>
-<p>Reproducing a fit requires the same aligned summaries, LD, variant order and
-settings. Downloaded revisions or newly constructed LD panels define new
-inputs; record their hashes and parameters with the portable case drivers.</p>
+<p>The primary real-data comparison uses the following association summaries on
+GRCh38. Here <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span></span> is the study sample size, separate from the LD reference
+sample count.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Association source</th>
+<th>Analyses</th>
+<th>Study <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span></span></th>
+<th>LD reference samples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://finngen.gitbook.io/documentation/data-download">FinnGen R13</a>, type 2 diabetes (<code>T2D</code>)</td>
+<td>200 loci</td>
+<td>486,019</td>
+<td>99 Finnish (FIN)</td>
+</tr>
+<tr>
+<td><a href="https://gtexportal.org/home/downloads/adult-gtex/qtl">GTEx v11</a>, Whole_Blood</td>
+<td>14,157 genes</td>
+<td>800</td>
+<td>525 European (EUR)</td>
+</tr>
+</tbody>
+</table></div>
+<p>For the binary GWAS, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span></span> is the total number of cases and controls, and RSS
+uses a Gaussian approximation. The GTEx inputs use the released all-pairs
+nominal cis-eQTL associations for each selected gene before variant QC.</p>
+<p>LD was computed from the
+<a href="https://www.internationalgenome.org/data-portal/data-collection/1000genomes_30x/">IGSR high-coverage collection</a>,
+release <code>20220422_3202_phased_SNV_INDEL_SV</code>, after excluding first- and
+second-degree relatives using the release-specific sample exclusion list.
+EUR describes the LD reference; the GTEx association cohort was not restricted
+to European ancestry. External LD can differ from study LD. Gene windows and
+study participants overlap, so cases are not independent biological replications.</p>
+<p>Preparation retained nonpalindromic SNPs with minor allele frequency at least
+0.05 in both study and reference, reference missingness at most 0.02 and
+reference Hardy–Weinberg mid-p value at least <code>1e-6</code>, together with sequence,
+allele and duplicate checks. Signed effect estimates divided by their standard
+errors were aligned to the reference counted ALT allele to form <code>z</code>.
+<a href="inputs.html#variant-order-and-alleles">Variant order and alleles</a> describes the
+alignment required by the fitting API.</p>
+<p>To repeat a fit, preserve the source release, genome build, sample selection,
+variant filters, allele orientation, ordered variant IDs, input hashes and
+fitting parameters. The
+<a href="https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md#portable-single-case-format">portable case format</a>
+records signed summaries, LD and ordered IDs with explicit fitting settings.
+Downloaded revisions or newly constructed LD panels define different inputs.</p>
 <h2 id="software-and-references">Software and references</h2>
-<p>Measurement records identify prusie 0.2.4.dev2 or 0.2.3rc4, the native extension,
-Python/NumPy versions and loaded numerical libraries. The statistical reference
-is susieR 0.16.6 at commit <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>.
-The toy reference records the same R source and its own output hash.
-The attributed regression inputs in <code>tests/fixtures/susier_regression</code> retain their source,
-reference outputs and licenses. <a href="worked_examples.html#sources-and-reproducibility">Worked examples</a>
-provide saved posterior states and report rendering commands.</p></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
+<p>Keep the software identity with each fit. The
+<a href="assets/benchmark/v030_summary.json">public summary</a> records Python, NumPy and
+R versions, plus identities of loaded numerical libraries, for the published
+measurements. Both builds below report prusie 0.3.0:</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Build</th>
+<th>Code commit</th>
+<th>Wheel SHA-256</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Measured</td>
+<td><code>a4bddf00dbb6b19e7e13d4267fc739f928ff0c5a</code></td>
+<td><code>b4627f9116b4fbbbe6338c40d965d21e1e0e63e8ecaf4c148af7b4cd7bac65f3</code></td>
+</tr>
+<tr>
+<td>Qualified release</td>
+<td><code>6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7</code></td>
+<td><code>85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>All measured fits used <code>refine=False</code>. The two builds have byte-identical
+native extensions and ordinary fitting modules. The release wheel was
+qualified separately and was not separately timed or measured for
+fresh-process peak memory. The <a href="performance.html#reproducibility">performance page</a>
+gives the native extension hash; <a href="numerical_accuracy.html">numerical accuracy</a>
+describes the tested configurations and their limitations.</p>
+<p>The numerical reference is susieR 0.16.6 at commit
+<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>; the
+<a href="model.html#computational-compatibility">model page</a> defines the comparison
+criterion. The <a href="#toy-example">packaged toy reference</a> records this R source
+and SHA-256 hashes for the raw reference record and reference arrays.</p>
+<p>The <a href="https://github.com/LucaJiang/prusie/blob/main/tests/fixtures/susier_regression/README.md">regression fixtures</a>
+retain synthetic inputs from coloc 6.0.3, attributed to Chris Wallace and the
+coloc contributors, with frozen susieR outputs, source identities and
+checksums. Preserve their upstream GPL declaration and included GPL-3 license
+text.</p>
+<p>The <a href="worked_examples.html#sources-and-reproducibility">convergence and refinement example</a>
+uses the official susieR <code>FinemappingConvergence</code> data under BSD-3-Clause.
+Its guide describes the source, attribution and license, with commands to
+repeat the fit or render saved posterior results.</p></article>
+<footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

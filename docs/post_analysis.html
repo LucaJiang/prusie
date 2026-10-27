@@ -359,6 +359,12 @@ or stopping rule. <a href="#convergence-diagnostics">Cycle handling</a> depends 
 <code>trace</code> contains its original stage-B trajectory. If no candidate is accepted,
 the returned copy keeps the input fit's trace. Candidate traces are not saved
 by default, even if the baseline was tracked.</p>
+<p>The fitting-entry shortcut <code>refine=True</code> leaves its candidate fits untracked,
+even with entry-level <code>track_fit=True</code>. Use an explicit <code>refine_fit</code> call for
+candidate trajectories. Tracking retains both stages of every attempted
+candidate. Dense tracking deep-copies full <code>alpha</code>, <code>mu</code> and <code>mu2</code> arrays for
+each sweep into the search history, so memory and saved JSON size can grow
+substantially with the number of rounds, credible sets and sweeps.</p>
 <p>Requested controls are read from <code>params["convergence"]</code>, with labelled recovery
 from diagnostics or retained options for older results. If those controls are
 unavailable, the record identifies compatibility defaults. Completed inner fits

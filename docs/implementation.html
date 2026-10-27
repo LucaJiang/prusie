@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
-<div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html" aria-current="page">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<div class="version"><span class="version-number">0.3.0</span><span class="version-badge">Stable</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html" aria-current="page">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
@@ -54,21 +54,25 @@
 </ul>
 </div>
 </details><h1 id="implementation">Implementation</h1>
-<p>prusie has three layers. The Python package (<code>src/prusie</code>) provides the public
-API: it checks and aligns inputs, prepares the working model, chooses a fitting
-route and assembles the result. The binding crate (<code>rust/prusie-python</code>,
-imported as <code>prusie._native</code>) converts between NumPy and Rust and provides
-native input checks. The solver crate (<code>rust/prusie-core</code>) has no Python
-dependency and runs the iterative Bayesian stepwise selection (IBSS) algorithm.
-This page follows a call from the public functions to the solver and back.
-<a href="optimization.html">Optimization</a> describes the speed and memory techniques
-used along these paths.</p>
+<p>prusie fits the <a href="model.html">SuSiE model</a> through input preparation, single-effect
+updates and posterior summaries. This page traces a fit from the public
+functions to the returned <code>SusieResult</code>.</p>
+<p>The Python package (<code>src/prusie</code>) checks inputs, prepares the model, chooses a
+fitting route and assembles results. The Rust binding (<code>rust/prusie-python</code>,
+imported as <code>prusie._native</code>) connects NumPy arrays to native routines and
+checks native inputs. The solver crate (<code>rust/prusie-core</code>) implements iterative
+Bayesian stepwise selection (IBSS) without a Python dependency.</p>
+<p>The <a href="#fitting-routes">fitting routes</a> include dynamic RSS models whose sweep loop
+runs in Python using native single-effect regression.
+<a href="optimization.html">Optimization</a> describes the speed and memory methods.</p>
 <h2 id="architecture">Architecture</h2>
-<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Call-path roadmap. Four public entry points in the Python package prepare their inputs, pass through the shared preparation and fitting functions, call native functions in the binding and reach the Rust solver, whose sweep calls single-effect regression, the Gram operator, the objective and the stopping rule." class="figure-complex" src="assets/architecture.svg" /></div><figcaption><a href="assets/architecture.svg">Open original figure</a></figcaption></figure>
-<p>Shaded boxes are public entry points and arrows are calls. The left-hand arrow
-marks the native input checks used during preparation. Results return along
-the same path: the solver returns arrays and diagnostics to <code>_fit</code>, which adds
-PIPs and credible sets and builds the <code>SusieResult</code>.</p>
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Fitting call paths through Python input preparation, the native binding and the Rust solver, with a separate Python sweep loop for dynamic RSS models." class="figure-complex" src="assets/architecture.svg" /></div><figcaption><a href="assets/architecture.svg">Open original figure</a></figcaption></figure>
+<p>The shaded boxes at the top are fitting entry points. The left-hand path marks
+native input checks during preparation. In <code>workhorse.py</code>, <code>_fit</code> dispatches the
+prepared request, then adds PIPs and credible sets to the returned arrays and
+diagnostics to construct a <code>SusieResult</code>. Retained-data continuation and
+refinement call <code>_native.fit</code> directly through <code>refinement._run</code>;
+<a href="#call-paths">Call paths</a> describes these routes.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -81,25 +85,27 @@ PIPs and credible sets and builds the <code>SusieResult</code>.</p>
 <tr>
 <td>Python entry points</td>
 <td><code>individual.py</code>, <code>suff_stat.py</code>, <code>rss.py</code>, <code>rss_lambda.py</code>, <code>constructors.py</code>, <code>ser.py</code></td>
-<td>Convert individual data, sufficient statistics and association/LD inputs; construct automatic and trend-filter fits; standalone single-effect regression</td>
+<td>Prepare individual data, sufficient statistics or association summaries and LD; automatic and trend-filter fits; standalone single-effect regression (SER)</td>
 </tr>
 <tr>
 <td>Python shared core</td>
 <td><code>_request.py</code>, <code>workhorse.py</code>, <code>rss_models.py</code>, <code>posterior.py</code>, <code>result.py</code>, <code>refinement.py</code>, <code>_validation.py</code></td>
-<td>Validate and construct fitting requests; dispatch prepared fits and assemble results; dynamic RSS sweeps; PIPs, credible sets, continuation and refinement</td>
+<td>Construct fitting requests, dispatch fits, run dynamic RSS sweeps and build posterior summaries; continuation and refinement</td>
 </tr>
 <tr>
-<td>Binding</td>
-<td><code>lib.rs</code>, <code>options.rs</code>, <code>array_layout.rs</code>, <code>summary_helpers.rs</code>, <code>prepare_helpers.rs</code>, <code>design.rs</code>, <code>ser.rs</code>, <code>output.rs</code></td>
-<td>Read-only borrowing of NumPy arrays after layout checks; conversion of options to typed Rust values; native matrix validation, repair and preparation; credible-set purity; conversion of results and errors</td>
+<td>Rust binding</td>
+<td><code>lib.rs</code>, <code>options.rs</code>, <code>array_layout.rs</code>, <code>summary_helpers.rs</code>, <code>prepare_helpers.rs</code>, <code>design.rs</code>, <code>ser.rs</code>, <code>output.rs</code>, <code>executor.rs</code></td>
+<td>Check NumPy layouts and borrows; parse options; expose fitting, matrix preparation and purity routines; convert results and errors; own private execution resources</td>
 </tr>
 <tr>
-<td>Solver</td>
-<td>see the table below</td>
-<td>IBSS sweeps, single-effect regression (SER), prior-variance search, expected residual sum of squares (ER2) and ELBO, stopping rules, trimming and Gram operators</td>
+<td>Rust solver</td>
+<td>Main modules below</td>
+<td>IBSS, SER, matrix operators, variance estimation, objectives and stopping rules</td>
 </tr>
 </tbody>
 </table></div>
+<p>Binding filenames refer to <code>rust/prusie-python/src</code>. The main solver modules
+under <code>rust/prusie-core/src</code> are:</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -110,39 +116,39 @@ PIPs and credible sets and builds the <code>SusieResult</code>.</p>
 <tbody>
 <tr>
 <td><code>ibss.rs</code></td>
-<td><code>fit_controlled</code>, the dense entry point, and <code>fit_operator</code>: sweeps, effect updates, residual variance and trimming</td>
+<td>Dense entry points <code>fit_controlled</code> and <code>fit_controlled_with_executor</code>; shared <code>fit_operator</code> sweeps, evidence lower bound (ELBO), variance updates and trimming</td>
 </tr>
 <tr>
-<td><code>ser.rs</code></td>
-<td>Gaussian and fixed-mixture SER (Bayes factors, posterior, KL) and the standalone <code>ser_update</code></td>
+<td><code>ser.rs</code>, <code>optimizer.rs</code></td>
+<td>Gaussian and fixed-mixture SER, standalone <code>ser_update</code> and Brent prior-variance search</td>
 </tr>
 <tr>
-<td><code>optimizer.rs</code></td>
-<td>One-dimensional Brent search for the prior variance</td>
-</tr>
-<tr>
-<td><code>residual.rs</code></td>
-<td>Expected residual sum of squares</td>
-</tr>
-<tr>
-<td><code>diagnostics.rs</code></td>
-<td>Stopping rules, cycle detection and the convergence trace</td>
+<td><code>residual.rs</code>, <code>diagnostics.rs</code></td>
+<td>Expected residual sum of squares (ER2), convergence metrics, stopping rules and cycle detection</td>
 </tr>
 <tr>
 <td><code>operator.rs</code>, <code>exact_columns.rs</code>, <code>activation.rs</code></td>
-<td>The <code>GramOperator</code> trait, dense products, implicit scaling and exact signed-column classes</td>
+<td><code>GramOperator</code>, dense products, implicit scaling, exact signed-column classes and their activation rule</td>
 </tr>
 <tr>
 <td><code>design.rs</code></td>
-<td>Matrix-free operators for dense, sparse and trend-filtering designs</td>
+<td>Matrix-free operators for dense, sparse CSC and trend-filtering designs</td>
 </tr>
 <tr>
 <td><code>nig.rs</code>, <code>slot.rs</code></td>
 <td>Normal–Inverse-Gamma residual-variance model and effect-activity priors</td>
 </tr>
 <tr>
-<td><code>vector_math.rs</code>, <code>numerical.rs</code>, <code>input_validation.rs</code></td>
-<td>Vector exponentials, compensated summation, digamma and finiteness checks</td>
+<td><code>input_validation.rs</code>, <code>input_validation/</code></td>
+<td>Finiteness checks, exact-symmetry proofs and paired RSS validation and repair</td>
+</tr>
+<tr>
+<td><code>execution.rs</code>, <code>parallel.rs</code></td>
+<td>Private execution resources, per-fit thread pools and partitioned matrix products</td>
+</tr>
+<tr>
+<td><code>vector_math.rs</code>, <code>numerical.rs</code></td>
+<td>Vector exponentials, compensated summation and digamma</td>
 </tr>
 <tr>
 <td><code>types.rs</code>, <code>options.rs</code>, <code>model.rs</code></td>
@@ -151,9 +157,10 @@ PIPs and credible sets and builds the <code>SusieResult</code>.</p>
 </tbody>
 </table></div>
 <h2 id="fitting-routes">Fitting routes</h2>
-<p>The individual-data, sufficient-statistics, RSS and RSS-lambda entry points
-convert their inputs, then use <code>_request._prepare_request</code> to build a
-<code>_FitRequest</code> and call <code>workhorse._fit</code>, which follows one of four routes:</p>
+<p><code>susie</code>, <code>susie_suff_stat</code>, <code>susie_rss</code> and <code>susie_rss_lambda</code> prepare a
+<code>_FitRequest</code> through <code>_request._prepare_request</code>. <code>workhorse._fit</code> selects
+among three numerical routes, checking for dynamic RSS before dense or design
+fitting. Native entry names below belong to <code>prusie._native</code>.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -165,222 +172,297 @@ convert their inputs, then use <code>_request._prepare_request</code> to build a
 </thead>
 <tbody>
 <tr>
+<td>Dynamic RSS</td>
+<td><code>susie_rss</code> with <code>R_finite</code> other than <code>None</code> or <code>False</code>, <code>R_mismatch</code> other than <code>"none"</code>, or an <code>R</code> or <code>X</code> list/tuple of matrices; <code>susie_rss_lambda</code></td>
+<td><code>ser_update</code> for each effect update</td>
+<td>Python <code>fit_dynamic</code></td>
+</tr>
+<tr>
 <td>Dense</td>
-<td><code>susie_suff_stat</code>; <code>susie_rss</code> with <code>R</code>; <code>susie_rss</code> with <code>X</code>, <code>bhat</code>, <code>shat</code> and <code>var_y</code>, which builds a correlation matrix</td>
-<td><code>_native.fit</code> → <code>fit_controlled</code></td>
-<td>Rust, with <code>DenseGram</code></td>
+<td><code>susie_suff_stat</code> (<code>susie_ss</code>); remaining <code>susie_rss</code> fits with <code>R</code></td>
+<td><code>fit</code></td>
+<td>Rust <code>fit_operator</code>, with <code>DenseGram</code></td>
 </tr>
 <tr>
 <td>Matrix-free design</td>
-<td><code>susie</code>, <code>susie_trendfilter</code>; <code>susie_rss</code> with reference genotypes <code>X</code></td>
+<td><code>susie</code>, <code>susie_trendfilter</code>; remaining <code>susie_rss</code> fits with reference genotypes <code>X</code>, subject to the exception below</td>
 <td><code>fit_design_dense</code>, <code>fit_design_csc</code>, <code>fit_design_trend</code></td>
-<td>Rust, with <code>Design</code> or <code>TrendDesign</code></td>
-</tr>
-<tr>
-<td>Dynamic RSS</td>
-<td><code>susie_rss</code> with <code>R_finite</code>, <code>R_mismatch</code> other than <code>"none"</code> or a list of LD panels; <code>susie_rss_lambda</code></td>
-<td><code>_native.ser_update</code> for each effect update</td>
-<td>Python, <code>fit_dynamic</code></td>
-</tr>
-<tr>
-<td>Greedy</td>
-<td><code>L_greedy</code></td>
-<td><code>_fit</code> repeatedly, with increasing <code>L</code></td>
-<td>That of the underlying route</td>
+<td>Rust <code>fit_operator</code>, with <code>Design</code> or <code>TrendDesign</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>The dynamic models recompute their working quantities during fitting, so
-their sweep loop runs in Python with NumPy matrix products. <code>susie_ser</code> calls
-<code>_native.ser_update</code> once, and <code>susie_auto</code> calls <code>susie</code> repeatedly with warm
-starts.</p>
+<p>With <code>susie_rss(X=...)</code>, supplying <code>bhat</code>, <code>shat</code> and <code>var_y</code> builds a dense
+correlation matrix before fitting. This selects the dense route unless a dynamic
+RSS model is requested. Dynamic RSS recomputes working quantities during fitting
+using NumPy matrix products and native SER; it also forms a dense Gram matrix
+when supplied with reference <code>X</code>.</p>
+<p><code>L_greedy</code> adds an outer loop: <code>_fit_greedy</code> repeatedly calls <code>_fit</code>, increasing
+the number of single-effect components <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span></span></span></span></span> and warm-starting from the preceding
+result. Each fit uses the applicable route above. <code>susie_auto</code> runs staged
+<code>susie</code> fits with warm starts.
+The standalone <code>susie_ser</code> calls <code>_native.ser_update</code> once.</p>
 <h2 id="call-paths">Call paths</h2>
+<p>These paths trace input preparation, fitting and result construction. The
+<a href="#fitting-routes">fitting routes</a> determine which optional branches are used.</p>
 <h3 id="susie_rss"><code>susie_rss</code></h3>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>susie_rss                                        rss.py
-├─ argument checks; RSSControl
-├─ list of LD panels → prepare_multipanel        rss.py
-│    fit each panel, start from the best, joint dynamic fit
-├─ z ← bhat/shat when z is not given; missing z ← 0 with a warning
-├─ reference X → _validated_design, _column_stats → design route
-├─ validate R: validate_and_repair_rss (fused) | validate_rss_matrix
-├─ working statistics: n known | bhat, shat and var_y | n missing
-├─ asymmetric R → RuntimeWarning → (M + Mᵀ)/2
-├─ R_finite or R_mismatch → dynamic request
-├─ _prepare_request → _FitRequest                 _request.py
-└─ _fit                                           workhorse.py
-   ├─ dynamic → fit_dynamic → _native.ser_update for each effect
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>susie_rss                                              rss.py
+├─ argument checks; construct RSSControl
+├─ R/X panel sequence → prepare_multipanel
+│    panel fits → select initial LD panel by final ELBO → joint dynamic fit
+├─ z, or z ← bhat/shat; missing z ← 0 with a warning
+├─ reference X → _validated_design → _column_stats → _DesignData
+│    bhat, shat and var_y → _design_correlation → dense R
+├─ dense R → native validation and repair when required
+├─ construct working statistics or retain the design
+├─ enabled R_finite or R_mismatch → dynamic-model configuration
+├─ _prepare_request → _FitRequest                       _request.py
+└─ _fit                                                workhorse.py
+   ├─ init_only → SusieInputs
+   ├─ L_greedy → _fit_greedy → repeated _fit
+   ├─ dynamic → fit_dynamic → _native.ser_update
    ├─ design  → _native.fit_design_dense | _native.fit_design_csc
-   ├─ dense   → _native.fit → fit_controlled → fit_operator
-   ├─ credible_sets → _native.cs_pairwise_abs; marginal_pip
-   ├─ SusieResult
-   └─ refine  → refine_fit | _refine_by_refitting
+   ├─ dense   → _native.fit
+   ├─ credible_sets; marginal_pip; convergence_summary
+   └─ SusieResult; optional refinement
 </code></pre></div>
 
 <h3 id="susie"><code>susie</code></h3>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>susie                                            individual.py
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>susie                                                  individual.py
 ├─ type checks; _validated_design
-│    dense → F-ordered float64, sparse → CSC copy, TrendDesign kept implicit
-├─ _column_stats: column means and scales (centering stays implicit)
-├─ working y, Xᵀy and diagonal → _DesignData
-├─ _prepare_request(XtX=None, Xty, yty, n, _design=design) → _FitRequest  _request.py
-└─ _fit (workhorse.py) → _native.fit_design_dense | fit_design_csc | fit_design_trend
-        → credible_sets (correlations of members computed from X)
-        → SusieResult with fitted values
+│    dense → F-ordered float64; sparse → canonical CSC copy
+│    TrendDesign → retain implicit representation
+├─ _column_stats → column means and centered sums of squares
+├─ response, crossproducts, means and scales → _DesignData
+├─ _prepare_request(XtX=None, ..., _design=design) → _FitRequest
+└─ _fit                                                workhorse.py
+   ├─ _native.fit_design_dense | fit_design_csc | fit_design_trend
+   ├─ credible_sets (member correlations computed from X); marginal_pip
+   └─ SusieResult with fitted values
 </code></pre></div>
 
+<p>Centering and scaling are applied through the design operator during fitting.
+The native design solver does not construct the full Gram matrix.</p>
 <h3 id="inside-the-native-fit">Inside the native fit</h3>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>_native.fit                                      rust/prusie-python/src/lib.rs
-├─ parse options → FitOptions, FitControl, model extensions
+<p>For a dense fit with the default Gaussian model, the native call reaches the
+shared IBSS loop as follows:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>_native.fit                                            prusie-python/src/lib.rs
+├─ options::parse → FitOptions, FitControl
 ├─ check NumPy layout and borrow read-only views
-├─ fit_controlled                                rust/prusie-core/src/ibss.rs
+├─ fit_controlled                                      prusie-core/src/ibss.rs
 │  ├─ check sizes, scalars and scale factors
 │  ├─ implicit scaling, or a materialized working matrix
-│  ├─ diagonal of Q (must be nonnegative) → DenseGram
+│  ├─ nonnegative working diagonal → DenseGram
 │  └─ fit_operator
-│     ├─ each sweep, for ℓ = 1, …, L in order:
-│     │  ├─ single_effect → minimize             ser.rs, optimizer.rs
-│     │  └─ GramOperator::apply                  operator.rs, exact_columns.rs
-│     ├─ after the sweep: expected_residual_sum_squares, ELBO,
-│     │  detect_cycle, stopping_decision          residual.rs, diagnostics.rs
-│     └─ trimming of null effects
-└─ fit_result → dict of NumPy arrays, warnings and diagnostics
+│     ├─ initialize posterior; rebuild products for a warm start
+│     ├─ each sweep: update components in order
+│     │  ├─ single_effect (optim method → optimizer::minimize)
+│     │  ├─ compute component KL term
+│     │  └─ GramOperator::apply → store component product
+│     ├─ expected_residual_sum_squares; ELBO; convergence diagnostics
+│     ├─ stopping decision; residual-variance update if no stop
+│     └─ trim components below prior_tol
+└─ output::fit_result → NumPy arrays, warnings and diagnostics
 </code></pre></div>
 
-<p>The design entry points build a <code>Design</code> or <code>TrendDesign</code> operator and call the
-same <code>fit_operator</code>. The binding holds the Python global interpreter lock and
-the read borrows of the input arrays for the duration of the solver call.</p>
+<p>Rust source paths above are relative to <code>rust/</code>. The design entry points build
+a <code>Design</code> or <code>TrendDesign</code> operator and call the same <code>fit_operator</code>. Mixture
+and NIG fits use their corresponding SER routines inside that loop. The private
+<code>_fit_with_executor</code> binding enters through <code>fit_controlled_with_executor</code>.</p>
+<p>The binding keeps the Python global interpreter lock (GIL) during solver calls.
+For <code>_native.fit</code>, the matrix and <code>Xty</code> read borrows also remain live until the
+solver returns; the design bindings copy vector inputs into
+Rust-owned buffers and borrow dense <code>X</code>.</p>
 <h3 id="refinement-continuation-and-warm-starts">Refinement, continuation and warm starts</h3>
-<p>With <code>retain_data</code>, <code>track_fit</code>, <code>refine</code> or <code>model_init</code>, preparation stores
-read-only copies of the inputs and a signature that identifies them.
-<code>continue_fit</code> and <code>refine_fit</code> call <code>_native.fit</code> again on those copies with a
-warm start, then recompute PIPs and credible sets. For each credible set,
-<code>refine_fit</code> first fits with that set's prior weights set to zero, then refits
-from that state with the original weights. It accepts a refit whose ELBO
-exceeds the current one by more than the tolerance. Models whose inputs cannot
-be retained (designs, dynamic RSS, mixture, NIG and slot priors, the PIP
-criterion, <code>L_greedy</code> and nondefault credible-set controls) use
-<code>_refine_by_refitting</code>, which repeats <code>_fit</code> as susieR does. A warm start
-supplies <code>alpha</code>, <code>mu</code> and <code>mu2</code> (and optionally <code>V</code> and <code>sigma2</code>); the solver
-recomputes every product <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">Q</mi><msub><mi mathvariant="bold">m</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">\mathbf Q\mathbf m_\ell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8805em;vertical-align:-0.1944em;"></span><span class="mord mathbf">Q</span><span class="mord"><span class="mord mathbf">m</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span> before the first sweep.
-<a href="post_analysis.html">Convergence and refinement</a> describes these interfaces.</p>
+<p>For supported models, <code>_prepare_request</code> calls <code>make_prepared</code> when
+<code>retain_data=True</code>, tracking, refinement or initialization requires a retained
+context. <code>PreparedData</code> holds read-only input snapshots and a content signature.
+<code>continue_fit</code> and <code>refine_fit</code> use <code>refinement._run</code> to call <code>_native.fit</code> on
+these snapshots, then recompute PIPs and credible sets.</p>
+<p>Continuation warm-starts from the saved posterior. For each candidate credible
+set, refinement makes a cold-start fit with that set's prior weights set to
+zero, then warm-starts a second fit from its posterior with the original weights
+and initial variances restored. Each round accepts its best candidate only if the
+last logged ELBO improves by more than <code>RefinementConfig.absolute_tol</code>.
+<a href="post_analysis.html">Convergence and refinement</a> describes the search controls.</p>
+<p>The retained-data path excludes matrix-free designs, dynamic RSS, mixture, NIG
+and slot priors, <code>convergence_method="pip"</code>, <code>L_greedy</code>, and nondefault
+<code>median_abs_corr</code> or <code>cs_extension_corr</code>. For these fits, plain <code>refine=True</code>
+uses <code>workhorse._refine_by_refitting</code> to repeat <code>_fit</code>, except that multi-panel
+RSS rejects refinement. <code>retain_data=True</code> and a <code>RefinementConfig</code> require a
+supported model.</p>
+<p>A warm-start mapping supplied through <code>model_init</code> or its alias <code>s_init</code> needs
+<code>alpha</code>, <code>mu</code> and <code>mu2</code>; <code>V</code> and <code>sigma2</code> are optional. <code>initial_options</code> checks
+the posterior arrays and supplied variant IDs, allele labels, scales and
+null-column layout. For a native warm start, Rust rebuilds all component matrix
+products before the first sweep rather than resuming stored products.</p>
 <h2 id="pseudocode">Pseudocode</h2>
-<p>The pseudocode follows the Gaussian model with the default options. Fixed
-mixture priors replace <code>single_effect</code> by <code>single_effect_mixture</code>. The NIG
-model uses <code>single_effect_nig</code>, EM prior updates, the PIP rule when <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">L&gt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal">L</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span> and
-its own objective and residual-variance update. Slot priors weight each stored
-product by the effect's activity probability and skip inactive effects.</p>
+<p>The fitting loop below follows the ordinary Gaussian model, with prior-variance
+and stopping options shown explicitly. Mixture, NIG and slot priors change the
+updates as described under <a href="model.html#additional-model-options">Additional model options</a>.
+Dynamic RSS uses its separate Python loop.</p>
 <h3 id="preparation">Preparation</h3>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function susie_rss(z or (bhat, shat), R or X, n, var_y, …):
-    check argument combinations and option types
-    z ← bhat / shat if z is not supplied;  missing z ← 0 with a warning
-    validate R: finite, diagonal ≥ 0, exact symmetry ((n − 1)R for z-scores with known n)
-    if n is missing:            XtX ← R, Xty ← z, yty ← 1 (with a warning)
-    else if bhat, shat, var_y:  reconstruct XtX (always averaged with its transpose),
-                                Xty and yty on the response scale
-    else:                       XtX ← (n − 1)R, Xty ← √(n − 1)·z̃, yty ← (n − 1)·var_y
-                                (z̃ is the Wald-adjusted z when z_method = &quot;wald&quot;;
-                                 var_y is 1 when not supplied)
-    if the z-score matrix was asymmetric: warn and use (M + Mᵀ)/2
-    return workhorse._fit(_request._prepare_request(XtX, Xty, yty, n, …))
-
-function _request._prepare_request(XtX, Xty, yty, n, options, design=None):
-    individual-level input supplies design instead of XtX (XtX=None)
-    check scalars, tolerances, priors and residual-variance bounds
-    align identifiers and metadata; apply the maf filter
-    if null_weight &gt; 0: append a null column; normalize the prior weights
-    L ← min(L, p)
-    d_j ← sqrt(XtX_jj / (n − 1)) if standardize else 1;  zero scales ← 1
-    pass XtX with scale factors (implicit scaling), or prepare D⁻¹ XtX D⁻¹
-    build native options: prior variance × yty / (n − 1), convergence, warm start
-    keep read-only copies if continuation or refinement must be supported
+<p>Entry points first construct sufficient statistics or prepare a design operator.
+<a href="model.html#from-summaries-to-working-sufficient-statistics">From summaries to working sufficient statistics</a>
+gives the RSS constructions, including the internal sample-size placeholder
+and disabled standardization when <code>n</code> is missing. Shared preparation and
+fitting then proceed schematically as follows:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function _request._prepare_request(statistics or design, options):
+    validate statistics, identifiers, metadata, priors and controls
+    apply the requested MAF filter; add a null predictor if requested
+    normalize prior weights; resolve the component count
+    obtain predictor scales and the working crossresponse
+    prepare a dense matrix with scale factors, a scaled matrix, or a design
+    prepare initial variances, convergence controls and any warm start
+    if supported and requested: retain read-only inputs and their signature
     return _FitRequest
 
 function workhorse._fit(request):
-    native ← solver result for the request&#39;s route
-    re-emit native warnings; warn if not converged
-    pip  ← marginal_pip(alpha, V)
-    sets ← credible_sets(alpha, V, correlation or X)
-    result ← SusieResult(native, pip, sets, …)
-    return refine(result) if refinement was requested else result
+    if init_only: return SusieInputs(request)
+    if L_greedy is set: return _fit_greedy(request)
+    output ← fit using the request&#39;s dense, design or dynamic route
+    emit output warnings; warn if not converged
+    sets ← credible_sets(output, correlation or design)
+    pip ← marginal_pip(output)
+    result ← SusieResult(output, pip, sets, diagnostics, …)
+    if requested: apply the supported refinement route
+    return result
 </code></pre></div>
 
 <h3 id="ibss">IBSS</h3>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function fit_operator(Q, g = Xᵀy, yᵀy, n, options):
-    α_ℓ ← π,  μ_ℓ = μ2_ℓ ← 0,  V_ℓ ← V₀,  σ² ← σ₀²
-    u_ℓ ← 0,  f ← 0              # warm start: u_ℓ ← Q(α_ℓ ∘ μ_ℓ), f ← Σ_ℓ u_ℓ
+<p>Use the working statistics <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">Q</mi></mrow><annotation encoding="application/x-tex">\mathbf Q</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8805em;vertical-align:-0.1944em;"></span><span class="mord mathbf">Q</span></span></span></span></span>, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">g</mi></mrow><annotation encoding="application/x-tex">\mathbf g</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6389em;vertical-align:-0.1944em;"></span><span class="mord mathbf" style="margin-right:0.01597em;">g</span></span></span></span></span> and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>s</mi><mi>y</mi></msub></mrow><annotation encoding="application/x-tex">s_y</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7167em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal">s</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03588em;">y</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span></span></span></span> defined in the
+<a href="model.html#data-notation-and-scale">model</a>, with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span> variants, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span></span></span></span></span> components and
+sample size <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span></span>. The stored component product is
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="bold">u</mi><mi mathvariant="normal">ℓ</mi></msub><mo>=</mo><mi mathvariant="bold">Q</mi><mo stretchy="false">(</mo><msub><mi mathvariant="bold-italic">α</mi><mi mathvariant="normal">ℓ</mi></msub><mo>⊙</mo><msub><mi mathvariant="bold-italic">μ</mi><mi mathvariant="normal">ℓ</mi></msub><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\mathbf u_\ell=\mathbf Q(\boldsymbol\alpha_\ell\odot\boldsymbol\mu_\ell)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5944em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathbf">u</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathbf">Q</span><span class="mopen">(</span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol">α</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⊙</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol">μ</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.242em;"><span style="top:-2.4559em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2441em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span>,
+and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">f</mi><mo>=</mo><msub><mo>∑</mo><mi mathvariant="normal">ℓ</mi></msub><msub><mi mathvariant="bold">u</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">\mathbf f=\sum_\ell\mathbf u_\ell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathbf" style="margin-right:0.10903em;">f</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0497em;vertical-align:-0.2997em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1864em;"><span style="top:-2.4003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2997em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathbf">u</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span> is the fitted crossproduct.
+Here <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="bold-italic">α</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">\boldsymbol\alpha_\ell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5944em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol">α</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span> contains posterior variant probabilities,
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="bold-italic">μ</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">\boldsymbol\mu_\ell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6886em;vertical-align:-0.2441em;"></span><span class="mord"><span class="mord"><span class="mord"><span class="mord boldsymbol">μ</span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.242em;"><span style="top:-2.4559em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2441em;"><span></span></span></span></span></span></span></span></span></span></span> contains conditional effect means, and <code>mu2</code> stores
+conditional second moments. The normalized prior weights are <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>π</mi><mi>j</mi></msub></mrow><annotation encoding="application/x-tex">\pi_j</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7167em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span></span></span></span>;
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub></mrow><annotation encoding="application/x-tex">V_\ell</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span> and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>σ</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\sigma^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">σ</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> are the prior and residual variances.
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi></mrow><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">ε</span></span></span></span></span> denotes float64 machine epsilon, and <code>Q(v)</code> denotes a
+Gram-operator application.</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function fit_operator(Q, g, s_y, n, options):
+    α_ℓj ← 1/p;  μ_ℓj, μ2_ℓj ← 0
+    V_ℓ, σ² ← prepared initial variances
+    u_ℓ ← 0;  f ← 0
+    if warm start:
+        load posterior and any supplied variances; rebuild u_ℓ and f
+    method ← estimate_prior_method if estimate_prior_variance else &quot;none&quot;
+    log_prior_j ← log(π_j + √ε)
     for t = 1, …, max_iter:
-        for ℓ = 1, …, L:            # sequential: each update uses the previous ones
-            f ← f − u_ℓ;  r ← g − f # residual crossproduct without effect ℓ
-            (α_ℓ, μ_ℓ, μ2_ℓ, V_ℓ, lbf_ℓ) ← single_effect(r, diag Q, σ², V_ℓ, π)
-            KL_ℓ ← −lbf_ℓ + E_q[log-likelihood of the single-effect model]
-            u_ℓ ← Q(α_ℓ ∘ μ_ℓ);  f ← f + u_ℓ     # one product with Q per update
-        if check_prior and some V_ℓ &gt; 100 · max_j g_j² / (Q_jj σ²): error
-        ER2  ← expected_residual_sum_squares(g, yᵀy, diag Q, α, μ, μ2, u)
+        for ℓ = 1, …, L in order:
+            f ← f − u_ℓ;  r ← g − f
+            α_ℓ, μ_ℓ, μ2_ℓ, V_ℓ, lbf_variable_ℓ, lbf_ℓ ← single_effect(
+                r, diag Q, σ², V_ℓ, log_prior, method)
+            compute KL_ℓ from this SER posterior and its evidence
+            u_ℓ ← Q(α_ℓ ⊙ μ_ℓ);  f ← f + u_ℓ
+        if check_prior: check V against scores using the current σ²
+        ER2 ← expected_residual_sum_squares(g, s_y, diag Q, α, μ, μ2, u)
         ELBO ← −(n/2) log(2πσ²) − ER2 / (2σ²) − Σ_ℓ KL_ℓ
-        decision ← stopping_decision(ELBO history, α and PIP history)
+        if ELBO is infinite: error
+        if ELBO is NaN and any of α, μ, μ2, V is nonfinite: error
+        decision ← stopping_decision(current sweep, changes, cycles, controls)
+        apply alpha-cycle averaging when required; record diagnostics
         if decision ≠ continue: break
-        if estimate_residual_variance: σ² ← clamp(ER2 / n, lower, upper)
-    for ℓ with V_ℓ &lt; prior_tol:     # trimming, also at the iteration limit
-        α_ℓ ← π;  μ_ℓ, μ2_ℓ, lbf_ℓ, KL_ℓ ← 0;  V_ℓ ← 0
-    return α, μ, μ2, V, σ², ELBO history, iterations, converged, diagnostics
+        if estimate_residual_variance:
+            estimate ← ER2 / n;  reject a nonpositive or nonfinite estimate
+            σ² ← clamp(estimate, residual lower bound, residual upper bound)
+    for ℓ with V_ℓ &lt; prior_tol:
+        α_ℓ ← π;  μ_ℓ, μ2_ℓ, lbf_variable_ℓ, lbf_ℓ, KL_ℓ, V_ℓ ← 0
+    return posterior, variances, ELBO history, f, diagnostics
 </code></pre></div>
 
-<p>Because the stopping test precedes the residual-variance update, a converged
-fit keeps the <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>σ</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\sigma^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">σ</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> used in its last sweep, whereas a fit that reaches
-<code>max_iter</code> receives one more update.</p>
+<p>If residual-variance estimation is enabled, its update also follows the final
+allowed sweep when the stopping decision is still <code>continue</code>. Returned <code>sigma2</code>
+can therefore differ from the value used for the last ELBO. Final trimming
+does not recompute the stored ELBO or fitted crossproduct;
+<a href="results.html#iterations-and-finalization">Results</a> explains these quantities.</p>
 <h3 id="single-effect-regression">Single-effect regression</h3>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function single_effect(r, d, σ², V, π, method):
-    b̂_j ← r_j / d_j;   s_j² ← max(σ² / d_j, ε)        # rebuilt when σ² changes
-    ℓ(V) ← log Σ_j π_j BF_j(V)                         # SER log marginal likelihood
+<p><a href="model.html#one-single-effect-regression">The Gaussian SER equations</a> give the
+Bayes factors and posterior moments. Both the prior-variance search and the
+posterior use the smoothed <code>log_prior</code> prepared above. The sampling variances
+are cached until <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>σ</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\sigma^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">σ</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> changes. Bayes factors use a variance floor of
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi></mrow><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">ε</span></span></span></span></span>; posterior moments use the unfloored sampling variances.</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function single_effect(r, diag Q, σ², V, log_prior, method):
+    b̂_j ← (1/Q_jj) r_j;  s_j² ← σ²/Q_jj
+    logBF_j(V) ← Gaussian log BF using max(s_j², ε)
+                  (zero if b̂_j or s_j² is nonfinite)
+    h(V) ← logsumexp(logBF_j(V) + log_prior_j)
     if method = &quot;optim&quot;:
-        V ← argmax of ℓ(V) over log V ∈ [−30, 15]      # Brent search on log V
-        keep the previous V if the search result is worse
-    if method ∈ {&quot;optim&quot;, &quot;simple&quot;} and ℓ(0) + check_null_threshold ≥ ℓ(V): V ← 0
-    w_j ← log BF_j(V) + log(π_j + √ε)
-    α_j ← exp(w_j − max_k w_k) / Σ_k exp(w_k − max_k w_k)
-    v_j ← V s_j² / (V + s_j²);  μ_j ← v_j b̂_j / s_j²;  μ2_j ← v_j + μ_j²
+        candidate ← Brent search maximizing h(V) over log V ∈ [−30, 15]
+        if h(candidate) ≥ h(V): V ← candidate
+    if method ∈ {&quot;optim&quot;, &quot;simple&quot;} and h(0) + check_null_threshold ≥ h(V): V ← 0
+    lbf_variable_j ← logBF_j(V);  w_j ← lbf_variable_j + log_prior_j
+    weights_j ← exp(w_j − max_k w_k);  total ← Σ_j weights_j
+    α_j ← weights_j / total;  lbf ← max_j w_j + log(total)
+    for each variant j:
+        if r_j/Q_jj and s_j² are finite:
+            v_j ← V s_j² / (V + s_j²)
+            μ_j ← (v_j / s_j²) (r_j/Q_jj);  μ2_j ← v_j + μ_j²
+        else: μ_j, μ2_j ← 0
     if method = &quot;EM&quot;: V ← Σ_j α_j μ2_j
-    lbf ← max_k w_k + log Σ_k exp(w_k − max_k w_k)
-    return α, μ, μ2, V, lbf
+    reject nonfinite evidence or moments
+    return α, μ, μ2, V, lbf_variable, lbf
 </code></pre></div>
 
+<p>With <code>method="none"</code>, the supplied variance is retained. EM updates the variance
+after computing the posterior, so the returned evidence refers to the variance
+used before that update.</p>
 <h3 id="stopping-rule">Stopping rule</h3>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function stopping_decision(t, ELBO history, Δα, ΔPIP, cycle):
-    infinite ELBO, or NaN ELBO with criterion &quot;joint&quot;   → numerical failure
-    t &lt; min_iter                                        → continue
-    criterion &quot;elbo&quot;:      converged if 0 ≤ ELBO(t) − ELBO(t − 1) &lt; tol
-    criterion &quot;alpha_pip&quot;: converged if Δα &lt; alpha_tol and ΔPIP &lt; pip_tol
-    criterion &quot;joint&quot;:     converged if both hold
-    criterion &quot;pip&quot;:       converged if ΔPIP &lt; tol and Δα &lt; tol
-    NaN ELBO with &quot;elbo&quot;:  apply the PIP rule instead, recorded as a fallback
-    converged                                           → stop
-    cycle of length 2–5 under an α/PIP rule             → stop
-    otherwise                                           → continue
+<p>The native solver rejects infinite ELBOs before applying this decision. For a
+finite posterior state, the remaining logic is:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>function stopping_decision(t, ELBO, ΔELBO, Δα, ΔPIP, cycle, controls):
+    if ELBO is NaN and criterion = &quot;joint&quot;: return numerical_failure
+    if t &lt; min_iter: return continue
+    fallback ← ELBO is NaN and criterion = &quot;elbo&quot;
+    pip_rule ← criterion = &quot;pip&quot; or (fallback and nan_elbo_pip)
+    posterior_stable ← Δα &lt; alpha_tol and ΔPIP &lt; pip_tol
+    objective_stable ← ELBO is finite and 0 ≤ ΔELBO &lt; tol
+    if pip_rule: satisfied ← Δα &lt; tol and ΔPIP &lt; tol
+    else if criterion = &quot;alpha_pip&quot; or fallback: satisfied ← posterior_stable
+    else if criterion = &quot;joint&quot;: satisfied ← objective_stable and posterior_stable
+    else: satisfied ← objective_stable
+    if satisfied: return converged
+    if cycle lag &gt; 1 and (criterion ≠ &quot;elbo&quot; or fallback):
+        if pip_rule: return converged
+        return cycle_detected
+    return continue
 </code></pre></div>
 
-<p><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mi>α</mi></mrow><annotation encoding="application/x-tex">\Delta\alpha</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord">Δ</span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span></span></span></span></span> and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow></mrow><annotation encoding="application/x-tex">\Delta\mathrm{PIP}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord">Δ</span><span class="mord"><span class="mord mathrm">PIP</span></span></span></span></span></span> are maximum absolute changes from an
-earlier sweep. Under the PIP rule a detected cycle counts as convergence and
-alpha is averaged over the cycle; under <code>"alpha_pip"</code> and <code>"joint"</code> it stops
-with <code>stop_reason="cycle_detected"</code>. Slot priors, NIG with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">L&gt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal">L</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span> and
-<code>convergence_method="pip"</code> use the PIP rule. The Python sweep loop of the
-dynamic RSS models implements only the ELBO and PIP rules, with the default
-<code>min_iter</code> and cycle lag; <code>susie_rss</code> rejects other <code>ConvergenceConfig</code>
-settings for these models before fitting.</p>
+<p><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">E</mi><mi mathvariant="normal">L</mi><mi mathvariant="normal">B</mi><mi mathvariant="normal">O</mi></mrow></mrow><annotation encoding="application/x-tex">\Delta\mathrm{ELBO}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord">Δ</span><span class="mord"><span class="mord mathrm">ELBO</span></span></span></span></span></span> is the change from the preceding sweep;
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mi>α</mi></mrow><annotation encoding="application/x-tex">\Delta\alpha</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord">Δ</span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span></span></span></span></span> and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow></mrow><annotation encoding="application/x-tex">\Delta\mathrm{PIP}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord">Δ</span><span class="mord"><span class="mord mathrm">PIP</span></span></span></span></span></span> are the maximum absolute changes in
+their respective arrays. Cycle detection compares both arrays with earlier
+states, using <code>tol</code> for the PIP rule and <code>alpha_tol</code> and <code>pip_tol</code> otherwise.
+The largest lag is <code>cycle_lag</code> (default 5), and successful or cycle stops
+require <code>min_iter</code> sweeps (default 2). A PIP-rule cycle stop averages alpha over
+the cycle in the IBSS loop.</p>
+<p>Preparation sets the internal <code>nan_elbo_pip</code> flag when no <code>convergence</code> is
+supplied and the resolved <code>ConvergenceConfig</code> has default values. Other
+NaN-ELBO fallbacks use the separate alpha and PIP tolerances. With a finite ELBO,
+the ELBO rule records cycles without stopping. <a href="model.html#stopping-rules">Stopping rules</a>
+describes PIP history, averaging and model-specific rule selection.</p>
+<p>Dynamic RSS uses <code>rss_models.fit_dynamic</code> and also requires the estimated
+mismatch-bias change to be at most <code>tol</code> before declaring convergence.
+Its permitted <code>ConvergenceConfig</code> settings are described in the same reference.</p>
 <h2 id="boundaries-and-exceptions">Boundaries and exceptions</h2>
+<p>Input errors stop a call. A completed fit can still return <code>converged=False</code>;
+its stopping record explains why.</p>
 <h3 id="errors">Errors</h3>
-<ul>
-<li><code>ValueError</code>: invalid values, shapes and option combinations, and every
-  error from the native layer, whose message is passed through unchanged.</li>
-<li><code>TypeError</code>: wrong types of boolean flags, <code>slot_prior</code>, <code>convergence</code>,
-  <code>RSSControl</code> options, <code>refine</code> and <code>model_init</code>.</li>
-<li><code>KeyError</code>: a missing key of the <code>SusieInputs</code> mapping returned by
-  <code>init_only=True</code>.</li>
-</ul>
-<p>Native functions return errors as messages, and the binding converts every
-message into a <code>ValueError</code>. Warnings are <code>RuntimeWarning</code>s. Those issued by
-<code>susie_rss</code>, by the shared preparation and fitting functions and by the solver
-are also stored in <code>fit.warnings</code>.</p>
+<p>Shape, range and option-combination checks raise <code>ValueError</code>. The binding also
+converts Rust solver error messages to <code>ValueError</code>, preserving the message.
+Explicit Python type checks raise <code>TypeError</code>, for example for invalid
+<code>standardize</code>, <code>slot_prior</code> or <code>convergence</code> types. The <code>SusieInputs</code> mapping
+returned by <code>init_only=True</code> accepts <code>"data"</code> and <code>"params"</code>; another key raises
+<code>KeyError</code>.</p>
+<p>Shared preparation and fitting emit <code>RuntimeWarning</code>s and retain their messages
+in <code>fit.warnings</code> when a result is returned. Ordinary <code>susie_rss</code> adds its
+collected input warnings to that list. Input warnings emitted directly by
+<code>susie_rss_lambda</code> are not copied into it.</p>
 <h3 id="input-checks">Input checks</h3>
+<p>For dense <code>susie_suff_stat</code> and ordinary <code>susie_rss</code>, matrices must have matching
+dimensions, finite entries and nonnegative diagonals. Ordinary RSS does not
+separately enforce a unit LD diagonal or entries in <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>1</mn><mo separator="true">,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[-1,1]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">−</span><span class="mord">1</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mclose">]</span></span></span></span></span>. The caller must
+supply correctly scaled, signed LD with matching variant order and effect
+alleles.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -390,64 +472,41 @@ are also stored in <code>fit.warnings</code>.</p>
 </thead>
 <tbody>
 <tr>
-<td>Matrix of the wrong shape, nonfinite entry or negative diagonal</td>
-<td><code>ValueError</code></td>
-</tr>
-<tr>
-<td>Exactly asymmetric <code>R</code> or <code>XtX</code></td>
-<td>Warning; <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi mathvariant="bold">M</mi><mo>+</mo><msup><mi mathvariant="bold">M</mi><mi>T</mi></msup><mo stretchy="false">)</mo><mi mathvariant="normal">/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">(\mathbf M+\mathbf M^T)/2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathbf">M</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0913em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathbf">M</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8413em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.13889em;">T</span></span></span></span></span></span></span></span><span class="mclose">)</span><span class="mord">/2</span></span></span></span></span> is used. There is no symmetry tolerance</td>
-</tr>
-<tr>
-<td>LD diagonal not one, or <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">∣</mo><msub><mi>r</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><mo stretchy="false">∣</mo><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lvert r_{ij}\rvert&gt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mopen">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">ij</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mclose">∣</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span></td>
-<td>Accepted; only finiteness, the diagonal sign and symmetry are required</td>
-</tr>
-<tr>
-<td><span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>≤</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n\le1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7719em;vertical-align:-0.136em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≤</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span>, negative <code>yty</code>, or zero <code>yty</code> with nonzero <code>Xty</code> or an estimated residual variance</td>
-<td><code>ValueError</code></td>
-</tr>
-<tr>
-<td><code>shat</code> missing or not positive</td>
-<td><code>ValueError</code></td>
-</tr>
-<tr>
-<td>Missing z-scores</td>
-<td>Replaced with zero with a warning</td>
-</tr>
-<tr>
-<td>Missing <code>Xty</code> entries</td>
-<td>Replaced with zero with a warning; <code>ValueError</code> with <code>check_input=True</code></td>
-</tr>
-<tr>
-<td>Infinite summary statistics</td>
-<td><code>ValueError</code></td>
-</tr>
-<tr>
-<td>Negative or nonfinite prior weights, a zero sum, or <code>null_weight</code> outside <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[0,1)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mclose">)</span></span></span></span></span></td>
-<td><code>ValueError</code></td>
-</tr>
-<tr>
-<td><code>L</code> larger than the number of columns</td>
-<td><code>L</code> is reduced to that number, including any null column</td>
-</tr>
-<tr>
-<td>Column with zero variance</td>
-<td>Scale set to one; its Bayes factor is one, so it carries no information</td>
-</tr>
-<tr>
-<td><code>maf</code> filter that removes every variant</td>
-<td><code>ValueError</code></td>
+<td>Unequal off-diagonal entries in the working matrix</td>
+<td><code>RuntimeWarning</code>; average with its transpose. Symmetry is checked exactly, without a tolerance</td>
 </tr>
 <tr>
 <td><code>check_input=True</code></td>
-<td>Eigendecomposition: a negative eigenvalue raises <code>ValueError</code>; <code>Xty</code> outside the column space gives a warning</td>
+<td>Add an eigendecomposition before standardization. Reject a negative eigenvalue at or below <code>-r_tol</code>; warn if the <code>Xty</code> projection check fails</td>
 </tr>
 <tr>
-<td>Infinite <code>y</code>, or missing <code>y</code> without <code>na_rm</code></td>
-<td><code>ValueError</code></td>
+<td>Missing (<code>NaN</code>) z-scores</td>
+<td>Replace with zero and warn; infinite z-scores raise <code>ValueError</code></td>
+</tr>
+<tr>
+<td>Missing <code>Xty</code> entries</td>
+<td>Replace with zero and warn with <code>check_input=False</code>; reject with <code>check_input=True</code>. Infinite entries always raise <code>ValueError</code></td>
+</tr>
+<tr>
+<td>Effect estimates and standard errors</td>
+<td>Require finite <code>bhat</code> and positive <code>shat</code> without missing values. Scalar <code>shat</code> and positive infinity are accepted; a finite <code>bhat</code> divided by infinite <code>shat</code> gives zero</td>
+</tr>
+<tr>
+<td><code>yty=0</code> in the ordinary Gaussian model</td>
+<td>Require <code>Xty=0</code>, an explicitly positive <code>residual_variance</code> and <code>estimate_residual_variance=False</code></td>
 </tr>
 </tbody>
 </table></div>
-<p><a href="inputs.html">Inputs and priors</a> gives the complete input rules.</p>
+<p>For z-score RSS, the exact symmetry check applies after scaling to the working
+<code>XtX</code>. With <code>bhat</code>, <code>shat</code>, <code>n</code> and <code>var_y</code>, the reconstructed <code>XtX</code> is always
+averaged with its transpose. The resulting matrix is also checked for finite
+entries and a nonnegative diagonal. These routes do not clip eigenvalues or
+repair a matrix to be positive semidefinite.</p>
+<p>For individual-level input, <code>X</code> must be finite and infinite <code>y</code> is rejected.
+Missing <code>y</code> requires <code>na_rm=True</code>, which omits the corresponding rows.
+<a href="inputs.html#shapes-and-numerical-checks">Inputs</a> gives the numerical and projection
+checks; <a href="inputs.html#priors-and-zero-information-columns">priors and zero-information columns</a>
+describes weight normalization, null columns and the component-count rules.</p>
 <h3 id="numerical-safeguards">Numerical safeguards</h3>
 <p>Posterior weights are normalized after subtracting the largest log weight.
 This prevents exponential overflow without changing relative probabilities.
@@ -457,9 +516,10 @@ shifted form does not:</p>
 <p>A 60-digit decimal calculation gives <strong>1000.313261687518</strong>; the first normalized weight is <strong>0.731058578630</strong>.</p>
 <!-- calculated:logsum:end -->
 
-<ul>
-<li><strong>Floors.</strong> Sampling variances are at least machine epsilon, log prior
-  weights use <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>log</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>π</mi><mi>j</mi></msub><mo>+</mo><msqrt><mi>ϵ</mi></msqrt><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\log(\pi_j+\sqrt\epsilon)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0503em;vertical-align:-0.25em;"></span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8003em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="padding-left:0.833em;">ϵ</span></span><span style="top:-2.7603em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.08em" viewBox="0 0 400000 1080" preserveAspectRatio="xMinYMin slice"><path d="M95,702
+<p>In ordinary Gaussian SER, finite sampling variances are floored at float64
+machine epsilon <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi></mrow><annotation encoding="application/x-tex">\varepsilon</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">ε</span></span></span></span></span> for log Bayes factors and the prior-variance
+objective. Posterior moments use the unfloored variances. Prior weighting uses
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>log</mi><mo>⁡</mo><mo stretchy="false">(</mo><msub><mi>π</mi><mi>j</mi></msub><mo>+</mo><msqrt><mi>ε</mi></msqrt><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">\log(\pi_j+\sqrt\varepsilon)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0361em;vertical-align:-0.2861em;"></span><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">π</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0503em;vertical-align:-0.25em;"></span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8003em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="padding-left:0.833em;">ε</span></span><span style="top:-2.7603em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.08em" viewBox="0 0 400000 1080" preserveAspectRatio="xMinYMin slice"><path d="M95,702
 c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14
 c0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54
 c44.2,-33.3,65.8,-50.3,66.5,-51c1.3,-1.3,3,-2,5,-2c4.7,0,8.7,3.3,12,10
@@ -470,25 +530,48 @@ c5.3,-9.3,12,-14,20,-14
 H400000v40H845.2724
 s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
 c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
-M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2397em;"><span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span> as in susieR, and slot log-odds are
-  limited to <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>20</mn><mo separator="true">,</mo><mn>20</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[-20,20]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">−</span><span class="mord">20</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">20</span><span class="mclose">]</span></span></span></span></span>.</li>
-<li><strong>Columns without information.</strong> A variant with zero diagonal or a nonfinite
-  sampling variance gets Bayes factor one and is excluded from the expected
-  log-likelihood and from the <code>check_prior</code> bound.</li>
-<li><strong>Prior-variance search.</strong> A nonfinite trial objective or more than 1000
-  steps is an error.</li>
-<li><strong>Posterior and objective.</strong> A nonfinite posterior quantity, an infinite
-  ELBO or a nonpositive or nonfinite residual-variance estimate is an error.
-  The estimate is otherwise limited to [<code>residual_variance_lowerbound</code>,
-  <code>residual_variance_upperbound</code>].</li>
-<li><strong>Prior variance.</strong> With <code>check_prior</code>, an estimated prior variance more than
-  100 times the largest squared z-score is an error, which usually indicates
-  inconsistent summary statistics and LD.</li>
-<li><strong>Fast paths.</strong> Grouped, vectorized and implicitly scaled computations fall
-  back to the general formula whenever an intermediate is nonfinite or
-  subnormal; see <a href="optimization.html">Optimization</a>.</li>
-</ul>
+M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2397em;"><span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span>, so a supplied zero weight can retain positive
+posterior probability. A zero working diagonal gives log BF zero and zero
+conditional moments; its location probability can remain positive.
+<a href="#single-effect-regression">Single-effect regression</a> shows these branches.</p>
+<p>Gaussian SER rejects nonfinite evidence or conditional moments. Native IBSS
+rejects an infinite ELBO. A NaN ELBO also raises an error if the posterior arrays
+contain nonfinite entries; otherwise the stopping rules below apply. The native
+residual-variance update rejects a nonpositive or nonfinite estimate before
+constraining it by <code>residual_variance_lowerbound</code> and <code>residual_variance_upperbound</code>.</p>
+<p>With <code>check_prior=True</code>, the native loop checks the component variances after
+each sweep, using the current residual variance. Write
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>z</mi><mi>max</mi><mo>⁡</mo></msub><mo>=</mo><mo stretchy="false">{</mo><msub><mrow><mi>max</mi><mo>⁡</mo></mrow><mrow><mi>j</mi><mo>:</mo><msub><mi>Q</mi><mrow><mi>j</mi><mi>j</mi></mrow></msub><mo>&gt;</mo><mn>0</mn></mrow></msub><mo stretchy="false">(</mo><mi mathvariant="normal">∣</mi><msub><mi>g</mi><mi>j</mi></msub><mi mathvariant="normal">∣</mi><mi mathvariant="normal">/</mi><msqrt><msub><mi>Q</mi><mrow><mi>j</mi><mi>j</mi></mrow></msub></msqrt><mo stretchy="false">)</mo><mo stretchy="false">}</mo><mi mathvariant="normal">/</mi><msqrt><msup><mi>σ</mi><mn>2</mn></msup></msqrt></mrow><annotation encoding="application/x-tex">z_{\max}=\{\max_{j:Q_{jj}&gt;0}(|g_j|/\sqrt{Q_{jj}})\}/\sqrt{\sigma^2}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.044em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mop mtight"><span class="mtight">m</span><span class="mtight">a</span><span class="mtight">x</span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.3114em;vertical-align:-0.3564em;"></span><span class="mopen">{</span><span class="mop"><span class="mop">max</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3283em;"><span style="top:-2.55em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span><span class="mrel mtight">:</span><span class="mord mtight"><span class="mord mathnormal mtight">Q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3281em;"><span style="top:-2.357em;margin-left:0em;margin-right:0.0714em;"><span class="pstrut" style="height:2.5em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">jj</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2819em;"><span></span></span></span></span></span></span><span class="mrel mtight">&gt;</span><span class="mord mtight">0</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.3473em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord">∣</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0359em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">j</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mord">∣/</span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8836em;"><span class="svg-align" style="top:-3.2em;"><span class="pstrut" style="height:3.2em;"></span><span class="mord" style="padding-left:1em;"><span class="mord"><span class="mord mathnormal">Q</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.05724em;">jj</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span></span></span><span style="top:-2.8436em;"><span class="pstrut" style="height:3.2em;"></span><span class="hide-tail" style="min-width:1.02em;height:1.28em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.28em" viewBox="0 0 400000 1296" preserveAspectRatio="xMinYMin slice"><path d="M263,681c0.7,0,18,39.7,52,119
+c34,79.3,68.167,158.7,102.5,238c34.3,79.3,51.8,119.3,52.5,120
+c340,-704.7,510.7,-1060.3,512,-1067
+l0 -0
+c4.7,-7.3,11,-11,19,-11
+H40000v40H1012.3
+s-271.3,567,-271.3,567c-38.7,80.7,-84,175,-136,283c-52,108,-89.167,185.3,-111.5,232
+c-22.3,46.7,-33.8,70.3,-34.5,71c-4.7,4.7,-12.3,7,-23,7s-12,-1,-12,-1
+s-109,-253,-109,-253c-72.7,-168,-109.3,-252,-110,-252c-10.7,8,-22,16.7,-34,26
+c-22,17.3,-33.3,26,-34,26s-26,-26,-26,-26s76,-59,76,-59s76,-60,76,-60z
+M1001 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.3564em;"><span></span></span></span></span></span><span class="mclose">)}</span><span class="mord">/</span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.9551em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord" style="padding-left:0.833em;"><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">σ</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.7401em;"><span style="top:-2.989em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span><span style="top:-2.9151em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.08em" viewBox="0 0 400000 1080" preserveAspectRatio="xMinYMin slice"><path d="M95,702
+c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14
+c0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54
+c44.2,-33.3,65.8,-50.3,66.5,-51c1.3,-1.3,3,-2,5,-2c4.7,0,8.7,3.3,12,10
+s173,378,173,378c0.7,0,35.3,-71,104,-213c68.7,-142,137.5,-285,206.5,-429
+c69,-144,104.5,-217.7,106.5,-221
+l0 -0
+c5.3,-9.3,12,-14,20,-14
+H400000v40H845.2724
+s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
+c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
+M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.0849em;"><span></span></span></span></span></span></span></span></span></span> for the largest
+absolute working score. Any <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo><mn>100</mn><msubsup><mi>z</mi><mi>max</mi><mo>⁡</mo><mn>2</mn></msubsup></mrow><annotation encoding="application/x-tex">V_\ell&gt;100z_{\max}^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1.0611em;vertical-align:-0.247em;"></span><span class="mord">100</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.04398em;">z</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-2.453em;margin-left:-0.044em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mop mtight"><span class="mtight">m</span><span class="mtight">a</span><span class="mtight">x</span></span></span></span></span><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.247em;"><span></span></span></span></span></span></span></span></span></span></span> raises <code>ValueError</code> with a
+summary-statistic/LD consistency message. Zero-diagonal columns are excluded;
+with no positive diagonal the bound does not reject a variance.</p>
+<p>Brent's prior-variance search checks new trial objectives for finiteness and
+raises an error if its 1000-iteration limit is exhausted. Native slot-activity
+updates constrain log-odds to <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mo>−</mo><mn>20</mn><mo separator="true">,</mo><mn>20</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[-20,20]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">−</span><span class="mord">20</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">20</span><span class="mclose">]</span></span></span></span></span>. Kernel eligibility and fallback rules
+are described in <a href="optimization.html">Optimization</a>.</p>
 <h3 id="convergence-outcomes">Convergence outcomes</h3>
+<p>The native IBSS loop reports these <code>fit.convergence</code> outcomes:</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -501,17 +584,17 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
 <tr>
 <td><code>criterion_satisfied</code></td>
 <td><code>True</code></td>
-<td>The selected criterion was met</td>
+<td>The selected rule accepted the fit, including an eligible PIP-rule cycle</td>
 </tr>
 <tr>
 <td><code>iteration_limit</code></td>
 <td><code>False</code></td>
-<td><code>max_iter</code> sweeps ran without meeting it; a warning reports the iteration count</td>
+<td>The sweep limit was reached</td>
 </tr>
 <tr>
 <td><code>cycle_detected</code></td>
 <td><code>False</code></td>
-<td>Alpha and PIPs alternate among 2–5 states under <code>"alpha_pip"</code> or <code>"joint"</code></td>
+<td>An eligible alpha/PIP cycle at lag greater than one under <code>"alpha_pip"</code>, <code>"joint"</code> or an ELBO fallback using separate tolerances</td>
 </tr>
 <tr>
 <td><code>numerical_failure</code></td>
@@ -520,111 +603,136 @@ M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">�
 </tr>
 </tbody>
 </table></div>
-<p>An ELBO decrease larger than <code>tol</code> produces a warning and is counted, and the
-fit continues. A NaN ELBO with a finite posterior under <code>"elbo"</code> switches that
-sweep to the PIP rule and produces a warning. In all cases the fit returns its
-current state. <a href="results.html#iterations-and-finalization">Reading results</a>
-describes the returned diagnostics.</p>
+<p>An ELBO decrease larger than <code>tol</code> produces a warning and increments the decrease
+count. The selected stopping rule still decides whether fitting stops. A NaN
+ELBO with finite posterior arrays under <code>"elbo"</code> invokes a warned alpha/PIP
+fallback at or after <code>min_iter</code>. With the internal <code>nan_elbo_pip</code> flag, this uses
+the PIP rule and averages alpha over an accepted cycle. Otherwise it uses the
+separate <code>alpha_tol</code> and <code>pip_tol</code>, and a longer cycle returns
+<code>converged=False</code> without averaging. <a href="#stopping-rule">Stopping rule</a> gives the
+flag selection and decision order. <code>workhorse._fit</code> warns when the solver
+returns <code>converged=False</code>, including the iteration count and stop reason.</p>
+<p>Dynamic RSS has a separate Python loop and reports <code>elbo_tolerance</code>,
+<code>alpha_pip_fixed_point</code>, <code>alpha_pip_cycle_&lt;lag&gt;</code> or <code>max_iter</code>.
+<a href="results.html#iterations-and-finalization">Results</a> explains how to read the
+stopping record and returned posterior.</p>
 <h3 id="trimming-and-output-shapes">Trimming and output shapes</h3>
-<p>After the final sweep, including at the iteration limit, effects with
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&lt;</mo></mrow><annotation encoding="application/x-tex">V_\ell&lt;</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span></span></span></span></span> <code>prior_tol</code> are reset: alpha to the prior weights and the moments,
-log Bayes factors and KL terms to zero. The stored ELBO is not recomputed. With
-a null column, <code>alpha</code>, <code>mu</code>, <code>mu2</code> and <code>lbf_variable</code> have one more column
-than <code>pip</code>, and credible sets that contain the null column are rejected. If no
-credible set qualifies, the set collections are empty and PIPs are still
-returned. PIPs use effects with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo></mrow><annotation encoding="application/x-tex">V_\ell&gt;</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span></span></span></span></span> <code>prior_tol</code>; credible sets use
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">V_\ell&gt;10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span>.</p>
+<p>Final trimming resets components with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&lt;</mo><mrow><mi mathvariant="monospace">p</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">i</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">_</mi><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">V_\ell&lt;\mathtt{prior\_tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.2222em;"></span><span class="mord"><span class="mord mathtt">prior_tol</span></span></span></span></span></span>: alpha to
+the normalized prior weights, and <code>V</code>, moments, log Bayes factors and KL terms
+to zero. Component rows remain in the result. Native IBSS leaves the stored
+ELBO and <code>XtXr</code> unchanged; dynamic RSS constructs <code>XtXr</code> from the finalized
+arrays. <a href="results.html#iterations-and-finalization">Results</a> describes these phases.</p>
+<p>With a null column, <code>alpha</code>, <code>mu</code>, <code>mu2</code> and <code>lbf_variable</code> have one more column
+than <code>pip</code>. During fitting, credible sets containing the null column are
+rejected. If no credible set qualifies, PIPs are still returned. PIPs use
+components with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo><mrow><mi mathvariant="monospace">p</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">i</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">r</mi><mi mathvariant="monospace">_</mi><mi mathvariant="monospace">t</mi><mi mathvariant="monospace">o</mi><mi mathvariant="monospace">l</mi></mrow></mrow><annotation encoding="application/x-tex">V_\ell&gt;\mathtt{prior\_tol}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.2222em;"></span><span class="mord"><span class="mord mathtt">prior_tol</span></span></span></span></span></span>; credible sets use the separate
+fixed cutoff <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>V</mi><mi mathvariant="normal">ℓ</mi></msub><mo>&gt;</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">V_\ell&gt;10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.2222em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">ℓ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span>.</p>
 <h2 id="native-threading">Native threading</h2>
-<p>Dense Gram products may partition output rows among a private per-fit native
-thread pool when <code>n_threads &gt; 1</code>. Each output coordinate retains its ordered
-source-column accumulation; IBSS still updates effects sequentially. Pool
-creation is skipped for one thread and small matrices. Kernel dispatch requires
-at least 1024 output rows and 1,048,576 matrix entries. Exact-class compact
-products use the same rule based on their proved dimension. Public default-one
-validation is serial and does not consult a process-global thread count. No
-global Rayon pool or BLAS thread setting is modified.</p>
-<p>Eligible plain C-order z/R/n RSS calls use a local private execution owner for
-the sufficient exact-symmetry proof and complete owned paired validation/repair.
-Eligibility depends on normalized preparation inputs: a count greater than one,
-p ≥ 1024, provided n, <code>var_y=None</code>, and aligned native float64 C-order storage.
-Solver and output controls do not disable this matrix work. NumPy integer counts,
-replaced stderr, tracing, profiling and logging warning capture use the same
-path. Other preparation routes retain their requested solver count; destructive
-LD workspace preparation remains serial.</p>
-<p>All conversion and array checks finish before native borrowing. Static upper
-macroblock-row jobs own each unordered pair, write both output positions once
-and preserve the separate scaled terms and ordered average. Workers never call
-Python or acquire the GIL. Native preparation returns warning predicates and
-deferred repair errors as data. Its owner retains the worker JoinHandles and
-joins them in <code>finally</code> before later Python transformations or warning dispatch.
-The calling thread uses <code>warnings.warn</code> with the original messages and order;
-raw validation errors retain priority, and symmetry warnings precede deferred
-repair errors. Fitting creates its own per-call executor after preparation.
-The private owner is absent from result options and serialization, and a saved
-traceback retains only an inert closed wrapper.</p>
-<p>On Linux x86_64, parallel preparation requires nearest rounding, masked
-exceptions, FTZ/DAZ disabled and the canonical x87 control word. Read-only probes
-inspect the caller and every worker. Unknown or nonstandard controls use ordinary
-preparation; no floating controls are set. Sticky exception flags can accrue on
-different threads; equality of the complete floating environment is not a result
-contract. Construction failure uses ordinary preparation. A recoverable joined
-task panic discards its partial output and runs the complete serial helper;
-unrecoverable join failure cannot return a valid posterior. Solver-only fallback
-entries retain their existing Rayon lifecycle; dropping a pool signals termination
-and does not itself establish that all worker threads have joined.</p>
+<p><code>n_threads</code> sets a native thread limit for each call, from 1 to 32, with default
+1. Public fitting functions use this option independently of
+<code>PRUSIE_NUM_THREADS</code>. They do not change process-wide Rayon or BLAS settings.
+NumPy matrix operations, including those in dynamic RSS, follow their own
+BLAS threading settings.</p>
+<p>With <code>n_threads &gt; 1</code>, large dense Gram products use a private Rayon pool to
+partition output rows. Each row retains its source-column accumulation order;
+IBSS components are updated sequentially. Pool creation is skipped for one
+thread or a matrix dimension below 1024. Product dispatch requires at least
+1024 output rows and 1,048,576 matrix entries; a compact product formed from
+exact signed-column classes uses its reduced dimensions for this check.
+Matrix-free design operators and the dynamic RSS sweep loop are not
+parallelized by <code>n_threads</code>. The fitting pool is local to the native call and
+is dropped when that call ends.</p>
+<p>For <code>susie_rss</code> with known <code>n</code> and <code>var_y=None</code>, eligible LD inputs can also use
+parallel preparation for the sufficient exact-symmetry proof and owned
+validation and repair. This requires <code>n_threads &gt; 1</code>, at least 1024 variants
+and a plain NumPy array with aligned, C-contiguous, native float64 storage
+without dtype metadata. Eligibility is checked on normalized preparation inputs,
+independently of solver and output controls.
+Array subclasses, including memory-mapped LD, other dtypes and other layouts
+prepare serially. The requested solver count is retained when preparation is
+serial. <code>overwrite_ld=True</code> preparation is always serial; its storage contract
+is described under <a href="api.html#optional-ld-workspace">Optional LD workspace</a>.</p>
+<p>Parallel preparation requires the optional GNU/Linux x86-64 native math shim;
+<code>portable-math</code> builds use serial preparation. Read-only probes check the caller
+and every worker for nearest rounding, masked exceptions, disabled subnormal
+flushing (FTZ/DAZ) and the canonical x87 control word. Unsupported or nonstandard
+controls select serial preparation; the probes do not change them. Sticky
+exception flags can accrue on different threads, so equality of the complete
+floating-point environment is not part of the result contract.</p>
+<p>Preparation workers read the matrix under a native read borrow and make no
+Python calls. Owned repair partitions unordered matrix pairs into disjoint jobs;
+each job writes both orientations into a separate repair array using the same
+ordered scaled terms and average as serial preparation. The calling thread
+dispatches warnings and errors: raw validation errors take priority, and a
+symmetry warning precedes a deferred repair error.</p>
+<p>The preparation owner explicitly joins its workers before later NumPy
+transformations or warning dispatch, including cleanup on exceptions. It stays
+out of result options and serialization; fitting creates a separate pool when
+eligible. A construction failure or recoverable task panic selects the complete
+serial validator after joining any workers and discarding partial output.
+A worker join failure prevents a successful result. These explicit preparation
+joins are separate from the fitting pool's ordinary drop lifecycle.</p>
 <h2 id="numerical-reproducibility">Numerical reproducibility</h2>
-<p>Agreement with susieR is validated with relative tolerance zero: complete final
-component alpha matrices are compared with pinned susieR 0.16.6 at absolute
-tolerance <code>1e-5</code>, with original component and variant order retained. PIPs and other summaries
-are separate diagnostics; see <a href="numerical_accuracy.html">numerical accuracy</a>.</p>
-<p>The solver uses float64 rather than long-double C helpers or R-specific
-accumulation order. Small platform-dependent differences are assessed using the
-complete-alpha tolerance above, not bitwise equality. The compile-time
-<code>portable-math</code> feature disables the optional GNU/Linux vector-math shim and
-uses the existing scalar fallback. It leaves model settings unchanged and makes
-no promise of identical floating-point results across platforms. There is no
-runtime environment switch selecting an experimental numerical algorithm.</p>
+<p>prusie uses float64 arithmetic. Summation order and math-library implementations
+can differ from susieR, so agreement is assessed numerically. Core comparisons
+use pinned susieR 0.16.6 with matched inputs and fitting settings. The criterion
+is a maximum absolute difference of <code>1e-5</code> (<code>rtol=0</code>) across the complete final
+<code>alpha</code> matrix, retaining every component and the original component and variant
+order. PIPs and other summaries are separate diagnostics.
+<a href="model.html#computational-compatibility">Computational compatibility</a> defines the
+comparison and probability-validity checks.</p>
+<p>On native GNU/Linux x86-64 builds, the optional vector-math shim can evaluate SER
+exponentials through glibc <code>libmvec</code>, using SSE2 or AVX2 according to library and
+CPU support. Scalar exponentials are used when vector math is unavailable or
+the caller's rounding or subnormal controls require them. The compile-time
+<code>portable-math</code> feature disables this shim and uses scalar exponentials without
+changing model settings. Bitwise equality across implementations or platforms
+is not promised.</p>
+<p><a href="numerical_accuracy.html">Numerical accuracy</a> reports the tested configurations
+and results. Agreement on those cases does not establish agreement for every
+input, model option or platform.</p>
 <h2 id="dense-storage-and-matrix-products">Dense storage and matrix products</h2>
-<p>Ordinary RSS validation owns its repair and leaves the caller unchanged.
-The explicit <code>susie_rss(overwrite_ld=True)</code> storage option first performs the
-same complete exact-symmetry proof. If it fails, a read-only search must find
-finite raw/scaled terms with unequal scaled values before any store. With no
-witness, the unchanged owned helper is used and R remains untouched. Otherwise
-the read borrow ends and one NumPy mutable borrow, under the GIL, supplies a
-paired repair traversal. A complete SSE2 tile loads both original orientations
-before any tile store; scalar tails load each original pair before either
-store. No immutable Rust slice aliases the mutable buffer, and no full backup
-or repaired matrix is allocated by this destructive path.</p>
-<p>The traversal independently derives the same raw/scaled/repair predicates and
-ordered <code>(x*s + y*s)/2</code> values as owned preparation. Raw validation errors keep
-their priority, then the original Python symmetry warning precedes deferred
-repair errors. The mutable borrow ends before warning dispatch. The actual
-native action controls the matrix representation: consumed R is scaled XtX
-with global scale 1; no-write paths keep raw R and scale n−1. Original sample
-size and all model settings are retained. Diagonal preparation, ordinary stored
-products and both native purity loops use that same matrix and scale. The
-option's support, alias exclusions and destructive-on-failure contract are
-documented in <a href="api.html#optional-ld-workspace">the API</a>.</p>
+<p>A dense float64 matrix for <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span> variants occupies <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><msup><mi>p</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">8p^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0085em;vertical-align:-0.1944em;"></span><span class="mord">8</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> bytes. Input conversion,
+symmetry repair and materialized scaling can each require additional full matrices.</p>
 <!-- calculated:memory:start -->
 <p>At <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>5000</mn></mrow><annotation encoding="application/x-tex">p=5000</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">5000</span></span></span></span></span>, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>8</mn><msup><mi>p</mi><mn>2</mn></msup><mo>=</mo><mn>200</mn><mo separator="true">,</mo><mn>000</mn><mo separator="true">,</mo><mn>000</mn></mrow><annotation encoding="application/x-tex">8p^2=200,000,000</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0085em;vertical-align:-0.1944em;"></span><span class="mord">8</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8389em;vertical-align:-0.1944em;"></span><span class="mord">200</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">000</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">000</span></span></span></span></span> bytes, or approximately <strong>190.7 MiB</strong>.</p>
 <!-- calculated:memory:end -->
 
-<p>The dense operator applies diagonal scaling implicitly, avoiding a separate
-scaled matrix when the factors permit safe evaluation. Its products use a four-column kernel
-with runtime-checked AVX2 support and a portable fallback. Gaussian single-effect
-updates reuse groups of equal sampling variance. Runtime and memory use depend
-on input size, exact matrix structure, iteration count and requested threads.
-Reducing temporary storage need not reduce runtime, and parallelism does not
-make every input faster.
-There are no environment variables for selecting alternative mathematical paths.
-Use the per-fit <code>n_threads</code> parameter for native product parallelism and eligible
-RSS preparation. Its default is one, and public thread selection remains
-independent of <code>PRUSIE_NUM_THREADS</code>.
-Component updates are sequential. The primary comparisons use one numerical
-thread throughout.</p>
+<p>RSS validation preserves the caller's <code>R</code> by default, using owned storage for
+repair. For supported z-score inputs with <code>R</code> and known <code>n</code>,
+<code>susie_rss(overwrite_ld=True)</code> can reuse <code>R</code> for repair. Once writes begin, later
+errors can leave <code>R</code> and its aliases changed, with no rollback. Reload the
+original LD before reuse, including after a failed call.
+<a href="api.html#optional-ld-workspace">Optional LD workspace</a> gives the restrictions.</p>
+<p>A sufficient exact-symmetry proof can return without writes. Otherwise, a
+read-only search must find finite original and scaled entries with unequal
+scaled values before destructive repair starts. With no such pair, owned
+preparation keeps <code>R</code> unchanged. Repair holds one mutable NumPy borrow under the
+GIL and loads both original orientations before either store. With <code>s = n - 1</code>,
+each pair receives <code>(Rij*s + Rji*s)/2</code> in that operation order, using original
+entries <code>Rij</code> and <code>Rji</code>. The traversal allocates no full backup or repair array.
+Consumed <code>R</code> is scaled <code>XtX</code> with global scale 1; unchanged <code>R</code> retains global
+scale <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n-1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span>.</p>
+<p>The dense operator can apply RSS and predictor scaling without storing the
+working matrix. Outside the <a href="optimization.html#implicit-scaling">implicit-scaling bounds</a>,
+it materializes that matrix once. If the ordinary factored product has a
+nonfinite intermediate or result, it is retried with a temporary materialized
+matrix.</p>
+<p>The column-major product kernel skips zero coefficients and adds columns in
+ascending order, grouping four nonzero columns per output update. On x86-64,
+runtime CPU detection selects AVX2 when available, with a portable fallback.
+<a href="optimization.html#exact-signed-column-classes">Exact signed-column classes</a> can
+combine coefficients after proving column relations, keeping separate posterior
+coordinates for every variant. <a href="#native-threading">Native threading</a> describes
+parallel product dispatch and sequential component updates.</p>
+<p>Runtime and memory depend on the input, matrix structure, preparation, iterations
+and threads. Reducing temporary storage or adding threads need not reduce runtime.</p>
 <h2 id="reference-source-mapping">Reference source mapping</h2>
-<p>The reference is <a href="https://github.com/stephenslab/susieR/tree/8e56a8e038e989856d106d9ca5175cc664fea9d2">susieR 0.16.6</a>.
-Corresponding functions at that commit are:</p>
+<p>Use this mapping to compare input preparation and Gaussian IBSS updates with
+<a href="https://github.com/stephenslab/susieR/tree/8e56a8e038e989856d106d9ca5175cc664fea9d2">susieR 0.16.6</a>,
+commit <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>. The table groups code by
+responsibility; links to reference files point to this commit. Python filenames
+are relative to <code>src/prusie</code>, and Rust filenames to <code>rust/prusie-core/src</code>.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -634,35 +742,39 @@ Corresponding functions at that commit are:</p>
 </thead>
 <tbody>
 <tr>
-<td><code>ibss.rs</code>: <code>fit_operator</code></td>
-<td><code>susie_workhorse</code> (<code>R/susie_workhorse.R</code>); <code>ibss_fit</code> (<code>R/iterative_bayesian_stepwise_selection.R</code>)</td>
+<td><code>individual.py</code>: <code>susie</code>; <code>suff_stat.py</code>: <code>susie_suff_stat</code> (<code>susie_ss</code>); <code>rss.py</code>: <code>susie_rss</code>; <code>rss_lambda.py</code>: <code>susie_rss_lambda</code></td>
+<td><code>susie</code>, <code>susie_ss</code>, <code>susie_rss</code>, <code>susie_rss_lambda</code> in <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/susie.R">R/susie.R</a></td>
 </tr>
 <tr>
-<td><code>ser.rs</code>: <code>single_effect</code>; <code>optimizer.rs</code>: <code>minimize</code></td>
-<td><code>single_effect_update</code>, <code>single_effect_regression</code>, <code>optimize_prior_variance</code> (<code>R/single_effect_regression.R</code>)</td>
+<td>Input preparation in the entry modules and <code>_request.py</code>: <code>_prepare_request</code></td>
+<td><code>individual_data_constructor</code>, <code>sufficient_stats_constructor</code>, <code>summary_stats_constructor</code>, <code>rss_lambda_constructor</code> in <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/susie_constructors.R">R/susie_constructors.R</a></td>
+</tr>
+<tr>
+<td><code>workhorse.py</code>: <code>_fit</code>; <code>ibss.rs</code>: <code>fit_operator</code></td>
+<td><code>susie_workhorse</code> in <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/susie_workhorse.R">R/susie_workhorse.R</a>; <code>ibss_fit</code> in <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/iterative_bayesian_stepwise_selection.R">R/iterative_bayesian_stepwise_selection.R</a></td>
+</tr>
+<tr>
+<td>Component updates in <code>ibss.rs</code>; <code>ser.rs</code>: <code>single_effect</code>; <code>optimizer.rs</code>: <code>minimize</code></td>
+<td><code>single_effect_update</code>, <code>single_effect_regression</code>, <code>optimize_prior_variance</code> in <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/single_effect_regression.R">R/single_effect_regression.R</a></td>
 </tr>
 <tr>
 <td><code>residual.rs</code>: <code>expected_residual_sum_squares</code>; ELBO in <code>ibss.rs</code></td>
-<td><code>get_ER2</code>, <code>Eloglik</code> (<code>R/sufficient_stats_methods.R</code>); <code>get_objective</code> (<code>R/model_methods.R</code>)</td>
+<td><code>get_ER2.ss</code>, <code>Eloglik.ss</code> in <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/sufficient_stats_methods.R">R/sufficient_stats_methods.R</a>; <code>get_objective.default</code> in <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/model_methods.R">R/model_methods.R</a></td>
 </tr>
 <tr>
 <td><code>diagnostics.rs</code>: <code>stopping_decision</code>, <code>detect_cycle</code></td>
-<td><code>check_convergence</code> (<code>R/model_methods.R</code>); <code>check_alpha_pip_cycle_convergence</code> (<code>R/susie_utils.R</code>)</td>
+<td><code>check_convergence.default</code> in <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/model_methods.R">R/model_methods.R</a>; <code>check_alpha_pip_cycle_convergence</code> in <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/susie_utils.R">R/susie_utils.R</a></td>
 </tr>
 <tr>
-<td><code>ibss.rs</code>: residual update and trimming</td>
-<td><code>update_model_variance</code>, <code>trim_null_effects</code> (<code>R/model_methods.R</code>)</td>
-</tr>
-<tr>
-<td><code>individual.py</code>: <code>susie</code>; <code>suff_stat.py</code>: <code>susie_suff_stat</code>/<code>susie_ss</code>; <code>rss.py</code>: <code>susie_rss</code>; <code>rss_lambda.py</code>: <code>susie_rss_lambda</code>; <code>_request.py</code> and <code>workhorse.py</code>: shared construction and fitting</td>
-<td><code>susie</code>, <code>susie_ss</code>, <code>susie_rss</code>, <code>susie_rss_lambda</code> (<code>R/susie.R</code>) and their constructors (<code>R/susie_constructors.R</code>)</td>
+<td>Residual-variance update and trimming in <code>ibss.rs</code></td>
+<td><code>update_model_variance.default</code>, <code>trim_null_effects.default</code> in <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/model_methods.R">R/model_methods.R</a></td>
 </tr>
 </tbody>
 </table></div>
 <p>The Brent search in <code>optimizer.rs</code> is adapted from <code>Brent_fmin</code> in R's
 <code>src/library/stats/src/optimize.c</code> (GPL-2.0-or-later). Attribution and licenses
 are retained in the <a href="https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md">third-party notices</a>.</p></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
+<footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

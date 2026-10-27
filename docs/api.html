@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
-<div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html" aria-current="page">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<div class="version"><span class="version-number">0.3.0</span><span class="version-badge">Stable</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html" aria-current="page">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
@@ -39,49 +39,57 @@
 </ul>
 </div>
 </details><h1 id="python-api">Python API</h1>
-<p>The Gaussian SuSiE fitters return a typed <code>SusieResult</code>. Inputs are converted
-to float64 as needed; variant and component indices are zero-based. See
-<a href="inputs.html">inputs</a> for alignment and <a href="results.html">results</a> for returned fields.
-Python <code>help()</code> provides complete signatures and NumPy-style docstrings.</p>
+<p>prusie fits SuSiE fine-mapping models from individual-level data, centered
+sufficient statistics or association summary statistics with LD. Fitted models
+are returned as <code>SusieResult</code> objects.</p>
+<p>Numerical arrays are converted to float64 as needed; variant and component
+indices are zero-based. See <a href="inputs.html">Inputs</a> for preparation and alignment,
+<a href="results.html">Results</a> for posterior fields and <a href="example.html">the toy example</a>
+for a runnable workflow. Use Python <code>help()</code>, for example
+<code>help(prusie.susie_rss)</code>, for signatures and parameter documentation.</p>
 <h2 id="fitting-entry-points">Fitting entry points</h2>
+<p>Choose the entry point that matches the available data.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Function</th>
-<th>Input and purpose</th>
+<th>Inputs and purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>susie(X, y, *, ...)</code></td>
-<td>Individual-level dense NumPy or SciPy sparse data</td>
+<td><code>susie</code></td>
+<td>Individual-level <code>X</code>, <code>y</code>; dense or SciPy sparse predictors</td>
 </tr>
 <tr>
-<td><code>susie_suff_stat(XtX, Xty, yty, n, *, ...)</code></td>
-<td>Centered sufficient statistics; <code>susie_ss</code> is an alias</td>
+<td><code>susie_suff_stat</code></td>
+<td>Centered <code>XtX</code>, <code>Xty</code>, <code>yty</code> and sample size <code>n</code>; <code>susie_ss</code> is an alias</td>
 </tr>
 <tr>
-<td><code>susie_rss(z=..., R=..., n=..., ...)</code></td>
-<td>Signed summary statistics with LD; accepts <code>bhat</code>/<code>shat</code> and reference <code>X</code> routes</td>
+<td><code>susie_rss</code></td>
+<td><code>z</code> or both <code>bhat</code> and <code>shat</code>, with LD <code>R</code> or reference genotypes <code>X</code></td>
 </tr>
 <tr>
-<td><code>susie_rss_lambda(z, R, *, lambda_=..., ...)</code></td>
-<td>RSS with fixed or estimated LD regularization</td>
+<td><code>susie_rss_lambda</code></td>
+<td><code>z</code>, either <code>R</code> or reference <code>X</code>, and required <code>lambda_</code>; fixed or estimated isotropic covariance component</td>
 </tr>
 <tr>
-<td><code>susie_ser(z=..., ...)</code></td>
-<td>One-effect summary-statistic model without an LD matrix</td>
+<td><code>susie_ser</code></td>
+<td><code>z</code> or both <code>bhat</code> and <code>shat</code>; single-effect regression without LD</td>
 </tr>
 <tr>
-<td><code>susie_auto(X, y, *, ...)</code></td>
-<td>Increase the effect count using the susieR automatic fitting rule</td>
+<td><code>susie_auto</code></td>
+<td><code>X</code>, <code>y</code>; staged <code>susie</code> fits that double the component count</td>
 </tr>
 <tr>
-<td><code>susie_trendfilter(y, *, order=0, ...)</code></td>
-<td>Trend filtering with an implicit cumulative design</td>
+<td><code>susie_trendfilter</code></td>
+<td>Ordered <code>y</code>; trend filtering with an implicit cumulative design (<code>order=0</code> by default)</td>
 </tr>
 </tbody>
 </table></div>
+<p>For an RSS fit, let <code>z</code> contain signed marginal z-scores, <code>R</code> the matching
+LD correlation matrix, <code>n</code> the association sample size and <code>variant_ids</code>
+the ordered identifiers:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 
 <span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span>
@@ -92,29 +100,36 @@ Python <code>help()</code> provides complete signatures and NumPy-style docstrin
 <span class="p">)</span>
 </code></pre></div>
 
-<p>Here <code>z</code>, <code>R</code>, <code>n</code> and <code>variant_ids</code> must describe the same ordered variants.
-For a runnable offline script, start with <a href="example.html">the toy example</a>.
-Individual-level fitting centers the outcome and, by default, the design;
-<code>intercept=False</code> disables centering. <code>standardize</code> controls predictor scaling,
-<code>na_rm=True</code> drops rows with missing outcomes, and <code>compute_univariate_zscore</code>
-requests marginal z-scores. Dense and CSC sparse designs use matrix-vector
-operators without constructing a dense Gram matrix; sparse designs are not
-densified. Trend filtering also avoids storing its dense design matrix.</p>
-<p>The reference-factor <code>X</code> route in <code>susie_rss</code> uses the number of reference
-rows to estimate LD, independently of the association sample size <code>n</code>.
-Lists of reference panels are supported where susieR accepts them. SciPy is
-required for sparse inputs and advanced RSS linear algebra.</p>
+<p>Align the z-scores and LD to the same variant order and effect alleles, and
+keep <code>variant_ids</code> in that order; see <a href="inputs.html#variant-order-and-alleles">Inputs</a>.</p>
+<p><code>susie</code> centers <code>X</code> and <code>y</code> with <code>intercept=True</code> and scales predictors with
+<code>standardize=True</code>, both defaults. <code>na_rm=True</code> omits rows with missing
+outcomes; <code>compute_univariate_zscore=True</code> adds marginal z-scores. Dense
+and sparse designs use matrix-vector operators without a dense Gram matrix;
+sparse inputs remain sparse. Trend filtering also uses an implicit design.</p>
+<p>For <code>susie_rss(..., X=X)</code>, rows are reference samples and may differ in
+number from <code>n</code>. Multiple panels require a shared <code>z</code> and <code>n</code>; supply a list
+of LD matrices as <code>R</code> or reference genotype matrices as <code>X</code>. SciPy is required
+for sparse inputs, RSS-lambda, finite-reference and mismatch models, and
+multi-panel RSS.</p>
 <p><code>susie</code>, <code>susie_suff_stat</code>, <code>susie_rss</code> and <code>susie_rss_lambda</code> accept
-<code>init_only=True</code> to return a <code>SusieInputs</code> specification;
-<code>susie_workhorse(inputs)</code> fits it later; both are defined in <code>prusie.workhorse</code>. Panel-list RSS initialization performs
-per-panel selection fits before returning that specification. <code>model_init</code> accepts a previous fit
-or posterior state; <code>s_init</code> remains its supported alias. Supplying both raises
-an error. The existing retained-data continuation interface remains available.
-With the default <code>use_mad=True</code>, trend-filter initialization follows susieR's
-nested preparation; use <code>use_mad=False</code> for a directly reusable <code>SusieInputs</code>.
-<code>susie_auto</code> requires fitting and does not accept <code>init_only=True</code>.</p>
-<p>Warning filters, including <code>error</code>, and warning recording are supported. Callbacks that mutate input arrays during a fit, and replacing <code>warnings.warn</code> before importing prusie, are unsupported.</p>
+<code>init_only=True</code> to return <code>SusieInputs</code>; <code>prusie.susie_workhorse(inputs)</code>
+fits the prepared request. Multi-panel RSS still performs per-panel selection
+fits during preparation.</p>
+<p><code>susie_trendfilter(..., init_only=True)</code> with default <code>use_mad=True</code> and no
+warm start returns nested preparation that the workhorse rejects. Set
+<code>use_mad=False</code> to obtain directly reusable inputs. <code>susie_auto</code> requires
+fitting and does not support <code>init_only=True</code>.</p>
+<p><code>model_init</code> accepts a previous fit or a posterior-state mapping; <code>s_init</code>
+is its alias. Supplying both raises <code>ValueError</code>. See <a href="post_analysis.html">convergence and
+refinement</a> for warm-start validation and continuation.</p>
+<p>Python warning filters, including <code>error</code>, and warning recording are supported.
+Callbacks that mutate input arrays during a fit, and replacing <code>warnings.warn</code>
+before importing prusie, are unsupported.</p>
 <h2 id="shared-fitting-options">Shared fitting options</h2>
+<p>Several entry points share these controls. Defaults and supported combinations
+differ; consult each function's signature and the
+<a href="model.html#defaults-by-entry-point">entry-point defaults</a>.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -125,19 +140,23 @@ nested preparation; use <code>use_mad=False</code> for a directly reusable <code
 <tbody>
 <tr>
 <td><code>L=10</code></td>
-<td>Maximum number of effects, capped at the internal predictor count; RSS-lambda uses retained variants after MAF filtering, excluding any null column (<code>L=None</code> is an alias for 10)</td>
+<td>Requested maximum number of single-effect components; count limits are described below</td>
 </tr>
 <tr>
 <td><code>n_threads=1</code></td>
-<td>Per-fit native thread limit, an integer from 1 to 32; small kernels stay serial</td>
+<td>Per-fit native thread limit, from 1 to 32</td>
 </tr>
 <tr>
 <td><code>scaled_prior_variance=0.2</code></td>
-<td>Gaussian initial variance relative to outcome variance; NIG slab variance relative to residual variance; scalar or length-L vector</td>
+<td>Gaussian initial variance relative to working outcome variance; NIG slab variance relative to residual variance; scalar or length-<code>L</code> vector</td>
+</tr>
+<tr>
+<td><code>prior_variance=50</code></td>
+<td>Initial effect variance for RSS without <code>n</code>, and for RSS-lambda</td>
 </tr>
 <tr>
 <td><code>residual_variance=None</code></td>
-<td>Initial or fixed residual variance; defaults to the working outcome variance</td>
+<td>Initial or fixed residual variance, defaulting to working outcome variance; in RSS-lambda it denotes total variance before subtracting <code>lambda_</code></td>
 </tr>
 <tr>
 <td><code>estimate_prior_variance=True</code></td>
@@ -145,19 +164,30 @@ nested preparation; use <code>use_mad=False</code> for a directly reusable <code
 </tr>
 <tr>
 <td><code>estimate_prior_method="optim"</code></td>
-<td>Prior update: <code>optim</code>, <code>EM</code> or <code>simple</code> (<code>susie_ser</code> accepts <code>optim</code> or <code>simple</code>); disable estimation with <code>estimate_prior_variance=False</code></td>
+<td>Prior update: <code>"optim"</code>, <code>"EM"</code> or <code>"simple"</code>; <code>susie_ser</code> accepts only <code>"optim"</code> or <code>"simple"</code></td>
 </tr>
 <tr>
 <td><code>prior_variance_grid</code>, <code>mixture_weights</code></td>
-<td>Fixed mixture of positive prior variances; weights default to uniform</td>
+<td>Fixed mixture of positive prior variances; equal weights by default; disables scalar prior-variance estimation</td>
 </tr>
 <tr>
 <td><code>estimate_residual_method="MoM"</code></td>
-<td>Residual update: <code>MoM</code>, <code>MLE</code> or conjugate <code>NIG</code></td>
+<td><code>"MoM"</code>, <code>"MLE"</code> or conjugate <code>"NIG"</code>; RSS-lambda accepts <code>"MLE"</code> only</td>
 </tr>
 <tr>
 <td><code>alpha0</code>, <code>beta0</code></td>
-<td>Positive NIG hyperparameters; defaults are 1/√n</td>
+<td>Positive NIG hyperparameters, each defaulting to <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi mathvariant="normal">/</mi><msqrt><mi>n</mi></msqrt></mrow><annotation encoding="application/x-tex">1/\sqrt n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0503em;vertical-align:-0.25em;"></span><span class="mord">1/</span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8003em;"><span class="svg-align" style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord mathnormal" style="padding-left:0.833em;">n</span></span><span style="top:-2.7603em;"><span class="pstrut" style="height:3em;"></span><span class="hide-tail" style="min-width:0.853em;height:1.08em;"><svg xmlns="http://www.w3.org/2000/svg" width="400em" height="1.08em" viewBox="0 0 400000 1080" preserveAspectRatio="xMinYMin slice"><path d="M95,702
+c-2.7,0,-7.17,-2.7,-13.5,-8c-5.8,-5.3,-9.5,-10,-9.5,-14
+c0,-2,0.3,-3.3,1,-4c1.3,-2.7,23.83,-20.7,67.5,-54
+c44.2,-33.3,65.8,-50.3,66.5,-51c1.3,-1.3,3,-2,5,-2c4.7,0,8.7,3.3,12,10
+s173,378,173,378c0.7,0,35.3,-71,104,-213c68.7,-142,137.5,-285,206.5,-429
+c69,-144,104.5,-217.7,106.5,-221
+l0 -0
+c5.3,-9.3,12,-14,20,-14
+H400000v40H845.2724
+s-225.272,467,-225.272,467s-235,486,-235,486c-2.7,4.7,-9,7,-19,7
+c-6,0,-10,-1,-12,-3s-194,-422,-194,-422s-65,47,-65,47z
+M834 80h400000v40h-400000z"/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2397em;"><span></span></span></span></span></span></span></span></span></span></td>
 </tr>
 <tr>
 <td><code>residual_variance_lowerbound</code>, <code>residual_variance_upperbound</code></td>
@@ -165,39 +195,39 @@ nested preparation; use <code>use_mad=False</code> for a directly reusable <code
 </tr>
 <tr>
 <td><code>prior_weights=None</code>, <code>null_weight=0</code></td>
-<td>Variant prior probabilities and optional null-effect probability</td>
+<td>Variant prior weights, uniform by default, and optional null-column weight</td>
 </tr>
 <tr>
 <td><code>slot_prior=None</code></td>
 <td>Optional effect-activity model from <code>slot_prior_betabinom</code> or <code>slot_prior_poisson</code></td>
 </tr>
 <tr>
-<td><code>L_greedy</code>, <code>greedy_lbf_cutoff</code></td>
-<td>Greedy effect-count extension controls</td>
+<td><code>L_greedy</code>, <code>greedy_lbf_cutoff=0.1</code></td>
+<td>Grow the component count in steps, stopping at weak component evidence or the requested count</td>
 </tr>
 <tr>
-<td><code>convergence_method</code></td>
-<td>Effective ordinary default <code>elbo</code>; SS/RSS default <code>None</code> preserves configured controls. <code>pip</code> checks complete alpha and aggregate PIP</td>
+<td><code>convergence_method</code>, <code>convergence</code></td>
+<td>Ordinary default ELBO stopping; <code>"pip"</code> checks alpha and PIP. The sufficient-statistic/RSS default <code>None</code> preserves configured controls; <code>ConvergenceConfig</code> adds joint stopping where supported</td>
 </tr>
 <tr>
 <td><code>coverage=0.95</code>, <code>min_abs_corr=0.5</code></td>
-<td>Credible-set mass and purity thresholds</td>
+<td>Credible-set posterior mass and minimum absolute LD correlation thresholds</td>
 </tr>
 <tr>
 <td><code>n_purity</code></td>
-<td>Defaults to <code>None</code> for sufficient-statistic/ordinary RSS and <code>"auto"</code> for individual data, RSS-lambda and CS getters; correlation-matrix purity uses all pairs</td>
+<td>X-based purity cap: default <code>None</code> in sufficient-statistic/RSS fits, <code>"auto"</code> in individual fits and RSS-lambda; LD matrices use all members</td>
 </tr>
 <tr>
 <td><code>median_abs_corr</code>, <code>cs_extension_corr</code></td>
-<td>Alternative purity criterion and correlated-variant CS extension</td>
+<td>Alternative median-purity threshold and correlated-variant CS extension</td>
 </tr>
 <tr>
-<td><code>maf</code>, <code>maf_thresh</code></td>
-<td>Filter predictors before fitting using aligned minor-allele frequencies</td>
+<td><code>maf</code>, <code>maf_thresh=0</code></td>
+<td>Keep variants with supplied <code>maf &gt; maf_thresh</code>; available in sufficient-statistic and RSS entry points</td>
 </tr>
 <tr>
 <td><code>verbose=False</code></td>
-<td>Emit progress through the <code>prusie</code> Python logger</td>
+<td>Log sweep count, convergence and credible-set count through the <code>prusie</code> logger</td>
 </tr>
 <tr>
 <td><code>variant_ids</code>, <code>variant_metadata</code></td>
@@ -205,124 +235,119 @@ nested preparation; use <code>use_mad=False</code> for a directly reusable <code
 </tr>
 </tbody>
 </table></div>
-<p>RSS defaults to <code>max_iter=50</code> and fixed residual variance; sufficient-statistic
-and individual-level fitting default to <code>max_iter=100</code> and estimated residual
-variance. Ordinary Gaussian ELBO tolerance is <code>1e-4</code>. Passing <code>tol=None</code>
-selects method-specific defaults (<code>1e-6</code> for NIG); omitted <code>tol</code> retains the
-existing <code>1e-4</code> default in <code>susie_rss</code> and <code>susie_suff_stat</code>.
-Individual-level NIG uses <code>1e-6</code> when tolerance is omitted.
-NIG integrates out residual variance unless a fixed mixture selects Gaussian
-SER updates; it enables residual estimation and uses posterior stopping when
-L &gt; 1. Slot priors also select
-posterior stopping. Use fixed residual variance with external LD unless
-estimation is justified.</p>
-<p><code>n_threads</code> is accepted by <code>susie</code>, <code>susie_suff_stat</code>, <code>susie_rss</code> and
-<code>susie_rss_lambda</code>, and the requested value is recorded in <code>fit.params</code>.
-The parallel kernels include dense Gram-matrix products and proved exact-class
-compact products. Eligible <code>susie_rss(z, R, n)</code> preparation also partitions the
-exact symmetry proof and owned repair. Each matrix entry and output coordinate
-keeps its ordered arithmetic; component updates remain sequential. Small
-matrices and compact products with fewer than 1024 rows remain serial.
-The process-wide BLAS, OpenMP and Rayon configuration is unchanged.</p>
-<p>Parallel preparation requires a normalized count greater than one, p ≥ 1024,
-provided n, <code>var_y=None</code>, and a plain aligned native float64 C-order LD array
-on the owned-repair route. Solver and output controls do not restrict this
-independent matrix work. NumPy integer counts use the same path as Python
-integers. Replaced stderr, tracing, profiling and logging warning capture do not
-change eligibility. Nonstandard floating-control modes use ordinary preparation;
-no floating controls are changed. Other preparation routes retain the requested
-solver count. The destructive <code>overwrite_ld=True</code> route prepares serially.</p>
-<p>The default is explicitly one native thread. Pass <code>n_threads=2</code> or
-<code>n_threads=4</code> to try parallel fitting; more threads do not guarantee a speedup.
-Environment-only requests through <code>PRUSIE_NUM_THREADS</code> do not select public
-fitting parallelism. Counts implement the integer-index protocol; booleans and
-floating-point values are rejected. Determinism is defined for the same input
-and requested count; equality across different counts is reported separately.
-Preparation workers join before later Python transformations and warning
-dispatch. Fitting uses a separate per-call executor. Warning predicates and
-deferred errors return as data; the calling thread emits warnings through
-<code>warnings.warn</code> in their original order. Numerical determinism does not promise
-equality of thread-local sticky floating-point exception flags.</p>
+<p>For a cold start, <code>L</code> is capped at the predictor count including any null
+column. RSS-lambda caps at retained variants after MAF filtering, excluding
+null; <code>L=None</code> aliases 10 there. A larger supplied warm start can raise the
+effective count.</p>
+<p><code>susie</code> and <code>susie_suff_stat</code> default to <code>max_iter=100</code> and estimated
+residual variance. <code>susie_rss</code> and <code>susie_rss_lambda</code> default
+to <code>max_iter=50</code> and fixed residual variance. Use fixed residual variance
+with external LD unless estimation is justified; RSS warns when estimation
+is requested.</p>
+<p>Ordinary Gaussian tolerance is <code>1e-4</code>; RSS-lambda uses <code>1e-3</code>. In <code>susie</code>,
+<code>susie_suff_stat</code> and <code>susie_rss</code>, <code>tol=None</code> selects <code>1e-6</code> for NIG and
+<code>1e-4</code> otherwise. <code>susie</code> defaults to <code>None</code>; the other two default to
+<code>1e-4</code>, including with NIG.</p>
+<p>NIG forces residual-variance estimation and uses <code>EM</code> when estimating the
+prior variance. A fixed mixture selects Gaussian SER updates instead of
+conjugate NIG updates. Slot priors and NIG with multiple fitted components
+use the PIP stopping rule. See <a href="model.html#additional-model-options">additional model options</a>
+and <a href="post_analysis.html#convergence-diagnostics">convergence diagnostics</a>.</p>
+<p><code>susie</code>, <code>susie_suff_stat</code>, <code>susie_rss</code> and <code>susie_rss_lambda</code> record
+<code>n_threads</code> in <code>fit.params['n_threads']</code>. NumPy integers are accepted;
+booleans, floats and counts outside 1–32 raise <code>ValueError</code>.
+<code>PRUSIE_NUM_THREADS</code> does not override this public option. Large dense Gram
+products can use a per-fit pool; small kernels stay serial, and IBSS
+components remain sequential. This option does not parallelize
+individual-level operators or dynamic RSS fitting. Eligible R-based RSS
+calls can also parallelize LD preparation; <code>overwrite_ld=True</code> preparation
+is serial. See <a href="implementation.html#native-threading">native threading</a> for
+build, storage and floating-point requirements. Process-wide BLAS, OpenMP
+and Rayon settings are unchanged.</p>
 <h2 id="optional-ld-workspace">Optional LD workspace</h2>
-<p><code>susie_rss(..., overwrite_ld=False)</code> preserves caller arrays by default. The
-explicit <code>True</code> option can use R and its external aliases as destructive
-workspace, avoiding an owned full repair matrix when scaled asymmetry needs
-repair. It accepts only Python <code>bool</code> or NumPy <code>bool_</code> values.</p>
-<p>The option requires ordinary single-panel <code>z</code>, <code>R</code>, and provided <code>n</code>, with
-<code>var_y=None</code>. R must be a plain, aligned, writable native float64 NumPy array
+<p><code>susie_rss(..., overwrite_ld=False)</code> preserves caller arrays. Opting into
+<code>overwrite_ld=True</code> allows <code>R</code> and all its aliases to become destructive
+workspace for symmetry repair. This can avoid allocating a separate full
+repair matrix. The flag accepts only Python <code>bool</code> or NumPy <code>bool_</code> values.</p>
+<p><strong>After writes begin, later validation errors, fitting failures or warnings
+promoted to exceptions can leave <code>R</code> and its aliases changed. There is no
+rollback. Reload the original LD before reuse, including after a failed call.</strong>
+Do not access aliases concurrently with the fit. Other API arguments retain
+their preservation contract.</p>
+<p>The option requires a single <code>z</code>, <code>R</code> and supplied <code>n</code>, with <code>var_y=None</code>.
+<code>R</code> must be a plain, square, aligned, writable native float64 NumPy array
 with ordinary positive C-order strides and NumPy-owned heap storage. Reshape
-views of such an owner are supported. Array subclasses, memory maps and views
-of them, external buffers, readonly, F-order or strided arrays are rejected.
-Other arguments must use plain scalars or flat nonobject numeric/string vectors
-and plain metadata dictionaries; custom conversion objects and any overlap
-with R, including nested or zero-dimensional views, are rejected before writes. External aliases that are not arguments are consumed with R and must
-not be accessed concurrently.
-Standard warning dispatch, recording, <code>logging.captureWarnings</code> and
-warning-as-error filters are supported. Warning display and tracing state do
-not affect eligibility; callbacks must not mutate input arrays during a fit. <code>R_finite</code> must be <code>None</code> or the plain Python value <code>False</code>;
-the NumPy boolean scalar is outside this narrow support boundary.</p>
-<p>This option excludes reference <code>X</code>, <code>bhat</code>/<code>shat</code>, finite-reference/mismatch or
-control objects, MAF filtering, null-weight augmentation, mixture/slot/NIG
-models, residual estimation methods other than MoM, greedy fitting, proxy extension, warm starts, explicit convergence
-objects, <code>check_input=True</code>, tracking, retained data, refinement and
-<code>init_only=True</code>. Ordinary Gaussian controls, prior weights, standardization,
-basic CS/purity options and <code>n_threads</code> remain available. Unsupported opt-in
-requests raise before writes; use <code>overwrite_ld=False</code> for the other routes.</p>
-<p>The native helper records its actual action in <code>fit.qc['ld_overwrite']</code>, with
-the original RSS scale n−1:</p>
+views of such owners are accepted. Subclasses, memory maps and their views,
+external buffers, read-only arrays, F-order arrays and strided arrays are
+rejected. Other arguments must use supported plain scalars or flat nonobject
+numeric/string vectors, with a plain <code>dict</code> for <code>variant_metadata</code>. Custom
+conversion objects and any other argument overlapping <code>R</code>, including nested
+or zero-dimensional views, are rejected before writes.</p>
+<p>Keep <code>estimate_residual_method="MoM"</code>, <code>convergence_method=None</code> or <code>"elbo"</code>,
+<code>R_mismatch="none"</code> and <code>control=None</code>. <code>R_finite</code> must be <code>None</code> or Python
+<code>False</code>; NumPy <code>bool_(False)</code> is rejected. The option excludes reference <code>X</code>,
+<code>bhat</code>/<code>shat</code>, MAF filtering, null columns, mixture/slot/NIG models,
+<code>alpha0</code>/<code>beta0</code>, greedy growth, warm starts, <code>median_abs_corr</code>,
+<code>cs_extension_corr</code>, explicit <code>convergence</code> objects, <code>check_input=True</code>,
+tracking, retained data, refinement and <code>init_only=True</code>. Standardization,
+prior weights, Gaussian fitting controls, basic CS options and <code>n_threads</code>
+remain available. Unsupported storage and option combinations raise before
+writes; use <code>overwrite_ld=False</code> for other routes.</p>
+<p>Standard warning filters, recording and <code>logging.captureWarnings</code> are
+supported. Warning display and tracing hooks do not affect eligibility;
+callbacks must not modify input arrays during fitting.</p>
+<p>On success, <code>fit.params["overwrite_ld"]</code> records the flag and
+<code>fit.qc["ld_overwrite"]["action"]</code> records what happened. The accompanying
+<code>original_rss_scale</code> is <code>n - 1</code>. Let <code>s = n - 1</code>, with <code>Rij</code> and <code>Rji</code>
+denoting the original pair of matrix entries:</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Action</th>
-<th>State of R after a successful call</th>
+<th>State of <code>R</code> after a successful call</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>ordered_scaled_xtx</code></td>
-<td>Both orientations contain <code>(Rij*(n−1) + Rji*(n−1))/2</code> in float64, in that operation order</td>
+<td>Both orientations contain <code>(Rij*s + Rji*s)/2</code> in float64, in that operation order; <code>R</code> is now scaled <code>XtX</code></td>
 </tr>
 <tr>
 <td><code>symmetric_no_write</code></td>
-<td>Original bytes retained after the complete exact-symmetry proof</td>
+<td>Exact-symmetry proof succeeded; original bytes retained</td>
 </tr>
 <tr>
 <td><code>no_witness_eager_no_write</code></td>
-<td>Original bytes retained; original owned preparation was used because no finite scaled-asymmetry witness exists</td>
+<td>No finite pair had unequal scaled entries; ordinary owned preparation was used and original bytes retained</td>
 </tr>
 </tbody>
 </table></div>
-<p><code>fit.params['overwrite_ld']</code> records the requested flag. A consumed matrix is
-scaled XtX, so reload the original LD before a later fit. <strong>After writes begin,
-an error or a warning promoted to an exception can leave R and its aliases
-changed.</strong> There is no rollback guarantee. This includes later matrix/fit/option
-validation failures; no result metadata is available on an aborted call.
-Default calls and every other API argument retain their original preservation
-contract.</p>
-<p>For RSS, <code>z_method="wald"</code> or <code>"score"</code> selects the working statistic;
-<code>R_mismatch</code> and <code>R_finite</code> control reference mismatch and finite-reference
-adjustments. <code>susie_rss_control(...)</code> creates a validated control object for
-these options. <code>susie_rss_lambda</code> uses <code>lambda_="estimate"</code> for automatic
-regularization and exposes <code>intercept_value</code>, <code>check_R</code> and <code>check_z</code>.
-Its residual method is <code>"MLE"</code> only, with default tolerance <code>1e-3</code>.</p>
-<p>The legacy <code>z_ld_weight=0</code> argument is retained. Nonzero values are rejected:
-this parameter has no defined semantics in the pinned susieR 0.16.6 source.
-SuSiE-inf, SuSiE-ash and Mr.ASH are outside the supported model set.</p>
+<p>See <a href="implementation.html#dense-storage-and-matrix-products">dense storage and matrix products</a>
+for the repair implementation. Other RSS likelihood controls, including
+<code>z_method</code>, <code>R_finite</code>, <code>R_mismatch</code>, <code>susie_rss_control</code> and RSS-lambda's
+<code>lambda_</code>, are described under <a href="model.html#additional-model-options">additional model options</a>.
+Keep <code>z_ld_weight=0</code>; nonzero values raise <code>ValueError</code>. SuSiE-inf,
+SuSiE-ash and Mr.ASH are not implemented.</p>
 <h2 id="susieresult">SusieResult</h2>
-<p>Results include documented fields <code>pip</code>, <code>alpha</code>, <code>mu</code>, <code>mu2</code>, <code>lbf_variable</code>,
-<code>lbf</code>, <code>V</code>, <code>sigma2</code>, <code>elbo</code>, <code>KL</code>, <code>sets</code>, <code>niter</code> and <code>converged</code>. Mixture and
-activity models additionally return grid Bayes factors and slot probabilities.
-<code>input_quality</code> gives typed input diagnostics; <code>fit.qc</code> retains the existing
-mapping interface. <code>fit.as_dict()</code> returns a shallow mapping and does not copy arrays.</p>
-<p><code>params</code>, <code>qc</code> and entries in <code>cs_audit</code> use the exported <code>FitParameters</code>,
-<code>InputChecks</code> and <code>CredibleSetAudit</code> schemas. These are <code>TypedDict</code> definitions:
-dictionary access and saved-result formats are unchanged. <code>input_missing_policy</code>
-is <code>"reject"</code> or <code>"zero"</code>; the latter records zero-filled missing summary
-statistics. Retained working inputs are private, read-only snapshots used by
-continuation and refinement, not additional caller-owned data.</p>
-<p>Analysis, comparison, LD diagnostics, reports and visualization modules load
-only when requested. Ordinary <code>import prusie</code> does not import SciPy or Matplotlib.</p>
+<p><code>SusieResult</code> is a mutable dataclass containing posterior arrays, credible
+sets and the fitting record. Use attributes such as <code>fit.pip</code>, <code>fit.alpha</code>,
+<code>fit.sets</code> and <code>fit.convergence</code>. See <a href="results.html#posterior-fields">Results</a>
+for field shapes, scales and model-specific outputs, including mixture-grid
+Bayes factors, slot-activity probabilities and NIG quantities.</p>
+<p><code>params</code>, <code>qc</code> and entries in <code>cs_audit</code> are dictionaries with the exported
+<code>FitParameters</code>, <code>InputChecks</code> and <code>CredibleSetAudit</code> <code>TypedDict</code> schemas.
+<code>input_quality</code> is a frozen <code>InputQuality</code> dataclass describing recorded input
+checks. Its <code>missing_summary_values</code> field records the policy (<code>"reject"</code> or
+<code>"zero"</code>), even when no values were missing.</p>
+<p><code>fit.as_dict()</code> returns stored public fields without copying arrays or nested
+containers, except that <code>input_quality</code> is converted to a dictionary. It omits
+computed properties such as <code>coef</code> and private retained inputs. Copy values
+before modifying them independently.</p>
+<p>Retained working inputs are private, read-only snapshots. See
+<a href="#convergence-and-post-analysis">convergence and post-analysis</a> for supported
+retention routes and later continuation or refinement.</p>
 <h2 id="posterior-and-model-helpers">Posterior and model helpers</h2>
+<p>Use these top-level <code>prusie</code> functions to inspect a fit or prepare inputs.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -332,20 +357,32 @@ only when requested. Ordinary <code>import prusie</code> does not import SciPy o
 </thead>
 <tbody>
 <tr>
-<td><code>susie_get_pip</code>, <code>susie_get_cs</code>, <code>susie_get_cs_attainable</code></td>
-<td>Inclusion probabilities and credible sets</td>
+<td><code>susie_get_pip</code></td>
+<td>Marginal PIPs from a fit or raw alpha matrix</td>
 </tr>
 <tr>
-<td><code>susie_get_posterior_mean</code>, <code>susie_get_posterior_sd</code>, <code>susie_get_lfsr</code></td>
-<td>Marginal moments and local false-sign rates</td>
+<td><code>susie_get_cs</code></td>
+<td>Credible sets from a fit or raw alpha matrix; supply <code>X</code> or <code>Xcorr</code> for purity and extension</td>
 </tr>
 <tr>
-<td><code>susie_get_posterior_samples(..., seed=...)</code></td>
-<td>Reproducible posterior draws using an explicit NumPy RNG seed</td>
+<td><code>susie_get_cs_attainable</code></td>
+<td>Credible sets screened by attainable mass and entropy, without LD filtering; <code>X</code> and <code>Xcorr</code> are ignored</td>
+</tr>
+<tr>
+<td><code>susie_get_posterior_mean</code>, <code>susie_get_posterior_sd</code></td>
+<td>Means and standard deviations over active components, on the input predictor scale; optional null included</td>
+</tr>
+<tr>
+<td><code>susie_get_lfsr</code></td>
+<td>Alpha-weighted Gaussian local false-sign rate for each component</td>
+</tr>
+<tr>
+<td><code>susie_get_posterior_samples</code></td>
+<td>Coefficient draws (<code>b</code>) and nonzero indicators (<code>gamma</code>); requires <code>num_samples</code> and keyword <code>seed</code></td>
 </tr>
 <tr>
 <td><code>susie_get_objective</code>, <code>susie_get_niter</code></td>
-<td>Objective history and completed iterations</td>
+<td>Last recorded objective (<code>last_only=False</code> returns the trace), and completed IBSS sweeps</td>
 </tr>
 <tr>
 <td><code>susie_get_prior_variance</code>, <code>susie_get_residual_variance</code></td>
@@ -353,89 +390,132 @@ only when requested. Ordinary <code>import prusie</code> does not import SciPy o
 </tr>
 <tr>
 <td><code>get_cs_correlation</code></td>
-<td>Correlations between credible-set representative variants</td>
+<td>Correlations between maximum-PIP CS members</td>
 </tr>
 <tr>
 <td><code>coef</code>, <code>predict</code>, <code>summary</code></td>
-<td>Coefficients, predictions and tabular model summaries</td>
+<td>Coefficients including intercept, response predictions, and <code>vars</code>/<code>cs</code> lists of summary records</td>
 </tr>
 <tr>
-<td><code>compute_suff_stat</code>, <code>univariate_regression</code>, <code>calc_z</code></td>
-<td>Individual-level data preparation</td>
+<td><code>compute_suff_stat</code></td>
+<td>Centered sufficient statistics, including dense <code>XtX</code> even for sparse <code>X</code></td>
+</tr>
+<tr>
+<td><code>univariate_regression</code>, <code>calc_z</code></td>
+<td>Marginal coefficient estimates and standard errors, or their z-scores</td>
 </tr>
 <tr>
 <td><code>susie_init_coef</code></td>
-<td>Construct a sparse coefficient initialization</td>
+<td>Dense <code>alpha</code>, <code>mu</code> and <code>mu2</code> initialization arrays from nonzero working-scale coefficients</td>
 </tr>
 <tr>
 <td><code>susie_post_outcome_configuration</code></td>
-<td>Shared-variant posterior outcome configurations from fitted models</td>
+<td>Existing single-outcome fits: <code>method="susiex"</code> activation configurations or <code>"coloc_pairwise"</code> H0–H4 probabilities; requires SciPy</td>
 </tr>
 </tbody>
 </table></div>
-<p><code>susie_get_lfsr</code> computes Gaussian sign probabilities from each matched posterior
-mean and standard deviation. It intentionally avoids susieR 0.16.6's recycled
-matrix indexing in this auxiliary calculation. NumPy posterior samples are
-reproducible for a fixed seed; they do not reproduce R's random-number stream.
-X-based purity subsampling also uses a local NumPy RNG. Sparse-X credible-set
-extension evaluates the requested correlation blocks without densifying X;
-susieR skips this extension for sparse designs.</p>
-<p>Lower-level <code>prusie.posterior.marginal_pip</code> and <code>credible_sets</code> also accept
-posterior arrays directly. Covariance scale options allow purity calculations
-without materializing a correlation matrix. Original component IDs are retained
-in credible-set results; see <a href="results.html#credible-set-fields">results</a>.</p>
+<p><code>coef(fit)</code> prepends the intercept and includes any null column; <code>fit.coef</code>
+contains only non-null predictor effects. Supply <code>predict</code> with columns in
+<code>fit.variant_ids</code> order. Both <code>coef</code> and <code>predict</code> include <code>slot_weights</code>
+for slot-prior fits. The moment, sign-rate and sampling helpers do not apply
+these activity weights.</p>
+<p>Sign rates and draws use a Gaussian distribution constructed from <code>mu</code> and
+<code>mu2</code>; for mixture or NIG fits this is an approximation. <code>susie_get_lfsr</code>
+pairs each mean with its own standard deviation; its output can differ from
+susieR 0.16.6. Posterior sampling and X-based purity subsampling use local
+NumPy RNGs; both accept <code>seed</code>. NumPy samples do not reproduce R's draws.
+Sparse-X extension computes correlation blocks without densifying <code>X</code>.</p>
+<p><code>prusie.posterior.marginal_pip</code> and <code>credible_sets</code> accept alpha and
+prior-variance arrays. For <code>credible_sets</code>, <code>covariance_scales</code> and
+<code>covariance_multiplier</code> enable purity calculation directly from covariance.
+Credible sets retain original component IDs; see
+<a href="results.html#credible-set-fields">credible-set fields</a>.</p>
 <h2 id="load_example">load_example</h2>
+<p>Load the packaged synthetic toy dataset and fit it with its supplied options:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 
 <span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_example</span><span class="p">()</span>
 <span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span><span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">])</span>
 </code></pre></div>
 
-<p>The synthetic toy example is loaded as a mapping with <code>inputs</code>, <code>parameters</code> and <code>metadata</code>. Inputs contain
-z, R, n and variant IDs; metadata includes the synthetic method, seed, true
-effects and sample size. Input bytes are checked against packaged hashes and
-returned arrays are owned by the caller. The loader works from any directory
-without network access. See the <a href="example.html">toy example tutorial</a>.</p>
+<p>The returned dictionary contains <code>inputs</code> (z-scores <code>z</code>, signed LD <code>R</code>, sample
+size <code>n</code> and ordered <code>variant_ids</code>), <code>parameters</code> (fitting settings) and
+<code>metadata</code> (generation method, seed, true effects and sample size). The data
+are simulated; no human study or genome build is implied.</p>
+<p>Each call returns new, caller-owned input arrays. The loader reads installed
+package resources from any working directory, without R or network access.
+It checks SHA-256 hashes of the inputs and metadata, raising <code>ValueError</code> on
+a mismatch. See the <a href="example.html">toy example tutorial</a> for the workflow and
+provenance.</p>
 <h2 id="convergence-and-post-analysis">Convergence and post-analysis</h2>
-<p>The core fitters support <code>s_init=None</code>, <code>refine=False</code>,
-<code>track_fit=False</code>, <code>convergence=None</code> and <code>retain_data=False</code>.
-The retained continuation, refinement and objective helpers support static,
-materialized Gaussian sufficient-statistic and R-based RSS models using the
-default or <code>ConvergenceConfig</code> stopping controls. Matrix-free designs, dynamic
-RSS, mixture/NIG/slot models, susieR <code>pip</code> stopping, greedy component growth,
-<code>median_abs_corr</code> and <code>cs_extension_corr</code> are outside that scope.
-For these combinations, <code>refine=True</code> refits the model with susieR's
-credible-set block coordinate ascent (except multi-panel RSS) and records the
-search in <code>refinement</code>. Explicit <code>retain_data=True</code> or a <code>RefinementConfig</code>
-raises before fitting; ordinary fitting and tracking remain available without
-a retained snapshot. No dense Gram matrix is constructed to enable retention of
+<p>Inspect <code>fit.convergence</code> before running more sweeps or searching for another
+solution. <code>diagnose_convergence(fit)</code> copies the recorded diagnostics or reports
+<code>stop_reason="not_available"</code> if none were stored. Native IBSS tracking with
+<code>track_fit=True</code> or <code>"compact"</code> adds exact per-sweep metrics and a labelled
+lossy alpha display to <code>fit.trace</code>; <code>"dense"</code> also stores full <code>alpha</code>, <code>mu</code>
+and <code>mu2</code> arrays for debugging. Dynamic RSS traces contain metrics only.</p>
+<p><code>convergence=ConvergenceConfig(...)</code> selects <code>"elbo"</code>, <code>"alpha_pip"</code> or
+<code>"joint"</code> where supported. The separate <code>convergence_method="pip"</code> uses the
+susieR posterior rule. See <a href="post_analysis.html#convergence-diagnostics">convergence diagnostics</a>
+for stopping conditions, cycles and nonfinite objectives.</p>
+<p>The following helpers use retained working inputs:</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>continue_fit</code></td>
+<td>Return a new fit from the saved posterior; <code>max_iter=100</code> gives an additional sweep budget and returned <code>niter</code> counts only those sweeps</td>
+</tr>
+<tr>
+<td><code>refine_fit</code></td>
+<td>Search alternative starting solutions for a higher logged ELBO; return a result with the search record in <code>refinement</code></td>
+</tr>
+<tr>
+<td><code>evaluate_objective</code></td>
+<td>Recompute ELBO, KL and fitted products from the post-trimming posterior without running IBSS</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>refine_fit(..., track_fit=False)</code> leaves candidate sweeps unrecorded by default.
+Use <code>True</code>, <code>"compact"</code> or <code>"dense"</code> to save each completed stage's trace in
+<code>refinement["history"][i]["stages"][phase]["trace"]</code>. An accepted result keeps
+its original stage-B trace; if no candidate is accepted, it keeps the input
+fit's trace. The fitting-entry shortcut <code>refine=True</code> does not forward
+<code>track_fit</code> to its search: entry-level tracking applies to the initial fit.
+Call <code>refine_fit</code> explicitly to track the candidates.</p>
+<p>Retention supports static, materialized Gaussian sufficient-statistic and RSS
+fits with default or <code>ConvergenceConfig</code> stopping. Matrix-free designs, dynamic
+RSS (including RSS-lambda and multiple panels), mixture/NIG/slot models,
+<code>convergence_method="pip"</code>, <code>L_greedy</code>, <code>median_abs_corr</code> and <code>cs_extension_corr</code>
+are outside this scope. <code>retain_data=True</code> or <code>refine=RefinementConfig(...)</code> is
+rejected on unsupported fitting routes. On these routes, <code>refine=True</code> uses
+a separate refitting search, except that multi-panel RSS rejects refinement.
+Ordinary fitting and tracking remain
+available without a snapshot; no dense Gram is built to enable retention of
 a matrix-free design.</p>
-<p>For supported models, <code>retain_data=True</code> enables later continuation,
-refinement or objective evaluation. Tracking, initialization and refinement
-also retain inputs within this scope. A new fit with <code>model_init</code>/<code>s_init</code>
-does not require source data retention. <code>data_signature</code> is a content hash of
-the owned input snapshot, computed once and reused; unretained fits return <code>None</code>.
-<code>ConvergenceConfig</code> selects exact ELBO, alpha/PIP or joint stopping.
-The separate <code>convergence_method="pip"</code> uses the susieR posterior stopping rule.
-Finite-ELBO stopping uses signed improvement; lagged posterior cycles remain
-diagnostics in that mode. Successful and statistical cycle exits respect
-<code>min_iter</code>; numerical failure is reported separately.
-<code>track_fit=True</code> records compact exact metrics and a labelled lossy alpha display;
-<code>track_fit='dense'</code> retains full states for small debugging inputs.</p>
-<p><code>continue_fit</code>, <code>refine_fit</code>, <code>evaluate_objective</code>, <code>summarize</code>, <code>diagnose_ld</code>,
-<code>compare_fits</code> and <code>run_sensitivity</code> are independent explicit operations.
-<code>RefinementConfig</code> separates search thresholds/budgets from inner IBSS tolerances.
-See <a href="post_analysis.html">convergence and refinement</a> for costs, initialization
-checks, phases and runnable examples. <code>continue_fit(fit, max_iter=100, tol=None)</code>
-inherits the original ELBO tolerance when <code>tol</code> is omitted. Requested convergence
-controls persist across continuation, refinement and sensitivity unless explicitly
-overridden; effective runtime fallback is recorded separately. Refinement's
-<code>inner_tol</code> sets its inner ELBO tolerance independently of those inherited controls.
-Continuation starts from the supplied posterior; refinement stage A is a cold
-excluded-prior fit and stage B warm-starts its posterior moments under the restored
-original model. Reuse the returned <code>refined</code> in plots and comparisons to avoid
-starting another search.</p>
+<p>Set <code>retain_data=True</code> during a supported fit. Tracking, warm starts and
+refinement also retain inputs within this scope. <code>data_signature</code> hashes the
+owned snapshot once; unretained fits return <code>None</code>. A new fit using
+<code>model_init</code>/<code>s_init</code> can use an unretained source posterior. Without retained
+inputs, <code>continue_fit</code> and <code>evaluate_objective</code> raise <code>ValueError</code>, while
+<code>refine_fit</code> records <code>status="unsupported"</code>.</p>
+<p>Continuation and refinement inherit requested convergence controls unless
+overridden, independently of runtime fallback. <code>continue_fit</code> with <code>tol=None</code>
+inherits the fitting tolerance. <code>RefinementConfig</code> separates search thresholds
+and budgets from candidate IBSS controls (<code>inner_tol</code>, <code>max_iter</code>). On the
+returned result, refinement can overwrite <code>converged</code>; read
+<code>convergence["ibss_converged"]</code> for IBSS status and <code>refinement["status"]</code> for
+the search outcome. Reuse that result for plots and comparisons. See the
+<a href="post_analysis.html">convergence and refinement guide</a> for algorithms, costs,
+warm-start validation and examples.</p>
 <h2 id="summaries-comparisons-and-reports">Summaries, comparisons and reports</h2>
+<p>To inspect and share a fine-mapping analysis, summarize an existing fit and
+pass the resulting mapping to the text or report helpers.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -445,88 +525,97 @@ starting another search.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>summarize(fit, R=None, *, z=None, ...)</code></td>
-<td>Component, variant, CS, proxy and prior-influence tables; no new fit</td>
+<td><code>summarize</code></td>
+<td>Component, variant, credible-set, LD-proxy and prior-influence tables from one posterior; no refit or eigendecomposition</td>
 </tr>
 <tr>
-<td><code>summary_text(summary, *, ld=None, comparison=None)</code></td>
-<td>Deterministic short string for <code>print</code>; no fitting, eigendecomposition or plotting</td>
+<td><code>summary_text</code></td>
+<td>Short string for <code>print</code>; no fitting, eigendecomposition or plotting</td>
 </tr>
 <tr>
-<td><code>compare_fits(fits, *, baseline=None, mode="union", R=None, ...)</code></td>
-<td>Compare a named mapping of existing fits using explicit ID/support rules</td>
+<td><code>compare_fits</code></td>
+<td>Compare named existing fits by variant ID, using <code>mode="union"</code> (default) or <code>"common"</code></td>
 </tr>
 <tr>
-<td><code>run_sensitivity(inputs, plan, *, baseline=None, baseline_settings=None, ...)</code></td>
-<td>Execute a finite named one-factor plan; report-only choices reuse a posterior</td>
+<td><code>run_sensitivity</code></td>
+<td>Execute a finite named plan: one-factor model changes, alternative inputs, posterior-only reports or continuation</td>
 </tr>
 <tr>
-<td><code>diagnose_ld(z, R, n=None, ...)</code></td>
-<td>Explicit conditional z/LD and allele-flip diagnostics</td>
+<td><code>diagnose_ld</code></td>
+<td>Conditional z/LD diagnostics and possible allele-mismatch flags; no automatic flips or filtering</td>
 </tr>
 <tr>
-<td><code>write_report(summary, directory, *, figures=None, ld=None, comparison=None, ...)</code></td>
-<td>Offline HTML, text and full evidence exports; include only supplied figures</td>
+<td><code>write_report</code></td>
+<td>Offline HTML, text, CSV tables and full-precision evidence exports; include only supplied figures</td>
 </tr>
 </tbody>
 </table></div>
-<p>The first five functions are exported at the package top level. <code>write_report</code>,
-<code>save_analysis</code>, <code>load_analysis</code> and <code>analysis_summary</code> live in <code>prusie.report</code>.
+<p>Supply optional <code>ld=</code> and <code>comparison=</code> records to <code>summary_text</code> or
+<code>write_report</code>; neither function runs LD diagnostics or refits a model.
+<code>write_report</code> returns artifact paths and checksums. Keep the report directory
+together so its local links remain valid.</p>
+<p>The first five functions are available from <code>prusie</code>. Import <code>write_report</code>
+and the compact <code>analysis_summary</code> helper from <code>prusie.report</code>, which also
+provides <a href="results.html#metadata-and-persistence"><code>save_analysis</code> and <code>load_analysis</code></a>
+for JSON/NPZ persistence.
 The <a href="example.html#write-an-offline-report">quick start</a> gives a minimal report call;
 <a href="sensitivity.html">sensitivity and LD</a> specifies prior remapping, alternative inputs,
 common/union support and missing-assessment states.</p>
 <h2 id="figures-and-local-style">Figures and local style</h2>
-<p>Use <code>from prusie.viz import plot_locus</code> for plotting. <code>prusie.plots</code> remains a
-compatibility import for existing scripts. Install the <code>analysis</code> extra for
-Matplotlib and SciPy; neither is required for ordinary dense Gaussian fits.</p>
-<p>Every function in <code>prusie.viz</code> returns <code>(figure, axes, plotted_data)</code>. The third
-item records selection rules and plotted values alongside the complete evidence
-needed to interpret the view. Existing Matplotlib axes can be passed with
-<code>axes=...</code>; their count must match the selected layout.</p>
+<p>Use <code>prusie.viz</code> to inspect association signals, posterior uncertainty and
+fitting diagnostics. Install the <code>analysis</code> extra for Matplotlib and SciPy.
+<code>prusie.plots</code> exports the same functions for compatibility.</p>
+<p>Each plotting function below returns <code>(figure, axes, plotted_data)</code>, with
+numeric values and selection or display rules in <code>plotted_data</code>. All default
+to <code>layout="full"</code>; <code>"compact"</code> reduces panels or spacing. Existing axes passed
+with <code>axes=...</code> must belong to one figure and match the selected panel count.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Function</th>
-<th>View and layout choices</th>
+<th>View</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>plot_locus(summary, *, R=None, layout="full", ...)</code></td>
-<td>Association, PIP, CS and reference r² on the same coordinates; optional annotated gene track</td>
+<td><code>plot_locus</code></td>
+<td>Association, PIP, credible sets and reference <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>r</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">r^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> from a summary; optional gene track</td>
 </tr>
 <tr>
-<td><code>plot_convergence(fit_or_summary, *, after=None, layout="full", ...)</code></td>
-<td><code>compact</code>: ELBO, signed ΔELBO, Δalpha, ΔPIP; <code>variance</code>: V and sigma²; <code>full</code>: all six metrics</td>
+<td><code>plot_convergence</code></td>
+<td>Tracked fit or summary: <code>"compact"</code> shows ELBO, signed ΔELBO and maximum absolute changes in alpha and PIP; <code>"variance"</code> shows <code>V</code> and <code>sigma2</code>; <code>"full"</code> combines both</td>
 </tr>
 <tr>
-<td><code>plot_refinement(before, after, *, layout="full", ...)</code></td>
-<td>Candidate PIPs, refit ELBO gains and accepted ELBO path; <code>compact</code> moves long evidence out of the figure</td>
+<td><code>plot_refinement</code></td>
+<td>Before/after PIPs, refit ELBO gains and accepted incumbent path</td>
 </tr>
 <tr>
-<td><code>plot_sensitivity(comparison, *, layout="full", candidates_only=True, layer="signals", ...)</code></td>
-<td>Baseline-first candidate heatmap and main signal relations; <code>components</code> retains all active-component relations</td>
+<td><code>plot_sensitivity</code></td>
+<td>Baseline-first PIP heatmap from a comparison; <code>candidates_only=True</code> and <code>layer="signals"</code> by default; <code>layer="components"</code> includes all active or CS-retained effects</td>
 </tr>
 <tr>
-<td><code>plot_signal(summary, component_id=None, *, variant_id=None, layout="full", ld_measure="r", ...)</code></td>
-<td>Component posterior, cumulative mass, CS, resolution and LD; <code>ld_measure="r2"</code> selects an explicitly labelled r² view</td>
+<td><code>plot_signal</code></td>
+<td>One component's alpha, cumulative probability, within-CS LD and proxies from a summary; select with <code>component_id</code> or <code>variant_id</code></td>
 </tr>
 <tr>
-<td><code>plot_prior_influence(summary, component_id=None, *, variant_id=None, variant_ids=None, layout="full", ...)</code></td>
-<td>Supplied/effective prior, conditional log BF and alpha in aligned variant order</td>
+<td><code>plot_prior_influence</code></td>
+<td>Supplied/effective prior, conditional log Bayes factors and alpha for one component</td>
 </tr>
 <tr>
-<td><code>plot_ld_diagnostics(diagnostics, *, layout="full", ...)</code></td>
-<td>Assessed states, conditional residuals, flip evidence and the actual joint rule</td>
+<td><code>plot_ld_diagnostics</code></td>
+<td>Observed/expected z-scores, assessment states, flip evidence and the joint flag rule from supplied diagnostics</td>
 </tr>
 </tbody>
 </table></div>
-<p><code>compact</code> is an explicit screen layout; <code>full</code> preserves access to larger views.
-Formal CS members remain included in signal candidate selections. Sensitivity
-<code>display_names={stored_name: readable_label}</code> changes labels, not settings or
-fit identities. <code>table_page</code> and <code>table_page_size</code>, where supported, paginate
-relation/details tables without discarding returned records.</p>
-<p>Use the shared white-background style or override Matplotlib settings locally:</p>
+<p>For LD views, pass <code>R=</code> in the summary's variant order to <code>plot_locus</code> or
+<code>plot_signal</code>. Compact signal and prior-influence selections retain formal CS
+members. Signal cumulative probabilities use the full ranking without
+renormalizing. Sensitivity <code>display_names={stored_name: readable_label}</code> changes
+labels while preserving fit identities and settings. <code>table_page</code> and
+<code>table_page_size</code>, where supported, paginate visible tables while retaining
+complete returned records.</p>
+<p>The shared style uses a white background and consistent before/after colors.
+Override Matplotlib settings locally with <code>style=</code>:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.viz</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_convergence</span>
 
 <span class="n">figure</span><span class="p">,</span> <span class="n">axes</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">plot_convergence</span><span class="p">(</span>
@@ -535,47 +624,47 @@ relation/details tables without discarding returned records.</p>
 <span class="n">figure</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;convergence.svg&quot;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">&quot;tight&quot;</span><span class="p">)</span>
 </code></pre></div>
 
-<p><code>style=False</code> uses the caller's current Matplotlib style. The function restores
-global rcParams on exit and does not choose a backend. Shared presentation tokens
-in <code>prusie._style</code> define fonts, spacing, colors and readable number formatting;
-use the public <code>style</code> argument for individual figures. Before/after colors are
-consistent, missing values are separate, and probability/r² scales stay in [0,1].
-Displayed rounding never replaces full-precision returned or exported values.</p>
+<p><code>style=False</code> uses the caller's current settings. Plotting restores global
+rcParams on exit. Select a backend before plotting; <code>backend</code> is rejected as
+a local style option.</p>
 <h3 id="heatmap-scales-and-labels">Heatmap scales and labels</h3>
-<p>PIP heatmaps default to <strong>Blues</strong>, with a fixed linear scale from 0 to 1. CS LD
-uses <strong>Reds</strong> for the explicit <code>ld_measure="r2"</code> display and <strong>RdBu_r</strong> for the
-default signed-r display, with fixed ranges [0,1] and [−1,1] respectively.
-The separate colormap roles prevent a PIP style change from altering LD views.
-Pass <code>cmap=</code> to <code>plot_sensitivity</code> or <code>plot_signal</code> to override the displayed
-colormap; the fixed numeric range and original matrix are retained.</p>
-<p>Compact sensitivity cells use <code>0</code>, <code>&lt;0.01</code>, two decimal places, <code>&gt;0.99</code>, <code>1</code> and
-<code>NA</code> as appropriate. This formatting affects labels only: returned display text
-and policy are separate from full-precision PIPs. Small selected matrices label
-every candidate row; large matrices retain the candidate records even when
-per-cell annotations are omitted. CS members on the declared comparison support
-are not dropped to shrink the figure; common-mode filtering is described in the
-<a href="sensitivity.html#common-and-union-comparison-support">support rules</a>. Missing observations have a distinct grey color, separate from the
-color for a true zero.</p>
-<p>Within-CS LD cells are square. Small matrices label non-endpoint correlations
-with sufficient precision to distinguish high LD from exact identity. Compact
-singleton CS views keep the underlying matrix and purity while using a short
-singleton display. See the <a href="worked_examples.html#what-remains-unresolved">worked 86/90 example</a>.</p>
+<p>PIP heatmaps use <code>Blues</code> on a fixed linear [0,1] scale. Within-CS LD defaults to
+signed correlation <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi></mrow><annotation encoding="application/x-tex">r</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span></span> with <code>RdBu_r</code> on [−1,1]; <code>ld_measure="r2"</code> selects <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>r</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">r^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span>
+with <code>Reds</code> on [0,1]. <code>cmap=</code> in <code>plot_sensitivity</code> or <code>plot_signal</code> changes that view's
+colormap while preserving its numeric range and matrix. Missing PIPs are grey,
+distinct from observed zero.</p>
+<p>Sensitivity cells use exact <code>0</code>/<code>1</code>, <code>&lt;0.01</code>/<code>&gt;0.99</code> for interior tails, two
+decimals otherwise, and <code>NA</code> for missing values. Label formatting leaves numeric
+matrices unchanged; display text and policies are returned separately. All
+selected candidate rows are labelled, including CS members on the declared
+comparison support; large views
+may omit cell annotations. See the
+<a href="sensitivity.html#common-and-union-comparison-support">support rules</a>.</p>
+<p>Within-CS LD cells are square. Small matrices distinguish near-unit correlations
+from exact identity in their labels. Compact singleton views retain the matrix
+and CS purity. See the <a href="worked_examples.html#what-remains-unresolved">Toy example</a>.</p>
 <h3 id="other-display-controls">Other display controls</h3>
-<p>For large-magnitude objectives, <code>plot_convergence(..., relative_elbo=True)</code> plots
-each trace relative to its first finite ELBO, with that origin labelled. It
-preserves the original trace and signed increments in the returned data.</p>
-<p>Locus plots use physical position only when provided, otherwise a labelled
-variant index. <code>position_unit="auto"</code> chooses a displayed bp/kb/Mb scale;
-<code>position_unit="bp"</code>, <code>"kb"</code> or <code>"Mb"</code> selects it explicitly without changing
-source coordinates. <code>label_variants</code> chooses annotation IDs, while
-<code>color_by_ld=True</code> colors association points by r² to the named reference. LD coloring names its reference variant. <code>plot_signal</code> defaults
-to signed r; the worked reports explicitly request r². Local gene tables/GTF
-require source, build, transcript selection and a coordinate convention; known
-chromosome/build conflicts are rejected. No gene identity is inferred from an
-rsID or arbitrary example coordinate. LD-diagnostic <code>auxiliary="residual"</code> or
-<code>"log_lr"</code> selects the supporting panel; labelled extreme residuals remain
-distinct from variants satisfying the joint flag rule.</p></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
+<p><code>plot_convergence(..., relative_elbo=True)</code> displays each trace relative to its
+first finite ELBO, with the origin labelled. Returned traces and signed
+increments are unchanged.</p>
+<p>Locus plots use physical positions when every variant has a finite position;
+otherwise they use labelled variant indices. <code>position_unit="auto"</code> chooses
+bp/kb/Mb; <code>"bp"</code>, <code>"kb"</code> or <code>"Mb"</code> selects the display unit explicitly without
+changing source coordinates. <code>label_variants</code> chooses annotation IDs.
+<code>plot_locus</code> shows one LD <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>r</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">r^2</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span></span> track per retained CS, using that component's
+highest-alpha CS member; exact ties use lexical variant ID order. An explicit
+<code>reference_variant</code> selects a single track. Without a retained CS, the reference
+is the highest marginal PIP variant. <code>color_by_ld=True</code> colors association points
+by the first displayed reference, which is named on the colorbar.</p>
+<p><code>read_gene_track</code> returns a mapping of intervals and provenance from a local GTF.
+Gene tracks require physical variant positions, source, genome build, transcript
+selection and <code>1-based closed</code> coordinates. Known chromosome/build conflicts
+are rejected. No gene identity is inferred from rsIDs or arbitrary example
+coordinates.</p>
+<p>For LD diagnostics, <code>auxiliary="residual"</code> (default) or <code>"log_lr"</code> selects the
+supporting panel. Labelled extreme residuals remain distinct from variants
+satisfying the joint flag rule.</p></article>
+<footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

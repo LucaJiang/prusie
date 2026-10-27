@@ -16,8 +16,8 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
-<div class="version"><span class="version-number">0.2.4.dev2</span><span class="version-badge">Development</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html" aria-current="page">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Worked examples</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<div class="version"><span class="version-number">0.3.0</span><span class="version-badge">Stable</span></div>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html" aria-current="page">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
@@ -26,34 +26,36 @@
   <a href="assets/logos/logo_title.jpeg"><img src="assets/logos/prusie-banner-1792.jpg" alt="prusie — Python and Rust software for SuSiE fine-mapping" width="1792" height="592"></a>
 </div>
 
-<p>prusie fits SuSiE fine-mapping models in Python with a Rust solver. It returns
-component-level posterior probabilities, marginal inclusion probabilities (PIPs)
-and credible sets from association summaries, sufficient statistics or
-individual-level data. See <a href="numerical_accuracy.html">numerical accuracy</a> for
-validation against susieR 0.16.6 and <a href="model.html">the model</a> for assumptions.</p>
+<p>Fine-mapping seeks to identify variants that affect a trait despite uncertainty
+from linkage disequilibrium (LD). prusie fits SuSiE (Sum of Single Effects)
+models in Python with a Rust solver, allowing multiple effects within a region.</p>
+<p>Fits accept association summary statistics with signed LD, centered sufficient
+statistics, or individual-level data. Results include component posterior
+probabilities (<code>alpha</code>), marginal posterior inclusion probabilities (PIPs) and
+credible sets. See <a href="model.html">the statistical model</a> for assumptions and
+<a href="numerical_accuracy.html">numerical accuracy</a> for comparisons with susieR 0.16.6.</p>
 <h2 id="installation">Installation</h2>
-<p>This checkout contains <strong>0.2.4.dev2</strong> (development version). Building from source requires CPython 3.10–3.13,
-the Rust toolchain pinned in <code>rust-toolchain.toml</code>, a C linker and the Python
-development headers:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="nb">cd</span><span class="w"> </span>prusie<span class="w">  </span><span class="c1"># source checkout for the version documented here</span>
+<p>From the prusie 0.3.0 source checkout, use CPython 3.10–3.13 and install the
+<a href="install.html#build-from-source">build requirements</a>, including the pinned Rust
+toolchain:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="nb">cd</span><span class="w"> </span>prusie
 python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
 .<span class="w"> </span>.venv/bin/activate
-python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span>
+python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span><span class="w"> </span>--config-settings<span class="o">=</span>build-args<span class="o">=</span><span class="s2">&quot;--locked&quot;</span>
 </code></pre></div>
 
-<p>Ordinary dense fitting requires only NumPy at run time. The optional <code>analysis</code>
-extra adds SciPy for sparse designs and advanced RSS models, and Matplotlib
-for figures. An installed package
-requires neither R nor Rust. The <a href="install.html">installation guide</a> also
-describes the earlier prerelease wheel for CPython 3.12 on Linux x86-64.</p>
+<p>NumPy is the only required Python dependency for core fitting. The optional
+<code>analysis</code> extra installed above adds SciPy for sparse inputs, LD diagnostics
+and advanced RSS models, and Matplotlib for plotting. Fitting does not require
+R. To install without Rust or a compiler, use a compatible
+<a href="install.html#use-a-prebuilt-wheel">prebuilt wheel</a>.</p>
 <h2 id="example">Example</h2>
-<p>The packaged synthetic toy example with 500 variants can be fitted offline:</p>
+<p>Fit the packaged 500-variant synthetic toy example offline and list its retained
+credible sets (CS):</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">prusie</span>
 
 <span class="n">example</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">load_example</span><span class="p">()</span>
-<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span>
-    <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">],</span> <span class="n">track_fit</span><span class="o">=</span><span class="s2">&quot;compact&quot;</span><span class="p">,</span> <span class="n">retain_data</span><span class="o">=</span><span class="kc">True</span>
-<span class="p">)</span>
+<span class="n">fit</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">susie_rss</span><span class="p">(</span><span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">])</span>
 <span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;R&quot;</span><span class="p">],</span> <span class="n">z</span><span class="o">=</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;z&quot;</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">prusie</span><span class="o">.</span><span class="n">summary_text</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;IBSS: </span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">convergence</span><span class="p">[</span><span class="s1">&#39;stop_reason&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">niter</span><span class="si">}</span><span class="s2"> sweeps)&quot;</span><span class="p">)</span>
@@ -68,69 +70,88 @@ CS 0: syn0100
 CS 1: syn0350
 </code></pre></div>
 
-<p>The <a href="example.html">quick-start tutorial</a> explains these PIPs and credible
-sets (CS) and then produces figures and an offline report from the same fit.</p>
+<p>Component IDs are zero-based. The <a href="example.html">quick-start tutorial</a> explains
+PIPs and credible sets, then adds figures and an offline report.</p>
 <h2 id="accuracy-and-performance">Accuracy and performance</h2>
+<p>The comparison uses SuSiE-RSS fits for FinnGen R13 type 2 diabetes GWAS loci
+and GTEx v11 Whole_Blood eQTL analyses. Time and memory ratios below are
+susieR divided by prusie.</p>
 <!-- current:highlights:start -->
-<p>Historical measurements of the recorded <strong>0.2.4.dev2</strong> snapshot against susieR 0.16.6.</p>
+<p>Measured <strong>prusie 0.3.0</strong> against fresh <strong>susieR 0.16.6</strong> fits.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Analysis</th>
-<th>Loci</th>
-<th>Max. absolute PIP difference vs susieR</th>
-<th>Speed-up¹</th>
-<th>Memory ratio²</th>
+<th>Cases</th>
+<th>Timing pairs</th>
+<th>Total-time speed-up¹</th>
+<th>Per-case geometric mean²</th>
+<th>Peak RSS ratio³</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>GWAS</td>
-<td>100</td>
-<td>9.14e-09</td>
-<td>26×</td>
-<td>6.3×</td>
+<td>200</td>
+<td>200</td>
+<td>27.7×</td>
+<td>35×</td>
+<td>3.66×</td>
 </tr>
 <tr>
 <td>eQTL</td>
-<td>100</td>
-<td>1.22e-08</td>
-<td>22×</td>
-<td>6.2×</td>
+<td>14157</td>
+<td>14157</td>
+<td>19.1×</td>
+<td>22.7×</td>
+<td>3.77×</td>
 </tr>
 </tbody>
 </table></div>
-<p>¹ Geometric mean of per-locus susieR/prusie runtime ratios. ² Median per-locus susieR/prusie ratio of peak resident memory (RSS), including the interpreter and inputs.</p>
+<p>¹ Sum of all seven retained R fit times divided by the corresponding prusie total. ² Geometric mean of within-case median-time ratios. ³ Median paired R/prusie fresh-process peak RSS, including interpreter and inputs. The two speed-up summaries use different weighting.</p>
 <!-- current:highlights:end -->
 
-<p>AMD EPYC 9754, Linux x86-64; one numerical thread per fit.
-See <a href="performance.html">performance</a> for the data, software and measurement
-protocol, and <a href="numerical_accuracy.html">numerical accuracy</a> for validation.</p>
+<p>Measurements used one numerical thread per fit on a concurrently loaded
+AMD EPYC 9754 host running Linux x86-64. Peak RSS is the process's peak
+resident memory, including the interpreter, inputs and returned fit. See
+<a href="performance.html">performance</a> for the protocol, software identities and scope.</p>
+<p>One eQTL analysis, <code>ENSG00000110203.10</code>, exceeds the <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span></span></span></span></span> absolute-error
+criterion for the complete final <code>alpha</code> matrix (<code>rtol=0</code>); both backends
+reached the iteration limit without convergence. See
+<a href="numerical_accuracy.html">numerical accuracy</a> for the tested configurations and
+individual outcomes.</p>
 <h2 id="sensitivity-and-refinement">Sensitivity and refinement</h2>
-<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Candidate PIPs under four settings: leading credible sets persist while a fixed prior variance changes PIPs elsewhere." src="examples/post_analysis/stable/figure_5.png" /></div><figcaption><a href="examples/post_analysis/stable/figure_5.png">Open original figure</a></figcaption></figure>
-<p>Fixing the scaled prior variance at a positive value preserves the two leading
-credible sets but raises PIP at other variants: <code>syn0143</code> changes from about
-5.3e-11 to 0.2544. All five components retain positive prior variance, including
-three without a credible set. The <a href="worked_examples.html">worked examples</a> explain
-this sensitivity and a second example in which refinement finds a higher ELBO.</p>
+<p>The official susieR <a href="worked_examples.html">toy example</a> shows a fit that meets its
+stopping rule before refinement finds a higher evidence lower bound (ELBO).
+Refinement changes the singleton credible sets, while a set of strongly
+correlated variants remains unresolved.</p>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="PIPs for the baseline fit, refined fit and a fit with a larger maximum number of single-effect components." src="examples/post_analysis/official/figure_5.png" /></div><figcaption><a href="examples/post_analysis/official/figure_5.png">Open original figure</a></figcaption></figure>
+<p>Increasing the maximum number of single-effect components, <code>L</code>, retains the
+baseline's credible sets in this example. The
+<a href="examples/post_analysis/official/index.html">saved report</a> shows every retained
+credible set and separate LD panels for each set's top variant.</p>
 <h2 id="documentation">Documentation</h2>
 <div class="start-links">
-<p><a href="example.html">Quick start</a> <a href="results.html">Reading results</a> <a href="worked_examples.html">Worked examples</a></p>
+<p><a href="example.html">Quick start</a> <a href="results.html">Reading results</a> <a href="worked_examples.html">Toy example</a></p>
 </div>
 <ul>
-<li><a href="post_analysis.html">Convergence and refinement</a>: stopping rules and alternative starting solutions.</li>
-<li><a href="sensitivity.html">Sensitivity and LD</a>: model choices, variant alignment and input diagnostics.</li>
-<li><a href="api.html">API</a>, <a href="inputs.html">inputs</a> and <a href="model.html">statistical model</a>: definitions and interfaces.</li>
-<li><a href="reproducibility.html">Reproducibility</a>: example data, reference results and measurement scripts.</li>
+<li><a href="inputs.html">Inputs, alignment and priors</a>: input routes, variant order, effect alleles and prior weights.</li>
+<li><a href="model.html">Statistical model</a>: assumptions, single-effect components, PIPs and credible sets.</li>
+<li><a href="api.html">Python API</a>: fitting functions, options and result fields.</li>
+<li><a href="post_analysis.html">Convergence and refinement</a>: stopping diagnostics, continuation and alternative starting solutions.</li>
+<li><a href="sensitivity.html">Sensitivity and LD diagnostics</a>: model comparisons and consistency between z-scores and LD.</li>
+<li><a href="reproducibility.html">Reproducibility</a>: data sources, reference fits and regeneration of benchmark tables and figures.</li>
 </ul>
 <h2 id="citation-and-license">Citation and license</h2>
 <p>Please cite <a href="https://doi.org/10.1111/rssb.12388">SuSiE, Wang et al. (2020)</a> and
-<a href="https://doi.org/10.1371/journal.pgen.1010299">SuSiE-RSS, Zou et al. (2022)</a>,
-and identify the prusie version using <a href="https://github.com/LucaJiang/prusie/blob/main/CITATION.cff">CITATION.cff</a>.
-Author and maintainer: Wenxin Jiang. No DOI is assigned to the software.</p>
+<a href="https://doi.org/10.1371/journal.pgen.1010299">SuSiE-RSS, Zou et al. (2022)</a>
+for the statistical methods. Include the installed prusie version
+(<code>prusie.__version__</code>); software citation metadata are in
+<a href="https://github.com/LucaJiang/prusie/blob/main/CITATION.cff">CITATION.cff</a>.</p>
+<p>Wenxin Jiang is the author and maintainer. No DOI is assigned to the software.</p>
 <p>Copyright © 2026 Wenxin Jiang. Licensed under <a href="https://github.com/LucaJiang/prusie/blob/main/LICENSE">GPL-3.0-or-later</a>;
 see <a href="https://github.com/LucaJiang/prusie/blob/main/THIRD_PARTY_NOTICES.md">third-party notices</a> for upstream attribution.</p></article>
-<footer><p>prusie 0.2.4.dev2 · Wenxin Jiang</p></footer>
+<footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>
