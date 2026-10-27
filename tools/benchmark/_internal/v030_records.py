@@ -645,6 +645,9 @@ def bind_release(run, output):
     summary = read(summary_path)
     measured = measurement_freeze(run)
     release = read(run / "status/code_freeze.json")
+    manifest = read(run / "inputs/m2_manifest.json")
+    assert len(manifest["rows"]) == 14357
+    assert all(row["parameters"]["refine"] is False for row in manifest["rows"])
     for key, measured_key in (
         ("compute_code_commit", "code_sha"),
         ("wheel_sha256", "wheel_sha256"),
