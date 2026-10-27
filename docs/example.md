@@ -229,7 +229,7 @@ centered, sample-standardized predictors. The data are synthetic; no human
 study or genome build is implied.
 
 <!-- generated:toy:start -->
-The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
+The independent 500-variant toy example converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
 <!-- generated:toy:end -->
 
 <!-- generated:toy-cs:start -->
