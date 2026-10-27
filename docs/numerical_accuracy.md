@@ -93,12 +93,12 @@ and estimated-residual-variance checks.
 
 <!-- generated:maxima:start -->
 
-| Analysis | Analyses | Variants per analysis | Maximum absolute PIP difference | Trace: case / variant index (zero-based) |
+| Analysis | Cases | Alpha passes / failures / unavailable | Maximum &#124;Δalpha&#124; | Maximum &#124;ΔPIP&#124; |
 | --- | --- | --- | --- | --- |
-| GWAS | 100 | 103–4162 | 9.14e-09 | region16/gwas / 49 |
-| eQTL | 100 | 103–4162 | 1.22e-08 | region31/eqtl / 238 |
+| GWAS | 200 | 200 / 0 / 0 | 6.58e-08 | 6.58e-08 |
+| eQTL | 14157 | 14156 / 1 / 0 | 1.27e-05 | 1.27e-05 |
 
-Across the evaluated GWAS analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 9.14e-09. Across the evaluated eQTL analyses, the maximum absolute difference in variant PIPs relative to susieR 0.16.6 was 1.22e-08.
+The gate remains absolute alpha error ≤ 1e-5, with relative tolerance zero. Iteration-limit exceedances remain failures of this numerical threshold.
 <!-- generated:maxima:end -->
 
 The numerical criterion is absolute PIP difference ≤10⁻⁵ with zero relative
@@ -113,26 +113,33 @@ The vertical axis is symmetric-log with a linear interval below 10⁻¹⁴; exac
 zeros are retained at zero. [Vector PDF](assets/pip_accuracy.pdf).
 
 <!-- generated:limits:start -->
-region25/gwas: prusie 100 iterations, susieR 100 iterations, both unconverged. Both calls completed and their outputs enter the numerical maxima and timing summaries.
+
+| Analysis | prusie iteration-limit cases | R iteration-limit cases |
+| --- | --- | --- |
+| GWAS | 0 | 0 |
+| eQTL | 224 | 224 |
+
+All completed positive timing pairs enter the performance summaries, independently of convergence, alpha agreement and credible-set presence. Per-case records list every status.
 <!-- generated:limits:end -->
 
 ## Posterior arrays, Bayes factors and objective
 
 <!-- generated:errors:start -->
 
-| Quantity | Scale / units | GWAS maximum absolute difference | eQTL maximum absolute difference |
-| --- | --- | --- | --- |
-| alpha | Probability | 9.14e-09 | 1.22e-08 |
-| mu | Standardized effect | 5.26e-10 | 2.34e-08 |
-| mu2 | Squared standardized effect | 1.39e-10 | 3.7e-09 |
-| lbf_variable | Natural-log BF | 2.82e-05 | 3.39e-07 |
-| lbf | Natural-log BF | 2.82e-05 | 2.74e-07 |
-| V | Squared effect | 4.08e-06 | 1.49e-07 |
-| sigma2 | Phenotype variance | 0 | 0 |
-| elbo | Natural-log objective | 1e-05 | 3.92e-08 |
-| KL | Natural-log divergence | 7.01e-08 | 1.17e-07 |
+| Analysis | Fresh/frozen R: non-bitwise cases | Fresh/frozen R: unequal-value cases | Integrity unavailable | Maximum fresh/frozen &#124;Δalpha&#124; |
+| --- | --- | --- | --- | --- |
+| GWAS | 200 | 200 | 0 | 5e-16 |
+| eQTL | 14101 | 14101 | 0 | 5.55e-16 |
 
-Maxima are computed elementwise across every valid analysis, including iteration-limit outputs. The machine summary includes the case, array index, both values at the maximum and reference magnitude for each field. ELBO traces are compared only with matching shapes; per-case records retain any shape mismatch.
+Fresh R is checked before timing against the stored frozen alpha values. Every nonzero difference remains recorded; the full-precision new R alpha is used for the prusie comparison. Frozen decimal serialization can prevent bitwise identity.
+
+
+| Case | Setting | Maximum &#124;Δalpha&#124; | prusie: iterations / converged | R: iterations / converged | Both at iteration limit |
+| --- | --- | --- | --- | --- | --- |
+| ENSG00000110203.10 | primary | 1.26768e-05 | 100 / False | 100 / False | True |
+| ENSG00000110203.10 | threads2 | 1.26768e-05 | 100 / False | 100 / False | True |
+| ENSG00000110203.10 | threads4 | 1.26768e-05 | 100 / False | 100 / False | True |
+| ENSG00000110203.10 | threads8 | 1.26768e-05 | 100 / False | 100 / False | True |
 <!-- generated:errors:end -->
 
 PIP and alpha differences have probability units. Conditional effects are on
@@ -147,12 +154,14 @@ V, moments, Bayes factors and KL follow the finalization semantics described in
 
 <!-- generated:cs:start -->
 
-| Analysis | prusie sets | susieR sets | Component/member differences | Maximum mass difference | Maximum purity difference |
-| --- | --- | --- | --- | --- | --- |
-| GWAS | 154 | 154 | 0 | 2.14e-09 | 8.88e-16 |
-| eQTL | 97 | 97 | 0 | 2.59e-09 | 8.88e-16 |
+| Analysis | Backend | Cases with recorded counts | Credible sets (first retained fit) | Empty-CS cases |
+| --- | --- | --- | --- | --- |
+| GWAS | prusie | 200 | 1139 | 7 |
+| GWAS | susieR | 200 | 1139 | 7 |
+| eQTL | prusie | 14157 | 14207 | 5049 |
+| eQTL | susieR | 14157 | 14207 | 5049 |
 
-Sets are matched by original component ID and compared as member sets; returned ordering does not affect the comparison. All actual masses, purity statistics and zero-based members are retained.
+This full-panel campaign records set counts; it does not compare full member identities, returned mass or purity. The separate packaged example and regression suites check those quantities.
 <!-- generated:cs:end -->
 
 The requested mass is 0.95. Returned mass is the sum of the selected alpha
@@ -164,7 +173,7 @@ Convergence and the presence of a credible set are different properties.
 ## Independent toy example
 
 <!-- generated:toy:start -->
-The independent 500-variant toy example fit converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
+The independent 500-variant toy example converged in 3 iterations and returned 2 credible sets. Its maximum absolute PIP difference from the separately generated susieR 0.16.6 reference was 1.66e-10.
 <!-- generated:toy:end -->
 
 ![Signed association statistics and fitted PIPs for the independent synthetic toy example, with its two true effect positions marked.](assets/toy_fit.svg)

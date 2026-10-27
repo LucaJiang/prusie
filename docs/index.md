@@ -62,14 +62,14 @@ sets (CS) and then produces figures and an offline report from the same fit.
 ## Accuracy and performance
 
 <!-- current:highlights:start -->
-Historical measurements of the recorded **0.2.4.dev2** snapshot against susieR 0.16.6.
+Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.
 
-| Analysis | Loci | Max. absolute PIP difference vs susieR | Speed-up¹ | Memory ratio² |
-| --- | --- | --- | --- | --- |
-| GWAS | 100 | 9.14e-09 | 26× | 6.3× |
-| eQTL | 100 | 1.22e-08 | 22× | 6.2× |
+| Analysis | Cases | Timing pairs | Total-time speed-up¹ | Per-case geometric mean² | Peak RSS ratio³ |
+| --- | --- | --- | --- | --- | --- |
+| GWAS | 200 | 200 | 27.7× | 35× | 3.66× |
+| eQTL | 14157 | 14157 | 19.1× | 22.7× | 3.77× |
 
-¹ Geometric mean of per-locus susieR/prusie runtime ratios. ² Median per-locus susieR/prusie ratio of peak resident memory (RSS), including the interpreter and inputs.
+¹ Sum of all seven retained R fit times divided by the corresponding prusie total. ² Geometric mean of within-case median-time ratios. ³ Median paired R/prusie fresh-process peak RSS, including interpreter and inputs. The two speed-up summaries use different weighting.
 <!-- current:highlights:end -->
 
 AMD EPYC 9754, Linux x86-64; one numerical thread per fit.

@@ -70,8 +70,14 @@ sets (CS) and then produces figures and an offline report from the same fit.
 ## Accuracy and performance
 
 <!-- current:highlights:start -->
-See [performance](docs/performance.md) for measured runtime and memory against
-susieR 0.16.6, and [numerical accuracy](docs/numerical_accuracy.md) for validation.
+Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.
+
+| Analysis | Cases | Timing pairs | Total-time speed-up¹ | Per-case geometric mean² | Peak RSS ratio³ |
+| --- | --- | --- | --- | --- | --- |
+| GWAS | 200 | 200 | 27.7× | 35× | 3.66× |
+| eQTL | 14157 | 14157 | 19.1× | 22.7× | 3.77× |
+
+¹ Sum of all seven retained R fit times divided by the corresponding prusie total. ² Geometric mean of within-case median-time ratios. ³ Median paired R/prusie fresh-process peak RSS, including interpreter and inputs. The two speed-up summaries use different weighting.
 <!-- current:highlights:end -->
 
 The performance report identifies the measured software, hardware, data and protocol.

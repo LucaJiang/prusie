@@ -181,6 +181,37 @@ def load_task(run, row, kind, count, overwrite, window):
     paired_memory = bool(
         reference_backend and native["memory_complete"] and reference_backend["memory_complete"]
     )
+    failure_outcomes = None
+    if result.get("alpha_pass") is False:
+        reference_kind = kind if window is not None else "primary"
+        reference_directory = root / row["panel"] / row["case_id"] / reference_kind
+        reference_result_path = reference_directory / "result.json"
+        reference_result = read(reference_result_path) if reference_result_path.exists() else {}
+        reference_observations = []
+        validation_available = False
+        for mode in ("validate", "time", "memory"):
+            reference_path = reference_directory / f"R_{mode}.json"
+            expected = reference_result.get("outputs", {}).get(str(reference_path))
+            if expected:
+                assert digest(reference_path) == expected
+                observed = read(reference_path)
+                assert observed["signature_sha256"] == reference_result["signature_sha256"]
+                validation_available |= mode == "validate" and observed.get("status") == "ok"
+                reference_observations.extend(
+                    dict(
+                        mode=mode,
+                        warmup=s.get("warmup"),
+                        niter=s.get("niter"),
+                        converged=s.get("converged"),
+                    )
+                    for s in observed.get("samples", [])
+                )
+        failure_outcomes = dict(
+            reference_series=reference_kind,
+            prusie=[{k: s.get(k) for k in ("niter", "converged")} for s in raw_native],
+            fresh_R=reference_observations,
+            fresh_R_validation_available=validation_available,
+        )
     return dict(
         case_id=row["case_id"],
         panel=row["panel"],
@@ -193,6 +224,8 @@ def load_task(run, row, kind, count, overwrite, window):
         n_threads=count,
         overwrite_ld=overwrite,
         task_state=result.get("state", "MISSING"),
+        started_epoch=result.get("started_epoch"),
+        finished_epoch=result.get("finished_epoch"),
         result_sha256=digest(result_path) if result_path.exists() else None,
         hardware=request["identity"].get("hardware") if result else None,
         signature_sha256=result.get("signature_sha256"),
@@ -202,6 +235,7 @@ def load_task(run, row, kind, count, overwrite, window):
             else None
         ),
         alpha_pass=result.get("alpha_pass"),
+        numerical_failure_outcomes=failure_outcomes,
         validity_failure_count=len(result.get("validity_failures", [])),
         **errors,
         nonfinite_error_samples=sum(
@@ -273,6 +307,12 @@ def group_summary(rows):
             if r["fresh_R_integrity"]["available"]
             and r["fresh_R_integrity"]["alpha_bitwise_equal"] is not True
         ],
+        frozen_R_value_deviations=[
+            r["case_id"]
+            for r in rows
+            if r["fresh_R_integrity"]["available"]
+            and r["fresh_R_integrity"]["alpha_values_equal"] is not True
+        ],
         frozen_R_unavailable=[
             r["case_id"] for r in rows if not r["fresh_R_integrity"]["available"]
         ],
@@ -330,6 +370,47 @@ def group_summary(rows):
             for b in ("prusie", "susieR")
         },
     )
+
+
+def alpha_failure_details(records):
+    """Retain the failed gate and the actual convergence evidence separately."""
+    failures = []
+    for row in records:
+        if row["alpha_pass"] is not False:
+            continue
+        outcomes = row["numerical_failure_outcomes"]
+        native = outcomes["prusie"]
+        reference_observations = outcomes["fresh_R"]
+        both_limited = bool(
+            native and reference_observations and outcomes["fresh_R_validation_available"]
+        ) and all(
+            value["niter"] == row["max_iter"] and value["converged"] is False
+            for value in native + reference_observations
+        )
+        valid = row["validity_failure_count"] == row["nonfinite_error_samples"] == 0
+        exceedance = finite(row["max_abs_alpha_error"]) and row["max_abs_alpha_error"] > 1e-5
+        failures.append(
+            dict(
+                case_id=row["case_id"],
+                panel=row["panel"],
+                series=row["kind"],
+                p=row["p"],
+                n_threads=row["n_threads"],
+                error=row["max_abs_alpha_error"],
+                pip_error=row["max_abs_pip_error"],
+                max_iter=row["max_iter"],
+                reference_series=outcomes["reference_series"],
+                prusie_fit_outcomes=native,
+                R_fit_outcomes=reference_observations,
+                basic_validity_pass=valid,
+                alpha_atol_exceeded=exceedance,
+                both_backends_nonconverged_at_iteration_limit=both_limited,
+                meets_nonconverged_exceedance_condition=(
+                    both_limited and valid and exceedance and row["task_state"] == "COMPLETE"
+                ),
+            )
+        )
+    return failures
 
 
 def export_m1(run):
@@ -515,6 +596,10 @@ def export(run, output):
         source_panel_sha256=sorted(manifest["source_panels"].values()),
         protocol=manifest["protocol"],
         maximum_physical_cores=64,
+        measurement_task_epoch_range=[
+            min(r["started_epoch"] for r in records if finite(r["started_epoch"])),
+            max(r["finished_epoch"] for r in records if finite(r["finished_epoch"])),
+        ],
         measurement_software_versions=[
             dict(sha256=json.loads(value), tasks=count)
             for value, count in sorted(
@@ -535,16 +620,7 @@ def export(run, output):
         groups=groups,
         series_counts=dict(Counter(r["kind"] for r in records)),
         all_tasks_accounted=len(records),
-        alpha_failures=[
-            dict(
-                case_id=r["case_id"],
-                panel=r["panel"],
-                series=r["kind"],
-                error=r["max_abs_alpha_error"],
-            )
-            for r in records
-            if r["alpha_pass"] is False
-        ],
+        alpha_failures=alpha_failure_details(records),
         definitions=dict(
             total_time_speedup=(
                 "sum of all seven retained R fit times / sum of all seven retained "
@@ -568,6 +644,8 @@ def export(run, output):
         ),
     )
     m1 = export_m1(run)
+    for value in (summary, m1, records):
+        assert "/home/" not in json.dumps(value, allow_nan=False), "Private path in public records"
     output.mkdir(parents=True, exist_ok=True)
     write(output / "v030_summary.json", summary)
     write(output / "v030_m1.json", m1)
@@ -683,6 +761,20 @@ def bind_release(run, output):
         native_sha256=release["native_sha256"],
         numerical_qualified_commit=numerical["commit"],
         numerical_report_sha256=release["numerical_report_sha256"],
+        numerical_qualification={
+            key: numerical[key]
+            for key in (
+                "completed_cells",
+                "measured_fit_calls",
+                "panel_counts",
+                "counts",
+                "max_R_alpha_error",
+                "R_alpha_atol",
+                "R_alpha_rtol",
+                "original_component_and_SNP_order",
+                "parent_oracle",
+            )
+        },
         changed_wheel_members=changed,
         formally_timed=False,
         fresh_process_memory_profiled=False,

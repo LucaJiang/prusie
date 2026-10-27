@@ -7,6 +7,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter, ScalarFormatter
 from v030_records import finite
 
 COLORS = {"prusie": "#0072B2", "susieR": "#D55E00"}
@@ -105,6 +106,10 @@ def plot(summary, m1, records, output):
                 xscale="log",
                 ylim=(0, 1.02),
             )
+            if field == "memory_ratio":
+                ax.xaxis.set_major_locator(FixedLocator((1, 2, 3, 4, 6, 8)))
+                ax.xaxis.set_major_formatter(ScalarFormatter())
+                ax.xaxis.set_minor_formatter(NullFormatter())
     finish(axes)
     save(fig, output, "v030_ratio_distributions")
 
@@ -262,11 +267,22 @@ def plot(summary, m1, records, output):
                 yscale="symlog",
             )
             axes[index, column].set_yscale("symlog", linthresh=1e-14)
+            maximum = max((r[field] for r in rows), default=0)
             if index == 0:
                 axes[index, column].axhline(
                     1e-5, color="#D55E00", linestyle="--", linewidth=0.8, label="Alpha gate: 1e-5"
                 )
                 axes[index, column].legend(frameon=False, fontsize=8)
+                maximum = max(maximum, 1e-5)
+            axes[index, column].set_ylim(0, max(3 * maximum, 1e-13))
+            axes[index, column].yaxis.set_major_locator(
+                FixedLocator((0, 1e-12, 1e-10, 1e-8, 1e-6, 1e-5))
+            )
+            axes[index, column].yaxis.set_major_formatter(
+                FuncFormatter(
+                    lambda value, _: "0" if value == 0 else f"$10^{{{int(np.log10(value))}}}$"
+                )
+            )
     finish(axes)
     save(fig, output, "v030_numerical_agreement")
 
@@ -322,7 +338,7 @@ def plot(summary, m1, records, output):
             xticks=(0, 1, 2),
             xticklabels=("MAIN", "base", "0.3.0"),
             ylabel="Median v10 RSS increment (MiB)",
-            ylim=(0, None),
+            ylim=(0, max(increments) / 2**20 * 1.1),
         )
     finish(axes)
     save(fig, output, "v030_cumulative_chain")

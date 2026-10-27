@@ -295,7 +295,42 @@ def render(root, pages=None, check=False):
                 ]
                 for p, g in groups.items()
             ],
-        ),
+        )
+        + "\nThe gate remains absolute alpha error ≤ 1e-5, with relative tolerance zero. "
+        "Iteration-limit exceedances remain failures of this numerical threshold.\n",
+    )
+    failure_rows = []
+
+    def outcomes(values):
+        return (
+            ", ".join(sorted({f"{v['niter']} / {v['converged']}" for v in values})) or "unavailable"
+        )
+
+    for item in summary["alpha_failures"]:
+        failure_rows.append(
+            [
+                item["case_id"],
+                item["series"],
+                number(item["error"], 8),
+                outcomes(item["prusie_fit_outcomes"]),
+                outcomes(item["R_fit_outcomes"]),
+                item["both_backends_nonconverged_at_iteration_limit"],
+            ]
+        )
+    failures = (
+        table(
+            [
+                "Case",
+                "Setting",
+                "Maximum |Δalpha|",
+                "prusie: iterations / converged",
+                "R: iterations / converged",
+                "Both at iteration limit",
+            ],
+            failure_rows,
+        )
+        if failure_rows
+        else "No alpha failures were recorded.\n"
     )
     fragment(
         "docs/numerical_accuracy.md",
@@ -303,7 +338,8 @@ def render(root, pages=None, check=False):
         table(
             [
                 "Analysis",
-                "Frozen-R integrity deviations",
+                "Fresh/frozen R: non-bitwise cases",
+                "Fresh/frozen R: unequal-value cases",
                 "Integrity unavailable",
                 "Maximum fresh/frozen |Δalpha|",
             ],
@@ -311,6 +347,7 @@ def render(root, pages=None, check=False):
                 [
                     p,
                     len(g["frozen_R_deviations"]),
+                    len(g["frozen_R_value_deviations"]),
                     len(g["frozen_R_unavailable"]),
                     number(g["frozen_R_max_abs_alpha_error"]),
                 ]
@@ -319,7 +356,9 @@ def render(root, pages=None, check=False):
         )
         + "\nFresh R is checked before timing against the stored frozen alpha values. "
         "Every nonzero difference remains recorded; the full-precision new R alpha is used "
-        "for the prusie comparison. Frozen decimal serialization can prevent bitwise identity.\n",
+        "for the prusie comparison. Frozen decimal serialization can prevent bitwise identity.\n"
+        + "\n"
+        + failures,
     )
     limits = table(
         ["Analysis", "prusie iteration-limit cases", "R iteration-limit cases"],

@@ -10,14 +10,14 @@ These measurements compare prusie 0.2.4.dev2 with susieR 0.16.6 on 100 GWAS and
 peak resident memory (RSS) of a new process for each locus and backend.
 
 <!-- current:highlights:start -->
-Measured **0.2.4.dev2** against susieR 0.16.6.
+Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.
 
-| Analysis | Loci | Max. absolute PIP difference vs susieR | Speed-up¹ | Memory ratio² |
-| --- | --- | --- | --- | --- |
-| GWAS | 100 | 9.14e-09 | 26× | 6.3× |
-| eQTL | 100 | 1.22e-08 | 22× | 6.2× |
+| Analysis | Cases | Timing pairs | Total-time speed-up¹ | Per-case geometric mean² | Peak RSS ratio³ |
+| --- | --- | --- | --- | --- | --- |
+| GWAS | 200 | 200 | 27.7× | 35× | 3.66× |
+| eQTL | 14157 | 14157 | 19.1× | 22.7× | 3.77× |
 
-¹ Geometric mean of per-locus susieR/prusie runtime ratios. ² Median per-locus susieR/prusie ratio of peak resident memory (RSS), including the interpreter and inputs.
+¹ Sum of all seven retained R fit times divided by the corresponding prusie total. ² Geometric mean of within-case median-time ratios. ³ Median paired R/prusie fresh-process peak RSS, including interpreter and inputs. The two speed-up summaries use different weighting.
 <!-- current:highlights:end -->
 
 **Environment:** AMD EPYC 9754; Linux x86-64, glibc 2.35; CPython 3.12.2,
@@ -29,7 +29,12 @@ identifies the loaded libraries and binary hashes.
 ## Data
 
 <!-- generated:panel:start -->
-The data cover 100 genomic windows: 100 analyses of one FinnGen R10 inflammatory bowel disease GWAS (K11_IBD_STRICT; n = 412181) and 100 BLUEPRINT monocyte eQTL analyses (QTD000021; n = 191), representing 83 distinct genes. The interval metadata contain 0 overlapping window pairs. Analyses share study participants and reference samples; the 200 trait analyses are not 200 independent loci.
+The fixed panel contains **200 FinnGen R13 type 2 diabetes GWAS loci** (n = 486,019; 89,727 cases and 396,292 controls) and **14,157 GTEx v11 Whole_Blood genes** (n = 800). GWAS is fitted with the frozen Gaussian RSS approximation. All cases remain accounted for, including iteration-limit outputs, empty credible sets, numerical discrepancies and operational failures. Gene windows and study participants overlap; cases are not independent biological replications.
+
+| Analysis | Cases | Variants per case | Alpha passes / failures / unavailable | Operational failures |
+| --- | --- | --- | --- | --- |
+| GWAS | 200 | 1575 to 19221 | 200 / 0 / 0 | 0 |
+| eQTL | 14157 | 7 to 6862 | 14156 / 1 / 0 | 0 |
 <!-- generated:panel:end -->
 
 Each analysis contains 103–4,162 aligned variants. Signed LD comes from
@@ -78,10 +83,10 @@ hardware; implementation agreement does not establish model validity.
 
 <!-- current:runtime:start -->
 
-| Analysis | prusie (ms) | susieR (ms) | Faster / tied / slower | prusie repeat IQR/median | susieR repeat IQR/median |
+| Analysis | prusie median (ms) | R median (ms) | Faster / tied / slower | prusie repeat IQR/median | R repeat IQR/median |
 | --- | --- | --- | --- | --- | --- |
-| GWAS | 5.18 | 142 | 100 / 0 / 0 | 0.0974 | 0.144 |
-| eQTL | 4.61 | 88.1 | 100 / 0 / 0 | 0.101 | 0.127 |
+| GWAS | 2.13e+03 | 6.81e+04 | 200 / 0 / 0 | 0.16 | 0.163 |
+| eQTL | 328 | 8.32e+03 | 14157 / 0 / 0 | 0.143 | 0.13 |
 <!-- current:runtime:end -->
 
 Runtime columns are medians across loci of the seven-repeat medians. The
@@ -95,12 +100,12 @@ Downloads below retain individual repeats and convergence/CS groups.
 
 <!-- current:memory:start -->
 
-| Analysis / backend | Peak RSS (MiB) | Before fitting (MiB) | Sampled fit peak (MiB) | Sampled increment (MiB) |
-| --- | --- | --- | --- | --- |
-| GWAS / prusie | 41.2 | 39 | 41.2 | 2.31 |
-| GWAS / susieR | 266 | 238 | 266 | 28.2 |
-| eQTL / prusie | 41.3 | 39.1 | 41.3 | 2.29 |
-| eQTL / susieR | 262 | 238 | 262 | 23.7 |
+| Analysis / backend | Fresh-process peak RSS, across-case median (MiB) | Measured cases |
+| --- | --- | --- |
+| GWAS / prusie | 478 | 200 |
+| GWAS / susieR | 1.76e+03 | 200 |
+| eQTL / prusie | 229 | 14157 |
+| eQTL / susieR | 883 | 14157 |
 <!-- current:memory:end -->
 
 Each column is a separate median across loci. The sampled increment is
@@ -122,20 +127,20 @@ this iteration-count difference.
 
 <!-- current:scaling:start -->
 
-| Variants | Backend | Median (s) | Iterations | Converged | Peak RSS (MiB) | Sampled increment (MiB) |
-| --- | --- | --- | --- | --- | --- | --- |
-| 500 | prusie | 0.00644 | 3 | True | 41.7 | 0.664 |
-| 500 | susieR | 0.0958 | 3 | True | 266 | 28.4 |
-| 1000 | prusie | 0.0162 | 3 | True | 48.4 | 1.65 |
-| 1000 | susieR | 0.245 | 3 | True | 281 | 35.4 |
-| 2000 | prusie | 0.0638 | 3 | True | 71.5 | 2.35 |
-| 2000 | susieR | 0.773 | 3 | True | 390 | 122 |
-| 4000 | prusie | 0.238 | 3 | True | 165 | 4.15 |
-| 4000 | susieR | 3.95 | 3 | True | 830 | 470 |
-| 10000 | prusie | 1.39 | 3 | True | 809 | 3.67 |
-| 10000 | susieR | 26.5 | 3 | True | 3.82e+03 | 2.82e+03 |
-| 20000 | prusie | 6.95 | 3 | True | 3.11e+03 | 14.3 |
-| 20000 | susieR | 102 | 4 | True | 1.39e+04 | 1.06e+04 |
+| Leading variants | Backend | Median fit time (s) | Observed iterations | Converged | Peak RSS (MiB) |
+| --- | --- | --- | --- | --- | --- |
+| 500 | prusie | 0.0162 | 14 | True | 49.8 |
+| 500 | susieR | 0.997 | 14 | True | 282 |
+| 1000 | prusie | 0.057 | 15 | True | 55.4 |
+| 1000 | susieR | 3.38 | 15 | True | 319 |
+| 2000 | prusie | 0.0783 | 5 | True | 80.6 |
+| 2000 | susieR | 2.75 | 5 | True | 413 |
+| 4000 | prusie | 0.703 | 11 | True | 180 |
+| 4000 | susieR | 22.6 | 11 | True | 1.29e+03 |
+| 10000 | prusie | 1.88 | 17 | True | 863 |
+| 10000 | susieR | 115 | 17 | True | 3.91e+03 |
+| 19221 | prusie | 57.6 | 28 | True | 5.95e+03 |
+| 19221 | susieR | 648 | 28 | True | 1.72e+04 |
 <!-- current:scaling:end -->
 
 ![Runtime, process memory, iteration count and sampled RSS across six matrix sizes.](assets/benchmark/controlled_scaling.svg)
@@ -146,9 +151,10 @@ files. Peak process RSS includes loading costs. Curves connect measured sizes.
 ## Reproducibility
 
 <!-- current:identity:start -->
-- Compute commit: `ff379ada284a63a3cf1770d43faacc6b929dc923`
-- CPython 3.12 wheel SHA-256: `7fbc1305a17dfeb2decf446c4703096d4a677a843ce0225641a9fe03300d139a`
-- Native extension SHA-256: `509f2f1b7c7f330807263241cd3f6e2ac122d938c43fd41c22a209f7a8643816`
+- Measured compute commit: `a4bddf00dbb6b19e7e13d4267fc739f928ff0c5a`
+- Measured CPython 3.12 wheel SHA-256: `b4627f9116b4fbbbe6338c40d965d21e1e0e63e8ecaf4c148af7b4cd7bac65f3`
+- Native extension SHA-256: `a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e`
+- Statistical reference: susieR 0.16.6, `8e56a8e038e989856d106d9ca5175cc664fea9d2`.
 <!-- current:identity:end -->
 
 Download the [locus summaries](assets/benchmark/real_summary.json),
@@ -169,10 +175,31 @@ Measurements of prusie 0.2.3rc4 on the same loci, made on 6 October 2026:
 
 <!-- generated:earlier:start -->
 
-| Analysis | Speed-up (geometric mean) | Peak RSS ratio (median) |
-| --- | --- | --- |
-| GWAS | 37× | 6.9× |
-| eQTL | 34× | 6.8× |
+| New M1 comparison | Fixed panel | v10 decision | Retained rounds | Applicable / all cases | v10 paired-round runtime W / T / R | Case-median runtime W / T / R | Incremental-memory W / T / R | Role |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| C1_V030_vs_BASE | Primary (87) | DIAGNOSTIC_ONLY | 8 | 87 / 87 | 75 / 0 / 12 | 73 / 0 / 14 | 27 / 0 / 60 | diagnostic |
+| C1_V030_vs_BASE | Confirmation (80) | DIAGNOSTIC_ONLY | 8 | 80 / 80 | 71 / 0 / 9 | 71 / 0 / 9 | 36 / 0 / 44 | diagnostic |
+| C1_V030_vs_BASE | Large-p (17) | DIAGNOSTIC_ONLY | 8 | 17 / 17 | 13 / 0 / 4 | 13 / 0 / 4 | 6 / 0 / 11 | diagnostic |
+| C2_V030_vs_MAIN | Primary (87) | DIAGNOSTIC_ONLY | 8 | 87 / 87 | 87 / 0 / 0 | 87 / 0 / 0 | 28 / 0 / 59 | diagnostic |
+| C2_V030_vs_MAIN | Confirmation (80) | DIAGNOSTIC_ONLY | 8 | 80 / 80 | 78 / 0 / 2 | 78 / 0 / 2 | 35 / 1 / 44 | diagnostic |
+| C2_V030_vs_MAIN | Large-p (17) | DIAGNOSTIC_ONLY | 8 | 17 / 17 | 17 / 0 / 0 | 17 / 0 / 0 | 7 / 0 / 10 | diagnostic |
+| C3_V030_vs_ENG01 | Primary (87) | ACCEPTED | 16 | 87 / 87 | 36 / 0 / 51 | 34 / 0 / 53 | 62 / 0 / 25 | default-veto |
+| C3_V030_vs_ENG01 | Confirmation (80) | ACCEPTED | 16 | 80 / 80 | 34 / 0 / 46 | 32 / 0 / 48 | 51 / 0 / 29 | default-veto |
+| C3_V030_vs_ENG01 | Large-p (17) | UNRESOLVED_QUALITY | 16 | 17 / 17 | 5 / 0 / 12 | 5 / 0 / 12 | 17 / 0 / 0 | default-veto |
+| C4_t2_vs_t1 | Primary (87) | DIAGNOSTIC_ONLY | 8 | 87 / 87 | 87 / 0 / 0 | 87 / 0 / 0 | 56 / 1 / 30 | diagnostic |
+| C4_t2_vs_t1 | Confirmation (80) | DIAGNOSTIC_ONLY | 8 | 78 / 80 | 78 / 0 / 0 | 78 / 0 / 0 | 52 / 1 / 25 | diagnostic |
+| C4_t2_vs_t1 | Large-p (17) | DIAGNOSTIC_ONLY | 8 | 17 / 17 | 17 / 0 / 0 | 17 / 0 / 0 | 11 / 0 / 6 | diagnostic |
+| C4_t4_vs_t1 | Primary (87) | ACCEPTED | 8 | 87 / 87 | 87 / 0 / 0 | 87 / 0 / 0 | 52 / 0 / 35 | thread-option |
+| C4_t4_vs_t1 | Confirmation (80) | ACCEPTED | 8 | 78 / 80 | 78 / 0 / 0 | 78 / 0 / 0 | 56 / 0 / 22 | thread-option |
+| C4_t4_vs_t1 | Large-p (17) | ACCEPTED | 8 | 17 / 17 | 17 / 0 / 0 | 17 / 0 / 0 | 12 / 0 / 5 | thread-option |
+| C4_t8_vs_t1 | Primary (87) | DIAGNOSTIC_ONLY | 8 | 87 / 87 | 79 / 0 / 8 | 79 / 0 / 8 | 58 / 2 / 27 | diagnostic |
+| C4_t8_vs_t1 | Confirmation (80) | DIAGNOSTIC_ONLY | 8 | 78 / 80 | 69 / 0 / 9 | 69 / 0 / 9 | 55 / 3 / 20 | diagnostic |
+| C4_t8_vs_t1 | Large-p (17) | DIAGNOSTIC_ONLY | 8 | 17 / 17 | 14 / 0 / 3 | 14 / 0 / 3 | 10 / 0 / 7 | diagnostic |
+| C5_true_vs_false | Primary (87) | ACCEPTED | 8 | 87 / 87 | 75 / 0 / 12 | 78 / 0 / 9 | 80 / 6 / 1 | memory-only |
+| C5_true_vs_false | Confirmation (80) | ACCEPTED | 8 | 80 / 80 | 70 / 0 / 10 | 69 / 0 / 11 | 77 / 1 / 2 | memory-only |
+| C5_true_vs_false | Large-p (17) | ACCEPTED | 8 | 17 / 17 | 16 / 0 / 1 | 17 / 0 / 0 | 14 / 2 / 1 | memory-only |
+
+These are new paired Burgundy measurements. Cumulative totals do not replace the fixed-panel majority, stratified veto and robustness gates. The v10 runtime count uses the median of paired-round time ratios; the additional case-median count compares the two within-case median times. These can differ. Memory counts compare within-case medians of incremental peaks. W / T / R means lower, equal and higher candidate measurements. A comparison with 16 retained rounds uses the protocol's single quality retry, pooling both complete windows only for comparisons whose first-window decision was unresolved. Other comparisons retain the original eight rounds. Initial decisions remain in the public M1 records.
 <!-- generated:earlier:end -->
 
 These use the same definitions of speed-up and peak process memory. Full
