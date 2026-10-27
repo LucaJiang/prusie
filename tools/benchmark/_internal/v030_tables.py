@@ -199,13 +199,24 @@ def render(root, pages=None, check=False):
         "current",
     )
     provenance = summary["provenance"]
+    identity = (
+        f"- Measured compute commit: `{provenance['compute_code_commit']}`\n"
+        f"- Measured CPython 3.12 wheel SHA-256: `{provenance['wheel_sha256']}`\n"
+        f"- Native extension SHA-256: `{provenance['native_sha256']}`\n"
+        f"- Statistical reference: susieR 0.16.6, `{provenance['reference_commit']}`.\n"
+    )
+    release = provenance.get("qualified_release")
+    if release:
+        identity += (
+            f"- Qualified release commit: `{release['code_commit']}`\n"
+            f"- Qualified release wheel SHA-256: `{release['wheel_sha256']}`\n\n"
+            + release["relationship"]
+            + "\n"
+        )
     fragment(
         "docs/performance.md",
         "identity",
-        f"- Compute commit: `{provenance['compute_code_commit']}`\n"
-        f"- Frozen CPython 3.12 wheel SHA-256: `{provenance['wheel_sha256']}`\n"
-        f"- Native extension SHA-256: `{provenance['native_sha256']}`\n"
-        f"- Statistical reference: susieR 0.16.6, `{provenance['reference_commit']}`.\n",
+        identity,
         "current",
     )
     gate_rows = []

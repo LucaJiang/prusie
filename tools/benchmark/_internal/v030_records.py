@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 import statistics
+import zipfile
 from collections import Counter
 from pathlib import Path
 
@@ -635,6 +636,63 @@ def write_records(output, records):
                     "max_abs_alpha_error"
                 ]
                 writer.writerow(flat)
+
+
+def bind_release(run, output):
+    """Identify the qualified release without relabelling retained measurements."""
+    run, output = Path(run).resolve(), Path(output)
+    summary_path = output / "v030_summary.json"
+    summary = read(summary_path)
+    measured = measurement_freeze(run)
+    release = read(run / "status/code_freeze.json")
+    for key, measured_key in (
+        ("compute_code_commit", "code_sha"),
+        ("wheel_sha256", "wheel_sha256"),
+        ("native_sha256", "native_sha256"),
+    ):
+        assert summary["provenance"][key] == measured[measured_key]
+    assert release["code_sha"] != measured["code_sha"], "No distinct release to bind"
+    for item in (measured, release):
+        assert digest(item["wheel"]) == item["wheel_sha256"]
+    assert release["native_sha256"] == measured["native_sha256"]
+    numerical_path = run / release["numerical_report"]
+    assert digest(numerical_path) == release["numerical_report_sha256"]
+    numerical = read(numerical_path)
+    assert numerical["passed"] and numerical["completed_cells"] == 1472
+    assert not numerical["failures"] and not numerical["missing"]
+    assert numerical["commit"] == release["numerical_qualified_code_sha"]
+    certificate = read(run / release["production_identity_certificate"])
+    assert certificate["runtime_members_equal"]
+    assert certificate["final_wheel_sha256"] == release["wheel_sha256"]
+    assert certificate["qualified_wheel_sha256"] == numerical["wheel_sha256"]
+    with zipfile.ZipFile(measured["wheel"]) as old, zipfile.ZipFile(release["wheel"]) as new:
+        assert set(old.namelist()) == set(new.namelist())
+        changed = sorted(name for name in old.namelist() if old.read(name) != new.read(name))
+    assert set(changed) <= {
+        "prusie/refinement.py",
+        "prusie/report.py",
+        "prusie-0.3.0.dist-info/METADATA",
+        "prusie-0.3.0.dist-info/RECORD",
+    }, "The ordinary fitting payload changed after formal measurement"
+    summary["provenance"]["qualified_release"] = dict(
+        code_commit=release["code_sha"],
+        wheel_sha256=release["wheel_sha256"],
+        native_sha256=release["native_sha256"],
+        numerical_qualified_commit=numerical["commit"],
+        numerical_report_sha256=release["numerical_report_sha256"],
+        changed_wheel_members=changed,
+        formally_timed=False,
+        fresh_process_memory_profiled=False,
+        ordinary_fitting_modules_byte_identical=True,
+        relationship=(
+            "The retained measurements used refine=False and the measured wheel above. "
+            "The qualified release adds opt-in refinement tracing and report handling. "
+            "Its native extension and ordinary fitting modules are byte-identical, "
+            "but the release wheel was not separately timed or memory-profiled."
+        ),
+    )
+    write(summary_path, summary)
+    return summary["provenance"]["qualified_release"]
 
 
 def load_public(output):

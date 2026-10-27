@@ -42,6 +42,14 @@ It authenticates each task against the retained measurement freeze, preserving
 that wheel identity independently of later qualified package builds. Per-task
 software hashes also retain controller-only resumption history.
 
+If a later qualified wheel adds optional functionality, the private-archive command
+`python tools/benchmark/v030.py bind-release --run MEASUREMENT_ARCHIVE` records its
+separate identity after checking the actual wheel contents and numerical evidence.
+It preserves the measured wheel identity and explicitly labels the later wheel as
+neither separately timed nor memory-profiled. Regenerating the tables then shows
+both builds; byte-identical ordinary fitting modules do not constitute a fresh
+measurement of the later package.
+
 Headline speed-up is the sum of all seven retained R times divided by the
 corresponding prusie total, separately for GWAS and eQTL. The geometric mean of
 per-case median-time ratios is a distinct summary. All completed positive timing
