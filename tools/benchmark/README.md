@@ -6,25 +6,31 @@ jsonlite; retain package source provenance as well as its version.
 
 ## Recorded 0.3.0 measurements
 
-The fixed real-data panel comprises 200 FinnGen R13 T2D loci and 14,157 GTEx v11
-Whole_Blood genes. The primary comparison uses fresh susieR fits and one native
-thread, with one warm-up and seven retained complete-call timings per backend.
-Backends run sequentially on the same core for each case. Independent processes
-measure peak RSS, including interpreter, imports, inputs and the returned fit.
-Thread scaling, opt-in LD overwrite and nested windows of one real T2D locus
-are separate series. The 184-case M1 comparison uses the distinct paired v10
-protocol; its measurements and acceptance decisions are reported separately.
-Each M1 window retains eight rounds. The predeclared single quality retry adds
-one complete window and pools 16 rounds only for unresolved comparisons; it
-does not retry a trustworthy rejection. The public M1 records retain the
-first-window decisions and identify the rounds used by each final comparison.
+The current runtime comparison includes all 200 FinnGen R13 T2D loci,
+14,157 GTEx v11 Whole_Blood genes and six nested windows. It runs on exclusive
+Burgundy AMD EPYC 7742 nodes with one numerical thread, one pinned core per L3
+domain and NUMA-local memory. Each fresh backend process makes one warmup and
+three retained calls. Complete-call and fitting-stage times describe the same
+fits; backends run sequentially within each case in a seeded balanced order.
+LD is reconstructed untimed with PLINK from the frozen genotype/sample source,
+variant order and allele alignment. It is not required to be bitwise identical
+to earlier local LD.
 
-The small `v030_*.tsv` tables under `docs/assets/benchmark/` contain per-case
-summaries. `v030_records.jsonl.gz` preserves all retained observations, numerical
-statuses, convergence and host-load summaries; it contains no association inputs
-or individual-level data. `v030_m1.json` retains the M1 comparisons, case records
-and gate diagnostics. The public records suffice to redraw the current figures
-and verify generated text without R or the real association inputs:
+`burgundy_records.jsonl.gz`, `burgundy_summary.json` and `burgundy_protocol.json`
+under `docs/assets/benchmark/` supply the current runtime and numerical results.
+The [protocol guide](../../docs/reproducibility.md#burgundy-protocol) explains
+instrumentation, the adoption of 24 completed seven-repeat cases, operational
+handling and the direct fitting-stage boundaries. Exact cluster scripts and
+patches are [archived](../../docs/assets/benchmark/burgundy/README.txt).
+
+`v030_records.jsonl.gz` and `v030_summary.json` retain the earlier local AMD EPYC
+9754 results, which still supply published fresh-process peak RSS. Their runtime
+fields are historical. `v030_m1.json` supplies the separate controlled Burgundy
+optimization/thread results and unchanged acceptance decisions. Dense figure
+layers are rasterized within SVG/PDF; axes and labels remain vector graphics.
+
+These commands redraw current figures and verify generated text without R,
+association inputs or new fits:
 
 ```sh
 python tools/benchmark/v030.py figures
@@ -35,27 +41,16 @@ python tools/build_docs.py
 
 Use `python tools/generate_results.py` to update generated text. Its `--pages`
 option accepts comma-separated repository-relative paths. Figure generation is
-separate so that checking text does not redraw all plots. The private archive
-importer, `python tools/benchmark/v030.py import --run MEASUREMENT_ARCHIVE`, checks
-the complete fixed panel and emits only the selected public measurement fields.
-It authenticates each task against the retained measurement freeze, preserving
-that wheel identity independently of later qualified package builds. Per-task
-software hashes also retain controller-only resumption history.
+separate so that checking text does not redraw all plots. The legacy `import`
+and `bind-release` actions of `v030.py` apply only to the original private v030
+archive and its memory/software provenance; they do not generate the Burgundy
+runtime campaign. Current rendering requires both published archives.
 
-If a later qualified wheel adds optional functionality, the private-archive command
-`python tools/benchmark/v030.py bind-release --run MEASUREMENT_ARCHIVE` records its
-separate identity after checking the actual wheel contents and numerical evidence.
-It preserves the measured wheel identity and explicitly labels the later wheel as
-neither separately timed nor memory-profiled. Regenerating the tables then shows
-both builds; byte-identical ordinary fitting modules do not constitute a fresh
-measurement of the later package.
-
-Headline speed-up is the sum of all seven retained R times divided by the
-corresponding prusie total, separately for GWAS and eQTL. The geometric mean of
-per-case median-time ratios is a distinct summary. All completed positive timing
-pairs enter both summaries, including alpha discrepancies, iteration-limit fits,
-empty credible sets and cases whose separate memory measurement failed.
-Incomplete timing pairs and all other failures remain explicitly accounted for.
+For each timing metric, headline speed-up is the sum of all three retained R
+times divided by the corresponding prusie total. The ratio of sums of case
+medians and the geometric mean of case-median ratios are separate summaries.
+All fixed cases enter, including alpha discrepancies, iteration-limit fits
+and empty credible sets. Operational retries are recorded separately.
 
 ## Independent toy example
 
@@ -172,14 +167,14 @@ its unit tests cover empty CSs, both-max-iteration fits, failures and true error
 maxima. The internal `import_records.py` can import the original controlled evidence archive
 using `--evidence-root`, `--output` and a run-local `--private-receipt`.
 The public `tools/generate_results.py` needs only retained normalized records.
-To plot the retained development-version runtime, iteration counts, process RSS
-and sampled incremental memory without fitting or R:
+To redraw the current retained runtime, numerical and earlier memory figures
+without fitting or R:
 
 ```sh
 python tools/benchmark/reproduce.py --render-records --output-dir benchmark-figures
 ```
 
-Use `--real REAL.json --scaling SCALING.json` to select other normalized records.
+Use `--assets DIRECTORY` to select a complete set of current public record files.
 See [reproducibility](../../docs/reproducibility.md) for the distinction between
 record regeneration and input-level reruns.
 

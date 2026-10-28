@@ -31,24 +31,87 @@ command writes SVG and PDF files to `docs/assets/benchmark/`.
 Add `--check` to `tools/model_examples.py` or
 `tools/generate_results.py` to check its generated Markdown without rewriting it.
 
-The current 0.3.0 records are in `docs/assets/benchmark/`:
+The records in `docs/assets/benchmark/` have distinct measurement origins:
 
 | File | Contents |
 | --- | --- |
-| [v030_summary.json](assets/benchmark/v030_summary.json) | Aggregate results, protocol and software identities. |
-| [v030_records.jsonl.gz](assets/benchmark/v030_records.jsonl.gz) | Per-case timing repeats, memory measurements, numerical and convergence diagnostics, and host-load summaries. |
-| [v030_m1.json](assets/benchmark/v030_m1.json) | Separate paired optimization measurements and acceptance decisions. |
+| [burgundy_summary.json](assets/benchmark/burgundy_summary.json) | Complete-call and fitting-stage summaries, variant-count quintiles, repeat variability and earlier local comparisons. |
+| [burgundy_records.jsonl.gz](assets/benchmark/burgundy_records.jsonl.gz) | All 14,363 cases, three retained times per backend/metric, timestamps, outcomes and numerical differences. |
+| [burgundy_protocol.json](assets/benchmark/burgundy_protocol.json) | Frozen protocol v2 and artifact hashes. |
+| [v030_summary.json](assets/benchmark/v030_summary.json) and [v030_records.jsonl.gz](assets/benchmark/v030_records.jsonl.gz) | Earlier local EPYC 9754 measurements, retained as the source of published peak RSS. Their old runtime fields are historical. |
+| [v030_m1.json](assets/benchmark/v030_m1.json) | Earlier controlled Burgundy optimization and thread measurements, with unchanged acceptance decisions. |
+| [nonconverged_records.jsonl.gz](assets/benchmark/nonconverged_records.jsonl.gz) | Separate local 1,000-iteration diagnostic for all 224 originally nonconverged genes. |
+| [c3_instructions.tsv](assets/benchmark/c3_instructions.tsv) | Instruction-count follow-up on the 17 large-p cases. |
 
-Compact per-case summaries are provided in
-[v030_primary.tsv](assets/benchmark/v030_primary.tsv),
-[v030_threads.tsv](assets/benchmark/v030_threads.tsv),
-[v030_overwrite.tsv](assets/benchmark/v030_overwrite.tsv) and
-[v030_windows.tsv](assets/benchmark/v030_windows.tsv).
+These records contain case identifiers and measurements; association vectors,
+LD matrices and individual genotypes are not included. The earlier
+[v030_overwrite.tsv](assets/benchmark/v030_overwrite.tsv) retains the paired
+local memory results. Historical per-case timing fields are preserved in the
+compressed archive but do not supply the new runtime figures.
 
-These public records contain case identifiers and measurement results;
-association vectors and LD matrices are not included. The
-[performance page](performance.md#reproducibility) gives the measured binary
-hashes and the separately qualified release identity.
+## Burgundy protocol
+
+The full panel is 200 GWAS loci, 14,157 eQTL genes and six nested windows of one
+GWAS locus. Each backend starts a fresh process, loads inputs untimed, makes
+one warmup and three retained calls, and records both timing metrics from each
+call. Backends run sequentially on one pinned physical core, with seeded,
+balanced order. Exclusive nodes use AMD EPYC 7742 processors. One lane per L3
+domain leaves the other cores in that domain idle; a separate domain serves
+the coordinator. NUMA binding, topology, node identity, host samples and
+per-call timestamps are retained. One numerical thread is enforced in both
+backends, and the R BLAS probe verifies one thread.
+The measured nodes were cpunode-011, cpunode-015 and cpunode-029, with 31 timing
+lanes each. All lane probes used NUMA memory binding. Frequency and governor
+sysfs readings were unavailable, so no fixed-frequency claim is made.
+
+The signed LD is built on the compute node with PLINK 1.9.0 (27 September
+2026), `--r square bin`, `--threads 1`, frozen variants/order and counted
+alleles. The reference has no missing genotypes for the selected samples.
+The EUR sample list contains one nonfounder; `--make-founders` includes all
+525 selected samples in this calculation. Genotype/reference receipts are
+verified before staging. The 24-case fidelity sample checks signs and the
+maximum absolute difference from local LD; its observed maximum is
+$2.15\times10^{-14}$. This establishes rounding-level agreement on the
+sample, not bitwise equality or an unmeasured full-panel LD comparison.
+
+Complete-call timing includes validation and preparation. Fitting-stage
+measurement starts after input/LD preparation and includes initialization,
+IBSS/SER, convergence/ELBO, and final posterior/credible-set construction.
+R measures from immediately before `susie_workhorse` to the final public
+return. Native timing combines directly measured initialization/solver,
+output-export and Python-finalization spans. It includes implicit Gram
+scaling during matrix-vector products; R constructs its scaled Gram matrix
+in preparation. Minor scalar checks and final-CS submatrix normalization
+remain in the fitting stage. Small transitions between native spans are
+omitted. No separately measured cost is subtracted.
+
+The [archived harness and instrumentation](assets/benchmark/burgundy/README.txt)
+include exact frozen scripts, patches, hashes and boundary notes. They retain
+cluster paths and are an execution archive, not a portable cluster installer.
+The original release artifacts remain unchanged. Eight representative cases
+were compared against the original artifacts before formal timing; final
+alpha/PIP arrays were bitwise unchanged, with matching recorded iterations,
+convergence and CS counts. Complete-call timing shifts are reported in
+[Methods](performance.md#methods); negligible overhead is not assumed.
+
+Protocol v1 initially retained seven calls. At the repeat-count amendment,
+24 completed cases were preserved and contribute their first three retained
+times. Their saved final alpha/PIP arrays are from retained repeat seven;
+other cases save retained repeat three. Thirty-one in-flight cases were
+aborted and restarted under v2 solely because of this amendment. Completed
+raw outputs and claims were preserved; some unarchived node-local partial
+outputs from those aborted cases could not be recovered. The archive records
+that limitation and does not treat those cases as outcome-based reruns.
+
+Only operational failures permit a whole-case retry with identical settings.
+The 19,221-variant nested window required one retry after R was killed by a
+NUMA-local out-of-memory event. The failed attempt is preserved; the whole
+case completed on another node with the same protocol. Node-wide memory
+admission did not guarantee enough free memory within each NUMA domain.
+Every fixed case remains in the denominator. The old seven-repeat local
+statistics and a first-three-retained sensitivity accompany the new repeat
+variability results. The new process high-water marks are diagnostics;
+published memory remains the earlier local fresh-process experiment.
 
 ## Toy example
 
@@ -168,22 +231,28 @@ Downloaded revisions or newly constructed LD panels define different inputs.
 
 ## Software and references
 
-Keep the software identity with each fit. The
-[public summary](assets/benchmark/v030_summary.json) records Python, NumPy and
-R versions, plus identities of loaded numerical libraries, for the published
-measurements. Both builds below report prusie 0.3.0:
+The Burgundy runtime environment uses CPython 3.12.4, NumPy 1.26.4 and R
+4.4.0. NumPy loads OpenBLAS 0.3.23.dev; R uses OpenBLAS 0.3.20, with the
+loaded library identities and thread probes recorded in the archive.
 
-| Build | Code commit | Wheel SHA-256 |
-| --- | --- | --- |
-| Measured | `a4bddf00dbb6b19e7e13d4267fc739f928ff0c5a` | `b4627f9116b4fbbbe6338c40d965d21e1e0e63e8ecaf4c148af7b4cd7bac65f3` |
-| Qualified release | `6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7` | `85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59` |
+| Runtime artifact | SHA-256 |
+| --- | --- |
+| Original frozen 0.3.0 wheel, code `6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7` | `85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59` |
+| Timing-instrumented wheel derived from that release | `ea54f79bae02240370811345ac34d751b6c58f4affd54477b31d649f90fd0af8` |
+| Timing-instrumented native extension | `95b764e5c99c4c1c851c0c8b5d1aa9a4577201a826ad2db6eb436bae635df577` |
+| Native timing patch | `f558de65c0eb3a6d7047f30a2c0f9a84e944616a42e921a51a2d5387df8ec8c2` |
+| R timing helper | `7e688f6cb146befe3f37ce2bd95a966c2f811e11180cdadd25515420a9158e6a` |
+| PLINK binary | `47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062` |
 
-All measured fits used `refine=False`. The two builds have byte-identical
-native extensions and ordinary fitting modules. The release wheel was
-qualified separately and was not separately timed or measured for
-fresh-process peak memory. The [performance page](performance.md#reproducibility)
-gives the native extension hash; [numerical accuracy](numerical_accuracy.md)
-describes the tested configurations and their limitations.
+All formal fits use `refine=False`. Earlier local peak-RSS measurements used
+code `a4bddf00dbb6b19e7e13d4267fc739f928ff0c5a`, wheel
+`b4627f9116b4fbbbe6338c40d965d21e1e0e63e8ecaf4c148af7b4cd7bac65f3`,
+on AMD EPYC 9754 with CPython 3.12.2. That native extension and the frozen
+release native extension have SHA-256
+`a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e`.
+The derived timing binary is explicitly distinct. See
+[numerical accuracy](numerical_accuracy.md) for the separate engineering
+qualification and full-panel numerical by-product.
 
 The numerical reference is susieR 0.16.6 at commit
 `8e56a8e038e989856d106d9ca5175cc664fea9d2`; the

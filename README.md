@@ -72,12 +72,12 @@ sets (CS) and then produces figures and an offline report from the same fit.
 <!-- current:highlights:start -->
 Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.
 
-| Analysis | Cases | Timing pairs | Total-time speed-up¹ | Per-case geometric mean² | Peak RSS ratio³ |
+| Analysis | Cases | Complete-call speed-up¹ | Fitting-stage speed-up¹ | Complete-call sum-of-medians² | Peak RSS ratio³ |
 | --- | --- | --- | --- | --- | --- |
-| GWAS | 200 | 200 | 27.7× | 35× | 3.66× |
-| eQTL | 14157 | 14157 | 19.1× | 22.7× | 3.77× |
+| GWAS | 200 | 49.2× | 55.4× | 42.9× | 3.66× |
+| eQTL | 14157 | 26.6× | 29.8× | 26.6× | 3.77× |
 
-¹ Sum of all seven retained R fit times divided by the corresponding prusie total. ² Geometric mean of within-case median-time ratios. ³ Median paired R/prusie fresh-process peak RSS, including interpreter and inputs. The two speed-up summaries use different weighting.
+¹ Sum of three retained R times divided by the corresponding prusie total, on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. ² Sum of within-case R medians divided by the sum of prusie medians. ³ Median paired R/prusie fresh-process peak RSS from the earlier local AMD EPYC 9754 measurements, including interpreter and inputs. Runtime and memory have separate origins.
 <!-- current:highlights:end -->
 
 The performance report identifies the measured software, hardware, data and protocol.

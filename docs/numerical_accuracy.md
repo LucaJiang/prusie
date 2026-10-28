@@ -50,7 +50,9 @@ and stochastic draws across languages require separate validation.
 ## Variant inclusion probabilities
 
 The primary real-data comparison fits FinnGen R13 type 2 diabetes GWAS loci
-and GTEx v11 Whole_Blood eQTL analyses with prusie and fresh susieR 0.16.6.
+and GTEx v11 Whole_Blood eQTL analyses on Burgundy, using the AVX2-capable
+native build and fresh susieR 0.16.6. The arrays are a by-product of the formal
+timed calls, with no additional fits. R alpha is saved as binary float64.
 prusie uses `n_threads=1` and `refine=False`. Both implementations receive
 matched summary statistics, LD and model settings; see the
 [input provenance](reproducibility.md#real-gwas-and-eqtl-inputs) and
@@ -60,8 +62,8 @@ matched summary statistics, LD and model settings; see the
 
 | Analysis | Cases | Alpha passes / failures / unavailable | Maximum &#124;Δalpha&#124; | Maximum &#124;ΔPIP&#124; |
 | --- | --- | --- | --- | --- |
-| GWAS | 200 | 200 / 0 / 0 | 6.58e-08 | 6.58e-08 |
-| eQTL | 14157 | 14156 / 1 / 0 | 1.27e-05 | 1.27e-05 |
+| GWAS | 200 | 200 / 0 / 0 | 4.05e-08 | 4.05e-08 |
+| eQTL | 14157 | 14155 / 2 / 0 | 4.35e-05 | 0.000243 |
 
 The gate remains absolute alpha error ≤ 1e-5, with relative tolerance zero. Iteration-limit exceedances remain failures of this numerical threshold.
 <!-- generated:maxima:end -->
@@ -69,14 +71,14 @@ The gate remains absolute alpha error ≤ 1e-5, with relative tolerance zero. It
 The table reports observed maximum absolute differences over the complete
 returned arrays. Pass/fail status follows the
 [alpha criterion](#component-posterior-validation); PIP differences are
-additional diagnostics. The [per-case table](assets/benchmark/v030_primary.tsv)
-gives the errors and numerical status of each primary comparison.
+additional diagnostics. The [per-case records](assets/benchmark/burgundy_records.jsonl.gz)
+give the errors and numerical status of each primary comparison.
 
 ![Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, with separate GWAS and eQTL panels.](assets/benchmark/v030_numerical_agreement.svg)
 
 The vertical axes use a symmetric-log scale that retains exact zeros. The
 dashed lines mark the alpha acceptance limit in the top panels.
-[Vector PDF](assets/benchmark/v030_numerical_agreement.pdf).
+[PDF](assets/benchmark/v030_numerical_agreement.pdf).
 
 <!-- generated:limits:start -->
 
@@ -88,45 +90,23 @@ dashed lines mark the alpha acceptance limit in the top panels.
 All completed positive timing pairs enter the performance summaries, independently of convergence, alpha agreement and credible-set presence. Per-case records list every status.
 <!-- generated:limits:end -->
 
-The only gene exceeding the alpha criterion is `ENSG00000110203.10`. Its
-maximum absolute alpha difference is $1.26768\times10^{-5}$ in the primary
-comparison and in the separate `n_threads=2`, `4` and `8` comparisons. In all
-observed fits for this gene, both backends reached `max_iter=100` with
-`converged=False`. All four settings remain recorded as threshold failures.
-No exceedance involved a converged backend. The
-[full summary](assets/benchmark/v030_summary.json) retains the individual
-outcomes and probability-validity checks.
+## Individual exceedances and posterior diagnostics
 
-## Reference integrity and posterior diagnostics
-
-The first table checks whether fresh susieR `alpha` matrices reproduce the
-stored R references exactly, comparing both values and bit patterns. This is
-separate from the [alpha tolerance](#component-posterior-validation) used to
-compare prusie with fresh susieR. The second table lists the four settings with
-alpha threshold failures described [above](#variant-inclusion-probabilities).
+Every alpha exceedance is listed below. Exceedances remain threshold failures;
+the predeclared exception applies only when both backends reach the
+iteration limit without convergence. Any exceedance involving a converged
+backend is reported separately and prominently. No case is removed from the
+timing summary because of convergence or numerical outcome.
 
 <!-- generated:errors:start -->
-
-| Analysis | Fresh/frozen R: non-bitwise cases | Fresh/frozen R: unequal-value cases | Integrity unavailable | Maximum fresh/frozen &#124;Δalpha&#124; |
-| --- | --- | --- | --- | --- |
-| GWAS | 200 | 200 | 0 | 5e-16 |
-| eQTL | 14101 | 14101 | 0 | 5.55e-16 |
-
-Fresh R is checked before timing against the stored frozen alpha values. Every nonzero difference remains recorded; the full-precision new R alpha is used for the prusie comparison. Frozen decimal serialization can prevent bitwise identity.
+No alpha exceedance involved a converged backend.
 
 
-| Case | Setting | Maximum &#124;Δalpha&#124; | prusie: iterations / converged | R: iterations / converged | Both at iteration limit |
-| --- | --- | --- | --- | --- | --- |
-| ENSG00000110203.10 | primary | 1.26768e-05 | 100 / False | 100 / False | True |
-| ENSG00000110203.10 | threads2 | 1.26768e-05 | 100 / False | 100 / False | True |
-| ENSG00000110203.10 | threads4 | 1.26768e-05 | 100 / False | 100 / False | True |
-| ENSG00000110203.10 | threads8 | 1.26768e-05 | 100 / False | 100 / False | True |
+| Case | Setting | Maximum &#124;Δalpha&#124; | prusie: iterations / converged | R: iterations / converged | Both at iteration limit | Disposition |
+| --- | --- | --- | --- | --- | --- | --- |
+| ENSG00000164741.15 | primary | 1.5907202e-05 | 100 / False | 100 / False | True | ACCEPTED_BOTH_NONCONVERGED_EXCEPTION |
+| ENSG00000110203.10 | primary | 4.3494803e-05 | 100 / False | 100 / False | True | ACCEPTED_BOTH_NONCONVERGED_EXCEPTION |
 <!-- generated:errors:end -->
-
-Every primary case has a stored R reference. The nonzero R-versus-R differences
-remain exact-integrity mismatches, even at rounding scale. The
-[per-case table](assets/benchmark/v030_primary.tsv) retains each primary case's
-bitwise status and maximum absolute difference.
 
 The full real-data comparison does not provide error bounds for posterior
 moments, variances, log Bayes factors or ELBOs. See the
@@ -154,7 +134,7 @@ This full-panel campaign records set counts; it does not compare full member ide
 
 Matching aggregate counts do not establish agreement of individual sets.
 Credible-set presence also does not establish convergence. Interpret the counts
-alongside the [recorded convergence flags](assets/benchmark/v030_records.jsonl.gz)
+alongside the [recorded convergence flags](assets/benchmark/burgundy_records.jsonl.gz)
 and the [credible-set fields](results.md#credible-set-fields).
 
 ## Independent toy example
@@ -176,10 +156,11 @@ for the simulation method, fitting options and packaged reference, and the
 
 ## Reproduce the comparisons
 
-The [public summary](assets/benchmark/v030_summary.json),
-[primary comparison table](assets/benchmark/v030_primary.tsv) and
-[full per-case records](assets/benchmark/v030_records.jsonl.gz) provide numerical
-errors, convergence diagnostics and reference-integrity results. Follow the
+The [Burgundy summary](assets/benchmark/burgundy_summary.json) and
+[full per-case records](assets/benchmark/burgundy_records.jsonl.gz) provide
+numerical errors and convergence diagnostics. The 24 adopted earlier-protocol
+cases retain their saved final arrays from retained repeat seven; other cases
+save the arrays from retained repeat three. These repeat identities are explicit. Follow the
 [regeneration instructions](reproducibility.md#tables-and-figures) to rebuild
 the tables and figures from retained measurements without refitting.
 
@@ -190,3 +171,29 @@ real-data comparisons requires the separately obtained
 [association summaries and LD](reproducibility.md#real-gwas-and-eqtl-inputs),
 with the same variant order and fitting settings. Preserve the frozen inputs
 and reference files when running new checks.
+
+## Longer iteration-limit diagnostic
+
+The separate local AMD EPYC 9754 supplement selected all 224 GTEx genes for
+which both backends had reported nonconvergence at `max_iter=100`. Each backend
+was called once per gene with `max_iter=1000`, with every other setting and the
+original local inputs unchanged. This diagnostic does not change the default,
+formal benchmark settings, acceptance criterion or original classification.
+
+Both backends converged for 102 genes and returned nonconverged fits for 83.
+For the other 39 genes, both stopped with the existing prior-variance guard;
+those calls did not return fits and have no final iteration count. There were
+no discordant backend outcomes. The guard message suggests inconsistent
+summary statistics and LD as one possible cause; this supplement did not
+establish that cause.
+
+Among the 185 returned pairs, the largest absolute alpha difference was
+$5.49 \times 10^{-8}$; among the 102 both-converged pairs, it was $2.59 \times 10^{-8}$.
+For ENSG00000110203.10, both still reported nonconvergence after 1,000
+iterations, with maximum alpha difference $7.16 \times 10^{-10}$. This does not replace
+the original 100-iteration exceedance or its recorded user disposition.
+
+The [supplement records](assets/benchmark/nonconverged_records.jsonl.gz)
+list every gene, returned iteration count, numerical difference or guard
+rejection. The [selected gene list](assets/benchmark/nonconverged_case_ids.txt) has SHA-256
+`8ee34a2840903be09fa500241d646e508b1ddbd217f7996f07c59caadd125e47`.

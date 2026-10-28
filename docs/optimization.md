@@ -479,12 +479,11 @@ For an eligible dense fit, 2–4 threads are useful starting points; measure
 on the intended workload and keep BLAS at one thread when assessing this
 option. In the [paired measurements](performance.md#earlier-measurements),
 four threads improved all applicable cases in the 87-case, 80-case and
-17-case panels (87, 78 and 17 applicable cases). In the separate, concurrently
-loaded real-data series, four threads had median one-thread/four-thread
-time ratios of 1.93 for GWAS and 1.63 for eQTL, with slower cases in both
-panels. [Thread scaling](performance.md#thread-scaling) gives all counts and
-the separately measured eight-thread results. When running several fits
-concurrently, account for the worker threads in each fit.
+17-case panels (87, 78 and 17 applicable cases). On the primary 87-case
+panel, the median paired four/one-thread ratio was 0.735; eight/one was
+0.783, and eight threads were slower than one in 8 cases.
+[Thread scaling](performance.md#thread-scaling) gives the controlled results.
+When running several fits concurrently, account for each fit's worker threads.
 
 ## What prusie does not do
 

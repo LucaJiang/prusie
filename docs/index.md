@@ -71,24 +71,21 @@ susieR divided by prusie.
 <!-- current:highlights:start -->
 Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.
 
-| Analysis | Cases | Timing pairs | Total-time speed-up¹ | Per-case geometric mean² | Peak RSS ratio³ |
+| Analysis | Cases | Complete-call speed-up¹ | Fitting-stage speed-up¹ | Complete-call sum-of-medians² | Peak RSS ratio³ |
 | --- | --- | --- | --- | --- | --- |
-| GWAS | 200 | 200 | 27.7× | 35× | 3.66× |
-| eQTL | 14157 | 14157 | 19.1× | 22.7× | 3.77× |
+| GWAS | 200 | 49.2× | 55.4× | 42.9× | 3.66× |
+| eQTL | 14157 | 26.6× | 29.8× | 26.6× | 3.77× |
 
-¹ Sum of all seven retained R fit times divided by the corresponding prusie total. ² Geometric mean of within-case median-time ratios. ³ Median paired R/prusie fresh-process peak RSS, including interpreter and inputs. The two speed-up summaries use different weighting.
+¹ Sum of three retained R times divided by the corresponding prusie total, on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. ² Sum of within-case R medians divided by the sum of prusie medians. ³ Median paired R/prusie fresh-process peak RSS from the earlier local AMD EPYC 9754 measurements, including interpreter and inputs. Runtime and memory have separate origins.
 <!-- current:highlights:end -->
 
-Measurements used one numerical thread per fit on a concurrently loaded
-AMD EPYC 9754 host running Linux x86-64. Peak RSS is the process's peak
-resident memory, including the interpreter, inputs and returned fit. See
-[performance](performance.md) for the protocol, software identities and scope.
-
-One eQTL analysis, `ENSG00000110203.10`, exceeds the $10^{-5}$ absolute-error
-criterion for the complete final `alpha` matrix (`rtol=0`); both backends
-reached the iteration limit without convergence. See
-[numerical accuracy](numerical_accuracy.md) for the tested configurations and
-individual outcomes.
+Runtime uses one numerical thread per fit on exclusive AMD EPYC 7742
+nodes, with complete-call and fitting-stage measurements from the same calls.
+Memory retains the earlier local AMD EPYC 9754 measurements, including the
+interpreter, inputs and returned fit. See [performance](performance.md) for
+methods and software identities, and [numerical accuracy](numerical_accuracy.md)
+for the complete-alpha comparison, individual exceedances and convergence
+diagnostics.
 
 ## Sensitivity and refinement
 
