@@ -35,7 +35,7 @@
       "src/prusie/_array_layout.py": "9ee2a16065650e78fca673c02538abbfcc3e9da7b46e60387b2017876a9a5a86",
       "src/prusie/result.py": "3d6541bfb9d57a190db65562972d7c74a4f49fc309e5dc1875e8af80cd6fe671"
     },
-    "hardware_cpu": "AMD EPYC 9754 128-Core Processor",
+    "hardware_cpu": "Local workstation",
     "timing": "Complete susie_rss public call including validation, transformation, IBSS and posterior/CS summaries; imports, input reads, explicit GC and exports excluded",
     "warmups": 1,
     "retained_repeats": 7,

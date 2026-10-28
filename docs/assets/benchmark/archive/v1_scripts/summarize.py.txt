@@ -150,14 +150,14 @@ def main():
         result['max_abs_pip_error']=max(r['max_abs_pip_error'] for r in selected)
         result['exceedances']=[{k:r[k] for k in ('case_key','case_id','p','max_abs_alpha_error','numerical_disposition','both_nonconverged_at_limit','any_backend_call_converged')} for r in selected if not r['alpha_pass']]
         panels[panel]=result
-    record=RUN/'reports/burgundy_records.jsonl.gz'
+    record=RUN/'reports/benchmark_records.jsonl.gz'
     with record.open('wb') as raw,gzip.GzipFile(fileobj=raw,mode='wb',mtime=0) as f:
         for row in sorted(rows,key=lambda r:r['case_key']):f.write((json.dumps(row,sort_keys=True,separators=(',',':'))+'\n').encode())
     summary=dict(protocol_sha256=sha(RUN/'protocol.json'),records_sha256=sha(record),panels=panels,local_baseline=old,
                  numerical_acceptance=read(RUN/'run_config.json')['numerical_acceptance'],
                  node_hours_used=read(RUN/'reports/ledger.json')['node_hours_used'])
-    write(RUN/'reports/burgundy_summary.json',summary)
-    text=['# Burgundy R–prusie comparison','',f"All {len(rows):,} fixed cases completed: 200 GWAS, 14,157 eQTL and six nested windows. Each backend has one warmup and seven retained complete calls.",'',
+    write(RUN/'reports/benchmark_summary.json',summary)
+    text=['# Benchmark R-prusie comparison','',f"All {len(rows):,} fixed cases completed: 200 GWAS, 14,157 eQTL and six nested windows. Each backend has one warmup and seven retained complete calls.",'',
           '| Panel | Cases | R retained seconds | prusie retained seconds | Total-time R/prusie | Sum-of-medians | Geometric mean | Wins/ties/regressions |',
           '|---|---:|---:|---:|---:|---:|---:|---|']
     for p,s in panels.items():
@@ -181,7 +181,7 @@ def main():
            '| Panel | Host/metric | Backend | IQR/median q1 / median / q3 / p95 / max | Cases >2× / >3× | Repeats >2× / >3× | Time fraction in >2× repeats |',
            '|---|---|---|---|---:|---:|---:|']
     for p,s in panels.items():
-        for label,group in [('Burgundy complete',s),('Local complete',old[p]),('Burgundy fitting',s['fitting'])]:
+        for label,group in [('Cluster complete',s),('Local complete',old[p]),('Cluster fitting',s['fitting'])]:
             for b,d in group['backends'].items():
                 q=d['repeat_iqr_over_median'];values=' / '.join(f'{q[k]:.6g}' for k in ('q1','median','q3','p95','max'))
                 text.append(f"| {p} | {label} | {b} | {values} | {d['cases_with_repeat_above_2x']}/{d['cases_with_repeat_above_3x']} | {d['repeats_above_2x']}/{d['repeats_above_3x']} | {d['total_time_fraction_from_repeats_above_2x']:.6g} |")
@@ -191,19 +191,19 @@ def main():
            '| Panel | Host/metric | Backend | Threshold | k=0 | k=1 | k=2 | k=3 | k=4 | k=5 | k=6 | k=7 |',
            '|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|']
     for p,s in panels.items():
-        for label,group in [('Burgundy complete',s),('Local complete',old[p]),('Burgundy fitting',s['fitting'])]:
+        for label,group in [('Cluster complete',s),('Local complete',old[p]),('Cluster fitting',s['fitting'])]:
             for b,d in group['backends'].items():
                 for threshold in (2,3):
                     counts=d[f'repeat_count_distribution_above_{threshold}x']
                     text.append(f'| {p} | {label} | {b} | >{threshold}× median | '+' | '.join(str(counts[str(k)]) for k in range(8))+' |')
-    text+=['','Runtime data use exclusive AMD EPYC 7742 nodes. The memory results retained in public documentation come from the earlier AMD EPYC 9754 host; current VmHWM is diagnostic only.','',
+    text+=['','Runtime data use exclusive AMD EPYC 7742 nodes. The memory results retained in public documentation come from the earlier local workstation; current VmHWM is diagnostic only.','',
            'LD was reconstructed with PLINK from the same authenticated genotype/sample inputs and frozen variant, allele and z records. Fidelity uses the authorized 1e-6 absolute LD threshold and sign check, not bitwise identity.','',
            'In the 24-case fidelity sample, 22 local matrices with rounding-level asymmetry became exactly symmetric with PLINK. That can change the default native LD-validation allocation path. Comparisons with local timing therefore reflect both the host/environment and LD arithmetic; aggregate changes cannot be attributed solely to reduced interference.','',
            '## Numerical exceedances','']
     for panel,s in panels.items():
         text.append(f"{panel}: maximum |Δalpha| = {s['max_abs_alpha_error']:.17g}; {len(s['exceedances'])} exceedances.")
         for r in s['exceedances']:text.append(f"- {r['case_id']} ({r['case_key']}, p={r['p']}): {r['max_abs_alpha_error']:.17g}; {r['numerical_disposition']}.")
-    text+=['','Full quintile, repeat variability and local comparison tables are in `burgundy_summary.json`; all full-panel cases and call timestamps are in `burgundy_records.jsonl.gz`.','',f"Burgundy node-hours charged through the latest Slurm accounting: {summary['node_hours_used']:.9g}."]
+    text+=['','Full quintile, repeat variability and local comparison tables are in `benchmark_summary.json`; all full-panel cases and call timestamps are in `benchmark_records.jsonl.gz`.','',f"Cluster node-hours charged through the latest Slurm accounting: {summary['node_hours_used']:.9g}."]
     (RUN/'reports/benchmark_summary.md').write_text('\n'.join(text)+'\n')
     print(json.dumps({p:{k:s[k] for k in ('cases','headline_R_over_prusie','sum_of_medians_R_over_prusie','max_abs_alpha_error')} for p,s in panels.items()},indent=2))
 

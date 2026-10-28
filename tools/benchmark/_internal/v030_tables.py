@@ -84,7 +84,7 @@ def render(root, pages=None, check=False):
         "\n¹ Sum of three retained R times divided by the corresponding prusie total, "
         "on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. "
         "² Sum of within-case R medians divided by the sum of prusie medians. "
-        "³ Median paired R/prusie fresh-process peak RSS from the earlier local AMD EPYC 9754 "
+        "³ Median paired R/prusie fresh-process peak RSS from the earlier local workstation "
         "measurements, including interpreter and inputs. "
         "Runtime and memory have separate origins.\n"
     )
@@ -122,7 +122,7 @@ def render(root, pages=None, check=False):
     fragment("docs/performance.md", "panel", panel)
     runtime_rows = []
     for panel in groups:
-        current = summary["burgundy"]["panels"][panel]
+        current = summary["benchmark"]["panels"][panel]
         for label, group in (("Complete call", current), ("Fitting stage", current["fitting"])):
             runtime_rows.append(
                 [
@@ -156,9 +156,9 @@ def render(root, pages=None, check=False):
     )
     variability = []
     for panel in groups:
-        current = summary["burgundy"]["panels"][panel]
-        old = summary["burgundy"]["local_baseline_first3"][panel]
-        for label, group in (("Burgundy, 3 calls", current), ("Local, first 3 calls", old)):
+        current = summary["benchmark"]["panels"][panel]
+        old = summary["benchmark"]["local_baseline_first3"][panel]
+        for label, group in (("EPYC 7742, 3 calls", current), ("Local, first 3 calls", old)):
             for public, backend in (("prusie", "prusie"), ("susieR", "R")):
                 values = group["backends"][backend]
                 variability.append(
@@ -237,26 +237,26 @@ def render(root, pages=None, check=False):
                 "Fitting-stage median (s)",
                 "Observed iterations",
                 "Converged",
-                "Earlier EPYC 9754 peak RSS (MiB)",
+                "Earlier local peak RSS (MiB)",
             ],
             scaling,
         ),
         "current",
     )
-    protocol = summary["burgundy_protocol"]
+    protocol = summary["benchmark_protocol"]
     original = protocol["original_code_under_test"]
     identity = (
         f"- Frozen release code: `{original['code_sha']}`\n"
         f"- Original release wheel SHA-256: `{original['wheel_sha256']}`\n"
         f"- Original native extension SHA-256: `{original['native_sha256']}`\n"
-        f"- Burgundy protocol SHA-256: `{summary['burgundy']['protocol_sha256']}`\n"
+        f"- Benchmark protocol SHA-256: `{summary['benchmark']['protocol_sha256']}`\n"
         "- Statistical reference: R 4.4.0; susieR 0.16.6, "
         "`8e56a8e038e989856d106d9ca5175cc664fea9d2`.\n\n"
         "Both runtime metrics use run-local timing instrumentation derived from these frozen "
         "artifacts. The native binary differs from the release binary; the original wheel is "
         "preserved. The instrumentation patch, derived binary hashes, source boundaries and "
         "qualification results are in the "
-        "[measurement archive](reproducibility.md#burgundy-protocol). "
+        "[measurement archive](reproducibility.md#benchmark-protocol). "
         "Earlier local memory measurements retain their original measured build identity.\n"
     )
     fragment("docs/performance.md", "identity", identity, "current")
@@ -318,7 +318,7 @@ def render(root, pages=None, check=False):
             ],
             gate_rows,
         )
-        + "\nThese are earlier controlled Burgundy measurements. Cumulative totals do not replace "
+        + "\nThese are earlier controlled measurements on the same AMD EPYC 7742 nodes. Cumulative totals do not replace "
         "the fixed-panel majority, stratified non-regression check and robustness criteria. "
         "The v10 runtime count uses the median of paired-round time ratios; the additional "
         "case-median count compares the two within-case median times. These can differ. "
@@ -391,7 +391,7 @@ def render(root, pages=None, check=False):
     )
     converged_failures = [
         r
-        for p in summary["burgundy"]["panels"].values()
+        for p in summary["benchmark"]["panels"].values()
         for r in p["exceedances"]
         if r["any_backend_call_converged"]
     ]

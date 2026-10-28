@@ -63,13 +63,14 @@ agreement with susieR is assessed numerically; see
 <a href="implementation.html">Implementation</a> describes the fitting routes, and
 <a href="performance.html">Performance</a> reports runtimes and memory for the inputs,
 settings and hardware measured there.</p>
-<p>The <a href="performance.html#earlier-measurements">paired cumulative measurements</a>
-compare 184 fixed cases using eight retained complete calls per case. The
-historical-baseline and intermediate-baseline total times divided by the
-measured 0.3.0 total are 1.73 and 1.06, respectively. Cumulative totals do not
-replace the per-panel acceptance checks: the large-p comparison with the
-previously optimized baseline remains unresolved under the robustness
-criterion. The performance page records its result and limitations.</p>
+<p>The current <a href="performance.html#runtime">benchmark measurements</a> compare prusie
+and susieR 0.16.6 on 200 FinnGen T2D GWAS loci and 14,157 GTEx Whole_Blood
+eQTL genes, with three retained complete calls per case on exclusive EPYC
+7742 nodes. Across-case within-case R/prusie median-time ratios are 49.2×
+complete-call and 55.4× fitting-stage on GWAS, and 26.6× and 29.8× on eQTL;
+prusie was faster than susieR in every case on both panels. These are paired
+runtime results; the per-panel memory and thread-scaling comparisons on the
+performance page record their own gains and limitations.</p>
 <h2 id="principles">Principles</h2>
 <p>The optimizations reduce the work needed to evaluate the SuSiE updates while
 retaining float64 arithmetic. They introduce no LD thresholding, variant
@@ -452,11 +453,12 @@ candidate-by-all-variant correlation blocks. Purity from a design matrix
 forms the requested blocks as described under
 <a href="#individual-level-designs">Individual-level designs</a>.</p>
 <p>In the <a href="performance.html#ld-overwrite">real-data overwrite series</a>, enabling
-<code>overwrite_ld</code> lowered full-process peak RSS in 183 of 200 GWAS cases and
-raised it in 17. The median paired False/True peak ratio was 1.72. This is a
-measured process peak, including inputs and interpreter, rather than the
-matrix-size arithmetic above. The <a href="api.html#optional-ld-workspace">LD workspace contract</a>
-describes ownership requirements and when the caller must reload its array.</p>
+<code>overwrite_ld</code> on 200 GWAS cases produced a material fresh-process peak-RSS
+reduction in 173 cases and no material saving in 27. The median within-case
+False/True peak ratio was 1.72. This is a measured process peak, including
+inputs and interpreter, rather than the matrix-size arithmetic above. The
+<a href="api.html#optional-ld-workspace">LD workspace contract</a> describes ownership
+requirements and when the caller must reload its array.</p>
 <h2 id="threads">Threads</h2>
 <p>IBSS components remain sequential: each update uses the latest residual
 from earlier updates in the sweep. Parallelism within a dense matrix product
@@ -484,12 +486,12 @@ threading settings, so <code>n_threads=1</code> does not limit every operation i
 Python process to one thread.</p>
 <p>For an eligible dense fit, 2–4 threads are useful starting points; measure
 on the intended workload and keep BLAS at one thread when assessing this
-option. In the <a href="performance.html#earlier-measurements">paired measurements</a>,
-four threads improved all applicable cases in the 87-case, 80-case and
-17-case panels (87, 78 and 17 applicable cases). On the primary 87-case
-panel, the median paired four/one-thread ratio was 0.735; eight/one was
-0.783, and eight threads were slower than one in 8 cases.
-<a href="performance.html#thread-scaling">Thread scaling</a> gives the controlled results.
+option. In the controlled
+<a href="performance.html#thread-scaling">thread scaling</a> experiment on 87 fixed cases,
+median paired across-thread/one-thread complete-call ratios were 0.799 at
+two threads, 0.735 at four threads and 0.783 at eight threads. Four threads
+had the lowest ratio and improved every case; eight threads were slower than
+one in 8 cases and slower than four in 52.
 When running several fits concurrently, account for each fit's worker threads.</p>
 <h2 id="what-prusie-does-not-do">What prusie does not do</h2>
 <p>The optimizations described here retain float64 arithmetic. They do not

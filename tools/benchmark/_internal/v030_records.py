@@ -794,10 +794,10 @@ def load_public(output):
     with gzip.open(output / "v030_records.jsonl.gz", "rt") as stream:
         records = [json.loads(line) for line in stream]
     summary = read(output / "v030_summary.json")
-    burgundy = read(output / "burgundy_summary.json")
-    protocol = read(output / "burgundy_protocol.json")
-    assert digest(output / "burgundy_records.jsonl.gz") == burgundy["records_sha256"]
-    with gzip.open(output / "burgundy_records.jsonl.gz", "rt") as stream:
+    benchmark = read(output / "benchmark_summary.json")
+    protocol = read(output / "benchmark_protocol.json")
+    assert digest(output / "benchmark_records.jsonl.gz") == benchmark["records_sha256"]
+    with gzip.open(output / "benchmark_records.jsonl.gz", "rt") as stream:
         current = [json.loads(line) for line in stream]
     assert len(current) == 14363
     lookup = {(r["panel"], r["case_id"], r["kind"]): r for r in records}
@@ -837,7 +837,7 @@ def load_public(output):
             / prior["prusie"]["fitting_runtime"]["median"]
         )
     for panel, group in summary["groups"].items():
-        measured = burgundy["panels"][panel]
+        measured = benchmark["panels"][panel]
         selected = [r for r in current if r["panel"] == panel]
         group.update(
             timing_pairs=len(selected),
@@ -886,6 +886,6 @@ def load_public(output):
         for r in current
         if not r["alpha_pass"]
     ]
-    summary["burgundy"] = burgundy
-    summary["burgundy_protocol"] = protocol
+    summary["benchmark"] = benchmark
+    summary["benchmark_protocol"] = protocol
     return summary, read(output / "v030_m1.json"), records

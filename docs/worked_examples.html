@@ -23,8 +23,12 @@
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
+<li><a href="#main-results-and-resolution">Main results and resolution</a><ul>
+<li><a href="#resolution">Resolution</a></li>
+</ul>
+</li>
 <li><a href="#a-stopped-fit-improved-by-refinement">A stopped fit improved by refinement</a><ul>
-<li><a href="#what-remains-unresolved">What remains unresolved</a></li>
+<li><a href="#component-detail">Component detail</a></li>
 <li><a href="#sensitivity-and-ld-compatibility">Sensitivity and LD compatibility</a></li>
 </ul>
 </li>
@@ -47,6 +51,89 @@ Python source and native binary identities are in the
 second row of <code>alpha</code>, corresponding to susieR's one-based component 2.
 Variant IDs are zero-based positional indices. Genomic positions, alleles,
 genome build and gene annotations are unavailable.</p>
+<h2 id="main-results-and-resolution">Main results and resolution</h2>
+<p>The refined fit returns two retained credible sets covering two active
+single-effect components. Each CS carries posterior mass greater than 0.9999,
+and the leading variants have marginal PIPs close to one.</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Variant</th>
+<th style="text-align: right;">PIP</th>
+<th>Credible set</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>33</td>
+<td style="text-align: right;">1.000</td>
+<td>Component 2 (<code>{33}</code>)</td>
+<td>Lead; singleton CS</td>
+</tr>
+<tr>
+<td>2</td>
+<td>90</td>
+<td style="text-align: right;">0.8228</td>
+<td>Component 1 (<code>{86, 90}</code>)</td>
+<td>Lead within pair</td>
+</tr>
+<tr>
+<td>3</td>
+<td>86</td>
+<td style="text-align: right;">0.1772</td>
+<td>Component 1 (<code>{86, 90}</code>)</td>
+<td>Partner within pair</td>
+</tr>
+<tr>
+<td>4</td>
+<td>79</td>
+<td style="text-align: right;">8.76e-09</td>
+<td>—</td>
+<td>Highest non-member</td>
+</tr>
+</tbody>
+</table></div>
+<p>PIPs are marginal inclusion probabilities across the active components. The
+0.8228 PIP at variant 90 does not indicate weak overall support for component
+1: the whole CS <code>{86, 90}</code> carries posterior mass greater than 0.9999, and
+the pair splits component-level <code>alpha</code> as approximately 0.823 to 0.177 between
+90 and 86. Full-precision values are in the
+<a href="examples/post_analysis/official/comparison.json">comparison</a> and
+<a href="examples/post_analysis/official/posterior_summary.json">posterior summary</a>.</p>
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="All 200 variants, retained CS and separate LD r² panels for variants 90 and 33." class="figure-complex" src="examples/post_analysis/official/figure_1.png" width="720" /></div><figcaption><a href="examples/post_analysis/official/figure_1.png">Open original figure</a></figcaption></figure>
+<p>The locus overview marks CS members and uses one LD panel per CS, each
+referenced to its CS top variant: 90 for component 1 and 33 for component 2.
+A CS top maximizes its own component's <code>alpha</code> among its CS members; exact
+ties use lexical variant ID order, matching
+<code>summary["credible_sets"][i]["representative_rule"]</code>. Global marginal PIP
+does not select a CS top. Reference IDs, tied IDs, signed r and r² for all
+200 variants are exported under <code>locus overview.ld_references</code> in
+<a href="examples/post_analysis/official/plot_data.json">plot data</a>. The association
+track plots a two-sided normal approximation to marginal t statistics derived
+from <code>XtX</code>, <code>Xty</code> and <code>yty</code> (degrees of freedom <code>n - 2</code>); these are not
+external GWAS z scores.</p>
+<h3 id="resolution">Resolution</h3>
+<p>The two signals localize to different precisions:</p>
+<ul>
+<li><strong>Component 2 is resolved to a single variant.</strong> CS <code>{33}</code> is a singleton,
+  purity is 1 by convention and the marginal PIP at 33 is 1 to numerical
+  precision.</li>
+<li><strong>Component 1 is not resolved below the pair.</strong> CS <code>{86, 90}</code> has minimum
+  within-CS <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">∣</mi><mi>r</mi><mi mathvariant="normal">∣</mi><mo>≈</mo><mn>0.9989</mn></mrow><annotation encoding="application/x-tex">|r|\approx0.9989</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord">∣</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.9989</span></span></span></span></span>, so <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>r</mi><mn>2</mn></msup><mo>≈</mo><mn>0.9978</mn></mrow><annotation encoding="application/x-tex">r^2\approx0.9978</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.9978</span></span></span></span></span>. The two variants are
+  nearly collinear in the supplied LD reference and the posterior mass is
+  split roughly 0.823 to 0.177 between them. The effective number of
+  candidates within the CS is about 1.595; it measures posterior
+  concentration within the CS, not a causal count.</li>
+</ul>
+<p>The pairwise absolute LD between the two CS leads (33 and 90) is about 0.532.
+That value alone does not establish whether the two modeled effects are
+conditionally distinguishable: the fit already represents them as two
+separate components. PIP, alpha, r and r² are unitless; effect estimates use
+the scale of the supplied sufficient statistics. Neither CS size nor the
+number of retained CS determines the true number of causal effects.</p>
 <h2 id="a-stopped-fit-improved-by-refinement">A stopped fit improved by refinement</h2>
 <p>The baseline permits <code>L=10</code> single effects and satisfies its ELBO stopping rule
 after ten sweeps at <code>tol=0.001</code>. Refinement evaluates five credible-set exclusion
@@ -54,7 +141,7 @@ attempts in two rounds, using ten inner fits, and accepts one candidate. The
 returned candidate satisfies its inner stopping rule after three sweeps.
 The example opts into tracking for both the baseline and refinement, so the
 report shows the accepted candidate's three original stage-B sweeps.</p>
-<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Baseline and accepted-candidate convergence trajectories, on separate sweep axes." class="figure-complex" src="examples/post_analysis/official/figure_2.png" /></div><figcaption><a href="examples/post_analysis/official/figure_2.png">Open original figure</a></figcaption></figure>
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Baseline and accepted-candidate convergence trajectories, on separate sweep axes." class="figure-complex" src="examples/post_analysis/official/figure_2.png" width="820" /></div><figcaption><a href="examples/post_analysis/official/figure_2.png">Open original figure</a></figcaption></figure>
 <p>The search ranks candidates by their last logged ELBO under the original prior.
 Here it rises from −70832.271605 to −70814.813272, a gain of 17.458333.
 Its before/after values and gain are recorded in
@@ -65,7 +152,7 @@ explains the search settings and objective convention. Satisfying an inner
 stopping rule does not establish a global optimum. The unsuccessful subsequent
 attempts establish only that no executed candidate exceeded the search's
 absolute improvement threshold.</p>
-<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Refinement changes candidate support; attempts are compared against their round's incumbent." class="figure-complex" src="examples/post_analysis/official/figure_3.png" /></div><figcaption><a href="examples/post_analysis/official/figure_3.png">Open original figure</a></figcaption></figure>
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Refinement changes candidate support; attempts are compared against their round's incumbent." class="figure-complex" src="examples/post_analysis/official/figure_3.png" width="720" /></div><figcaption><a href="examples/post_analysis/official/figure_3.png">Open original figure</a></figcaption></figure>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -113,29 +200,11 @@ absolute improvement threshold.</p>
 probability close to one. Full-precision values remain in the
 <a href="examples/post_analysis/official/comparison.json">comparison</a>.
 Neither CS membership nor CS count determines the true number of causal effects.</p>
-<h3 id="what-remains-unresolved">What remains unresolved</h3>
-<p>The refined component 1 CS <code>{86,90}</code> has posterior mass greater than 0.9999.
-Its component probabilities are approximately 0.177 and 0.823. Strong LD,
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>≈</mo><mn>0.9989</mn></mrow><annotation encoding="application/x-tex">r\approx0.9989</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4831em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.9989</span></span></span></span></span> and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>r</mi><mn>2</mn></msup><mo>≈</mo><mn>0.9978</mn></mrow><annotation encoding="application/x-tex">r^2\approx0.9978</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">0.9978</span></span></span></span></span>, limits resolution within this set.
-The effective number of candidates is about 1.595; it measures posterior
-concentration, not a causal count. Component 2 has the singleton CS <code>{33}</code>;
-singleton purity is 1 by definition and says nothing about surrounding LD.</p>
-<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Component 1 detail: unresolved allocation within the 86/90 CS, cumulative posterior mass and LD r²." class="figure-complex" src="examples/post_analysis/official/figure_6.png" /></div><figcaption><a href="examples/post_analysis/official/figure_6.png">Open original figure</a></figcaption></figure>
-<p>The report presents component 1 before component 2, preserving their identities.
-In the locus overview, separate LD panels use the top variant of <strong>each</strong> CS:
-90 for component 1 and 33 for component 2. A CS top maximizes its own component's
-<code>alpha</code> among its CS members; exact ties use lexical variant ID order, matching
-<code>summary["credible_sets"][i]["representative_rule"]</code>. Global marginal PIP does
-not select a CS top. Reference IDs, tied IDs, signed r and r² for all 200 variants
-are exported under <code>locus overview.ld_references</code> in
-<a href="examples/post_analysis/official/plot_data.json">plot data</a>.</p>
-<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="All 200 variants, retained CS and separate LD r² panels for variants 90 and 33." class="figure-complex" src="examples/post_analysis/official/figure_1.png" /></div><figcaption><a href="examples/post_analysis/official/figure_1.png">Open original figure</a></figcaption></figure>
-<p>The absolute LD correlation between 33 and 90 is about 0.532. That pairwise
-correlation alone does not establish whether modeled effects are conditionally
-distinguishable. PIP, alpha, r and r² are unitless; effect estimates use the scale
-of the supplied sufficient statistics. The association track shows a two-sided
-normal approximation applied to marginal t statistics derived from <code>XtX</code>,
-<code>Xty</code> and <code>yty</code> (degrees of freedom <code>n - 2</code>). These are not external GWAS z scores.</p>
+<h3 id="component-detail">Component detail</h3>
+<p>The report presents component 1 before component 2, preserving their original
+fit-row identities. The component 1 detail plot shows the within-CS allocation,
+cumulative posterior mass and LD r² for the <code>{86, 90}</code> pair.</p>
+<figure class="doc-figure"><div class="figure-wrap figure-complex" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Component 1 detail: unresolved allocation within the 86/90 CS, cumulative posterior mass and LD r²." class="figure-complex" src="examples/post_analysis/official/figure_6.png" width="680" /></div><figcaption><a href="examples/post_analysis/official/figure_6.png">Open original figure</a></figcaption></figure>
 <h3 id="sensitivity-and-ld-compatibility">Sensitivity and LD compatibility</h3>
 <figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Baseline-first PIP comparison with refinement and L increased to 12." src="examples/post_analysis/official/figure_5.png" /></div><figcaption><a href="examples/post_analysis/official/figure_5.png">Open original figure</a></figcaption></figure>
 <p>Increasing <code>L</code> from 10 to 12 retains the baseline's three CS. The largest PIP

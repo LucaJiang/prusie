@@ -1,5 +1,5 @@
 --- v030/m2_worker.py
-+++ burgundy/m2_native.py
++++ b/m2_native.py
 @@ -17,7 +17,7 @@
  import traceback
  import warnings

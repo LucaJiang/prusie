@@ -5201,7 +5201,7 @@ L 319.779401 454.318125
      </g>
     </g>
     <g id="text_55">
-     <!-- R / prusie peak RSS, earlier EPYC 9754 -->
+     <!-- R / prusie peak RSS, earlier local workstation -->
      <g transform="translate(87.834567 647.119832) scale(0.1 -0.1)">
       <defs>
        <path id="DejaVuSans-6b" d="M 581 4863 
@@ -5902,7 +5902,7 @@ L 643.625648 454.318125
      </g>
     </g>
     <g id="text_70">
-     <!-- R / prusie peak RSS, earlier EPYC 9754 -->
+     <!-- R / prusie peak RSS, earlier local workstation -->
      <g transform="translate(412.074328 647.119832) scale(0.1 -0.1)">
       <use xlink:href="#DejaVuSans-52"/>
       <use xlink:href="#DejaVuSans-20" transform="translate(69.482422 0)"/>

@@ -3,9 +3,9 @@
 These measurements assess the time and memory required for SuSiE-RSS
 fine-mapping with prusie 0.3.0 and susieR 0.16.6. The comparison uses fresh fits
 on FinnGen R13 type 2 diabetes GWAS loci and GTEx v11 Whole_Blood eQTL analyses.
-Runtime is measured on Burgundy using exclusive AMD EPYC 7742 nodes, with
-complete-call and fitting-stage times from the same calls. Peak resident set
-size (RSS) comes from the earlier local AMD EPYC 9754 measurements.
+Runtime is measured on exclusive AMD EPYC 7742 nodes, with complete-call and
+fitting-stage times from the same calls. Peak resident set size (RSS) comes
+from an earlier local workstation.
 
 <!-- current:highlights:start -->
 Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.
@@ -15,11 +15,11 @@ Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.
 | GWAS | 200 | 49.2× | 55.4× | 42.9× | 3.66× |
 | eQTL | 14157 | 26.6× | 29.8× | 26.6× | 3.77× |
 
-¹ Sum of three retained R times divided by the corresponding prusie total, on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. ² Sum of within-case R medians divided by the sum of prusie medians. ³ Median paired R/prusie fresh-process peak RSS from the earlier local AMD EPYC 9754 measurements, including interpreter and inputs. Runtime and memory have separate origins.
+¹ Sum of three retained R times divided by the corresponding prusie total, on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. ² Sum of within-case R medians divided by the sum of prusie medians. ³ Median paired R/prusie fresh-process peak RSS from the earlier local workstation measurements, including interpreter and inputs. Runtime and memory have separate origins.
 <!-- current:highlights:end -->
 
 The runtime comparison uses one numerical thread per fit. The
-[protocol](assets/benchmark/burgundy_protocol.json) records the timing
+[protocol](assets/benchmark/benchmark_protocol.json) records the timing
 boundaries and software identities; [reproducibility](#reproducibility)
 identifies the frozen release and its timing-instrumented copy.
 [Numerical accuracy](numerical_accuracy.md) reports agreement with fresh
@@ -90,7 +90,7 @@ same iteration, convergence and CS-count outcomes. Instrumented/original
 median complete-call ratios ranged from 0.805 to 1.026 for prusie and 0.957 to
 1.064 for R. These observations include order and binary-layout effects and
 do not isolate timestamp overhead. Exact boundaries and limitations are
-[documented with the instrumentation](reproducibility.md#burgundy-protocol).
+[documented with the instrumentation](reproducibility.md#benchmark-protocol).
 
 For each metric, the headline speed-up is the sum of all three retained R
 times divided by the corresponding prusie total. The sum-of-medians
@@ -98,12 +98,12 @@ sensitivity divides the sum of within-case R medians by the sum of prusie
 medians. The geometric mean of within-case median ratios gives each case
 equal weight. These are separate summaries with different weighting.
 
-The retained memory experiment used a new process per case/backend on the
-local AMD EPYC 9754. It fitted once and read the resident-memory high-water
-mark immediately afterwards, before comparisons or serialization. Peaks
-include the interpreter, imports, input loading, preloaded validation
+The retained memory experiment used a new process per case/backend on an
+earlier local workstation. It fitted once and read the resident-memory
+high-water mark immediately afterwards, before comparisons or serialization.
+Peaks include the interpreter, imports, input loading, preloaded validation
 reference and fit. Published memory ratios are medians of within-case R/prusie
-peak ratios. Current Burgundy process peaks are diagnostics only.
+peak ratios. Current compute-cluster process peaks are diagnostics only.
 
 Fits request `L=10` components, capped at the variant count, with `tol=0.001`,
 `max_iter=100`, `scaled_prior_variance=0.2`, estimated prior variance
@@ -151,20 +151,20 @@ out-of-memory event. Their placement and timestamps are consistent with local
 memory pressure, although the stalls themselves were not profiled. All calls
 remain included; none was rerun or discarded because of its duration.
 
-![Complete-call median time by variant count, measured on Burgundy EPYC 7742.](assets/benchmark/v030_runtime_by_variants.svg)
+![Complete-call median time by variant count, measured on AMD EPYC 7742 nodes.](assets/benchmark/v030_runtime_by_variants.svg)
 
-![Fitting-stage median time by variant count, measured on Burgundy EPYC 7742.](assets/benchmark/burgundy_fitting_by_variants.svg)
+![Fitting-stage median time by variant count, measured on AMD EPYC 7742 nodes.](assets/benchmark/benchmark_fitting_by_variants.svg)
 
 <!-- current:variability:start -->
 
 | Analysis | Complete-call timing | Backend | Median IQR/median | Cases with a repeat >3× median | Time in repeats >2× median |
 | --- | --- | --- | --- | --- | --- |
-| GWAS | Burgundy, 3 calls | prusie | 0.0128 | 0 | 0% |
-| GWAS | Burgundy, 3 calls | susieR | 0.00668 | 2 | 15.2% |
+| GWAS | EPYC 7742, 3 calls | prusie | 0.0128 | 0 | 0% |
+| GWAS | EPYC 7742, 3 calls | susieR | 0.00668 | 2 | 15.2% |
 | GWAS | Local, first 3 calls | prusie | 0.105 | 0 | 0% |
 | GWAS | Local, first 3 calls | susieR | 0.109 | 0 | 1.63% |
-| eQTL | Burgundy, 3 calls | prusie | 0.0231 | 0 | 0% |
-| eQTL | Burgundy, 3 calls | susieR | 0.021 | 0 | 0% |
+| eQTL | EPYC 7742, 3 calls | prusie | 0.0231 | 0 | 0% |
+| eQTL | EPYC 7742, 3 calls | susieR | 0.021 | 0 | 0% |
 | eQTL | Local, first 3 calls | prusie | 0.102 | 128 | 3.02% |
 | eQTL | Local, first 3 calls | susieR | 0.0873 | 0 | 0.0111% |
 <!-- current:variability:end -->
@@ -173,13 +173,13 @@ IQR/median is computed within each case and then summarized across cases.
 The earlier local seven-repeat comparison is also restricted to its first
 three retained calls for this sensitivity check. The full seven-repeat
 statistics and variant-count quintiles remain in the
-[machine-readable summary](assets/benchmark/burgundy_summary.json).
+[machine-readable summary](assets/benchmark/benchmark_summary.json).
 Both eQTL backends and native GWAS had no retained repeat above twice its case
 median. The two extreme R GWAS repeats account for 15.23% of total retained
 R GWAS time; the one extreme nested-window repeat accounts for 52.53% of that
 panel's R total. Thus typical variability fell substantially, but exclusive
 nodes did not eliminate every source of interference. The
-[individual extreme calls](assets/benchmark/burgundy/extreme_retained_calls.json)
+[individual extreme calls](assets/benchmark/archive/extreme_retained_calls.json)
 remain available with timestamps and both measured durations.
 
 ### Memory
@@ -194,20 +194,20 @@ remain available with timestamps and both measured durations.
 | eQTL / susieR | 883 | 14157 |
 <!-- current:memory:end -->
 
-Each peak-RSS entry is a separate median across cases from the local AMD EPYC 9754. The paired memory
+Each peak-RSS entry is a separate median across cases from an earlier local workstation. The paired memory
 ratio in the opening table is calculated within each case before taking its
 median, as defined in [Methods](#methods).
 
 ![Fresh-process peak resident memory by variant count for the GWAS and eQTL panels.](assets/benchmark/v030_memory_by_variants.svg)
 
-The following distributions show Burgundy complete-call and fitting-stage
+The following distributions show the EPYC 7742 complete-call and fitting-stage
 ratios, followed by the earlier local memory ratios.
 
 ![Distributions of within-case susieR/prusie median-time and peak-RSS ratios.](assets/benchmark/v030_ratio_distributions.svg)
 
 ### Thread scaling
 
-The controlled Burgundy experiment used exclusive AMD EPYC 7742 nodes and
+The controlled thread-scaling experiment used exclusive AMD EPYC 7742 nodes and
 87 fixed real-data cases. Ratios below first pair each retained call with its
 one-thread counterpart, take the median within each case, and then the median
 across cases. Lower ratios mean shorter runtime.
@@ -227,7 +227,7 @@ the loaded-host M2 thread series is not used for this guidance.
 
 ### LD overwrite
 
-The separate local AMD EPYC 9754 memory experiment used 200 GWAS cases and
+The separate earlier local workstation memory experiment used 200 GWAS cases and
 one numerical thread. With `overwrite_ld=True`, 173 cases had a material
 reduction in fresh-process peak RSS; 27 had no material saving. Differences
 of about 1.1 MiB or less are ties at measurement resolution, rather than evidence
@@ -263,7 +263,7 @@ convergence paths; they are not independent loci or a complexity-law study.
 
 <!-- current:scaling:start -->
 
-| Leading variants | Backend | Complete-call median (s) | Fitting-stage median (s) | Observed iterations | Converged | Earlier EPYC 9754 peak RSS (MiB) |
+| Leading variants | Backend | Complete-call median (s) | Fitting-stage median (s) | Observed iterations | Converged | Earlier local peak RSS (MiB) |
 | --- | --- | --- | --- | --- | --- | --- |
 | 500 | prusie | 0.0105 | 0.00966 | 14 | True | 49.8 |
 | 500 | susieR | 0.463 | 0.46 | 14 | True | 282 |
@@ -279,12 +279,12 @@ convergence paths; they are not independent loci or a complexity-law study.
 | 19221 | susieR | 415 | 408 | 28 | True | 1.72e+04 |
 <!-- current:scaling:end -->
 
-![Burgundy complete-call and fitting-stage medians with repeat IQR, earlier local peak RSS, and Burgundy IBSS sweeps for six nested windows.](assets/benchmark/v030_controlled_scaling.svg)
+![Complete-call and fitting-stage medians with repeat IQR, earlier local peak RSS, and IBSS sweeps for six nested windows.](assets/benchmark/v030_controlled_scaling.svg)
 
 Dense LD matrices are materialized before fitting, and peak process RSS
 includes input loading. Lines connect measured windows; iteration counts
-change with window size. Runtime and iteration results use Burgundy inputs;
-the displayed memory results retain the earlier local inputs and host.
+change with window size. Runtime and iteration results use the EPYC 7742
+inputs; the displayed memory results retain the earlier local inputs and host.
 
 ## Reproducibility
 
@@ -292,17 +292,17 @@ the displayed memory results retain the earlier local inputs and host.
 - Frozen release code: `6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7`
 - Original release wheel SHA-256: `85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59`
 - Original native extension SHA-256: `a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e`
-- Burgundy protocol SHA-256: `3893ec7f92fc042f15eade88a4c27a452835bf3285dfda037d6133c55fc56825`
+- Benchmark protocol SHA-256: `3893ec7f92fc042f15eade88a4c27a452835bf3285dfda037d6133c55fc56825`
 - Statistical reference: R 4.4.0; susieR 0.16.6, `8e56a8e038e989856d106d9ca5175cc664fea9d2`.
 
-Both runtime metrics use run-local timing instrumentation derived from these frozen artifacts. The native binary differs from the release binary; the original wheel is preserved. The instrumentation patch, derived binary hashes, source boundaries and qualification results are in the [measurement archive](reproducibility.md#burgundy-protocol). Earlier local memory measurements retain their original measured build identity.
+Both runtime metrics use run-local timing instrumentation derived from these frozen artifacts. The native binary differs from the release binary; the original wheel is preserved. The instrumentation patch, derived binary hashes, source boundaries and qualification results are in the [measurement archive](reproducibility.md#benchmark-protocol). Earlier local memory measurements retain their original measured build identity.
 <!-- current:identity:end -->
 
-The [Burgundy summary](assets/benchmark/burgundy_summary.json) and
-[compressed per-case records](assets/benchmark/burgundy_records.jsonl.gz)
+The [benchmark summary](assets/benchmark/benchmark_summary.json) and
+[compressed per-case records](assets/benchmark/benchmark_records.jsonl.gz)
 retain both timing metrics, call timestamps, iteration/convergence outcomes
-and numerical differences. The [protocol](assets/benchmark/burgundy_protocol.json)
-and [archive guide](reproducibility.md#burgundy-protocol) document construction
+and numerical differences. The [protocol](assets/benchmark/benchmark_protocol.json)
+and [archive guide](reproducibility.md#benchmark-protocol) document construction
 and instrumentation. The [earlier local records](assets/benchmark/v030_records.jsonl.gz)
 remain the source for peak RSS and [LD overwrite](assets/benchmark/v030_overwrite.tsv).
 The separate [paired optimization records](assets/benchmark/v030_m1.json)
@@ -331,7 +331,7 @@ dependencies and the full documentation build commands.
 Separate paired measurements compare the measured 0.3.0 wheel with earlier
 prusie implementations on fixed real-data panels: 87 primary cases, 80
 confirmation cases and 17 cases with large variant counts. These measurements
-use AMD EPYC 7742 processors on Burgundy and the paired protocol v10.
+use AMD EPYC 7742 processors and the paired protocol v10.
 
 The cumulative runtime comparison uses one numerical thread and sums the
 original eight retained complete calls per case, following one warm-up. Across
@@ -373,7 +373,7 @@ This differs from the full-process peak RSS used in the
 | overwrite_ld=True vs False | Confirmation (80) | ACCEPTED | 8 | 80 / 80 | 70 / 0 / 10 | 69 / 0 / 11 | 77 / 1 / 2 | memory comparison |
 | overwrite_ld=True vs False | Large-p (17) | ACCEPTED | 8 | 17 / 17 | 16 / 0 / 1 | 17 / 0 / 0 | 14 / 2 / 1 | memory comparison |
 
-These are earlier controlled Burgundy measurements. Cumulative totals do not replace the fixed-panel majority, stratified non-regression check and robustness criteria. The v10 runtime count uses the median of paired-round time ratios; the additional case-median count compares the two within-case median times. These can differ. Memory counts compare within-case medians of incremental peaks. W / T / R means lower, equal and higher candidate measurements. A comparison with 16 retained rounds uses the protocol's single quality retry, pooling both complete windows only for comparisons whose first-window decision was unresolved. Other comparisons retain the original eight rounds. Initial decisions remain in the paired measurement records.
+These are earlier controlled measurements on the same AMD EPYC 7742 nodes. Cumulative totals do not replace the fixed-panel majority, stratified non-regression check and robustness criteria. The v10 runtime count uses the median of paired-round time ratios; the additional case-median count compares the two within-case median times. These can differ. Memory counts compare within-case medians of incremental peaks. W / T / R means lower, equal and higher candidate measurements. A comparison with 16 retained rounds uses the protocol's single quality retry, pooling both complete windows only for comparisons whose first-window decision was unresolved. Other comparisons retain the original eight rounds. Initial decisions remain in the paired measurement records.
 <!-- generated:earlier:end -->
 
 Eight of the nine non-diagnostic panel comparisons are `ACCEPTED`. The large-p
@@ -390,7 +390,7 @@ decisions as well as the final comparisons above.
 
 ### Large-p instruction-count follow-up
 
-A separate Burgundy check compared the measured 0.3.0 integration with its
+A separate instruction-count check compared the measured 0.3.0 integration with its
 previously optimized parent on the same 17 large-p cases. All user-space
 instruction-count differences were within the predeclared 0.2% bound; the
 largest was 0.00480%. Two repetitions on two cases gave a maximum difference

@@ -17,6 +17,62 @@ second row of `alpha`, corresponding to susieR's one-based component 2.
 Variant IDs are zero-based positional indices. Genomic positions, alleles,
 genome build and gene annotations are unavailable.
 
+## Main results and resolution
+
+The refined fit returns two retained credible sets covering two active
+single-effect components. Each CS carries posterior mass greater than 0.9999,
+and the leading variants have marginal PIPs close to one.
+
+| Rank | Variant | PIP | Credible set | Note |
+| --- | --- | ---: | --- | --- |
+| 1 | 33 | 1.000 | Component 2 (`{33}`) | Lead; singleton CS |
+| 2 | 90 | 0.8228 | Component 1 (`{86, 90}`) | Lead within pair |
+| 3 | 86 | 0.1772 | Component 1 (`{86, 90}`) | Partner within pair |
+| 4 | 79 | 8.76e-09 | — | Highest non-member |
+
+PIPs are marginal inclusion probabilities across the active components. The
+0.8228 PIP at variant 90 does not indicate weak overall support for component
+1: the whole CS `{86, 90}` carries posterior mass greater than 0.9999, and
+the pair splits component-level `alpha` as approximately 0.823 to 0.177 between
+90 and 86. Full-precision values are in the
+[comparison](examples/post_analysis/official/comparison.json) and
+[posterior summary](examples/post_analysis/official/posterior_summary.json).
+
+![All 200 variants, retained CS and separate LD r² panels for variants 90 and 33.](examples/post_analysis/official/figure_1.png){.figure-complex width=720}
+
+The locus overview marks CS members and uses one LD panel per CS, each
+referenced to its CS top variant: 90 for component 1 and 33 for component 2.
+A CS top maximizes its own component's `alpha` among its CS members; exact
+ties use lexical variant ID order, matching
+`summary["credible_sets"][i]["representative_rule"]`. Global marginal PIP
+does not select a CS top. Reference IDs, tied IDs, signed r and r² for all
+200 variants are exported under `locus overview.ld_references` in
+[plot data](examples/post_analysis/official/plot_data.json). The association
+track plots a two-sided normal approximation to marginal t statistics derived
+from `XtX`, `Xty` and `yty` (degrees of freedom `n - 2`); these are not
+external GWAS z scores.
+
+### Resolution
+
+The two signals localize to different precisions:
+
+- **Component 2 is resolved to a single variant.** CS `{33}` is a singleton,
+  purity is 1 by convention and the marginal PIP at 33 is 1 to numerical
+  precision.
+- **Component 1 is not resolved below the pair.** CS `{86, 90}` has minimum
+  within-CS $|r|\approx0.9989$, so $r^2\approx0.9978$. The two variants are
+  nearly collinear in the supplied LD reference and the posterior mass is
+  split roughly 0.823 to 0.177 between them. The effective number of
+  candidates within the CS is about 1.595; it measures posterior
+  concentration within the CS, not a causal count.
+
+The pairwise absolute LD between the two CS leads (33 and 90) is about 0.532.
+That value alone does not establish whether the two modeled effects are
+conditionally distinguishable: the fit already represents them as two
+separate components. PIP, alpha, r and r² are unitless; effect estimates use
+the scale of the supplied sufficient statistics. Neither CS size nor the
+number of retained CS determines the true number of causal effects.
+
 ## A stopped fit improved by refinement
 
 The baseline permits `L=10` single effects and satisfies its ELBO stopping rule
@@ -26,7 +82,7 @@ returned candidate satisfies its inner stopping rule after three sweeps.
 The example opts into tracking for both the baseline and refinement, so the
 report shows the accepted candidate's three original stage-B sweeps.
 
-![Baseline and accepted-candidate convergence trajectories, on separate sweep axes.](examples/post_analysis/official/figure_2.png){.figure-complex}
+![Baseline and accepted-candidate convergence trajectories, on separate sweep axes.](examples/post_analysis/official/figure_2.png){.figure-complex width=820}
 
 The search ranks candidates by their last logged ELBO under the original prior.
 Here it rises from −70832.271605 to −70814.813272, a gain of 17.458333.
@@ -39,7 +95,7 @@ stopping rule does not establish a global optimum. The unsuccessful subsequent
 attempts establish only that no executed candidate exceeded the search's
 absolute improvement threshold.
 
-![Refinement changes candidate support; attempts are compared against their round's incumbent.](examples/post_analysis/official/figure_3.png){.figure-complex}
+![Refinement changes candidate support; attempts are compared against their round's incumbent.](examples/post_analysis/official/figure_3.png){.figure-complex width=720}
 
 | Variant | Initial PIP | Refined PIP | `L=12` PIP |
 | --- | ---: | ---: | ---: |
@@ -55,34 +111,13 @@ probability close to one. Full-precision values remain in the
 [comparison](examples/post_analysis/official/comparison.json).
 Neither CS membership nor CS count determines the true number of causal effects.
 
-### What remains unresolved
+### Component detail
 
-The refined component 1 CS `{86,90}` has posterior mass greater than 0.9999.
-Its component probabilities are approximately 0.177 and 0.823. Strong LD,
-$r\approx0.9989$ and $r^2\approx0.9978$, limits resolution within this set.
-The effective number of candidates is about 1.595; it measures posterior
-concentration, not a causal count. Component 2 has the singleton CS `{33}`;
-singleton purity is 1 by definition and says nothing about surrounding LD.
+The report presents component 1 before component 2, preserving their original
+fit-row identities. The component 1 detail plot shows the within-CS allocation,
+cumulative posterior mass and LD r² for the `{86, 90}` pair.
 
-![Component 1 detail: unresolved allocation within the 86/90 CS, cumulative posterior mass and LD r².](examples/post_analysis/official/figure_6.png){.figure-complex}
-
-The report presents component 1 before component 2, preserving their identities.
-In the locus overview, separate LD panels use the top variant of **each** CS:
-90 for component 1 and 33 for component 2. A CS top maximizes its own component's
-`alpha` among its CS members; exact ties use lexical variant ID order, matching
-`summary["credible_sets"][i]["representative_rule"]`. Global marginal PIP does
-not select a CS top. Reference IDs, tied IDs, signed r and r² for all 200 variants
-are exported under `locus overview.ld_references` in
-[plot data](examples/post_analysis/official/plot_data.json).
-
-![All 200 variants, retained CS and separate LD r² panels for variants 90 and 33.](examples/post_analysis/official/figure_1.png){.figure-complex}
-
-The absolute LD correlation between 33 and 90 is about 0.532. That pairwise
-correlation alone does not establish whether modeled effects are conditionally
-distinguishable. PIP, alpha, r and r² are unitless; effect estimates use the scale
-of the supplied sufficient statistics. The association track shows a two-sided
-normal approximation applied to marginal t statistics derived from `XtX`,
-`Xty` and `yty` (degrees of freedom `n - 2`). These are not external GWAS z scores.
+![Component 1 detail: unresolved allocation within the 86/90 CS, cumulative posterior mass and LD r².](examples/post_analysis/official/figure_6.png){.figure-complex width=680}
 
 ### Sensitivity and LD compatibility
 

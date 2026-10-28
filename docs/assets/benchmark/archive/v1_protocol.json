@@ -1,6 +1,6 @@
 {
   "state": "FROZEN_BEFORE_FIRST_FORMAL_CALL",
-  "run": "20261028_prusie_burgundy_bench",
+  "run": "20261028_prusie_benchmark",
   "original_code_under_test": {
     "version": "0.3.0",
     "code_sha": "6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7",
@@ -67,7 +67,7 @@
   "queue_details": "Flatten predeclared plan shards and sort descending local planning seconds then case key; atomic complete-file hardlink claims prevent duplicate admission across nodes. Completed records bind current protocol; stale/failed claims require explicit operational disposition. Node queue drained does not imply full panel complete.",
   "walltime_admission": "Only admit when remaining allocation seconds>=max(180,3*old complete-case estimate+120). Deferred unclaimed cases remain in global queue for another allocation; this does not truncate the run.",
   "ld_policy": {
-    "source": "1000G-derived strict QC genotype reference strict_snp_maf05_v1 already on burgundy under /home/wjiang49/prusie_project/data/prusie_realdata_r13_v11/reference/strict_snp_maf05_v1 (SHA256-verified transfer 20261023); transfer only missing or mismatched genotype files",
+    "source": "1000G-derived strict QC genotype reference strict_snp_maf05_v1 already on the compute cluster under /home/wjiang49/prusie_project/data/prusie_realdata_r13_v11/reference/strict_snp_maf05_v1 (SHA256-verified transfer 20261023); transfer only missing or mismatched genotype files",
     "reconstruction": "per case on the compute node before timing with PLINK (user amendment 20261028; the original Python construction code is no longer required), using the frozen variant list, order and allele alignment, node-local storage, deleted after the case",
     "bitwise_identity_with_local_ld_required": false,
     "fidelity_sample_cases": 24,
@@ -87,14 +87,14 @@
   "failures": "Only operational node/OOM/preemption failures may rerun whole case with identical settings after explicit ledger entry; never timing/numerical outcome reruns; preserve failed attempts; every fixed case stays in denominator.",
   "numerical_acceptance": {
     "policy": "runs/20261020_prusie_susier_alignment/status/acceptance_policy.json",
-    "quantity": "final alpha[l,j] in original component and SNP order, native versus R on the same burgundy inputs",
+    "quantity": "final alpha[l,j] in original component and SNP order, native versus R on the same prepared benchmark inputs",
     "atol": 1e-05,
     "rtol": 0,
     "user_exception": "runs/20261026_prusie_v030/status/USER_DISPOSITION_C3_L17_M2_NONCONVERGED.md: exceedances where BOTH backends stop at max_iter without convergence are accepted and listed individually; any exceedance where either backend converged must be reported"
   },
-  "published_memory": "Unchanged v030 local AMD EPYC9754 fresh-process RSS; current HWM diagnostic only",
+  "published_memory": "Unchanged v030 local workstation fresh-process RSS; current HWM diagnostic only",
   "dropped_experiments": [
-    "M2 thread series (controlled thread results come from v030 M1 C4 on burgundy)",
+    "M2 thread series (controlled thread results come from v030 M1 C4 on the AMD EPYC 7742 nodes)",
     "M2 overwrite_ld series and separate fresh-process memory runs (CPU contention does not affect RSS; v030 local M2 memory is reused and labeled)",
     "fresh-R versus frozen decimal-JSON bitwise integrity check (uninformative)",
     "AA/null controls for this descriptive R comparison",

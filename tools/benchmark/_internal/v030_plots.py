@@ -56,8 +56,8 @@ def plot(summary, m1, records, output):
     primary = [r for r in records if r["kind"] == "primary"]
     for key, ylabel, filename in (
         ("runtime", "Complete-call median (s), EPYC 7742", "v030_runtime_by_variants"),
-        ("fitting_runtime", "Fitting-stage median (s), EPYC 7742", "burgundy_fitting_by_variants"),
-        ("memory", "Peak RSS (MiB), earlier EPYC 9754", "v030_memory_by_variants"),
+        ("fitting_runtime", "Fitting-stage median (s), EPYC 7742 nodes", "benchmark_fitting_by_variants"),
+        ("memory", "Peak RSS (MiB), earlier local workstation", "v030_memory_by_variants"),
     ):
         fig, axes = plt.subplots(1, 2, figsize=(9, 3.6), layout="constrained")
         for ax, panel in zip(axes, PANELS, strict=True):
@@ -101,7 +101,7 @@ def plot(summary, m1, records, output):
         for ax, field, label in (
             (axes[0, column], "speedup", "R / prusie complete call, EPYC 7742"),
             (axes[1, column], "fitting_speedup", "R / prusie fitting stage, EPYC 7742"),
-            (axes[2, column], "memory_ratio", "R / prusie peak RSS, earlier EPYC 9754"),
+            (axes[2, column], "memory_ratio", "R / prusie peak RSS, earlier local workstation"),
         ):
             values = [r[field] for r in rows if finite(r[field]) and r[field] > 0]
             ecdf(ax, values, color=COLORS["prusie"], linewidth=1.5)
@@ -146,7 +146,7 @@ def plot(summary, m1, records, output):
         )
     axes[0].set(
         xlabel="Variants (p)",
-        ylabel="Peak RSS (MiB), earlier EPYC 9754",
+        ylabel="Peak RSS (MiB), earlier local workstation",
         xscale="log",
         yscale="log",
         title=f"GWAS (paired n={len(pairs)})",
@@ -199,7 +199,7 @@ def plot(summary, m1, records, output):
         (
             "Complete-call median and IQR (s), EPYC 7742",
             "Fitting-stage median and IQR (s), EPYC 7742",
-            "Peak RSS (GiB), earlier EPYC 9754",
+            "Peak RSS (GiB), earlier local workstation",
             "Completed IBSS sweeps, EPYC 7742",
         )
     ):

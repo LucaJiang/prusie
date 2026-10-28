@@ -13,13 +13,14 @@ agreement with susieR is assessed numerically; see
 [Performance](performance.md) reports runtimes and memory for the inputs,
 settings and hardware measured there.
 
-The [paired cumulative measurements](performance.md#earlier-measurements)
-compare 184 fixed cases using eight retained complete calls per case. The
-historical-baseline and intermediate-baseline total times divided by the
-measured 0.3.0 total are 1.73 and 1.06, respectively. Cumulative totals do not
-replace the per-panel acceptance checks: the large-p comparison with the
-previously optimized baseline remains unresolved under the robustness
-criterion. The performance page records its result and limitations.
+The current [benchmark measurements](performance.md#runtime) compare prusie
+and susieR 0.16.6 on 200 FinnGen T2D GWAS loci and 14,157 GTEx Whole_Blood
+eQTL genes, with three retained complete calls per case on exclusive EPYC
+7742 nodes. Across-case within-case R/prusie median-time ratios are 49.2×
+complete-call and 55.4× fitting-stage on GWAS, and 26.6× and 29.8× on eQTL;
+prusie was faster than susieR in every case on both panels. These are paired
+runtime results; the per-panel memory and thread-scaling comparisons on the
+performance page record their own gains and limitations.
 
 ## Principles
 
@@ -439,11 +440,12 @@ forms the requested blocks as described under
 [Individual-level designs](#individual-level-designs).
 
 In the [real-data overwrite series](performance.md#ld-overwrite), enabling
-`overwrite_ld` lowered full-process peak RSS in 183 of 200 GWAS cases and
-raised it in 17. The median paired False/True peak ratio was 1.72. This is a
-measured process peak, including inputs and interpreter, rather than the
-matrix-size arithmetic above. The [LD workspace contract](api.md#optional-ld-workspace)
-describes ownership requirements and when the caller must reload its array.
+`overwrite_ld` on 200 GWAS cases produced a material fresh-process peak-RSS
+reduction in 173 cases and no material saving in 27. The median within-case
+False/True peak ratio was 1.72. This is a measured process peak, including
+inputs and interpreter, rather than the matrix-size arithmetic above. The
+[LD workspace contract](api.md#optional-ld-workspace) describes ownership
+requirements and when the caller must reload its array.
 
 ## Threads
 
@@ -477,12 +479,12 @@ Python process to one thread.
 
 For an eligible dense fit, 2–4 threads are useful starting points; measure
 on the intended workload and keep BLAS at one thread when assessing this
-option. In the [paired measurements](performance.md#earlier-measurements),
-four threads improved all applicable cases in the 87-case, 80-case and
-17-case panels (87, 78 and 17 applicable cases). On the primary 87-case
-panel, the median paired four/one-thread ratio was 0.735; eight/one was
-0.783, and eight threads were slower than one in 8 cases.
-[Thread scaling](performance.md#thread-scaling) gives the controlled results.
+option. In the controlled
+[thread scaling](performance.md#thread-scaling) experiment on 87 fixed cases,
+median paired across-thread/one-thread complete-call ratios were 0.799 at
+two threads, 0.735 at four threads and 0.783 at eight threads. Four threads
+had the lowest ratio and improved every case; eight threads were slower than
+one in 8 cases and slower than four in 52.
 When running several fits concurrently, account for each fit's worker threads.
 
 ## What prusie does not do

@@ -35,11 +35,11 @@ The records in `docs/assets/benchmark/` have distinct measurement origins:
 
 | File | Contents |
 | --- | --- |
-| [burgundy_summary.json](assets/benchmark/burgundy_summary.json) | Complete-call and fitting-stage summaries, variant-count quintiles, repeat variability and earlier local comparisons. |
-| [burgundy_records.jsonl.gz](assets/benchmark/burgundy_records.jsonl.gz) | All 14,363 cases, three retained times per backend/metric, timestamps, outcomes and numerical differences. |
-| [burgundy_protocol.json](assets/benchmark/burgundy_protocol.json) | Frozen protocol v2 and artifact hashes. |
-| [v030_summary.json](assets/benchmark/v030_summary.json) and [v030_records.jsonl.gz](assets/benchmark/v030_records.jsonl.gz) | Earlier local EPYC 9754 measurements, retained as the source of published peak RSS. Their old runtime fields are historical. |
-| [v030_m1.json](assets/benchmark/v030_m1.json) | Earlier controlled Burgundy optimization and thread measurements, with unchanged acceptance decisions. |
+| [benchmark_summary.json](assets/benchmark/benchmark_summary.json) | Complete-call and fitting-stage summaries, variant-count quintiles, repeat variability and earlier local comparisons. |
+| [benchmark_records.jsonl.gz](assets/benchmark/benchmark_records.jsonl.gz) | All 14,363 cases, three retained times per backend/metric, timestamps, outcomes and numerical differences. |
+| [benchmark_protocol.json](assets/benchmark/benchmark_protocol.json) | Frozen protocol v2 and artifact hashes. |
+| [v030_summary.json](assets/benchmark/v030_summary.json) and [v030_records.jsonl.gz](assets/benchmark/v030_records.jsonl.gz) | Earlier local workstation measurements, retained as the source of published peak RSS. Their old runtime fields are historical. |
+| [v030_m1.json](assets/benchmark/v030_m1.json) | Earlier controlled optimization and thread measurements on the same AMD EPYC 7742 nodes, with unchanged acceptance decisions. |
 | [nonconverged_records.jsonl.gz](assets/benchmark/nonconverged_records.jsonl.gz) | Separate local 1,000-iteration diagnostic for all 224 originally nonconverged genes. |
 | [c3_instructions.tsv](assets/benchmark/c3_instructions.tsv) | Instruction-count follow-up on the 17 large-p cases. |
 
@@ -49,7 +49,7 @@ LD matrices and individual genotypes are not included. The earlier
 local memory results. Historical per-case timing fields are preserved in the
 compressed archive but do not supply the new runtime figures.
 
-## Burgundy protocol
+## Benchmark protocol
 
 The full panel is 200 GWAS loci, 14,157 eQTL genes and six nested windows of one
 GWAS locus. Each backend starts a fresh process, loads inputs untimed, makes
@@ -85,7 +85,7 @@ in preparation. Minor scalar checks and final-CS submatrix normalization
 remain in the fitting stage. Small transitions between native spans are
 omitted. No separately measured cost is subtracted.
 
-The [archived harness and instrumentation](assets/benchmark/burgundy/README.txt)
+The [archived harness and instrumentation](assets/benchmark/archive/README.txt)
 include exact frozen scripts, patches, hashes and boundary notes. They retain
 cluster paths and are an execution archive, not a portable cluster installer.
 The original release artifacts remain unchanged. Eight representative cases
@@ -231,7 +231,7 @@ Downloaded revisions or newly constructed LD panels define different inputs.
 
 ## Software and references
 
-The Burgundy runtime environment uses CPython 3.12.4, NumPy 1.26.4 and R
+The AMD EPYC 7742 runtime environment uses CPython 3.12.4, NumPy 1.26.4 and R
 4.4.0. NumPy loads OpenBLAS 0.3.23.dev; R uses OpenBLAS 0.3.20, with the
 loaded library identities and thread probes recorded in the archive.
 
@@ -247,7 +247,7 @@ loaded library identities and thread probes recorded in the archive.
 All formal fits use `refine=False`. Earlier local peak-RSS measurements used
 code `a4bddf00dbb6b19e7e13d4267fc739f928ff0c5a`, wheel
 `b4627f9116b4fbbbe6338c40d965d21e1e0e63e8ecaf4c148af7b4cd7bac65f3`,
-on AMD EPYC 9754 with CPython 3.12.2. That native extension and the frozen
+on an earlier local workstation with CPython 3.12.2. That native extension and the frozen
 release native extension have SHA-256
 `a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e`.
 The derived timing binary is explicitly distinct. See

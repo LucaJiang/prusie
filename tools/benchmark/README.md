@@ -8,7 +8,7 @@ jsonlite; retain package source provenance as well as its version.
 
 The current runtime comparison includes all 200 FinnGen R13 T2D loci,
 14,157 GTEx v11 Whole_Blood genes and six nested windows. It runs on exclusive
-Burgundy AMD EPYC 7742 nodes with one numerical thread, one pinned core per L3
+exclusive AMD EPYC 7742 nodes with one numerical thread, one pinned core per L3
 domain and NUMA-local memory. Each fresh backend process makes one warmup and
 three retained calls. Complete-call and fitting-stage times describe the same
 fits; backends run sequentially within each case in a seeded balanced order.
@@ -16,17 +16,18 @@ LD is reconstructed untimed with PLINK from the frozen genotype/sample source,
 variant order and allele alignment. It is not required to be bitwise identical
 to earlier local LD.
 
-`burgundy_records.jsonl.gz`, `burgundy_summary.json` and `burgundy_protocol.json`
+`benchmark_records.jsonl.gz`, `benchmark_summary.json` and `benchmark_protocol.json`
 under `docs/assets/benchmark/` supply the current runtime and numerical results.
-The [protocol guide](../../docs/reproducibility.md#burgundy-protocol) explains
+The [protocol guide](../../docs/reproducibility.md#benchmark-protocol) explains
 instrumentation, the adoption of 24 completed seven-repeat cases, operational
 handling and the direct fitting-stage boundaries. Exact cluster scripts and
-patches are [archived](../../docs/assets/benchmark/burgundy/README.txt).
+patches are [archived](../../docs/assets/benchmark/archive/README.txt).
 
-`v030_records.jsonl.gz` and `v030_summary.json` retain the earlier local AMD EPYC
-9754 results, which still supply published fresh-process peak RSS. Their runtime
-fields are historical. `v030_m1.json` supplies the separate controlled Burgundy
-optimization/thread results and unchanged acceptance decisions. Dense figure
+`v030_records.jsonl.gz` and `v030_summary.json` retain the earlier local
+workstation results, which still supply published fresh-process peak RSS.
+Their runtime fields are historical. `v030_m1.json` supplies the separate
+controlled optimization/thread results on the same AMD EPYC 7742 nodes and
+unchanged acceptance decisions. Dense figure
 layers are rasterized within SVG/PDF; axes and labels remain vector graphics.
 
 These commands redraw current figures and verify generated text without R,
@@ -43,7 +44,7 @@ Use `python tools/generate_results.py` to update generated text. Its `--pages`
 option accepts comma-separated repository-relative paths. Figure generation is
 separate so that checking text does not redraw all plots. The legacy `import`
 and `bind-release` actions of `v030.py` apply only to the original private v030
-archive and its memory/software provenance; they do not generate the Burgundy
+archive and its memory/software provenance; they do not generate the benchmark
 runtime campaign. Current rendering requires both published archives.
 
 For each timing metric, headline speed-up is the sum of all three retained R

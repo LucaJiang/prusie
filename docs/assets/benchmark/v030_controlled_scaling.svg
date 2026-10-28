@@ -2959,7 +2959,7 @@ L 324.95976 278.250305
      </g>
     </g>
     <g id="text_30">
-     <!-- Peak RSS (GiB), earlier EPYC 9754 -->
+     <!-- Peak RSS (GiB), earlier local workstation -->
      <g transform="translate(14.798438 441.206791) rotate(-90) scale(0.1 -0.1)">
       <defs>
        <path id="DejaVuSans-6b" d="M 581 4863 

@@ -24,7 +24,7 @@
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
 <li><a href="#tables-and-figures">Tables and figures</a></li>
-<li><a href="#burgundy-protocol">Burgundy protocol</a></li>
+<li><a href="#benchmark-protocol">Benchmark protocol</a></li>
 <li><a href="#toy-example">Toy example</a><ul>
 <li><a href="#regeneration-checks">Regeneration checks</a></li>
 <li><a href="#r-comparison">R comparison</a></li>
@@ -70,24 +70,24 @@ Add <code>--check</code> to <code>tools/model_examples.py</code> or
 </thead>
 <tbody>
 <tr>
-<td><a href="assets/benchmark/burgundy_summary.json">burgundy_summary.json</a></td>
+<td><a href="assets/benchmark/benchmark_summary.json">benchmark_summary.json</a></td>
 <td>Complete-call and fitting-stage summaries, variant-count quintiles, repeat variability and earlier local comparisons.</td>
 </tr>
 <tr>
-<td><a href="assets/benchmark/burgundy_records.jsonl.gz">burgundy_records.jsonl.gz</a></td>
+<td><a href="assets/benchmark/benchmark_records.jsonl.gz">benchmark_records.jsonl.gz</a></td>
 <td>All 14,363 cases, three retained times per backend/metric, timestamps, outcomes and numerical differences.</td>
 </tr>
 <tr>
-<td><a href="assets/benchmark/burgundy_protocol.json">burgundy_protocol.json</a></td>
+<td><a href="assets/benchmark/benchmark_protocol.json">benchmark_protocol.json</a></td>
 <td>Frozen protocol v2 and artifact hashes.</td>
 </tr>
 <tr>
 <td><a href="assets/benchmark/v030_summary.json">v030_summary.json</a> and <a href="assets/benchmark/v030_records.jsonl.gz">v030_records.jsonl.gz</a></td>
-<td>Earlier local EPYC 9754 measurements, retained as the source of published peak RSS. Their old runtime fields are historical.</td>
+<td>Earlier local workstation measurements, retained as the source of published peak RSS. Their old runtime fields are historical.</td>
 </tr>
 <tr>
 <td><a href="assets/benchmark/v030_m1.json">v030_m1.json</a></td>
-<td>Earlier controlled Burgundy optimization and thread measurements, with unchanged acceptance decisions.</td>
+<td>Earlier controlled optimization and thread measurements on the same AMD EPYC 7742 nodes, with unchanged acceptance decisions.</td>
 </tr>
 <tr>
 <td><a href="assets/benchmark/nonconverged_records.jsonl.gz">nonconverged_records.jsonl.gz</a></td>
@@ -104,7 +104,7 @@ LD matrices and individual genotypes are not included. The earlier
 <a href="assets/benchmark/v030_overwrite.tsv">v030_overwrite.tsv</a> retains the paired
 local memory results. Historical per-case timing fields are preserved in the
 compressed archive but do not supply the new runtime figures.</p>
-<h2 id="burgundy-protocol">Burgundy protocol</h2>
+<h2 id="benchmark-protocol">Benchmark protocol</h2>
 <p>The full panel is 200 GWAS loci, 14,157 eQTL genes and six nested windows of one
 GWAS locus. Each backend starts a fresh process, loads inputs untimed, makes
 one warmup and three retained calls, and records both timing metrics from each
@@ -136,7 +136,7 @@ scaling during matrix-vector products; R constructs its scaled Gram matrix
 in preparation. Minor scalar checks and final-CS submatrix normalization
 remain in the fitting stage. Small transitions between native spans are
 omitted. No separately measured cost is subtracted.</p>
-<p>The <a href="assets/benchmark/burgundy/README.txt">archived harness and instrumentation</a>
+<p>The <a href="assets/benchmark/archive/README.txt">archived harness and instrumentation</a>
 include exact frozen scripts, patches, hashes and boundary notes. They retain
 cluster paths and are an execution archive, not a portable cluster installer.
 The original release artifacts remain unchanged. Eight representative cases
@@ -293,7 +293,7 @@ fitting parameters. The
 records signed summaries, LD and ordered IDs with explicit fitting settings.
 Downloaded revisions or newly constructed LD panels define different inputs.</p>
 <h2 id="software-and-references">Software and references</h2>
-<p>The Burgundy runtime environment uses CPython 3.12.4, NumPy 1.26.4 and R
+<p>The AMD EPYC 7742 runtime environment uses CPython 3.12.4, NumPy 1.26.4 and R
 4.4.0. NumPy loads OpenBLAS 0.3.23.dev; R uses OpenBLAS 0.3.20, with the
 loaded library identities and thread probes recorded in the archive.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
@@ -333,7 +333,7 @@ loaded library identities and thread probes recorded in the archive.</p>
 <p>All formal fits use <code>refine=False</code>. Earlier local peak-RSS measurements used
 code <code>a4bddf00dbb6b19e7e13d4267fc739f928ff0c5a</code>, wheel
 <code>b4627f9116b4fbbbe6338c40d965d21e1e0e63e8ecaf4c148af7b4cd7bac65f3</code>,
-on AMD EPYC 9754 with CPython 3.12.2. That native extension and the frozen
+on an earlier local workstation with CPython 3.12.2. That native extension and the frozen
 release native extension have SHA-256
 <code>a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e</code>.
 The derived timing binary is explicitly distinct. See

@@ -1,11 +1,11 @@
-# Burgundy measurement archive
+# Benchmark measurement archive
 
 These files preserve the executed 2026-10-28 protocol and run-local timing
 instrumentation. They are archival source with cluster-specific paths, not a
 portable installer. They do not alter the installed package or ship genotype,
 association or LD matrices. The `.txt` suffix keeps archived execution code
 separate from public tooling. [checksums.json](checksums.json) authenticates
-these copies; the [frozen protocol](../burgundy_protocol.json) authenticates
+these copies; the [frozen protocol](../benchmark_protocol.json) authenticates
 the original runtime scripts and inputs.
 
 - [campaign.py.txt](campaign.py.txt): topology, staging, admission, paired case

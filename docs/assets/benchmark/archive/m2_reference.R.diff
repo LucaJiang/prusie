@@ -1,5 +1,5 @@
 --- v030/m2_reference.R
-+++ burgundy/m2_reference.R
++++ b/m2_reference.R
 @@ -12,13 +12,21 @@
  base <- dirname(task$case_path)
  absolute <- function(p) if (startsWith(p,'/')) p else file.path(base,p)

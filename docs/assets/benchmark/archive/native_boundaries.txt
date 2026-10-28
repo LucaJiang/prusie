@@ -132,14 +132,14 @@ it does not make the full instrumented native binary identical to the release.
 | Timing-only patch | `f558de65c0eb3a6d7047f30a2c0f9a84e944616a42e921a51a2d5387df8ec8c2` |
 
 At this report's initial write, representative numerical invariance and actual
-complete-call overhead are **pending**. D owns the Burgundy validation submission
+complete-call overhead are **pending**. D owns the validation submission
 and acceptance, with original and instrumented builds on these eight predeclared
 cases: GWAS_00146, GWAS_00031, GWAS_00119, eQTL_12661, eQTL_00987, eQTL_09479,
 eQTL_07860 and eQTL_13504. Each build uses the same reconstructed LD/settings and
 one warmup plus seven retained calls. No full second campaign or invented
 overhead acceptance threshold is part of this check.
 
-That validation subsequently completed successfully in Burgundy job 700081 on
+That validation subsequently completed successfully in job 700081 on
 cpunode-029 (27 minutes 13 seconds). The independent raw audit is
 `qualification_audit.md` and `qualification_audit.json`. It checks all eight
 predeclared cases, 32 distinct fresh processes, 256 calls including warmups and

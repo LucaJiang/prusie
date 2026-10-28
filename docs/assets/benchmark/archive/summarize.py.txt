@@ -180,7 +180,7 @@ def main():
         result['max_abs_pip_error']=max(r['max_abs_pip_error'] for r in selected)
         result['exceedances']=[{k:r[k] for k in ('case_key','case_id','p','max_abs_alpha_error','numerical_disposition','both_nonconverged_at_limit','any_backend_call_converged')} for r in selected if not r['alpha_pass']]
         panels[panel]=result
-    record=RUN/'reports/burgundy_records.jsonl.gz'
+    record=RUN/'reports/benchmark_records.jsonl.gz'
     with record.open('wb') as raw,gzip.GzipFile(fileobj=raw,mode='wb',mtime=0) as f:
         for row in sorted(rows,key=lambda r:r['case_key']):f.write((json.dumps(row,sort_keys=True,separators=(',',':'))+'\n').encode())
     ledger=read(RUN/'reports/ledger.json')
@@ -212,8 +212,8 @@ def main():
                  protocol_amendment_aborts=31,partial_abort_outputs_preservation='Incomplete: unarchived v1 node-local partials unavailable; completed cases and all claims preserved',
                  numerical_acceptance=read(RUN/'run_config.json')['numerical_acceptance'],
                  node_hours_used=read(RUN/'reports/ledger.json')['node_hours_used'])
-    write(RUN/'reports/burgundy_summary.json',summary)
-    text=['# Burgundy R–prusie comparison','',f"All {len(rows):,} fixed cases completed: 200 GWAS, 14,157 eQTL and six nested windows. Each backend contributes one warmup and three retained complete calls (user amendment 20261028). Completed v1 cases retain their first three timings; all original samples and final numerical arrays are preserved and labeled.",'',
+    write(RUN/'reports/benchmark_summary.json',summary)
+    text=['# Benchmark R-prusie comparison','',f"All {len(rows):,} fixed cases completed: 200 GWAS, 14,157 eQTL and six nested windows. Each backend contributes one warmup and three retained complete calls (user amendment 20261028). Completed v1 cases retain their first three timings; all original samples and final numerical arrays are preserved and labeled.",'',
           '| Panel | Cases | R retained seconds | prusie retained seconds | Total-time R/prusie | Sum-of-medians | Geometric mean | Wins/ties/regressions |',
           '|---|---:|---:|---:|---:|---:|---:|---|']
     for p,s in panels.items():
@@ -237,22 +237,22 @@ def main():
            '| Panel | Host/metric | Backend | IQR/median q1 / median / q3 / p95 / max | Cases >2× / >3× | Repeats >2× / >3× | Time fraction in >2× repeats |',
            '|---|---|---|---|---:|---:|---:|']
     for p,s in panels.items():
-        for label,group in [('Burgundy complete 3retained',s),('Local complete 7retained',old[p]),('Local complete first3',old_first3[p]),('Burgundy fitting 3retained',s['fitting'])]:
+        for label,group in [('Cluster complete 3retained',s),('Local complete 7retained',old[p]),('Local complete first3',old_first3[p]),('Cluster fitting 3retained',s['fitting'])]:
             for b,d in group['backends'].items():
                 q=d['repeat_iqr_over_median'];values=' / '.join(f'{q[k]:.6g}' for k in ('q1','median','q3','p95','max'))
                 text.append(f"| {p} | {label} | {b} | {values} | {d['cases_with_repeat_above_2x']}/{d['cases_with_repeat_above_3x']} | {d['repeats_above_2x']}/{d['repeats_above_3x']} | {d['total_time_fraction_from_repeats_above_2x']:.6g} |")
     for p in panels:
         text+=['',f"{p} local complete-call headline {old[p]['headline_R_over_prusie']:.9g}; sum-of-medians {old[p]['sum_of_medians_R_over_prusie']:.9g}. The local campaign has no fitting-stage measurement."]
-    text+=['','Number of cases with exactly k extreme retained repeats (three Burgundy retained repeats; original local comparison has seven):','',
+    text+=['','Number of cases with exactly k extreme retained repeats (three cluster retained repeats; original local comparison has seven):','',
            '| Panel | Host/metric | Backend | Threshold | k=0 | k=1 | k=2 | k=3 | k=4 | k=5 | k=6 | k=7 |',
            '|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|']
     for p,s in panels.items():
-        for label,group in [('Burgundy complete 3retained',s),('Local complete 7retained',old[p]),('Local complete first3',old_first3[p]),('Burgundy fitting 3retained',s['fitting'])]:
+        for label,group in [('Cluster complete 3retained',s),('Local complete 7retained',old[p]),('Local complete first3',old_first3[p]),('Cluster fitting 3retained',s['fitting'])]:
             for b,d in group['backends'].items():
                 for threshold in (2,3):
                     counts=d[f'repeat_count_distribution_above_{threshold}x']
                     text.append(f'| {p} | {label} | {b} | >{threshold}× median | '+' | '.join(str(counts[str(k)]) for k in range(8))+' |')
-    text+=['','Repeat-count comparisons use the local first-three sensitivity to separate changes in repetition count from changes in interference. The original seven-repeat local statistics are retained separately.','', 'Runtime data use exclusive AMD EPYC 7742 nodes. The memory results retained in public documentation come from the earlier AMD EPYC 9754 host; current VmHWM is diagnostic only.','',
+    text+=['','Repeat-count comparisons use the local first-three sensitivity to separate changes in repetition count from changes in interference. The original seven-repeat local statistics are retained separately.','', 'Runtime data use exclusive AMD EPYC 7742 nodes. The memory results retained in public documentation come from the earlier local workstation; current VmHWM is diagnostic only.','',
            'LD was reconstructed with PLINK from the same authenticated genotype/sample inputs and frozen variant, allele and z records. Fidelity uses the authorized 1e-6 absolute LD threshold and sign check, not bitwise identity.','',
            'In the 24-case fidelity sample, 22 local matrices with rounding-level asymmetry became exactly symmetric with PLINK. That can change the default native LD-validation allocation path. Comparisons with local timing therefore reflect both the host/environment and LD arithmetic; aggregate changes cannot be attributed solely to reduced interference.','',
            '## Numerical exceedances','']
@@ -263,7 +263,7 @@ def main():
     text+=['',f"**Exceedances with at least one converged backend: {len(converged_exceedances)}.**"]
     text+=['','## Operational outcomes','',f'{len(retries)} operational whole-case retries; all successful fixed cases retained. The 31 v1 protocol-amendment aborts are separate. Some unarchived node-local v1 partial outputs were not recovered; all 24 completed v1 cases and all 31 claims were preserved.']
     for event in retries.values():text.append(f"- {event['case_key']}: {event['cause']}; completed replacement job {event['retry_job_id']}.")
-    text+=['','Full quintile, repeat variability and local comparison tables are in `burgundy_summary.json`; all full-panel cases and call timestamps are in `burgundy_records.jsonl.gz`.','',f"Burgundy node-hours charged through the latest Slurm accounting: {summary['node_hours_used']:.9g}."]
+    text+=['','Full quintile, repeat variability and local comparison tables are in `benchmark_summary.json`; all full-panel cases and call timestamps are in `benchmark_records.jsonl.gz`.','',f"Cluster node-hours charged through the latest Slurm accounting: {summary['node_hours_used']:.9g}."]
     (RUN/'reports/benchmark_summary.md').write_text('\n'.join(text)+'\n')
     print(json.dumps({p:{k:s[k] for k in ('cases','headline_R_over_prusie','sum_of_medians_R_over_prusie','max_abs_alpha_error')} for p,s in panels.items()},indent=2))
 

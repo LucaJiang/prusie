@@ -50,7 +50,7 @@ and stochastic draws across languages require separate validation.
 ## Variant inclusion probabilities
 
 The primary real-data comparison fits FinnGen R13 type 2 diabetes GWAS loci
-and GTEx v11 Whole_Blood eQTL analyses on Burgundy, using the AVX2-capable
+and GTEx v11 Whole_Blood eQTL analyses on exclusive AMD EPYC 7742 nodes, using the AVX2-capable
 native build and fresh susieR 0.16.6. The arrays are a by-product of the formal
 timed calls, with no additional fits. R alpha is saved as binary float64.
 prusie uses `n_threads=1` and `refine=False`. Both implementations receive
@@ -71,7 +71,7 @@ The gate remains absolute alpha error ≤ 1e-5, with relative tolerance zero. It
 The table reports observed maximum absolute differences over the complete
 returned arrays. Pass/fail status follows the
 [alpha criterion](#component-posterior-validation); PIP differences are
-additional diagnostics. The [per-case records](assets/benchmark/burgundy_records.jsonl.gz)
+additional diagnostics. The [per-case records](assets/benchmark/benchmark_records.jsonl.gz)
 give the errors and numerical status of each primary comparison.
 
 ![Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, with separate GWAS and eQTL panels.](assets/benchmark/v030_numerical_agreement.svg)
@@ -114,6 +114,44 @@ moments, variances, log Bayes factors or ELBOs. See the
 and working scales, and [iterations and finalization](results.md#iterations-and-finalization)
 for the relation between recorded objectives and returned arrays.
 
+## Iterations and alpha differences
+
+The IBSS sweep repeatedly updates each component's posterior and residuals,
+so prusie and susieR accumulate separate floating-point regroupings over
+successive sweeps. More sweeps therefore give more opportunity for small
+differences to appear, and both backends must stop before the comparison is
+anchored. Points below plot each case's maximum absolute alpha difference
+against the maximum of its two per-backend median IBSS iteration counts; cases
+where both backends reach `max_iter=100` without convergence are highlighted.
+
+![Maximum absolute alpha difference against IBSS iterations for each case, with the alpha gate and both-at-limit cases marked.](assets/benchmark/v030_alpha_vs_iterations.svg)
+
+Among cases where at least one backend converged, errors stay well below the
+`1e-5` acceptance limit on both panels. GWAS maximum within-case alpha
+differences range from $2.65\times10^{-10}$ (median across 9 one-to-five-sweep
+cases) to $4.05\times10^{-8}$ (maximum across 144 six-to-twenty-sweep cases),
+with the across-case maximum $4.05\times10^{-8}$. eQTL converged-pair errors
+behave similarly: across-case maximum $2.55\times10^{-7}$ on the full
+panel; within-bucket medians rise from $4.25\times10^{-10}$ (1–5 sweeps,
+n=8,886) to $1.75\times10^{-9}$ (21–50 sweeps, n=181). The Pearson correlation
+between the two per-case medians and $\log_{10}$ of the within-case maximum
+alpha difference is 0.22 on GWAS and 0.26 on eQTL. The trend is weak:
+regrouped operations accumulate slowly with sweep count, and most of the
+case-to-case spread comes from how closely $\mathbf Q$ and the active
+components are conditioned.
+
+Both panels keep every converged-pair comparison below $3\times10^{-7}$. The
+two recorded eQTL exceedances only appear when both backends stop at
+`max_iter=100` without convergence; their maximum absolute alpha differences
+($1.59\times10^{-5}$ and $4.35\times10^{-5}$) are the two highest points on
+the eQTL panel. The user acceptance applies to this both-nonconverged
+condition only; exceedances involving a converged backend remain gate failures.
+
+The [per-case records](assets/benchmark/benchmark_records.jsonl.gz) retain the
+backend-specific iteration counts, convergence flags and alpha errors used
+in the figure; the [longer iteration-limit diagnostic](#longer-iteration-limit-diagnostic)
+revisits the eQTL exceedances with `max_iter=1000`.
+
 ## Credible sets
 
 The real-data fits construct [credible sets](model.md#pip-and-credible-sets)
@@ -134,7 +172,7 @@ This full-panel campaign records set counts; it does not compare full member ide
 
 Matching aggregate counts do not establish agreement of individual sets.
 Credible-set presence also does not establish convergence. Interpret the counts
-alongside the [recorded convergence flags](assets/benchmark/burgundy_records.jsonl.gz)
+alongside the [recorded convergence flags](assets/benchmark/benchmark_records.jsonl.gz)
 and the [credible-set fields](results.md#credible-set-fields).
 
 ## Independent toy example
@@ -156,8 +194,8 @@ for the simulation method, fitting options and packaged reference, and the
 
 ## Reproduce the comparisons
 
-The [Burgundy summary](assets/benchmark/burgundy_summary.json) and
-[full per-case records](assets/benchmark/burgundy_records.jsonl.gz) provide
+The [benchmark summary](assets/benchmark/benchmark_summary.json) and
+[full per-case records](assets/benchmark/benchmark_records.jsonl.gz) provide
 numerical errors and convergence diagnostics. The 24 adopted earlier-protocol
 cases retain their saved final arrays from retained repeat seven; other cases
 save the arrays from retained repeat three. These repeat identities are explicit. Follow the
@@ -174,7 +212,7 @@ and reference files when running new checks.
 
 ## Longer iteration-limit diagnostic
 
-The separate local AMD EPYC 9754 supplement selected all 224 GTEx genes for
+The separate local workstation supplement selected all 224 GTEx genes for
 which both backends had reported nonconvergence at `max_iter=100`. Each backend
 was called once per gene with `max_iter=1000`, with every other setting and the
 original local inputs unchanged. This diagnostic does not change the default,

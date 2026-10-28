@@ -677,7 +677,7 @@ L -2 0
      </g>
     </g>
     <g id="text_6">
-     <!-- Peak RSS (MiB), earlier EPYC 9754 -->
+     <!-- Peak RSS (MiB), earlier local workstation -->
      <g transform="translate(14.798437 211.605698) rotate(-90) scale(0.1 -0.1)">
       <defs>
        <path id="DejaVuSans-50" d="M 1259 4147 
@@ -1678,7 +1678,7 @@ L 649.19952 85.934506
      </g>
     </g>
     <g id="text_16">
-     <!-- Peak RSS (MiB), earlier EPYC 9754 -->
+     <!-- Peak RSS (MiB), earlier local workstation -->
      <g transform="translate(339.038197 211.605698) rotate(-90) scale(0.1 -0.1)">
       <use xlink:href="#DejaVuSans-50"/>
       <use xlink:href="#DejaVuSans-65" transform="translate(56.677734 0)"/>

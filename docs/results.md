@@ -51,7 +51,7 @@ about which member carries the effect can remain. When evaluated, singleton
 purity is 1 by convention and says nothing about LD with neighboring variants.
 
 The [quick start](example.md#summarize-the-fitted-posterior) shows how to obtain
-the summary tables. The [Toy example](worked_examples.md#what-remains-unresolved)
+the summary tables. The [Toy example](worked_examples.md#resolution)
 illustrates a retained CS whose members remain difficult to resolve.
 
 ## Posterior summaries

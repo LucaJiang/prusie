@@ -1,4 +1,4 @@
-"""One submission/accounting ledger for all owned Burgundy jobs."""
+"""One submission/accounting ledger for all owned cluster jobs."""
 from pathlib import Path
 import argparse
 import fcntl
@@ -12,7 +12,7 @@ import time
 
 RUN=Path(__file__).resolve().parents[1]
 REMOTE='/home/wjiang49/prusie_project/bench_20261028'
-HOST='wjiang49@burgundy.hpc.cityu.edu.hk'
+HOST='wjiang49@REDACTED_HOST'
 SSH=['ssh','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes','-o','UpdateHostKeys=no','-o','ControlMaster=auto','-o','ControlPath='+str(RUN/'tmp/ssh.sock'),'-o','ControlPersist=300','-o','ConnectTimeout=20']
 TERMINAL={'COMPLETED','FAILED','CANCELLED','TIMEOUT','PREEMPTED','NODE_FAIL','OUT_OF_MEMORY','BOOT_FAIL','DEADLINE','REVOKED','SPECIAL_EXIT'}
 
@@ -31,7 +31,7 @@ if START_NOW_AMENDMENT.exists() and not START_NOW_ACK.exists():
           'Record acknowledgement and actual job IDs in '+str(START_NOW_ACK)+'.', file=sys.stderr)
 if SCRATCH_DATA_AMENDMENT.exists() and not SCRATCH_DATA_ACK.exists() and not START_NOW_AMENDMENT.exists():
     print('NEW USER REQUIREMENT: Read '+str(SCRATCH_DATA_AMENDMENT)+
-          '; move ALL this project Burgundy home data to scratch with verified cutover '
+          '; move ALL this project home data to scratch with verified cutover '
           'before formal timing. Preserve current qualification and scientific data.', file=sys.stderr)
 if FIT_TIMING_AMENDMENT.exists() and not FIT_TIMING_ACK.exists():
     print('NEW USER REQUIREMENT: Read '+str(FIT_TIMING_AMENDMENT)+

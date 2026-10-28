@@ -76,12 +76,12 @@ Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.
 | GWAS | 200 | 49.2× | 55.4× | 42.9× | 3.66× |
 | eQTL | 14157 | 26.6× | 29.8× | 26.6× | 3.77× |
 
-¹ Sum of three retained R times divided by the corresponding prusie total, on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. ² Sum of within-case R medians divided by the sum of prusie medians. ³ Median paired R/prusie fresh-process peak RSS from the earlier local AMD EPYC 9754 measurements, including interpreter and inputs. Runtime and memory have separate origins.
+¹ Sum of three retained R times divided by the corresponding prusie total, on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. ² Sum of within-case R medians divided by the sum of prusie medians. ³ Median paired R/prusie fresh-process peak RSS from the earlier local workstation measurements, including interpreter and inputs. Runtime and memory have separate origins.
 <!-- current:highlights:end -->
 
 Runtime uses one numerical thread per fit on exclusive AMD EPYC 7742
 nodes, with complete-call and fitting-stage measurements from the same calls.
-Memory retains the earlier local AMD EPYC 9754 measurements, including the
+Memory retains the earlier local workstation measurements, including the
 interpreter, inputs and returned fit. See [performance](performance.md) for
 methods and software identities, and [numerical accuracy](numerical_accuracy.md)
 for the complete-alpha comparison, individual exceedances and convergence
