@@ -25,10 +25,11 @@
 <ul>
 <li><a href="#component-posterior-validation">Component posterior validation</a></li>
 <li><a href="#variant-inclusion-probabilities">Variant inclusion probabilities</a></li>
-<li><a href="#reference-integrity-and-posterior-diagnostics">Reference integrity and posterior diagnostics</a></li>
+<li><a href="#individual-exceedances-and-posterior-diagnostics">Individual exceedances and posterior diagnostics</a></li>
 <li><a href="#credible-sets">Credible sets</a></li>
 <li><a href="#independent-toy-example">Independent toy example</a></li>
 <li><a href="#reproduce-the-comparisons">Reproduce the comparisons</a></li>
+<li><a href="#longer-iteration-limit-diagnostic">Longer iteration-limit diagnostic</a></li>
 </ul>
 </div>
 </details><h1 id="numerical-accuracy">Numerical accuracy</h1>
@@ -74,7 +75,9 @@ inputs, model settings and platforms; <a href="post_analysis.html#refinement-com
 and stochastic draws across languages require separate validation.</p>
 <h2 id="variant-inclusion-probabilities">Variant inclusion probabilities</h2>
 <p>The primary real-data comparison fits FinnGen R13 type 2 diabetes GWAS loci
-and GTEx v11 Whole_Blood eQTL analyses with prusie and fresh susieR 0.16.6.
+and GTEx v11 Whole_Blood eQTL analyses on Burgundy, using the AVX2-capable
+native build and fresh susieR 0.16.6. The arrays are a by-product of the formal
+timed calls, with no additional fits. R alpha is saved as binary float64.
 prusie uses <code>n_threads=1</code> and <code>refine=False</code>. Both implementations receive
 matched summary statistics, LD and model settings; see the
 <a href="reproducibility.html#real-gwas-and-eqtl-inputs">input provenance</a> and
@@ -96,15 +99,15 @@ matched summary statistics, LD and model settings; see the
 <td>GWAS</td>
 <td>200</td>
 <td>200 / 0 / 0</td>
-<td>6.58e-08</td>
-<td>6.58e-08</td>
+<td>4.05e-08</td>
+<td>4.05e-08</td>
 </tr>
 <tr>
 <td>eQTL</td>
 <td>14157</td>
-<td>14156 / 1 / 0</td>
-<td>1.27e-05</td>
-<td>1.27e-05</td>
+<td>14155 / 2 / 0</td>
+<td>4.35e-05</td>
+<td>0.000243</td>
 </tr>
 </tbody>
 </table></div>
@@ -114,12 +117,12 @@ matched summary statistics, LD and model settings; see the
 <p>The table reports observed maximum absolute differences over the complete
 returned arrays. Pass/fail status follows the
 <a href="#component-posterior-validation">alpha criterion</a>; PIP differences are
-additional diagnostics. The <a href="assets/benchmark/v030_primary.tsv">per-case table</a>
-gives the errors and numerical status of each primary comparison.</p>
+additional diagnostics. The <a href="assets/benchmark/burgundy_records.jsonl.gz">per-case records</a>
+give the errors and numerical status of each primary comparison.</p>
 <figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, with separate GWAS and eQTL panels." src="assets/benchmark/v030_numerical_agreement.svg" /></div><figcaption><a href="assets/benchmark/v030_numerical_agreement.svg">Open original figure</a></figcaption></figure>
 <p>The vertical axes use a symmetric-log scale that retains exact zeros. The
 dashed lines mark the alpha acceptance limit in the top panels.
-<a href="assets/benchmark/v030_numerical_agreement.pdf">Vector PDF</a>.</p>
+<a href="assets/benchmark/v030_numerical_agreement.pdf">PDF</a>.</p>
 <!-- generated:limits:start -->
 
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
@@ -146,50 +149,14 @@ dashed lines mark the alpha acceptance limit in the top panels.
 <p>All completed positive timing pairs enter the performance summaries, independently of convergence, alpha agreement and credible-set presence. Per-case records list every status.</p>
 <!-- generated:limits:end -->
 
-<p>The only gene exceeding the alpha criterion is <code>ENSG00000110203.10</code>. Its
-maximum absolute alpha difference is <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.26768</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.26768\times10^{-5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">1.26768</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span></span></span></span></span> in the primary
-comparison and in the separate <code>n_threads=2</code>, <code>4</code> and <code>8</code> comparisons. In all
-observed fits for this gene, both backends reached <code>max_iter=100</code> with
-<code>converged=False</code>. All four settings remain recorded as threshold failures.
-No exceedance involved a converged backend. The
-<a href="assets/benchmark/v030_summary.json">full summary</a> retains the individual
-outcomes and probability-validity checks.</p>
-<h2 id="reference-integrity-and-posterior-diagnostics">Reference integrity and posterior diagnostics</h2>
-<p>The first table checks whether fresh susieR <code>alpha</code> matrices reproduce the
-stored R references exactly, comparing both values and bit patterns. This is
-separate from the <a href="#component-posterior-validation">alpha tolerance</a> used to
-compare prusie with fresh susieR. The second table lists the four settings with
-alpha threshold failures described <a href="#variant-inclusion-probabilities">above</a>.</p>
+<h2 id="individual-exceedances-and-posterior-diagnostics">Individual exceedances and posterior diagnostics</h2>
+<p>Every alpha exceedance is listed below. Exceedances remain threshold failures;
+the predeclared exception applies only when both backends reach the
+iteration limit without convergence. Any exceedance involving a converged
+backend is reported separately and prominently. No case is removed from the
+timing summary because of convergence or numerical outcome.</p>
 <!-- generated:errors:start -->
-
-<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
-<thead>
-<tr>
-<th>Analysis</th>
-<th>Fresh/frozen R: non-bitwise cases</th>
-<th>Fresh/frozen R: unequal-value cases</th>
-<th>Integrity unavailable</th>
-<th>Maximum fresh/frozen &#124;Δalpha&#124;</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>GWAS</td>
-<td>200</td>
-<td>200</td>
-<td>0</td>
-<td>5e-16</td>
-</tr>
-<tr>
-<td>eQTL</td>
-<td>14101</td>
-<td>14101</td>
-<td>0</td>
-<td>5.55e-16</td>
-</tr>
-</tbody>
-</table></div>
-<p>Fresh R is checked before timing against the stored frozen alpha values. Every nonzero difference remains recorded; the full-precision new R alpha is used for the prusie comparison. Frozen decimal serialization can prevent bitwise identity.</p>
+<p>No alpha exceedance involved a converged backend.</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -199,49 +166,32 @@ alpha threshold failures described <a href="#variant-inclusion-probabilities">ab
 <th>prusie: iterations / converged</th>
 <th>R: iterations / converged</th>
 <th>Both at iteration limit</th>
+<th>Disposition</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>ENSG00000164741.15</td>
+<td>primary</td>
+<td>1.5907202e-05</td>
+<td>100 / False</td>
+<td>100 / False</td>
+<td>True</td>
+<td>ACCEPTED_BOTH_NONCONVERGED_EXCEPTION</td>
+</tr>
+<tr>
 <td>ENSG00000110203.10</td>
 <td>primary</td>
-<td>1.26768e-05</td>
+<td>4.3494803e-05</td>
 <td>100 / False</td>
 <td>100 / False</td>
 <td>True</td>
-</tr>
-<tr>
-<td>ENSG00000110203.10</td>
-<td>threads2</td>
-<td>1.26768e-05</td>
-<td>100 / False</td>
-<td>100 / False</td>
-<td>True</td>
-</tr>
-<tr>
-<td>ENSG00000110203.10</td>
-<td>threads4</td>
-<td>1.26768e-05</td>
-<td>100 / False</td>
-<td>100 / False</td>
-<td>True</td>
-</tr>
-<tr>
-<td>ENSG00000110203.10</td>
-<td>threads8</td>
-<td>1.26768e-05</td>
-<td>100 / False</td>
-<td>100 / False</td>
-<td>True</td>
+<td>ACCEPTED_BOTH_NONCONVERGED_EXCEPTION</td>
 </tr>
 </tbody>
 </table></div>
 <!-- generated:errors:end -->
 
-<p>Every primary case has a stored R reference. The nonzero R-versus-R differences
-remain exact-integrity mismatches, even at rounding scale. The
-<a href="assets/benchmark/v030_primary.tsv">per-case table</a> retains each primary case's
-bitwise status and maximum absolute difference.</p>
 <p>The full real-data comparison does not provide error bounds for posterior
 moments, variances, log Bayes factors or ELBOs. See the
 <a href="results.html#posterior-fields">posterior field definitions</a> for their meanings
@@ -299,7 +249,7 @@ with target posterior mass <code>coverage=0.95</code> and minimum absolute LD co
 
 <p>Matching aggregate counts do not establish agreement of individual sets.
 Credible-set presence also does not establish convergence. Interpret the counts
-alongside the <a href="assets/benchmark/v030_records.jsonl.gz">recorded convergence flags</a>
+alongside the <a href="assets/benchmark/burgundy_records.jsonl.gz">recorded convergence flags</a>
 and the <a href="results.html#credible-set-fields">credible-set fields</a>.</p>
 <h2 id="independent-toy-example">Independent toy example</h2>
 <p>The packaged toy example checks numerical agreement on a single simulated
@@ -315,10 +265,11 @@ also match the R reference for this example. See the <a href="example.html">toy 
 for the simulation method, fitting options and packaged reference, and the
 <a href="assets/toy_fit.pdf">vector PDF</a>.</p>
 <h2 id="reproduce-the-comparisons">Reproduce the comparisons</h2>
-<p>The <a href="assets/benchmark/v030_summary.json">public summary</a>,
-<a href="assets/benchmark/v030_primary.tsv">primary comparison table</a> and
-<a href="assets/benchmark/v030_records.jsonl.gz">full per-case records</a> provide numerical
-errors, convergence diagnostics and reference-integrity results. Follow the
+<p>The <a href="assets/benchmark/burgundy_summary.json">Burgundy summary</a> and
+<a href="assets/benchmark/burgundy_records.jsonl.gz">full per-case records</a> provide
+numerical errors and convergence diagnostics. The 24 adopted earlier-protocol
+cases retain their saved final arrays from retained repeat seven; other cases
+save the arrays from retained repeat three. These repeat identities are explicit. Follow the
 <a href="reproducibility.html#tables-and-figures">regeneration instructions</a> to rebuild
 the tables and figures from retained measurements without refitting.</p>
 <p>The <a href="reproducibility.html#toy-example">offline toy checks</a> compare a prusie fit
@@ -327,7 +278,28 @@ fits both implementations using matched inputs and settings. Repeating the
 real-data comparisons requires the separately obtained
 <a href="reproducibility.html#real-gwas-and-eqtl-inputs">association summaries and LD</a>,
 with the same variant order and fitting settings. Preserve the frozen inputs
-and reference files when running new checks.</p></article>
+and reference files when running new checks.</p>
+<h2 id="longer-iteration-limit-diagnostic">Longer iteration-limit diagnostic</h2>
+<p>The separate local AMD EPYC 9754 supplement selected all 224 GTEx genes for
+which both backends had reported nonconvergence at <code>max_iter=100</code>. Each backend
+was called once per gene with <code>max_iter=1000</code>, with every other setting and the
+original local inputs unchanged. This diagnostic does not change the default,
+formal benchmark settings, acceptance criterion or original classification.</p>
+<p>Both backends converged for 102 genes and returned nonconverged fits for 83.
+For the other 39 genes, both stopped with the existing prior-variance guard;
+those calls did not return fits and have no final iteration count. There were
+no discordant backend outcomes. The guard message suggests inconsistent
+summary statistics and LD as one possible cause; this supplement did not
+establish that cause.</p>
+<p>Among the 185 returned pairs, the largest absolute alpha difference was
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>5.49</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">5.49 \times 10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">5.49</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span>; among the 102 both-converged pairs, it was <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.59</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.59 \times 10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">2.59</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span>.
+For ENSG00000110203.10, both still reported nonconvergence after 1,000
+iterations, with maximum alpha difference <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>7.16</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">7.16 \times 10^{-10}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">7.16</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">10</span></span></span></span></span></span></span></span></span></span></span></span></span>. This does not replace
+the original 100-iteration exceedance or its recorded user disposition.</p>
+<p>The <a href="assets/benchmark/nonconverged_records.jsonl.gz">supplement records</a>
+list every gene, returned iteration count, numerical difference or guard
+rejection. The <a href="assets/benchmark/nonconverged_case_ids.txt">selected gene list</a> has SHA-256
+<code>8ee34a2840903be09fa500241d646e508b1ddbd217f7996f07c59caadd125e47</code>.</p></article>
 <footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>

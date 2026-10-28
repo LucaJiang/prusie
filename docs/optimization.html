@@ -486,12 +486,11 @@ Python process to one thread.</p>
 on the intended workload and keep BLAS at one thread when assessing this
 option. In the <a href="performance.html#earlier-measurements">paired measurements</a>,
 four threads improved all applicable cases in the 87-case, 80-case and
-17-case panels (87, 78 and 17 applicable cases). In the separate, concurrently
-loaded real-data series, four threads had median one-thread/four-thread
-time ratios of 1.93 for GWAS and 1.63 for eQTL, with slower cases in both
-panels. <a href="performance.html#thread-scaling">Thread scaling</a> gives all counts and
-the separately measured eight-thread results. When running several fits
-concurrently, account for the worker threads in each fit.</p>
+17-case panels (87, 78 and 17 applicable cases). On the primary 87-case
+panel, the median paired four/one-thread ratio was 0.735; eight/one was
+0.783, and eight threads were slower than one in 8 cases.
+<a href="performance.html#thread-scaling">Thread scaling</a> gives the controlled results.
+When running several fits concurrently, account for each fit's worker threads.</p>
 <h2 id="what-prusie-does-not-do">What prusie does not do</h2>
 <p>The optimizations described here retain float64 arithmetic. They do not
 threshold LD, prune variants or substitute a low-rank approximation.

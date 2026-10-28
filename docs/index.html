@@ -83,9 +83,9 @@ susieR divided by prusie.</p>
 <tr>
 <th>Analysis</th>
 <th>Cases</th>
-<th>Timing pairs</th>
-<th>Total-time speed-up¹</th>
-<th>Per-case geometric mean²</th>
+<th>Complete-call speed-up¹</th>
+<th>Fitting-stage speed-up¹</th>
+<th>Complete-call sum-of-medians²</th>
 <th>Peak RSS ratio³</th>
 </tr>
 </thead>
@@ -93,33 +93,31 @@ susieR divided by prusie.</p>
 <tr>
 <td>GWAS</td>
 <td>200</td>
-<td>200</td>
-<td>27.7×</td>
-<td>35×</td>
+<td>49.2×</td>
+<td>55.4×</td>
+<td>42.9×</td>
 <td>3.66×</td>
 </tr>
 <tr>
 <td>eQTL</td>
 <td>14157</td>
-<td>14157</td>
-<td>19.1×</td>
-<td>22.7×</td>
+<td>26.6×</td>
+<td>29.8×</td>
+<td>26.6×</td>
 <td>3.77×</td>
 </tr>
 </tbody>
 </table></div>
-<p>¹ Sum of all seven retained R fit times divided by the corresponding prusie total. ² Geometric mean of within-case median-time ratios. ³ Median paired R/prusie fresh-process peak RSS, including interpreter and inputs. The two speed-up summaries use different weighting.</p>
+<p>¹ Sum of three retained R times divided by the corresponding prusie total, on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. ² Sum of within-case R medians divided by the sum of prusie medians. ³ Median paired R/prusie fresh-process peak RSS from the earlier local AMD EPYC 9754 measurements, including interpreter and inputs. Runtime and memory have separate origins.</p>
 <!-- current:highlights:end -->
 
-<p>Measurements used one numerical thread per fit on a concurrently loaded
-AMD EPYC 9754 host running Linux x86-64. Peak RSS is the process's peak
-resident memory, including the interpreter, inputs and returned fit. See
-<a href="performance.html">performance</a> for the protocol, software identities and scope.</p>
-<p>One eQTL analysis, <code>ENSG00000110203.10</code>, exceeds the <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span></span></span></span></span> absolute-error
-criterion for the complete final <code>alpha</code> matrix (<code>rtol=0</code>); both backends
-reached the iteration limit without convergence. See
-<a href="numerical_accuracy.html">numerical accuracy</a> for the tested configurations and
-individual outcomes.</p>
+<p>Runtime uses one numerical thread per fit on exclusive AMD EPYC 7742
+nodes, with complete-call and fitting-stage measurements from the same calls.
+Memory retains the earlier local AMD EPYC 9754 measurements, including the
+interpreter, inputs and returned fit. See <a href="performance.html">performance</a> for
+methods and software identities, and <a href="numerical_accuracy.html">numerical accuracy</a>
+for the complete-alpha comparison, individual exceedances and convergence
+diagnostics.</p>
 <h2 id="sensitivity-and-refinement">Sensitivity and refinement</h2>
 <p>The official susieR <a href="worked_examples.html">toy example</a> shows a fit that meets its
 stopping rule before refinement finds a higher evidence lower bound (ELBO).
