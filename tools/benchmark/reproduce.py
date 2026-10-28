@@ -24,12 +24,7 @@ def main() -> int:
     inputs.add_argument(
         "--render-records", action="store_true", help="Plot retained records without running fits"
     )
-    parser.add_argument(
-        "--real", type=Path, default=ROOT / "docs/assets/benchmark/real_summary.json"
-    )
-    parser.add_argument(
-        "--scaling", type=Path, default=ROOT / "docs/assets/benchmark/scaling_summary.json"
-    )
+    parser.add_argument("--assets", type=Path, default=ROOT / "docs/assets/benchmark")
     parser.add_argument("--validation-only", action="store_true")
     parser.add_argument("--sample-rss", action="store_true")
     args = parser.parse_args()
@@ -41,12 +36,11 @@ def main() -> int:
         return subprocess.run(
             [
                 sys.executable,
-                str(HERE / "plot_current.py"),
-                "--real",
-                str(args.real.resolve()),
-                "--scaling",
-                str(args.scaling.resolve()),
-                "--output",
+                str(HERE.parent / "v030.py"),
+                "figures",
+                "--assets",
+                str(args.assets.resolve()),
+                "--output-dir",
                 str(out),
             ],
             check=False,

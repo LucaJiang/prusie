@@ -52,7 +52,10 @@ def test_render_records_does_not_require_r(reproduce, monkeypatch, tmp_path):
     monkeypatch.setattr(reproduce.subprocess, "run", run)
     assert reproduce.main() == 0
     assert len(calls) == 1
-    assert Path(calls[0][1]).name == "plot_current.py"
+    assert Path(calls[0][1]).name == "v030.py"
+    assert calls[0][2] == "figures"
+    assert calls[0][calls[0].index("--output-dir") + 1] == str(output)
+    assert "--real" not in calls[0] and "--scaling" not in calls[0]
     assert "Rscript" not in calls[0]
     assert not (output / "build").exists()
 
