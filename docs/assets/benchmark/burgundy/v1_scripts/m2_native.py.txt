@@ -1,0 +1,188 @@
+"""One M2 task and fresh installed-wheel backend processes; no result cache."""
+from __future__ import annotations
+
+import argparse
+import ctypes
+import fcntl
+import gc
+import gzip
+import json
+import math
+import os
+from pathlib import Path
+import resource
+import subprocess
+import sys
+import time
+import traceback
+import warnings
+
+from campaign import COMMIT, RUN, THREAD_VARS, read, sha, write
+
+
+def host():
+    memory = {}
+    for line in Path("/proc/meminfo").read_text().splitlines():
+        key, value = line.split(":", 1)
+        if key in ("MemTotal", "MemAvailable"):
+            memory[key] = int(value.split()[0]) * 1024
+    return dict(epoch=time.time(), load_average=list(os.getloadavg()), memory=memory,
+                occupancy=1 - memory["MemAvailable"] / memory["MemTotal"],
+                affinity=sorted(os.sched_getaffinity(0)))
+
+
+def numerical_libraries():
+    libraries = []
+    paths = set()
+    for line in Path("/proc/self/maps").read_text().splitlines():
+        fields = line.split(maxsplit=5)
+        if len(fields) == 6 and fields[-1].startswith("/") and any(
+                key in Path(fields[-1]).name.lower() for key in ("blas", "mkl", "libmvec")):
+            paths.add(fields[-1])
+    for path in sorted(paths):
+        library = ctypes.CDLL(path)
+        count = None
+        for symbol in ("openblas_get_num_threads", "openblas_get_num_threads64_",
+                       "scipy_openblas_get_num_threads64_", "scipy_openblas_get_num_threads", "MKL_Get_Max_Threads"):
+            if hasattr(library, symbol):
+                function = getattr(library, symbol)
+                function.restype = ctypes.c_int
+                count = int(function())
+                break
+        libraries.append(dict(path=path, sha256=sha(path), threads=count))
+    return libraries
+
+
+def verify_request(request):
+    payload = {k: v for k, v in request.items() if k != "signature_sha256"}
+    import hashlib
+    assert hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest() == request["signature_sha256"]
+    case = read(request["task"]["case_path"])
+    assert case["parameters"] == request["task"]["parameters"]
+    assert sorted(os.sched_getaffinity(0)) == request["placement"]["cpus"]
+    assert case["parameters"]["max_iter"] == 100
+    assert sha(request["protocol_path"]) == request["protocol_sha256"]
+    return case
+
+def native_main(args):
+    import numpy as np
+    import prusie
+    from prusie import _native
+
+    request = read(args.request)
+    task = request["task"]
+    case = verify_request(request)
+    stage_timer = None
+    if request.get("fit_timing"):
+        sys.path.insert(0, request["fit_timing"]["native_helper_directory"])
+        from stage_timer import install
+        stage_timer = install()
+    record = dict(backend="prusie", version=prusie.__version__, mode=args.mode, status="error",
+                  samples=[], signature_sha256=request["signature_sha256"], environment=host(),
+                  pid=os.getpid(), rlimit_as=list(resource.getrlimit(resource.RLIMIT_AS)),
+                  numerical_thread_environment={key: os.environ.get(key) for key in THREAD_VARS},
+                  native_sha256=sha(_native.__file__), backend_version=_native.backend_version(),
+                  runtime_versions=dict(python=sys.version, numpy=np.__version__, prusie=prusie.__version__),
+                  numerical_libraries=numerical_libraries())
+    try:
+        assert prusie.__version__ == "0.3.0"
+        assert COMMIT in _native.backend_version()
+        assert record["native_sha256"] == request["identity"]["native_sha256"]
+        assert Path(prusie.__file__).resolve().is_relative_to(Path(request["identity"]["python"]).parent.parent.resolve())
+        assert all(os.environ.get(key) == "1" for key in THREAD_VARS)
+        assert all(item["threads"] in (None, 1) for item in record["numerical_libraries"])
+        base = Path(task["case_path"]).parent
+        full_p = case["n_variants"]
+        p = task["window"] or full_p
+        before = time.perf_counter_ns()
+        z = np.fromfile(base / case["z_path"], dtype="<f8", count=p)
+        if task["window"] is not None and "R_gzip_path" not in case:
+            matrix = np.empty((p, p), dtype="<f8", order="C")
+            with (base / case["R_path"]).open("rb") as handle:
+                for row in range(p):
+                    handle.seek(8 * row * full_p)
+                    view = memoryview(matrix[row]).cast("B")
+                    assert handle.readinto(view) == 8 * p
+                    del view
+        elif "R_gzip_path" in case:
+            matrix = np.empty(full_p * full_p, dtype="<f8")
+            view = memoryview(matrix).cast("B")
+            offset = 0
+            with gzip.open(base / case["R_gzip_path"], "rb") as stream:
+                while offset < len(view):
+                    size = stream.readinto(view[offset:offset + 1024 * 1024])
+                    assert size, "Compressed LD ended before declared size"
+                    offset += size
+                assert not stream.read(1), "Compressed LD exceeds declared size"
+            del view
+        else:
+            matrix = np.fromfile(base / case["R_path"], dtype="<f8")
+        assert z.size == p
+        # Set shape on the owning array: overwrite eligibility must not be lost
+        # merely because a reshape returned a view of the same loaded bytes.
+        matrix.shape = (full_p, full_p) if matrix.size == full_p * full_p else (p, p)
+        ids = (base / case["variant_ids_path"]).read_text().splitlines()
+        assert len(ids) == len(set(ids)) == full_p and all(ids)
+        if task["window"] is not None:
+            if matrix.shape != (p, p):
+                matrix = matrix[:p, :p].copy(order="C")
+            ids = ids[:p]
+        inputs = dict(z=z, R=matrix, variant_ids=ids, **case["parameters"],
+                      n_threads=task["n_threads"], overwrite_ld=task["overwrite"])
+        record["input_load_seconds"] = (time.perf_counter_ns() - before) / 1e9
+        shape = (min(case["parameters"]["L"], p), p)
+        fit = None
+        for repeat in range(8 if args.mode == "time" else 1):
+            fit = None
+            gc.collect()
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                start_epoch = time.time()
+                clock = time.perf_counter_ns()
+                fit = prusie.susie_rss(**inputs)
+                elapsed = (time.perf_counter_ns() - clock) / 1e9
+                end_epoch = time.time()
+            fitting = stage_timer.latest() if stage_timer is not None else None
+            # Capture before comparisons, serialization, or exported copies.
+            peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+            alpha = np.asarray(fit.alpha)
+            pip = np.asarray(fit.pip)
+            assert alpha.shape == shape and pip.shape == (p,)
+            valid = bool(np.isfinite(alpha).all() and np.isfinite(pip).all()
+                         and ((alpha >= 0) & (alpha <= 1)).all() and ((pip >= 0) & (pip <= 1)).all()
+                         and np.max(abs(alpha.sum(axis=1) - 1)) <= 1e-10
+                         and np.isfinite(fit.V).all() and (fit.V >= 0).all()
+                         and np.isfinite(fit.sigma2) and fit.sigma2 > 0
+                         and list(fit.variant_ids) == ids and 1 <= fit.niter <= case["parameters"]["max_iter"])
+            parameter_checks = {key: bool(fit.params[key] == value) for key, value in case["parameters"].items()
+                                if key in fit.params and key != "prior_weights"}
+            valid = valid and all(parameter_checks.values())
+            validity_failures = [] if valid else ["Basic probability/input/model validity failed"]
+            record["samples"].append(dict(repeat=repeat, warmup=args.mode == "time" and repeat == 0,
+                  time_seconds=elapsed if args.mode == "time" else None, peak_rss_bytes=peak if args.mode == "memory" else None,
+                  start_epoch=start_epoch, end_epoch=end_epoch, niter=int(fit.niter), converged=bool(fit.converged),
+                  cs_count=len(fit.sets["cs_index"]), warnings=[str(w.message) for w in caught], validity_pass=valid,
+                  parameter_checks=parameter_checks,
+                  validity_failures=validity_failures,
+                  fitting=fitting,
+                  alpha_sha256=__import__("hashlib").sha256(alpha.astype("<f8").tobytes()).hexdigest()))
+            assert valid, "; ".join(validity_failures)
+        record.update(status="ok", alpha_shape=list(alpha.shape), n_variants=p,
+                      n_threads=task["n_threads"], overwrite_ld=task["overwrite"],
+                      parameters=case["parameters"], environment_end=host())
+        if args.mode == "time":
+            alpha.astype("<f8").T.tofile(str(args.output) + ".alpha.bin")
+            pip.astype("<f8").tofile(str(args.output) + ".pip.bin")
+        record["peak_rss_bytes"] = peak
+    except Exception as error:
+        record.update(error=repr(error), traceback=traceback.format_exc())
+    write(args.output, record)
+    return 0 if record["status"] == "ok" else 1
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--request", type=Path, required=True)
+    parser.add_argument("--mode", choices=["time"], default="time")
+    parser.add_argument("--output", type=Path, required=True)
+    raise SystemExit(native_main(parser.parse_args()))

@@ -1,0 +1,106 @@
+{
+  "state": "DESCRIPTIVE_RETAINED_NO_RERUN",
+  "records_sha256": "ab6eb6e424c06b9ce734aadbf2e58176750a6bc4e0b7ffce171a2796f51f3f9c",
+  "extreme_calls": [
+    {
+      "case_key": "GWAS_00070",
+      "case_id": "T2D_chr6_112979311_122424552",
+      "panel": "GWAS",
+      "p": 16178,
+      "host": "cpunode-029",
+      "job_id": "700793",
+      "backend": "R",
+      "repeat": 2,
+      "complete_seconds": 1698.50641654246,
+      "fitting_seconds": 1693.81187378336,
+      "complete_median": 185.212630907074,
+      "timestamps": [
+        1793176434.84348,
+        1793178133.34995
+      ],
+      "niter": 15,
+      "converged": true,
+      "placement": {
+        "cpus": [
+          4
+        ],
+        "numa": 0,
+        "socket": 0,
+        "l3_cpus": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "binding": "membind"
+      }
+    },
+    {
+      "case_key": "GWAS_00111",
+      "case_id": "T2D_chr10_61277948_71054950",
+      "panel": "GWAS",
+      "p": 19221,
+      "host": "cpunode-029",
+      "job_id": "700793",
+      "backend": "R",
+      "repeat": 1,
+      "complete_seconds": 1897.93130782247,
+      "fitting_seconds": 1890.62074538134,
+      "complete_median": 417.039866636507,
+      "timestamps": [
+        1793176509.81605,
+        1793178407.74742
+      ],
+      "niter": 28,
+      "converged": true,
+      "placement": {
+        "cpus": [
+          8
+        ],
+        "numa": 0,
+        "socket": 0,
+        "l3_cpus": [
+          8,
+          9,
+          10,
+          11
+        ],
+        "binding": "membind"
+      }
+    },
+    {
+      "case_key": "window_10000",
+      "case_id": "T2D_chr10_61277948_71054950",
+      "panel": "windows",
+      "p": 10000,
+      "host": "cpunode-029",
+      "job_id": "700793",
+      "backend": "R",
+      "repeat": 3,
+      "complete_seconds": 1576.38740886375,
+      "fitting_seconds": 70.1202525179833,
+      "complete_median": 71.0679848343134,
+      "timestamps": [
+        1793176591.00791,
+        1793178167.39537
+      ],
+      "niter": 17,
+      "converged": true,
+      "placement": {
+        "cpus": [
+          12
+        ],
+        "numa": 0,
+        "socket": 0,
+        "l3_cpus": [
+          12,
+          13,
+          14,
+          15
+        ],
+        "binding": "membind"
+      }
+    }
+  ],
+  "interpretation": "All three extreme R calls used NUMA0 on cpunode-029, overlapped in time and ended near the recorded NUMA0 OOM. This is consistent with local memory pressure; stall mechanisms were not separately profiled. Retained without outcome-based reruns or exclusions."
+}

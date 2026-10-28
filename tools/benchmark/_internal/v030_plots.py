@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import matplotlib
 
 matplotlib.use("Agg")
@@ -49,22 +51,25 @@ def finish(axes):
 
 def plot(summary, m1, records, output):
     style()
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
     primary = [r for r in records if r["kind"] == "primary"]
     for key, ylabel, filename in (
-        ("runtime", "Median fit time (s)", "v030_runtime_by_variants"),
-        ("memory", "Fresh-process peak RSS (MiB)", "v030_memory_by_variants"),
+        ("runtime", "Complete-call median (s), EPYC 7742", "v030_runtime_by_variants"),
+        ("fitting_runtime", "Fitting-stage median (s), EPYC 7742", "burgundy_fitting_by_variants"),
+        ("memory", "Peak RSS (MiB), earlier EPYC 9754", "v030_memory_by_variants"),
     ):
         fig, axes = plt.subplots(1, 2, figsize=(9, 3.6), layout="constrained")
         for ax, panel in zip(axes, PANELS, strict=True):
             rows = [
                 r
                 for r in primary
-                if r["panel"] == panel and r["timing_pair" if key == "runtime" else "memory_pair"]
+                if r["panel"] == panel and r["memory_pair" if key == "memory" else "timing_pair"]
             ]
             for backend, marker in (("prusie", "o"), ("susieR", "^")):
                 y = [
-                    r[backend]["runtime"]["median"]
-                    if key == "runtime"
+                    r[backend][key]["median"]
+                    if key != "memory"
                     else r[backend]["peak_rss_bytes"] / 2**20
                     for r in rows
                 ]
@@ -76,6 +81,7 @@ def plot(summary, m1, records, output):
                     color=COLORS[backend],
                     marker=marker,
                     linewidths=0,
+                    rasterized=True,
                     label=backend,
                 )
             ax.set(
@@ -89,12 +95,13 @@ def plot(summary, m1, records, output):
         finish(axes)
         save(fig, output, filename)
 
-    fig, axes = plt.subplots(2, 2, figsize=(9, 6.8), layout="constrained")
+    fig, axes = plt.subplots(3, 2, figsize=(9, 9), layout="constrained")
     for column, panel in enumerate(PANELS):
         rows = [r for r in primary if r["panel"] == panel]
         for ax, field, label in (
-            (axes[0, column], "speedup", "R / prusie median fit time"),
-            (axes[1, column], "memory_ratio", "R / prusie fresh-process peak RSS"),
+            (axes[0, column], "speedup", "R / prusie complete call, EPYC 7742"),
+            (axes[1, column], "fitting_speedup", "R / prusie fitting stage, EPYC 7742"),
+            (axes[2, column], "memory_ratio", "R / prusie peak RSS, earlier EPYC 9754"),
         ):
             values = [r[field] for r in rows if finite(r[field]) and r[field] > 0]
             ecdf(ax, values, color=COLORS["prusie"], linewidth=1.5)
@@ -114,47 +121,6 @@ def plot(summary, m1, records, output):
     save(fig, output, "v030_ratio_distributions")
 
     lookup = {(r["panel"], r["case_id"], r["kind"]): r for r in records}
-    fig, axes = plt.subplots(2, 2, figsize=(9, 6.8), layout="constrained")
-    for column, panel in enumerate(PANELS):
-        base = [r for r in primary if r["panel"] == panel and (panel == "GWAS" or r["p"] >= 1024)]
-        all_ratios = []
-        for count, color in ((2, "#009E73"), (4, "#0072B2"), (8, "#CC79A7")):
-            paired = [(r, lookup[(panel, r["case_id"], f"threads{count}")]) for r in base]
-            ratios = [
-                a["prusie"]["runtime"]["median"] / b["prusie"]["runtime"]["median"]
-                for a, b in paired
-                if a["prusie"]["time_complete"] and b["prusie"]["time_complete"]
-            ]
-            all_ratios.append(ratios)
-            ecdf(axes[0, column], ratios, color=color, label=f"{count} threads (n={len(ratios):,})")
-        axes[0, column].axvline(1, color="#777777", linestyle="--", linewidth=0.8)
-        axes[0, column].set(
-            title=panel,
-            xlabel="Median t1 / median tk fit time",
-            ylabel="Fraction of cases",
-            xscale="log",
-            ylim=(0, 1.02),
-        )
-        axes[0, column].legend(frameon=False, fontsize=8)
-        valid = [
-            (k, np.quantile(v, (0.25, 0.5, 0.75)))
-            for k, v in zip((2, 4, 8), all_ratios, strict=True)
-            if v
-        ]
-        if valid:
-            x = [1] + [k for k, _ in valid]
-            q = np.array([[1, 1, 1]] + [list(v) for _, v in valid])
-            axes[1, column].plot(x, q[:, 1], "o-", color=COLORS["prusie"])
-            axes[1, column].fill_between(x, q[:, 0], q[:, 2], alpha=0.15, color=COLORS["prusie"])
-        axes[1, column].axhline(1, color="#777777", linestyle="--", linewidth=0.8)
-        axes[1, column].set(
-            xlabel="Requested native threads",
-            ylabel="Across-case speed-up: median and IQR",
-            xticks=(1, 2, 4, 8),
-        )
-    finish(axes)
-    save(fig, output, "v030_thread_scaling")
-
     pairs = [
         (lookup[(r["panel"], r["case_id"], "primary")], r)
         for r in records
@@ -174,12 +140,13 @@ def plot(summary, m1, records, output):
             [pair[position]["prusie"]["peak_rss_bytes"] / 2**20 for pair in pairs],
             s=14,
             alpha=0.6,
+            rasterized=True,
             color=color,
             label=label,
         )
     axes[0].set(
         xlabel="Variants (p)",
-        ylabel="Fresh-process peak RSS (MiB)",
+        ylabel="Peak RSS (MiB), earlier EPYC 9754",
         xscale="log",
         yscale="log",
         title=f"GWAS (paired n={len(pairs)})",
@@ -196,14 +163,15 @@ def plot(summary, m1, records, output):
     save(fig, output, "v030_overwrite_memory")
 
     windows = sorted((r for r in records if r["kind"].startswith("window")), key=lambda r: r["p"])
-    fig, axes = plt.subplots(1, 3, figsize=(12, 3.6), layout="constrained")
+    fig, grid = plt.subplots(2, 2, figsize=(9, 6.8), layout="constrained")
+    axes = grid.flat
     for backend in COLORS:
         timed = [r for r in windows if r[backend] and r[backend]["time_complete"]]
-        if timed:
-            med = np.array([r[backend]["runtime"]["median"] for r in timed])
-            low = np.array([r[backend]["runtime"]["q1"] for r in timed])
-            high = np.array([r[backend]["runtime"]["q3"] for r in timed])
-            axes[0].errorbar(
+        for index, metric in enumerate(("runtime", "fitting_runtime")):
+            med = np.array([r[backend][metric]["median"] for r in timed])
+            low = np.array([r[backend][metric]["q1"] for r in timed])
+            high = np.array([r[backend][metric]["q3"] for r in timed])
+            axes[index].errorbar(
                 [r["p"] for r in timed],
                 med,
                 yerr=(med - low, high - med),
@@ -212,35 +180,36 @@ def plot(summary, m1, records, output):
                 label=backend,
                 capsize=3,
             )
-            axes[2].plot(
-                [r["p"] for r in timed],
-                [np.median(r[backend]["niter"]) for r in timed],
-                "o-",
-                color=COLORS[backend],
-                label=backend,
-            )
+        axes[3].plot(
+            [r["p"] for r in timed],
+            [np.median(r[backend]["niter"]) for r in timed],
+            "o-",
+            color=COLORS[backend],
+            label=backend,
+        )
         memory = [r for r in windows if r[backend] and r[backend]["memory_complete"]]
-        axes[1].plot(
+        axes[2].plot(
             [r["p"] for r in memory],
             [r[backend]["peak_rss_bytes"] / 2**30 for r in memory],
             "o-",
             color=COLORS[backend],
             label=backend,
         )
-    for ax, ylabel in zip(
-        axes,
+    for index, ylabel in enumerate(
         (
-            "Median fit time and repeat IQR (s)",
-            "Fresh-process peak RSS (GiB)",
-            "Completed IBSS sweeps",
-        ),
-        strict=True,
+            "Complete-call median and IQR (s), EPYC 7742",
+            "Fitting-stage median and IQR (s), EPYC 7742",
+            "Peak RSS (GiB), earlier EPYC 9754",
+            "Completed IBSS sweeps, EPYC 7742",
+        )
     ):
-        ax.set(xlabel="Leading variants in one fixed T2D locus", ylabel=ylabel, xscale="log")
-        ax.legend(frameon=False)
-    axes[0].set_yscale("log")
-    axes[1].set_yscale("log")
-    finish(axes)
+        axes[index].set(
+            xlabel="Leading variants in one fixed T2D locus", ylabel=ylabel, xscale="log"
+        )
+        axes[index].legend(frameon=False)
+        if index < 3:
+            axes[index].set_yscale("log")
+    finish(grid)
     save(fig, output, "v030_controlled_scaling")
 
     fig, axes = plt.subplots(2, 2, figsize=(9, 6.8), layout="constrained")
@@ -257,6 +226,7 @@ def plot(summary, m1, records, output):
                 [r[field] for r in rows],
                 s=9,
                 alpha=0.4,
+                rasterized=True,
                 color=COLORS["prusie"],
             )
             axes[index, column].set(

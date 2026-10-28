@@ -1,0 +1,164 @@
+The native fitting metric uses directly timed spans within the same public
+`prusie.susie_rss` call as the complete-call metric. The implementation is an
+isolated timing-instrumented derivative of frozen prusie 0.3.0 commit
+`6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7`. It is **not byte-identical to the
+release wheel**. The original release wheel, source, environment and default
+installation remain preserved. No scientific expression or update order was
+changed by the patch. Numerical invariance is a separate empirical check; build
+success and source inspection do not establish it.
+
+The inspected ordinary z/R/n path is `rss.py::susie_rss` →
+`_request.py::_prepare_request` → `workhorse.py::_fit` →
+`prusie-python/lib.rs::fit_impl` → `prusie-core/ibss.rs::fit_controlled_inner` →
+`fit_operator`, followed by native output export, Python credible sets/PIP/result
+construction, and RSS result metadata. Entering the native function or Python
+workhorse would start too early: substantial input validation and preparation
+still execute below both entries.
+
+All input checks still execute. The fitting metric excludes Python input and
+method/control preparation, LD checking/symmetrization, PVE-adjusted z and
+sufficient-statistics preparation; native option parsing, dtype/rank/layout and
+borrow checks; the full native matrix/finiteness/operator-bound scans, factor
+checks, layout conversion and exceptional scaled-matrix materialization; and
+initial diagonal construction/checking. It also excludes initial fit-option,
+model and convergence-control validation interleaved with solver initialization.
+
+The four directly timed core spans are below. Line numbers refer to the isolated
+instrumented source in `instrumentation/native/source/`; the exact unified diff
+against the frozen commit is `instrumentation/native/timing_only.patch`.
+
+| File and start | Stop | Included work |
+| --- | --- | --- |
+| `rust/prusie-core/src/ibss.rs:214`, immediately before `DenseGram` construction | `:225`, immediately after construction | Solver operator state and scratch initialization |
+| `ibss.rs:239`, before `model_pip` selection | `:252`, before diagonal copying/checking | Effective fitting/convergence control selection |
+| `ibss.rs:259`, after `validate_fit_options` and `validate_model`, before `log_prior` | `:326`, before convergence-control/optional-initial-state validation | Log priors, model/default choices, prior plausibility scale, all initial posterior/output arrays and optional slot state |
+| `ibss.rs:386`, before `component` scratch allocation | `:838`, after final exact-activation diagnostics | Remaining solver/scratch initialization; complete IBSS/SER updates; variance, objective/ELBO and convergence work; fitted-state checks/warnings; null-effect trimming and final core posterior/diagnostics |
+
+The fixed panel has no supplied initial posterior, per-component prior-variance
+list, slot prior, design matrix, greedy outer fit, mismatch correction, finite-LD
+model, or refinement. The skipped validation block therefore contains only
+control checks on this path. The harness rejects the relevant unsupported public
+options and requires `n_threads=1`; this is a measurement harness for the frozen
+panel, not a general replacement public API. The pool selector lies before the
+first span; at one thread it returns `None` and creates no thread pool.
+
+Native output export is timed separately around `output::fit_result` in
+`rust/prusie-python/src/lib.rs:215–217`, including native-to-NumPy/Python result
+construction. The Python wrapper stamps immediately after native return, then
+immediately after the original public `susie_rss` returns. This final directly
+timed span includes native warning dispatch, Python credible sets, intercept,
+convergence summaries, marginal PIP and `SusieResult` construction in
+`workhorse.py:137–254`, RSS metadata/warning decoration in `rss.py:569–588`, and
+public-return cleanup. It also includes the few harness operations that retrieve
+the two native timing scalars. Retrieval of the completed metric for recording
+occurs after the outer complete-call clock stops.
+
+`fitting_seconds` is the sum of those four native spans, native output-export
+seconds and Python finalization seconds. This is direct same-call timing; it
+does not subtract a separately measured preparation estimate. Tiny transitions
+and timing bookkeeping between native spans are omitted from this sum. All added
+instrumentation and wrapper bookkeeping remain inside the complete-call metric
+where they execute, so their complete-call effect must be measured against the
+original wheel.
+
+The native Gram operator uses an implicit scaled representation. Initial scale
+factor preparation/checks, matrix scans and any eager fallback materialization
+are excluded. Scale multiplications fused into later Gram matrix-vector products
+remain inside the solver span: they are part of that implementation's fitting
+arithmetic and cannot be removed without changing it. The R constructor instead
+materializes scaled sufficient statistics before its fit starts. Both final
+credible-set implementations include the required CS submatrix normalization.
+This representation difference is explicit; no alternate algorithm or prepared
+input was substituted to alter the measured boundary.
+
+The lower native CS helper was also inspected:
+`rust/prusie-python/src/summary_helpers.rs:108–190` performs layout/borrow checks,
+matrix shape and selected-member bounds checks, then visits only selected CS
+pairs for normalization and purity. It does not scan or repair the full LD or
+check full-matrix symmetry. These result-construction checks and CS-only pair
+operations remain included, as do posterior purity sanity checks in Python.
+
+The comparable pinned R span starts immediately before the top-level
+`susie_workhorse` call at `R/susie.R:808` and ends immediately before final return
+at line 826. It includes solver initialization, IBSS/SER, fitted-prior
+plausibility diagnostics and final CS/PIP/RSS result construction. R retains
+minor scalar residual-variance default/validity checks within solver
+initialization; native excludes its initial option/control checks, which are
+interleaved with initialization. Neither fitting span contains full input/LD
+validation or symmetry repair. See `reports/fit_timing/R/README.md` for the lower
+R call-path audit.
+
+Use the timer once per fresh native measurement process, before any calls:
+
+```python
+import stage_timer
+timer = stage_timer.install()
+start = time.perf_counter()
+fit = prusie.susie_rss(**inputs)
+complete_seconds = time.perf_counter() - start
+stage = timer.latest()  # outside the complete-call interval
+```
+
+`stage_timer.py` patches the public function and `_native.fit` in memory only;
+installed Python files are unchanged. `latest()` returns `call_index`,
+`fitting_seconds`, `native_solver_seconds`, `native_export_seconds`,
+`python_finalize_seconds`, and `definition`. One warmup then seven retained calls
+have indices 1 then 2–8. The harness is sequential, not reentrant, and must only
+be installed once. Each completed call must satisfy
+`0 < fitting_seconds <= complete_seconds` before its record is accepted.
+
+The exact build/source records are `instrumentation/native/build.json` and
+`source_provenance.json`. The isolated copy changes only three Rust files.
+Every non-native `prusie/` wheel member was checked byte-for-byte against the
+release wheel. The build reused the original read-only Rust 1.98.1 toolchain
+(`rustc 1.98.1 (48a229cea 2026-09-01)`, cargo 1.98.1), maturin 1.10.2, Python
+3.12, `--release --locked --offline`, cleared Rust/PRUSIE build overrides and
+four build jobs. New target/cache/temp/output paths and the timing additions
+differ. The local build used the existing shared heavy guard, one heavy process,
+four build threads and its 16 GiB address-space limit.
+
+The unchanged C vector helper uses `cc -O3 -fPIC -std=c11` from the retained
+build script. Its new object is byte-identical to both original v030 cached
+objects (SHA256 `ee95b7354c019bfe81a2f615d54d09575126179a2e6ad0923579c97eb1382cd1`).
+`compiler_evidence.json` records the paths/hashes and the inspected GCC 11.4.0
+and GNU ar 2.38 versions. This supports compiler/recipe fidelity for that helper;
+it does not make the full instrumented native binary identical to the release.
+
+| Artifact | SHA256 |
+| --- | --- |
+| Original wheel | `85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59` |
+| Derived instrumented wheel | `ea54f79bae02240370811345ac34d751b6c58f4affd54477b31d649f90fd0af8` |
+| Derived native library | `95b764e5c99c4c1c851c0c8b5d1aa9a4577201a826ad2db6eb436bae635df577` |
+| Timing-only patch | `f558de65c0eb3a6d7047f30a2c0f9a84e944616a42e921a51a2d5387df8ec8c2` |
+
+At this report's initial write, representative numerical invariance and actual
+complete-call overhead are **pending**. D owns the Burgundy validation submission
+and acceptance, with original and instrumented builds on these eight predeclared
+cases: GWAS_00146, GWAS_00031, GWAS_00119, eQTL_12661, eQTL_00987, eQTL_09479,
+eQTL_07860 and eQTL_13504. Each build uses the same reconstructed LD/settings and
+one warmup plus seven retained calls. No full second campaign or invented
+overhead acceptance threshold is part of this check.
+
+That validation subsequently completed successfully in Burgundy job 700081 on
+cpunode-029 (27 minutes 13 seconds). The independent raw audit is
+`qualification_audit.md` and `qualification_audit.json`. It checks all eight
+predeclared cases, 32 distinct fresh processes, 256 calls including warmups and
+224 retained calls. All final alpha and PIP binaries match bitwise between the
+original and instrumented state of each backend; all eight native alpha hashes
+per case and every call's iteration/convergence/CS-count outcome match. All 128
+instrumented same-call fitting observations are positive and at most the
+corresponding complete-call time. All 186 preserved local raw files match
+independently obtained remote SHA256 values in `raw_remote_sha256.txt`. The audit
+uses existing outputs only and repeats no fits.
+
+Observed instrumented/original median complete-call ratios range from 0.804688
+to 1.026195 for native and from 0.956797 to 1.063883 for R. The largest native
+shifts occur in eQTL_09479 (ratio 0.804688; original/instrumented IQR divided by
+median 6.65%/2.73%) and GWAS_00031 (0.899498; 7.53%/13.57%). These shifts cannot
+be described as uniformly negligible. The eight lanes ran different cases
+concurrently, and original/instrumented processes ran sequentially with balanced
+order. Co-running phases, order and binary layout can contribute; this check
+does not identify a pure timestamp cost. Full raw ranges/IQRs, fitting fractions
+and native timing components are retained in the audit. The complete-call
+artifact tradeoff stays explicit, and D owns final protocol acceptance after
+the separate storage-migration requirement is met.

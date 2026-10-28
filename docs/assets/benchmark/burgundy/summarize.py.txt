@@ -1,0 +1,270 @@
+"""Authenticate all retained calls and summarize the fixed full panel."""
+from pathlib import Path
+import argparse
+import gzip
+import hashlib
+import json
+import math
+import statistics
+import sys
+
+from campaign import RUN, read, sha, write
+
+def quantiles(values):
+    import numpy as np
+    return {k:float(v) for k,v in zip(('min','q1','median','q3','p95','max'),np.quantile(values,[0,.25,.5,.75,.95,1]))}
+
+def describe(rows,metric='times'):
+    result={'cases':len(rows),'backends':{}}
+    for backend in ('R','prusie'):
+        times=[r[backend][metric] for r in rows]
+        medians=[statistics.median(t) for t in times]
+        total=sum(map(sum,times))
+        ratios=[]
+        import numpy as np
+        for t,m in zip(times,medians):ratios.append(float((np.quantile(t,.75)-np.quantile(t,.25))/m))
+        result['backends'][backend]=dict(retained_total_seconds=total,sum_case_medians_seconds=sum(medians),
+            case_median_seconds=quantiles(medians),repeat_iqr_over_median=quantiles(ratios),
+            cases_with_repeat_above_2x=sum(max(t)>2*m for t,m in zip(times,medians)),
+            cases_with_repeat_above_3x=sum(max(t)>3*m for t,m in zip(times,medians)),
+            repeats_above_2x=sum(sum(v>2*m for v in t) for t,m in zip(times,medians)),
+            repeats_above_3x=sum(sum(v>3*m for v in t) for t,m in zip(times,medians)),
+            repeat_count_distribution_above_2x={str(k):sum(sum(v>2*m for v in t)==k for t,m in zip(times,medians)) for k in range(8)},
+            repeat_count_distribution_above_3x={str(k):sum(sum(v>3*m for v in t)==k for t,m in zip(times,medians)) for k in range(8)},
+            total_time_fraction_from_repeats_above_2x=sum(sum(v for v in t if v>2*m) for t,m in zip(times,medians))/total)
+    ratios=[statistics.median(r['R'][metric])/statistics.median(r['prusie'][metric]) for r in rows]
+    result.update(headline_R_over_prusie=result['backends']['R']['retained_total_seconds']/result['backends']['prusie']['retained_total_seconds'],
+                  sum_of_medians_R_over_prusie=result['backends']['R']['sum_case_medians_seconds']/result['backends']['prusie']['sum_case_medians_seconds'],
+                  geometric_mean_case_median_ratio=math.exp(statistics.mean(map(math.log,ratios))),
+                  wins=sum(v>1 for v in ratios),ties=sum(v==1 for v in ratios),regressions=sum(v<1 for v in ratios))
+    return result
+
+def baseline():
+    source=RUN.parents[1]/'runs/20261026_prusie_v030/source/prusie/docs/assets/benchmark/v030_records.jsonl.gz'
+    rows=[]
+    with gzip.open(source,'rt') as f:
+        for line in f:
+            r=json.loads(line)
+            if r['kind']!='primary' and not r['kind'].startswith('window'):continue
+            out=dict(case_id=r['case_id'],panel='windows' if r['kind'].startswith('window') else r['panel'],p=r['p'],kind=r['kind'])
+            for b,old in [('R','susieR'),('prusie','prusie')]:
+                out[b]=dict(times=r[old]['retained_seconds'],peak_rss_bytes=r[old]['peak_rss_bytes'],niter=r[old]['niter'],converged=r[old]['converged'])
+            rows.append(out)
+    summary={p:describe([r for r in rows if r['panel']==p]) for p in ('GWAS','eQTL','windows')}
+    write(RUN/'reports/local_baseline.json',dict(source=str(source),source_sha256=sha(source),panels=summary))
+    return rows,summary
+
+def collect():
+    import numpy as np
+    expected=read(RUN/'inputs/campaign_manifest.json')
+    expected_by_key={r['case_key']:r for r in expected['rows']}
+    protocol_sha=sha(RUN/'protocol.json')
+    protocol=read(RUN/'protocol.json')
+    environment=read(RUN/'runtime/instrumented_environment.json')
+    assert sha(RUN/'runtime/instrumented_environment.json')==protocol['runtime_assets']['runtime/instrumented_environment.json']
+    adoption=read(RUN/'protocol_versions/v1_adoption.json')['completed']
+    count=read(RUN/'protocol.json')['timing']['retained_calls']
+    found={};failures=[];rows=[]
+    paths=list((RUN/'results').glob('*/*/*/result.json'))+list((RUN/'results_v2').glob('*/*/*/result.json'))
+    for path in sorted(paths):
+        if path.parent.name.startswith('.'):continue
+        r=read(path);key=r['case_key']
+        legacy=path.is_relative_to(RUN/'results')
+        if legacy and key not in adoption:continue
+        assert key in expected_by_key,key
+        if r['state']!='COMPLETE':failures.append(dict(path=str(path),case_key=key,error=r.get('error')));continue
+        assert key not in found,'Duplicate completed case: '+key
+        assert r['protocol_sha256']==(adoption[key]['protocol_sha256'] if legacy else protocol_sha)
+        if legacy:assert sha(path)==adoption[key]['result_sha256']
+        for name,digest in r['outputs'].items():assert sha(path.parent/name)==digest,str(path.parent/name)
+        request=read(path.parent/'request.json')
+        payload={k:v for k,v in request.items() if k!='signature_sha256'}
+        assert hashlib.sha256(json.dumps(payload,sort_keys=True).encode()).hexdigest()==request['signature_sha256']
+        assert request['protocol_sha256']==r['protocol_sha256']
+        manifest_row=expected_by_key[key]
+        assert r['p']==manifest_row['p'] and r['case_id']==manifest_row['case_id']
+        assert r['panel']==manifest_row['panel'] and r['kind']==manifest_row['kind']
+        assert request['task']['parameters']==manifest_row['parameters']
+        assert request['task']['n_threads']==1 and request['task']['overwrite'] is False
+        ld=r['ld'];validation=ld['validation']
+        assert ld['state']=='PASS' and ld['n_variants']==r['p']
+        assert all(ld[k] for k in ('signed_r','variant_order_verified','alleles_verified','sample_order_verified'))
+        assert ld['missing_genotypes']==0 and validation['finite']
+        assert validation['diagonal_max_abs_error']<=validation['tolerances']['diagonal_atol']
+        assert validation['symmetry_max_abs_error']<=validation['tolerances']['symmetry_atol']
+        assert validation['max_abs_r']<=1+validation['tolerances']['range_atol']
+        row=dict(case_key=key,case_id=r['case_id'],panel=r['panel'],p=r['p'],kind=r['kind'],
+                 host=r['host'],job_id=r['job_id'],placement=r['placement'],backend_order=r['backend_order'],
+                 max_abs_alpha_error=r['max_abs_alpha_error'],alpha_pass=r['alpha_pass'],
+                 numerical_disposition=r['numerical_disposition'],both_nonconverged_at_limit=r['both_nonconverged_at_limit'],
+                 any_backend_call_converged=r['any_backend_call_converged'],
+                 ld_sha256=r['ld']['R_sha256'],ld_validation=r['ld']['validation'],result_sha256=sha(path))
+        row.update(measurement_protocol_version=1 if legacy else 2,retained_selection='first3of7' if legacy else 'all3',numerical_final_saved_repeat=7 if legacy else 3)
+        arrays={};pips={};full_converged=[];full_at_limit=[]
+        for backend in ('R','prusie'):
+            data=read(path.parent/(backend+'.json'))
+            assert data['status']=='ok' and data['parameters']==manifest_row['parameters']
+            assert data['signature_sha256']==request['signature_sha256']
+            if backend=='prusie':
+                assert data['native_sha256']==request['identity']['native_sha256']==environment['native_sha256']
+                assert data['version']=='0.3.0'
+                assert data['environment']['affinity']==r['placement']['cpus']
+                assert all(v=='1' for v in data['numerical_thread_environment'].values())
+                assert all(v['threads'] in (None,1) for v in data['numerical_libraries'])
+            else:
+                assert data['version']=='0.16.6'
+                assert data['environment']['R'].startswith('R version 4.4.0 ')
+                assert data['environment']['blas_probe']['threads']==1
+                assert all(v=='1' for v in data['environment']['threads'].values())
+                allowed=next(line.split(':',1)[1].strip() for line in data['environment']['process_status'] if line.startswith('Cpus_allowed_list:'))
+                assert allowed==str(r['placement']['cpus'][0])
+            all_samples=data['samples'];assert len(all_samples)==(8 if legacy else count+1)
+            full_converged.extend(s['converged'] for s in all_samples)
+            full_at_limit.extend(not s['converged'] and s['niter']==manifest_row['parameters']['max_iter'] for s in all_samples)
+            samples=all_samples[:count+1]
+            retained=[s for s in samples if not s['warmup']]
+            assert len(retained)==count and all(s['validity_pass'] and math.isfinite(s['time_seconds']) and s['time_seconds']>0 for s in samples)
+            assert all(s['start_epoch']<=s['end_epoch'] for s in samples)
+            assert [s['repeat'] for s in samples]==list(range(count+1))
+            assert samples[0]['warmup'] and not any(s['warmup'] for s in samples[1:])
+            fitting=[s['fitting'].get('fitting_seconds',s['fitting'].get('fit_seconds')) for s in samples]
+            assert all(math.isfinite(v) and 0<v<=s['time_seconds'] for v,s in zip(fitting,samples))
+            with gzip.open(path.parent/(backend+'.json.alpha.bin.gz'),'rb') as f:
+                alpha=np.frombuffer(f.read(),dtype='<f8').reshape(tuple(data['alpha_shape']),order='F')
+            assert np.isfinite(alpha).all() and ((alpha>=0)&(alpha<=1)).all()
+            assert np.max(np.abs(alpha.sum(axis=1)-1))<=1e-10
+            arrays[backend]=alpha
+            with gzip.open(path.parent/(backend+'.json.pip.bin.gz'),'rb') as f:
+                pip=np.frombuffer(f.read(),dtype='<f8')
+            assert pip.shape==(row['p'],) and np.isfinite(pip).all() and ((pip>=0)&(pip<=1)).all()
+            pips[backend]=pip
+            row[backend]=dict(times=[s['time_seconds'] for s in retained],warmup_seconds=samples[0]['time_seconds'],
+                    fitting_times=[v for v,s in zip(fitting,samples) if not s['warmup']],
+                    warmup_fitting_seconds=fitting[0],fitting_spans=[s['fitting'] for s in samples],
+                    niter=[s['niter'] for s in samples],converged=[s['converged'] for s in samples],cs_count=[s['cs_count'] for s in samples],
+                    call_timestamps=[[s['start_epoch'],s['end_epoch']] for s in samples],
+                    peak_rss_diagnostic_bytes=data['peak_rss_bytes'])
+        error=float(np.max(np.abs(arrays['R']-arrays['prusie'])))
+        row['max_abs_pip_error']=float(np.max(np.abs(pips['R']-pips['prusie'])))
+        assert error==r['max_abs_alpha_error']
+        assert (error<=1e-5)==r['alpha_pass']
+        assert any(full_converged)==r['any_backend_call_converged']
+        assert all(full_at_limit)==r['both_nonconverged_at_limit']
+        disposition='PASS' if error<=1e-5 else 'ACCEPTED_BOTH_NONCONVERGED_EXCEPTION' if all(full_at_limit) else 'EXCEEDANCE_WITH_CONVERGED_BACKEND' if any(full_converged) else 'EXCEEDANCE_OUTSIDE_NONCONVERGED_EXCEPTION'
+        assert disposition==r['numerical_disposition']
+        first,last=row['backend_order'];assert row[first]['call_timestamps'][-1][1]<=row[last]['call_timestamps'][0][0]
+        found[key]=path;rows.append(row)
+    missing=sorted(set(expected_by_key)-set(found))
+    write(RUN/'reports/completeness.json',dict(expected=len(expected_by_key),complete=len(found),missing=missing,failed_attempts=failures))
+    assert not missing, f'{len(missing)} cases still missing'
+    return rows
+
+def main():
+    assert __import__('os').environ.get('COLOC_HEAVY_RECORD')
+    p=argparse.ArgumentParser();p.add_argument('--baseline-only',action='store_true');args=p.parse_args()
+    old_rows,old=baseline()
+    if args.baseline_only:
+        print(json.dumps({p:{k:v for k,v in s.items() if k!='backends'} for p,s in old.items()},indent=2));return
+    rows=collect();panels={}
+    old_first3={p:describe([dict(r,**{b:dict(r[b],times=r[b]['times'][:3]) for b in ('R','prusie')}) for r in old_rows if r['panel']==p]) for p in ('GWAS','eQTL','windows')}
+    for panel in ('GWAS','eQTL','windows'):
+        selected=[r for r in rows if r['panel']==panel]
+        result=describe(selected)
+        result['fitting']=describe(selected,'fitting_times')
+        if panel!='windows':
+            ordered=sorted(selected,key=lambda r:(r['p'],r['case_key']))
+            groups=[ordered[i*len(ordered)//5:(i+1)*len(ordered)//5] for i in range(5)]
+            result['p_quintiles']=[dict(quintile=i+1,p_min=min(r['p'] for r in group),p_max=max(r['p'] for r in group),**describe(group)) for i,group in enumerate(groups)]
+            result['fitting']['p_quintiles']=[dict(quintile=i+1,p_min=min(r['p'] for r in group),p_max=max(r['p'] for r in group),**describe(group,'fitting_times')) for i,group in enumerate(groups)]
+        result['max_abs_alpha_error']=max(r['max_abs_alpha_error'] for r in selected)
+        result['max_abs_pip_error']=max(r['max_abs_pip_error'] for r in selected)
+        result['exceedances']=[{k:r[k] for k in ('case_key','case_id','p','max_abs_alpha_error','numerical_disposition','both_nonconverged_at_limit','any_backend_call_converged')} for r in selected if not r['alpha_pass']]
+        panels[panel]=result
+    record=RUN/'reports/burgundy_records.jsonl.gz'
+    with record.open('wb') as raw,gzip.GzipFile(fileobj=raw,mode='wb',mtime=0) as f:
+        for row in sorted(rows,key=lambda r:r['case_key']):f.write((json.dumps(row,sort_keys=True,separators=(',',':'))+'\n').encode())
+    ledger=read(RUN/'reports/ledger.json')
+    retries={}
+    for event in ledger['events']:
+        if event.get('type')=='OPERATIONAL_CASE_RETRY' and event.get('state')=='FAILED_ATTEMPT_PRESERVED_CLAIM_RELEASED':
+            retries[(event['job_id'],event['case_key'])]={k:event[k] for k in ('job_id','case_key','cause','result_sha256','outcome_based')}
+    by_key={r['case_key']:r for r in rows}
+    for event in retries.values():
+        completed=by_key[event['case_key']]
+        event.update(retry_job_id=completed['job_id'],retry_result_sha256=completed['result_sha256'])
+    node_records=[]
+    for root in (RUN/'results',RUN/'results_v2'):
+        for path in sorted(root.glob('*/*/topology.json')):
+            topology=read(path)
+            assert topology['model']=='AMD EPYC 7742 64-Core Processor'
+            sample_path=path.with_name('host_samples.jsonl')
+            samples=[json.loads(line) for line in sample_path.read_text().splitlines() if line] if sample_path.exists() else []
+            node_records.append(dict(host=topology['hostname'],job_id=path.parent.name,
+                topology_sha256=sha(path),host_samples_sha256=sha(sample_path) if samples else None,
+                timing_lanes=len(topology['lanes']),binding_modes=sorted({r.get('binding','unrecorded') for r in topology['lanes']}),
+                cpu_model=topology['model'],load_1min_range=[min(r['load'][0] for r in samples),max(r['load'][0] for r in samples)] if samples else None,
+                memory_available_bytes_range=[min(r['memory']['MemAvailable'] for r in samples),max(r['memory']['MemAvailable'] for r in samples)] if samples else None,
+                frequency_samples_available=sum(v['scaling_cur_freq'] is not None for r in samples for v in r['frequencies'].values()),
+                governors=sorted({v['scaling_governor'] for r in samples for v in r['frequencies'].values() if v['scaling_governor'] is not None})))
+    summary=dict(protocol_sha256=sha(RUN/'protocol.json'),records_sha256=sha(record),panels=panels,local_baseline=old,local_baseline_first3=old_first3,
+                 retained_calls_per_backend=3,complete_cases=len(rows),nodes=node_records,operational_retries=list(retries.values()),
+                 v1_completed_adopted=sum(r['measurement_protocol_version']==1 for r in rows),
+                 protocol_amendment_aborts=31,partial_abort_outputs_preservation='Incomplete: unarchived v1 node-local partials unavailable; completed cases and all claims preserved',
+                 numerical_acceptance=read(RUN/'run_config.json')['numerical_acceptance'],
+                 node_hours_used=read(RUN/'reports/ledger.json')['node_hours_used'])
+    write(RUN/'reports/burgundy_summary.json',summary)
+    text=['# Burgundy R–prusie comparison','',f"All {len(rows):,} fixed cases completed: 200 GWAS, 14,157 eQTL and six nested windows. Each backend contributes one warmup and three retained complete calls (user amendment 20261028). Completed v1 cases retain their first three timings; all original samples and final numerical arrays are preserved and labeled.",'',
+          '| Panel | Cases | R retained seconds | prusie retained seconds | Total-time R/prusie | Sum-of-medians | Geometric mean | Wins/ties/regressions |',
+          '|---|---:|---:|---:|---:|---:|---:|---|']
+    for p,s in panels.items():
+        text.append(f"| {p} | {s['cases']} | {s['backends']['R']['retained_total_seconds']:.9g} | {s['backends']['prusie']['retained_total_seconds']:.9g} | {s['headline_R_over_prusie']:.9g} | {s['sum_of_medians_R_over_prusie']:.9g} | {s['geometric_mean_case_median_ratio']:.9g} | {s['wins']}/{s['ties']}/{s['regressions']} |")
+    text+=['','## Fitting-stage timing','',
+           'Direct spans from the same calls include solver initialization, IBSS/SER, convergence/ELBO and final posterior/credible-set construction. They exclude input preparation and full-LD checks/repair. Run-local instrumented copies are identified in the protocol; the original artifacts are preserved. The complete-call definition is unchanged, but the measured native binary is the instrumented build, not the original wheel.','',
+           '| Panel | R fitting seconds | prusie fitting seconds | Total-time R/prusie | Sum-of-medians | Geometric mean | Wins/ties/regressions |',
+           '|---|---:|---:|---:|---:|---:|---|']
+    for p,s in panels.items():
+        f=s['fitting'];text.append(f"| {p} | {f['backends']['R']['retained_total_seconds']:.9g} | {f['backends']['prusie']['retained_total_seconds']:.9g} | {f['headline_R_over_prusie']:.9g} | {f['sum_of_medians_R_over_prusie']:.9g} | {f['geometric_mean_case_median_ratio']:.9g} | {f['wins']}/{f['ties']}/{f['regressions']} |")
+    text+=['','## Variant-count quintiles','',
+           'Quintiles use fixed ranks by p then case key within each primary panel, retaining every case.','',
+           '| Panel | Metric | Quintile | p range | Cases | Total-time R/prusie | Sum-of-medians | Geometric mean | Wins/ties/regressions |',
+           '|---|---|---:|---|---:|---:|---:|---:|---|']
+    for p,s in panels.items():
+        if p=='windows':continue
+        for metric,group in [('Complete',s),('Fitting',s['fitting'])]:
+            for q in group['p_quintiles']:
+                text.append(f"| {p} | {metric} | {q['quintile']} | {q['p_min']}–{q['p_max']} | {q['cases']} | {q['headline_R_over_prusie']:.6g} | {q['sum_of_medians_R_over_prusie']:.6g} | {q['geometric_mean_case_median_ratio']:.6g} | {q['wins']}/{q['ties']}/{q['regressions']} |")
+    text+=['','## Repeat variability and local comparison','',
+           '| Panel | Host/metric | Backend | IQR/median q1 / median / q3 / p95 / max | Cases >2× / >3× | Repeats >2× / >3× | Time fraction in >2× repeats |',
+           '|---|---|---|---|---:|---:|---:|']
+    for p,s in panels.items():
+        for label,group in [('Burgundy complete 3retained',s),('Local complete 7retained',old[p]),('Local complete first3',old_first3[p]),('Burgundy fitting 3retained',s['fitting'])]:
+            for b,d in group['backends'].items():
+                q=d['repeat_iqr_over_median'];values=' / '.join(f'{q[k]:.6g}' for k in ('q1','median','q3','p95','max'))
+                text.append(f"| {p} | {label} | {b} | {values} | {d['cases_with_repeat_above_2x']}/{d['cases_with_repeat_above_3x']} | {d['repeats_above_2x']}/{d['repeats_above_3x']} | {d['total_time_fraction_from_repeats_above_2x']:.6g} |")
+    for p in panels:
+        text+=['',f"{p} local complete-call headline {old[p]['headline_R_over_prusie']:.9g}; sum-of-medians {old[p]['sum_of_medians_R_over_prusie']:.9g}. The local campaign has no fitting-stage measurement."]
+    text+=['','Number of cases with exactly k extreme retained repeats (three Burgundy retained repeats; original local comparison has seven):','',
+           '| Panel | Host/metric | Backend | Threshold | k=0 | k=1 | k=2 | k=3 | k=4 | k=5 | k=6 | k=7 |',
+           '|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|']
+    for p,s in panels.items():
+        for label,group in [('Burgundy complete 3retained',s),('Local complete 7retained',old[p]),('Local complete first3',old_first3[p]),('Burgundy fitting 3retained',s['fitting'])]:
+            for b,d in group['backends'].items():
+                for threshold in (2,3):
+                    counts=d[f'repeat_count_distribution_above_{threshold}x']
+                    text.append(f'| {p} | {label} | {b} | >{threshold}× median | '+' | '.join(str(counts[str(k)]) for k in range(8))+' |')
+    text+=['','Repeat-count comparisons use the local first-three sensitivity to separate changes in repetition count from changes in interference. The original seven-repeat local statistics are retained separately.','', 'Runtime data use exclusive AMD EPYC 7742 nodes. The memory results retained in public documentation come from the earlier AMD EPYC 9754 host; current VmHWM is diagnostic only.','',
+           'LD was reconstructed with PLINK from the same authenticated genotype/sample inputs and frozen variant, allele and z records. Fidelity uses the authorized 1e-6 absolute LD threshold and sign check, not bitwise identity.','',
+           'In the 24-case fidelity sample, 22 local matrices with rounding-level asymmetry became exactly symmetric with PLINK. That can change the default native LD-validation allocation path. Comparisons with local timing therefore reflect both the host/environment and LD arithmetic; aggregate changes cannot be attributed solely to reduced interference.','',
+           '## Numerical exceedances','']
+    for panel,s in panels.items():
+        text.append(f"{panel}: maximum |Δalpha| = {s['max_abs_alpha_error']:.17g}; {len(s['exceedances'])} exceedances.")
+        for r in s['exceedances']:text.append(f"- {r['case_id']} ({r['case_key']}, p={r['p']}): {r['max_abs_alpha_error']:.17g}; {r['numerical_disposition']}.")
+    converged_exceedances=[r for s in panels.values() for r in s['exceedances'] if r['any_backend_call_converged']]
+    text+=['',f"**Exceedances with at least one converged backend: {len(converged_exceedances)}.**"]
+    text+=['','## Operational outcomes','',f'{len(retries)} operational whole-case retries; all successful fixed cases retained. The 31 v1 protocol-amendment aborts are separate. Some unarchived node-local v1 partial outputs were not recovered; all 24 completed v1 cases and all 31 claims were preserved.']
+    for event in retries.values():text.append(f"- {event['case_key']}: {event['cause']}; completed replacement job {event['retry_job_id']}.")
+    text+=['','Full quintile, repeat variability and local comparison tables are in `burgundy_summary.json`; all full-panel cases and call timestamps are in `burgundy_records.jsonl.gz`.','',f"Burgundy node-hours charged through the latest Slurm accounting: {summary['node_hours_used']:.9g}."]
+    (RUN/'reports/benchmark_summary.md').write_text('\n'.join(text)+'\n')
+    print(json.dumps({p:{k:s[k] for k in ('cases','headline_R_over_prusie','sum_of_medians_R_over_prusie','max_abs_alpha_error')} for p,s in panels.items()},indent=2))
+
+if __name__=='__main__':main()

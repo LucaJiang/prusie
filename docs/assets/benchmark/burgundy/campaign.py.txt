@@ -1,0 +1,564 @@
+"""Frozen complete-call campaign: exclusive-node lanes, staging and raw receipts."""
+from __future__ import annotations
+import argparse
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+import copy
+import gzip
+import hashlib
+import json
+import os
+from pathlib import Path
+import random
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+import traceback
+
+RUN=Path(__file__).resolve().parents[1]
+DATA=Path('/scratch/wjiang49/prusie_project/bench_20261028')
+RESULTS=DATA/'formal_results_v2'
+CLAIMS=DATA/'formal_claims_v2'
+COMMIT='8e56a8e038e989856d106d9ca5175cc664fea9d2'
+THREAD_VARS=('OMP_NUM_THREADS OPENBLAS_NUM_THREADS MKL_NUM_THREADS BLIS_NUM_THREADS '
+             'VECLIB_MAXIMUM_THREADS NUMEXPR_NUM_THREADS RAYON_NUM_THREADS PRUSIE_NUM_THREADS').split()
+
+def read(p): return json.loads(Path(p).read_text())
+def sha(p):
+    with Path(p).open('rb') as f: return hashlib.file_digest(f,'sha256').hexdigest()
+def write(p,x):
+    p=Path(p);p.parent.mkdir(parents=True,exist_ok=True)
+    temp=p.with_name(p.name+f'.{os.getpid()}.tmp')
+    temp.write_text(json.dumps(x,indent=2,allow_nan=False)+'\n');temp.replace(p)
+def command(argv,**kwargs):
+    return subprocess.run(argv,check=True,text=True,capture_output=True,**kwargs).stdout
+def expand(s):
+    return [i for part in s.strip().split(',') for i in
+            (range(int(part.split('-')[0]),int(part.split('-')[1])+1) if '-' in part else [int(part)])]
+
+def topology():
+    domains={}
+    for cpu in sorted(os.sched_getaffinity(0)):
+        base=Path('/sys/devices/system/cpu')/f'cpu{cpu}'
+        cache=next(p for p in (base/'cache').glob('index*') if (p/'level').read_text().strip()=='3')
+        domain=tuple(expand((cache/'shared_cpu_list').read_text()))
+        node=int(next(base.glob('node[0-9]*')).name[4:])
+        d=domains.setdefault(domain,dict(cpu=cpu,numa=node,socket=int((base/'topology/physical_package_id').read_text()),
+               l3_cpus=list(domain),smt_siblings=expand((base/'topology/thread_siblings_list').read_text())))
+        assert d['numa']==node
+    model=next(s.split(':',1)[1].strip() for s in Path('/proc/cpuinfo').read_text().splitlines() if s.startswith('model name'))
+    assert model=='AMD EPYC 7742 64-Core Processor',model
+    assert 'avx2' in Path('/proc/cpuinfo').read_text()
+    rows=sorted(domains.values(),key=lambda d:(d['socket'],d['cpu']))
+    assert len(rows)>=16
+    control=rows.pop()
+    return dict(model=model,lanes=rows,controller_domain=control,hostname=os.uname().nodename,
+                allowed_cpus=sorted(os.sched_getaffinity(0)),numactl=command(['numactl','-H']),lscpu=command(['lscpu']),
+                slurm=command(['scontrol','show','job',os.environ['SLURM_JOB_ID']]),job_id=os.environ['SLURM_JOB_ID'])
+
+def host_sample(lanes):
+    memory={k:int(v.split()[0])*1024 for line in Path('/proc/meminfo').read_text().splitlines()
+            for k,v in [line.split(':',1)] if k in ('MemTotal','MemAvailable')}
+    frequencies={}
+    for lane in lanes:
+        base=Path('/sys/devices/system/cpu')/f"cpu{lane['cpu']}"/'cpufreq'
+        frequencies[str(lane['cpu'])]={n:(base/n).read_text().strip() if (base/n).exists() else None
+                                      for n in ('scaling_governor','scaling_cur_freq')}
+    return dict(epoch=time.time(),load=list(os.getloadavg()),memory=memory,frequencies=frequencies)
+
+def inspect_node(args):
+    info=topology()
+    for lane in info['lanes']:
+        probe=subprocess.run(['numactl',f"--membind={lane['numa']}",f"--physcpubind={lane['cpu']}",'true'],text=True,capture_output=True)
+        lane['membind_probe']=dict(returncode=probe.returncode,stderr=probe.stderr)
+    write(RUN/'runtime/topologies'/(info['hostname']+'_'+info['job_id']+'.json'),
+          dict(topology=info,host=host_sample(info['lanes']),scratch_filesystem=command(['df','-h','/tmp'])))
+    print(json.dumps(dict(host=info['hostname'],model=info['model'],lanes=len(info['lanes']))),flush=True)
+
+def plan(args):
+    assert os.environ.get('COLOC_HEAVY_RECORD')
+    manifest=read(RUN/'inputs/campaign_manifest.json')
+    old=RUN.parents[1]/'runs/20261026_prusie_v030/source/prusie/docs/assets/benchmark/v030_records.jsonl.gz'
+    records={}
+    with gzip.open(old,'rt') as f:
+        for line in f:
+            row=json.loads(line)
+            if row['kind']=='primary' or row['kind'].startswith('window'):
+                records[(row['panel'],row['case_id'],row['kind'])]=row
+    rng=random.Random(20261028)
+    assignments={}
+    for panel in ('GWAS','eQTL','windows'):
+        rows=sorted((r for r in manifest['rows'] if r['panel']==panel),key=lambda r:r['case_key'])
+        rng.shuffle(rows)
+        for i,row in enumerate(rows):assignments[row['case_key']]=['R','prusie'] if i%2==0 else ['prusie','R']
+    tasks=[]
+    for row in manifest['rows']:
+        panel='GWAS' if row['panel']=='windows' else row['panel']
+        kind=f"window{row['p']}" if row['panel']=='windows' else 'primary'
+        oldrow=records[(panel,row['case_id'],kind)]
+        peak=max(oldrow[b]['peak_rss_bytes'] for b in ('susieR','prusie'))
+        estimate=8*sum(oldrow[b]['runtime']['median'] for b in ('susieR','prusie'))
+        tasks.append(dict(case_key=row['case_key'],panel=row['panel'],p=row['p'],backend_order=assignments[row['case_key']],
+                          planning_seconds=estimate,planning_peak_bytes=peak,
+                          reserved_bytes=int(max(2*1024**3,1.5*peak,4*8*row['p']**2))))
+    shards=[dict(index=i,planning_seconds=0,tasks=[]) for i in range(args.nodes)]
+    for task in sorted(tasks,key=lambda x:(-x['planning_seconds'],x['case_key'])):
+        shard=min(shards,key=lambda x:(x['planning_seconds'],x['index']))
+        shard['tasks'].append(task);shard['planning_seconds']+=task['planning_seconds']
+    result=dict(seed=20261028,manifest_sha256=sha(RUN/'inputs/campaign_manifest.json'),
+                source_records_sha256=sha(old),total=len(tasks),shards=shards,
+                shard_policy='Longest estimated complete case first, assigned to lightest shard before outcomes; local v030 median times only for planning')
+    assert len(tasks)==14363
+    write(RUN/'campaign_plan.json',result)
+    print([(s['index'],len(s['tasks']),s['planning_seconds']) for s in shards],flush=True)
+
+def stage(manifest,rows,scratch):
+    from reconstruct_ld import reference_prefix
+    target=scratch/'inputs';target.mkdir()
+    for rel in sorted({r['archive_relpath'] for r in rows if r.get('archive_relpath')}):
+        (target/rel).parent.mkdir(parents=True,exist_ok=True)
+        shutil.copy2(RUN/'inputs'/rel,target/rel)
+    for rel in sorted({str(Path(r['case_relpath']).parent) for r in rows if not r.get('archive_relpath')}):
+        shutil.copytree(RUN/'inputs'/rel,target/rel)
+    shutil.copy2(RUN/'inputs/campaign_manifest.json',target/'campaign_manifest.json')
+    verification=read(RUN/'inputs/reference_verification.json')
+    assert verification['state']=='PASS'
+    local=copy.deepcopy(verification)
+    (target/'reference').mkdir()
+    needed={r['reference_key'] for r in rows}
+    for receipt in local['records']:
+        if receipt['key'] not in needed:continue
+        dest=target/'reference'/receipt['key'];dest.parent.mkdir(parents=True,exist_ok=True)
+        for suffix,info in receipt['files'].items():
+            source=Path(info['path']);file=dest.with_suffix(suffix)
+            shutil.copy2(source,file)
+            assert sha(file)==info['sha256'],str(file)
+            st=file.stat();info.update(path=str(file),bytes=st.st_size,mtime_ns=st.st_mtime_ns)
+        receipt['prefix']=str(dest)
+    local['records']=[r for r in local['records'] if r['key'] in needed]
+    manifest['_inputs_root']=str(target)
+    manifest['_manifest_sha256']=sha(target/'campaign_manifest.json')
+    return manifest,local
+
+def case(args):
+    import numpy as np
+    from reconstruct_ld import reconstruct
+    request_path=Path(args.request)
+    execution=read(request_path)
+    out=request_path.parent
+    row=execution['row'];environment=read(RUN/'runtime/instrumented_environment.json')
+    result=dict(state='FAILED',case_key=row['case_key'],panel=row['panel'],case_id=row['case_id'],p=row['p'],
+                kind=row['kind'],backend_order=execution['task']['backend_order'],placement=execution['placement'],
+                started_epoch=time.time(),protocol_sha256=execution['protocol_sha256'],
+                job_id=os.environ['SLURM_JOB_ID'],host=os.uname().nodename,commands=[])
+    try:
+        assert sorted(os.sched_getaffinity(0))==execution['placement']['cpus']
+        rebuilt=reconstruct(execution['manifest'],row,out/'input',RUN/'inputs/tools/plink1/plink',execution['verification'])
+        result['ld']=rebuilt
+        task=dict(case_path=rebuilt['case_path'],case_id=row['case_id'],panel=row['panel'],parameters=row['parameters'],
+                  p=row['p'],window=None,n_threads=1,overwrite=False,kind=row['kind'])
+        request=dict(task=task,identity=dict(python=environment['python'],native_sha256=environment['native_sha256']),
+                     R_paths=environment['R_paths'],R_expected=environment['R_expected'],blas_probe=environment['blas_probe'],
+                     placement=execution['placement'],protocol_path=str(RUN/'protocol.json'),protocol_sha256=execution['protocol_sha256'])
+        request['fit_timing']=environment['fit_timing']
+        request['signature_sha256']=hashlib.sha256(json.dumps(request,sort_keys=True).encode()).hexdigest()
+        write(out/'request.json',request)
+        env=dict(os.environ,**{k:'1' for k in THREAD_VARS},R_PROFILE_USER='/dev/null',R_ENVIRON_USER='/dev/null')
+        env.update({k:environment['R_paths'][k] for k in ('R_LIBS','R_LIBS_USER')})
+        for backend in execution['task']['backend_order']:
+            output=out/(backend+'.json')
+            if backend=='R':argv=[environment['R_paths']['rscript'],'--vanilla',str(RUN/'scripts/m2_reference.R')]
+            else:argv=[environment['python'],'-B',str(RUN/'scripts/m2_native.py')]
+            argv+=['--request',str(out/'request.json'),'--mode','time','--output',str(output)]
+            with (out/(backend+'.log')).open('w') as log:
+                process=subprocess.run(argv,env=env,stdout=log,stderr=subprocess.STDOUT)
+            metadata=read(output) if output.exists() else {}
+            result['commands'].append(dict(backend=backend,returncode=process.returncode,status=metadata.get('status'),argv=argv))
+            if process.returncode or metadata.get('status')!='ok':
+                raise RuntimeError(f'{backend} failed: exit {process.returncode}, {metadata.get("error")}')
+            assert len(metadata['samples'])==1+read(RUN/'protocol.json')['timing']['retained_calls'] and all(s['validity_pass'] for s in metadata['samples'])
+            assert sum(s['warmup'] for s in metadata['samples'])==1
+            for sample in metadata['samples']:
+                fitting=sample['fitting'].get('fitting_seconds',sample['fitting'].get('fit_seconds'))
+                assert 0<fitting<=sample['time_seconds'], (backend,fitting,sample['time_seconds'])
+        R=read(out/'R.json');native=read(out/'prusie.json')
+        shape=tuple(R['alpha_shape']);assert shape==tuple(native['alpha_shape'])
+        a=np.fromfile(out/'R.json.alpha.bin',dtype='<f8').reshape(shape,order='F')
+        b=np.fromfile(out/'prusie.json.alpha.bin',dtype='<f8').reshape(shape,order='F')
+        assert np.isfinite(a).all() and np.isfinite(b).all()
+        error=float(np.max(np.abs(a-b)));passed=error<=1e-5
+        both_nonconverged=all(not s['converged'] and s['niter']==100 for d in (R,native) for s in d['samples'])
+        any_converged=any(s['converged'] for d in (R,native) for s in d['samples'])
+        result.update(state='COMPLETE',max_abs_alpha_error=error,alpha_pass=passed,
+                      both_nonconverged_at_limit=both_nonconverged,any_backend_call_converged=any_converged,
+                      numerical_disposition='PASS' if passed else 'ACCEPTED_BOTH_NONCONVERGED_EXCEPTION' if both_nonconverged else 'EXCEEDANCE_WITH_CONVERGED_BACKEND' if any_converged else 'EXCEEDANCE_OUTSIDE_NONCONVERGED_EXCEPTION',
+                      peak_rss_diagnostic={k:d['peak_rss_bytes'] for k,d in [('R',R),('prusie',native)]})
+    except Exception:
+        result.update(error=traceback.format_exc())
+    finally:
+        inputdir=out/'input'
+        if inputdir.exists():
+            for file in inputdir.iterdir():
+                if file.suffix=='.log' or file.name in ('validation.json','case.json'):shutil.copy2(file,out/('ld_'+file.name))
+            shutil.rmtree(inputdir)
+        # Compress full-precision arrays only after both timing processes exit.
+        for path in out.glob('*.bin'):
+            with path.open('rb') as src,gzip.open(str(path)+'.gz','wb',compresslevel=1) as dst:shutil.copyfileobj(src,dst)
+            path.unlink()
+        result['finished_epoch']=time.time()
+        result['outputs']={p.name:sha(p) for p in out.iterdir() if p.is_file() and p.name!='result.json'}
+        write(out/'result.json',result)
+    return 0 if result['state']=='COMPLETE' else 1
+
+def qualify_case(args):
+    """Original/instrumented same-LD comparison; not a formal panel result."""
+    import numpy as np
+    from reconstruct_ld import reconstruct
+    execution=read(args.request);out=Path(args.request).parent;row=execution['row']
+    result=dict(case_key=row['case_key'],state='FAILED',started_epoch=time.time())
+    try:
+        assert sorted(os.sched_getaffinity(0))==execution['placement']['cpus']
+        rebuilt=reconstruct(execution['manifest'],row,out/'input',RUN/'inputs/tools/plink1/plink',execution['verification'])
+        result['ld']=rebuilt
+        task=dict(case_path=rebuilt['case_path'],case_id=row['case_id'],panel=row['panel'],parameters=row['parameters'],
+                  p=row['p'],window=None,n_threads=1,overwrite=False,kind=row['kind'])
+        records={};arrays={}
+        environment=read(RUN/'runtime/environment.json')
+        instrumented=read(RUN/'runtime/instrumented_environment.json')
+        settings=dict(os.environ,**{k:'1' for k in THREAD_VARS},R_PROFILE_USER='/dev/null',R_ENVIRON_USER='/dev/null')
+        settings.update({k:environment['R_paths'][k] for k in ('R_LIBS','R_LIBS_USER')})
+        states=['original','instrumented'] if execution['index']%2==0 else ['instrumented','original']
+        backends=['R','prusie'] if execution['index']%2==0 else ['prusie','R']
+        for backend in backends:
+            for state in states:
+                identity=environment if state=='original' else instrumented
+                target=out/(backend+'_'+state);target.mkdir()
+                request=dict(task=task,identity=dict(python=identity['python'],native_sha256=identity['native_sha256']),
+                    R_paths=environment['R_paths'],R_expected=environment['R_expected'],blas_probe=environment['blas_probe'],
+                    placement=execution['placement'],protocol_path=str(RUN/'instrumentation/validation_plan.json'),
+                    protocol_sha256=sha(RUN/'instrumentation/validation_plan.json'))
+                if state=='instrumented':request['fit_timing']=instrumented['fit_timing']
+                request['signature_sha256']=hashlib.sha256(json.dumps(request,sort_keys=True).encode()).hexdigest()
+                write(target/'request.json',request)
+                if backend=='R':argv=[environment['R_paths']['rscript'],'--vanilla',str(RUN/'scripts/m2_reference.R')]
+                else:argv=[identity['python'],'-B',str(RUN/'scripts/m2_native.py')]
+                argv+=['--request',str(target/'request.json'),'--mode','time','--output',str(target/'output.json')]
+                with (target/'process.log').open('w') as log:
+                    process=subprocess.run(argv,env=settings,stdout=log,stderr=subprocess.STDOUT)
+                assert process.returncode==0,(backend,state,process.returncode)
+                record=read(target/'output.json');assert record['status']=='ok'
+                samples=record['samples'];assert len(samples)==1+read(RUN/'instrumentation/validation_plan.json').get('timing',{'retained_calls':7})['retained_calls'] and all(s['validity_pass'] for s in samples)
+                if state=='instrumented':
+                    for sample in samples:
+                        value=sample['fitting'].get('fitting_seconds',sample['fitting'].get('fit_seconds'))
+                        assert 0<value<=sample['time_seconds'],(backend,value,sample['time_seconds'])
+                records[(backend,state)]=record
+                arrays[(backend,state)]=np.fromfile(target/'output.json.alpha.bin',dtype='<f8').reshape(record['alpha_shape'],order='F')
+        checks={};overhead={}
+        import statistics
+        for backend in backends:
+            a,b=[records[(backend,state)] for state in ('original','instrumented')]
+            original_pip=np.fromfile(out/(backend+'_original')/'output.json.pip.bin',dtype='<f8')
+            instrumented_pip=np.fromfile(out/(backend+'_instrumented')/'output.json.pip.bin',dtype='<f8')
+            checks[backend]=dict(alpha_bitwise_equal=bool(np.array_equal(arrays[(backend,'original')].view(np.uint64),arrays[(backend,'instrumented')].view(np.uint64))),
+                pip_bitwise_equal=bool(np.array_equal(original_pip.view(np.uint64),instrumented_pip.view(np.uint64))),
+                all_native_call_alpha_hashes_equal=all(x.get('alpha_sha256')==y.get('alpha_sha256') for x,y in zip(a['samples'],b['samples'])) if backend=='prusie' else None,
+                max_abs_alpha_difference=float(np.max(np.abs(arrays[(backend,'original')]-arrays[(backend,'instrumented')]))),
+                call_outcomes_equal=all(all(x[k]==y[k] for k in ('niter','converged','cs_count')) for x,y in zip(a['samples'],b['samples'])))
+            original=[s['time_seconds'] for s in a['samples'] if not s['warmup']]
+            timed=[s['time_seconds'] for s in b['samples'] if not s['warmup']]
+            overhead[backend]=dict(original_retained_seconds=original,instrumented_retained_seconds=timed,
+                 instrumented_over_original_median_ratio=statistics.median(timed)/statistics.median(original),
+                 instrumented_fitting_seconds=[s['fitting'].get('fitting_seconds',s['fitting'].get('fit_seconds')) for s in b['samples'] if not s['warmup']])
+        passed=all(c['alpha_bitwise_equal'] and c['pip_bitwise_equal'] and c['call_outcomes_equal']
+                   and c['all_native_call_alpha_hashes_equal'] is not False for c in checks.values())
+        result.update(state='PASS' if passed else 'INVARIANCE_FAILURE',checks=checks,overhead=overhead,
+                      p=row['p'],case_id=row['case_id'],states=states,backends=backends)
+    except Exception:result['error']=traceback.format_exc()
+    finally:
+        if (out/'input').exists():shutil.rmtree(out/'input')
+        result['finished_epoch']=time.time();write(out/'qualification.json',result)
+    return 0 if result['state']=='PASS' else 1
+
+def qualify(args):
+    assert os.environ.get('SLURM_JOB_ID')
+    topo=topology();plan=read(RUN/'instrumentation/validation_plan.json')
+    original=read(RUN/'runtime/environment.json')
+    env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1',PYTHONNOUSERSITE='1',PIP_CACHE_DIR=str(RUN/'cache/pip'),TMPDIR=str(RUN/'tmp'))
+    python=RUN/'envs/instrumented/bin/python'
+    if not python.exists():subprocess.run([str(RUN/'envs/native/bin/python'),'-m','venv',str(python.parents[1])],env=env,check=True)
+    wheel=next((RUN/'instrumentation/native/artifacts').glob('*.whl'))
+    numpy=next((RUN/'runtime').glob('numpy*.whl'))
+    subprocess.run([str(python),'-m','pip','install','--no-index','--no-deps','--no-cache-dir',str(numpy),str(wheel)],env=env,check=True)
+    installed=next((python.parents[1]/'lib/python3.12/site-packages/prusie').glob('*native*.so'))
+    build=read(RUN/'instrumentation/native/build.json')
+    expected_native='95b764e5c99c4c1c851c0c8b5d1aa9a4577201a826ad2db6eb436bae635df577'
+    assert sha(installed)==expected_native
+    instrumented=dict(original,python=str(python),native_sha256=sha(installed),wheel_sha256=sha(wheel),
+                      original_wheel_sha256=original['wheel_sha256'],instrumented=True,
+                      fit_timing=dict(native_helper_directory=str(RUN/'instrumentation/native'),R_helper=str(RUN/'instrumentation/R/fit_timer.R'),
+                                      R_source_file=str(RUN/'instrumentation/R/pinned/susie.R.txt')))
+    write(RUN/'runtime/instrumented_environment.json',instrumented)
+    manifest=read(RUN/'inputs/campaign_manifest.json');rows_by_key={r['case_key']:r for r in manifest['rows']}
+    rows=[rows_by_key[key] for key in plan['case_keys']]
+    scratch=Path('/tmp')/('prusie_bench_20261028_qualification_'+os.environ['SLURM_JOB_ID'])
+    scratch.mkdir();archive=RUN/'instrumentation/qualification'/os.environ['SLURM_JOB_ID'];archive.mkdir(parents=True)
+    write(archive/'topology.json',topo)
+    os.sched_setaffinity(0,[topo['controller_domain']['cpu']])
+    try:
+        manifest,verification=stage(manifest,rows,scratch)
+        outcomes=[]
+        def run_case(index,row):
+            lane=topo['lanes'][index];out=scratch/'cases'/row['case_key'];out.mkdir(parents=True)
+            minimal={k:manifest[k] for k in ('_inputs_root','_manifest_sha256','validation_tolerances')}
+            minimal['references']={row['reference_key']:manifest['references'][row['reference_key']]}
+            receipt=dict(verification,records=[r for r in verification['records'] if r['key']==row['reference_key']])
+            write(out/'execution.json',dict(index=index,row=row,manifest=minimal,verification=receipt,placement=dict(cpus=[lane['cpu']],numa=lane['numa'])))
+            argv=['taskset','--cpu-list',','.join(map(str,topo['allowed_cpus'])),
+                  'numactl',f"--membind={lane['numa']}",f"--physcpubind={lane['cpu']}",str(RUN/'envs/native/bin/python'),'-B',str(Path(__file__).resolve()),'qualify_case','--request',str(out/'execution.json')]
+            with (out/'worker.log').open('w') as log:rc=subprocess.run(argv,stdout=log,stderr=subprocess.STDOUT).returncode
+            shutil.copytree(out,archive/row['case_key']);shutil.rmtree(out)
+            result=read(archive/row['case_key']/'qualification.json') if (archive/row['case_key']/'qualification.json').exists() else dict(state='FAILED',case_key=row['case_key'])
+            print(json.dumps(dict(case_key=row['case_key'],state=result['state'],rc=rc)),flush=True)
+            return result
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            outcomes=list(pool.map(lambda item:run_case(*item),enumerate(rows)))
+        passed=all(r['state']=='PASS' for r in outcomes)
+        write(archive/'summary.json',dict(state='PASS' if passed else 'FAIL',cases=outcomes,plan_sha256=sha(RUN/'instrumentation/validation_plan.json'),
+                    instrumented_environment=instrumented,job_id=os.environ['SLURM_JOB_ID'],finished_epoch=time.time()))
+        return 0 if passed else 1
+    finally:
+        if (scratch/'cases').exists():
+            for partial in (scratch/'cases').iterdir():
+                if (partial/'input').exists():shutil.rmtree(partial/'input')
+                if not (archive/partial.name).exists():shutil.copytree(partial,archive/partial.name)
+        shutil.rmtree(scratch)
+
+def node(args):
+    assert os.environ.get('SLURM_JOB_ID')
+    def terminate(signum,frame):
+        raise SystemExit(128+signum)
+    signal.signal(signal.SIGTERM,terminate)
+    protocol=read(RUN/'protocol.json');protocol_sha=sha(RUN/'protocol.json')
+    for name,digest in protocol['scripts'].items():assert sha(RUN/'scripts'/name)==digest,name
+    for name,digest in protocol['runtime_assets'].items():assert sha(RUN/name)==digest,name
+    if not (DATA/'smoke_v2/PASS.json').exists(): smoke(args)
+    assert read(DATA/'smoke_v2/PASS.json')['protocol_sha256']==protocol_sha
+    canonical_project=Path('/scratch/wjiang49/prusie_project').resolve()
+    assert protocol['storage']['state']=='CONCURRENT_MIGRATION_AUTHORIZED'
+    for path in (RESULTS,CLAIMS,DATA/'formal_tmp'):
+        assert path.resolve().is_relative_to(canonical_project), str(path)
+    # Verified home dependencies stay read-only during concurrent relocation.
+    # stage() hashes node-local reference copies before any timing starts.
+    assert read(RUN/'inputs/fidelity_results.json')['state']=='PASS'
+    plan=read(RUN/'campaign_plan.json');manifest=read(RUN/'inputs/campaign_manifest.json')
+    assert plan['manifest_sha256']==sha(RUN/'inputs/campaign_manifest.json')
+    topo=topology()
+    assert topo['hostname'].startswith('cpunode-')
+    assert protocol['queue_policy']=='shared_predeclared_priority_atomic_case_claims'
+    base=Path(os.environ.get('SLURM_TMPDIR','/tmp'))/('prusie_bench_20261028_'+os.environ['SLURM_JOB_ID']+'_'+topo['hostname'])
+    assert not base.exists();base.mkdir(parents=True)
+    archive=RESULTS/topo['hostname']/os.environ['SLURM_JOB_ID'];archive.mkdir(parents=True,exist_ok=True)
+    write(archive/'topology.json',topo)
+    os.sched_setaffinity(0,[topo['controller_domain']['cpu']])
+    rows_by_key={r['case_key']:r for r in manifest['rows']}
+    tasks=sorted([t for shard in plan['shards'] for t in shard['tasks']],key=lambda t:(-t['planning_seconds'],t['case_key']))
+    claims=CLAIMS;claims.mkdir(exist_ok=True)
+    # Resume only cases lacking an authenticated COMPLETE result. Failed outcomes
+    # are never retried here; D must classify any operational failure explicitly.
+    known={}
+    for path in RESULTS.glob('*/*/*/execution.json'):
+        if path.parent.name.startswith('.'):continue
+        assert (path.parent/'result.json').exists(), 'Manual interrupted-case disposition required: '+str(path.parent)
+    for path in RESULTS.glob('*/*/*/result.json'):
+        if path.parent.name.startswith('.'):continue
+        r=read(path)
+        assert r['case_key'] not in known, 'Ambiguous duplicate case: '+r['case_key']
+        known[r['case_key']]=(path,r)
+    adoption=read(RUN/'protocol_versions/v1_adoption.json')['completed']
+    for key,item in adoption.items():
+        path=Path(item['result_directory'])/'result.json'
+        assert sha(path)==item['result_sha256']
+        assert key not in known
+        known[key]=(path,read(path))
+    pending=[]
+    def authenticate_completed(path,task):
+        record=read(path)
+        assert record['state']=='COMPLETE', 'Manual operational-failure disposition required: '+str(path)
+        assert record['protocol_sha256']==(adoption[task['case_key']]['protocol_sha256'] if task['case_key'] in adoption else protocol_sha), 'Completed case belongs to a different protocol: '+str(path)
+        expected=rows_by_key[task['case_key']]
+        assert record['case_key']==task['case_key']
+        assert all(record[k]==expected[k] for k in ('case_id','panel','p','kind'))
+        for name,digest in record['outputs'].items():
+            # Canonical scratch payloads remain available after local fetching.
+            assert sha(path.parent/name)==digest, str(path.parent/name)
+    for task in tasks:
+        if task['case_key'] in known:
+            path,record=known[task['case_key']]
+            authenticate_completed(path,task)
+        else:
+            claim_path=claims/(task['case_key']+'.json')
+            if not claim_path.exists():pending.append(task);continue
+            claim=read(claim_path)
+            assert claim['protocol_sha256']==protocol_sha, 'Claim protocol mismatch: '+str(claim_path)
+            if claim['state']=='COMPLETE':
+                result_path=Path(claim['result_directory'])/'result.json'
+                authenticate_completed(result_path,task)
+            else:
+                assert claim['state']=='CLAIMED', 'Manual failed-claim disposition required: '+str(claim_path)
+                owner=command(['sacct','-X','-nP','-j',claim['job_id'],'-o','JobID,State'])
+                state=next((line.split('|')[1] for line in owner.splitlines() if line.split('|')[0]==claim['job_id']),None)
+                if state not in ('RUNNING','COMPLETING'):
+                    claim=read(claim_path)
+                    assert claim['state']=='COMPLETE', 'Manual orphan-claim disposition required: '+str(claim_path)+'; owner='+str(state)
+                    authenticate_completed(Path(claim['result_directory'])/'result.json',task)
+    try:
+        manifest,verification=stage(manifest,[rows_by_key[t['case_key']] for t in pending],base)
+        lanes=topo['lanes'];available=list(lanes);running={};reserved=0;large={0:0,1:0};failed=[];completed=[]
+        memory=host_sample(lanes)['memory']['MemTotal'];cap=int(0.9*memory)
+        end_time=re.search(r'EndTime=(\S+)',topo['slurm']).group(1)
+        end_epoch=time.mktime(time.strptime(end_time,'%Y-%m-%dT%H:%M:%S'))
+        # Test actual NUMA binding before first case, preserving a documented fallback.
+        for lane in lanes:
+            # Restore only the allocation's original mask before numactl inspects
+            # it; the coordinator itself stays on its separate L3 domain.
+            argv=['taskset','--cpu-list',','.join(map(str,topo['allowed_cpus'])),
+                  'numactl',f"--membind={lane['numa']}",f"--physcpubind={lane['cpu']}",'true']
+            check=subprocess.run(argv,text=True,capture_output=True)
+            lane['binding']='membind' if check.returncode==0 else 'localalloc'
+            lane['binding_probe_stderr']=check.stderr
+        write(archive/'topology.json',topo)
+        with (archive/'host_samples.jsonl').open('a') as samples,ThreadPoolExecutor(max_workers=len(lanes)) as pool:
+            last_sample=0
+            while pending or running:
+                if time.time()-last_sample>=15:
+                    samples.write(json.dumps(host_sample(lanes))+'\n');samples.flush();last_sample=time.time()
+                admitted=True
+                while available and pending and admitted:
+                    admitted=False
+                    for ix,task in enumerate(pending):
+                        if end_epoch-time.time()<max(180,3*task['planning_seconds']+120):continue
+                        big=8*task['p']**2>1024**3
+                        lane=next((l for l in available if not big or large[l['socket']]<4),None)
+                        if lane is None or reserved+task['reserved_bytes']>cap:continue
+                        claim=claims/(task['case_key']+'.json')
+                        claim_temp=claims/(f".claim_{topo['hostname']}_{os.getpid()}.tmp")
+                        claim_temp.write_text(json.dumps(dict(case_key=task['case_key'],job_id=os.environ['SLURM_JOB_ID'],host=topo['hostname'],
+                                      state='CLAIMED',epoch=time.time(),protocol_sha256=protocol_sha))+'\n')
+                        try:
+                            # Publish a complete claim atomically, with no partially
+                            # written JSON visible to another node at startup.
+                            os.link(claim_temp,claim)
+                        except FileExistsError:
+                            pending.pop(ix);admitted=True;break
+                        finally:claim_temp.unlink()
+                        pending.pop(ix);available.remove(lane);reserved+=task['reserved_bytes'];large[lane['socket']]+=int(big)
+                        row=rows_by_key[task['case_key']];out=base/'cases'/task['case_key'];out.mkdir(parents=True)
+                        minimal={k:manifest[k] for k in ('_inputs_root','_manifest_sha256','validation_tolerances')}
+                        minimal['rows']=[];minimal['references']={row['reference_key']:manifest['references'][row['reference_key']]}
+                        receipt=dict(verification,records=[r for r in verification['records'] if r['key']==row['reference_key']])
+                        execution=dict(row=row,task=task,manifest=minimal,verification=receipt,protocol_sha256=protocol_sha,
+                                       placement=dict(cpus=[lane['cpu']],numa=lane['numa'],socket=lane['socket'],l3_cpus=lane['l3_cpus'],binding=lane['binding']))
+                        write(out/'execution.json',execution)
+                        argv=['taskset','--cpu-list',','.join(map(str,topo['allowed_cpus'])),
+                              'numactl',f"--physcpubind={lane['cpu']}"]
+                        argv+= [f"--membind={lane['numa']}"] if lane['binding']=='membind' else ['--localalloc']
+                        argv+=[str(RUN/'envs/native/bin/python'),'-B',str(Path(__file__).resolve()),'case','--request',str(out/'execution.json')]
+                        def run(argv=argv,out=out):
+                            with (out/'worker.log').open('w') as log:return subprocess.run(argv,stdout=log,stderr=subprocess.STDOUT).returncode
+                        future=pool.submit(run);running[future]=(task,lane,out,big);admitted=True;break
+                if running:
+                    done,_=wait(running,timeout=1,return_when=FIRST_COMPLETED)
+                    for future in done:
+                        task,lane,out,big=running.pop(future);rc=future.result()
+                        target=archive/task['case_key'];temporary=archive/('.pending_'+task['case_key'])
+                        shutil.copytree(out,temporary);temporary.rename(target);shutil.rmtree(out)
+                        if rc or not (target/'result.json').exists() or read(target/'result.json')['state']!='COMPLETE':
+                            failed.append(dict(case_key=task['case_key'],returncode=rc,path=str(target)))
+                        else:completed.append(task['case_key'])
+                        claim=read(claims/(task['case_key']+'.json'))
+                        claim.update(state='COMPLETE' if not rc and (target/'result.json').exists() and read(target/'result.json')['state']=='COMPLETE' else 'FAILED',
+                                     result_directory=str(target),finished_epoch=time.time())
+                        write(claims/(task['case_key']+'.json'),claim)
+                        reserved-=task['reserved_bytes'];large[lane['socket']]-=int(big);available.append(lane)
+                        print(json.dumps(dict(case_key=task['case_key'],rc=rc,remaining=len(pending),running=len(running))),flush=True)
+                elif pending:
+                    if all(end_epoch-time.time()<max(180,3*t['planning_seconds']+120) for t in pending):break
+                    raise RuntimeError('No task fits the declared memory cap')
+        write(archive/'node_complete.json',dict(state='NODE_QUEUE_DRAINED' if not failed else 'FAILED_CASES',
+              completed_cases=completed,failed_cases=failed,protocol_sha256=protocol_sha,finished_epoch=time.time(),
+              queue_policy=protocol['queue_policy'],unclaimed_at_walltime_admission_stop=[t['case_key'] for t in pending]))
+        return 0 if not failed else 1
+    finally:
+        # Preserve interrupted partial calls before deleting the node-local LD.
+        if (base/'cases').exists():
+            for partial in (base/'cases').iterdir():
+                if not partial.is_dir():continue
+                inputdir=partial/'input'
+                if inputdir.exists():shutil.rmtree(inputdir)
+                interrupted=archive/'.interrupted'/partial.name
+                interrupted.parent.mkdir(exist_ok=True)
+                if not interrupted.exists():shutil.copytree(partial,interrupted)
+        shutil.rmtree(base)
+
+def smoke(args):
+    """Two user-required v2 end-to-end checks; excluded from formal records."""
+    topo=topology()
+    assert topo['hostname']=='cpunode-029'
+    os.sched_setaffinity(0,[topo['controller_domain']['cpu']])
+    old=Path('/tmp/prusie_bench_20261028_700768_cpunode-029')
+    if old.exists():
+        recovery=DATA/'formal_results/cpunode-029/700768/.protocol_amendment_aborts'
+        recovery.mkdir(parents=True,exist_ok=True)
+        for partial in (old/'cases').glob('*'):
+            if (partial/'input').exists():shutil.rmtree(partial/'input')
+            dest=recovery/partial.name
+            assert not dest.exists(),str(dest)
+            shutil.copytree(partial,dest)
+        shutil.rmtree(old)
+    archive=DATA/'smoke_v2'/os.environ['SLURM_JOB_ID'];archive.mkdir(parents=True,exist_ok=True)
+    base=Path('/tmp')/('prusie_v2_smoke_'+os.environ['SLURM_JOB_ID'])
+    base.mkdir()
+    manifest=read(RUN/'inputs/campaign_manifest.json')
+    selected=[min((r for r in manifest['rows'] if r['panel']==p),key=lambda r:(r['p'],r['case_key'])) for p in ('GWAS','eQTL')]
+    plan=read(RUN/'campaign_plan.json')
+    tasks={t['case_key']:t for sh in plan['shards'] for t in sh['tasks']}
+    protocol_sha=sha(RUN/'protocol.json');outcomes=[]
+    try:
+        manifest,verification=stage(manifest,selected,base)
+        lane=topo['lanes'][0]
+        for row in selected:
+            out=base/'cases'/row['case_key'];out.mkdir(parents=True)
+            minimal={k:manifest[k] for k in ('_inputs_root','_manifest_sha256','validation_tolerances')}
+            minimal.update(rows=[],references={row['reference_key']:manifest['references'][row['reference_key']]})
+            receipt=dict(verification,records=[r for r in verification['records'] if r['key']==row['reference_key']])
+            execution=dict(row=row,task=tasks[row['case_key']],manifest=minimal,verification=receipt,protocol_sha256=protocol_sha,
+                placement=dict(cpus=[lane['cpu']],numa=lane['numa'],socket=lane['socket'],l3_cpus=lane['l3_cpus'],binding='membind'))
+            write(out/'execution.json',execution)
+            argv=['taskset','--cpu-list',','.join(map(str,topo['allowed_cpus'])),'numactl',f"--membind={lane['numa']}",f"--physcpubind={lane['cpu']}",str(RUN/'envs/native/bin/python'),'-B',str(Path(__file__).resolve()),'case','--request',str(out/'execution.json')]
+            with (out/'worker.log').open('w') as log:
+                rc=subprocess.run(argv,stdout=log,stderr=subprocess.STDOUT).returncode
+            shutil.copytree(out,archive/row['case_key'])
+            assert rc==0 and read(out/'result.json')['state']=='COMPLETE',str(out)
+            for backend in ('R','prusie'):
+                samples=read(out/(backend+'.json'))['samples']
+                assert len(samples)==4 and sum(s['warmup'] for s in samples)==1
+                assert all(s['validity_pass'] and 0<s['fitting'].get('fitting_seconds',s['fitting'].get('fit_seconds'))<=s['time_seconds'] for s in samples)
+            outcomes.append(dict(case_key=row['case_key'],p=row['p'],state='PASS'))
+        write(DATA/'smoke_v2/PASS.json',dict(state='PASS',protocol_sha256=protocol_sha,cases=outcomes,job_id=os.environ['SLURM_JOB_ID'],formal_timing_result=False,epoch=time.time()))
+    finally:
+        if base.exists():shutil.rmtree(base)
+        os.sched_setaffinity(0,topo['allowed_cpus'])
+
+def main():
+    p=argparse.ArgumentParser();sub=p.add_subparsers(dest='action',required=True)
+    s=sub.add_parser('plan');s.add_argument('--nodes',type=int,required=True)
+    s=sub.add_parser('node');s.add_argument('--shard',default='auto')
+    s=sub.add_parser('case');s.add_argument('--request',required=True)
+    s=sub.add_parser('qualify_case');s.add_argument('--request',required=True)
+    sub.add_parser('qualify')
+    sub.add_parser('inspect_node')
+    a=p.parse_args();result=globals()[a.action](a);return result or 0
+if __name__=='__main__':raise SystemExit(main())

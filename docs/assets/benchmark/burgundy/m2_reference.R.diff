@@ -1,0 +1,85 @@
+--- v030/m2_reference.R
++++ burgundy/m2_reference.R
+@@ -12,13 +12,21 @@
+ base <- dirname(task$case_path)
+ absolute <- function(p) if (startsWith(p,'/')) p else file.path(base,p)
+ thread_names <- c('OMP_NUM_THREADS','OPENBLAS_NUM_THREADS','MKL_NUM_THREADS',
+-                 'VECLIB_MAXIMUM_THREADS','BLIS_NUM_THREADS','PRUSIE_NUM_THREADS')
++                 'VECLIB_MAXIMUM_THREADS','BLIS_NUM_THREADS','PRUSIE_NUM_THREADS',
++                 'NUMEXPR_NUM_THREADS','RAYON_NUM_THREADS')
+ stopifnot(all(Sys.getenv(thread_names)=='1'))
+ if (requireNamespace('RcppParallel',quietly=TRUE)) RcppParallel::setThreadOptions(numThreads=1L)
+ dyn.load(request$blas_probe)
+ clock <- function() .Call('prusie_monotonic')
++fit_timer <- NULL
++fit_function <- susieR::susie_rss
++if (!is.null(request$fit_timing)) {
++    source(request$fit_timing$R_helper)
++    fit_timer <- make_susier_fit_timer(clock, request$fit_timing$R_source_file)
++    fit_function <- fit_timer$fit
++}
+ probe <- .Call('prusie_blas_info')
+-stopifnot(is.na(probe$threads) || probe$threads==1L)
++stopifnot(!is.na(probe$threads) && probe$threads==1L)
+ stopifnot(normalizePath(find.package('susieR'))==normalizePath(request$R_expected$path),
+           normalizePath(trimws(extSoftVersion()[['BLAS']]))==normalizePath(trimws(request$R_expected$blas)),
+           identical(probe$config,request$R_expected$blas_probe$config))
+@@ -83,18 +91,14 @@
+     params$z_method <- 'wald'; params$unmappable_effects <- 'none'
+     params$convergence_method <- 'elbo'; params$R_mismatch <- 'none'
+     inputs <- c(list(z=z,R=R),params)
+-    fresh_alpha <- NULL
+-    if (arg$mode!='validate') {
+-        fresh_alpha <- read_doubles(file.path(dirname(arg$output),'R_validate.json.alpha.bin'),min(case$parameters$L,p)*p)
+-        dim(fresh_alpha) <- c(as.integer(min(case$parameters$L,p)),p)
+-    }
+     record$input_load_seconds <- clock()-input_started
+     fit <- NULL
+     for (i in if (arg$mode=='time') 0:7 else 0L) {
+         fit <- NULL; gc(verbose=FALSE)
+         warns <- character()
++        if (!is.null(fit_timer)) fit_timer$reset()
+         start_epoch <- as.numeric(Sys.time()); start <- clock()
+-        fit <- withCallingHandlers(do.call(susieR::susie_rss,inputs),
++        fit <- withCallingHandlers(do.call(fit_function,inputs),
+           warning=function(w) {warns<<-c(warns,conditionMessage(w));invokeRestart('muffleWarning')},
+           message=function(w) {warns<<-c(warns,conditionMessage(w));invokeRestart('muffleMessage')})
+         elapsed <- clock()-start; end_epoch <- as.numeric(Sys.time()); peak <- peak_rss()
+@@ -109,34 +113,17 @@
+           peak_rss_bytes=if (arg$mode=='memory') peak else NULL,
+           start_epoch=start_epoch,end_epoch=end_epoch,niter=fit$niter,converged=fit$converged,
+           cs_count=length(fit$sets$cs_index),warnings=I(warns),validity_pass=valid)
+-        if (!is.null(fresh_alpha)) {
+-            sample$max_abs_alpha_error_to_fresh_R <- max(abs(a-fresh_alpha))
+-            sample$alpha_values_equal_to_fresh_R <- all(a==fresh_alpha)
+-        }
++        if (!is.null(fit_timer)) sample$fitting <- fit_timer$last()
+         record$samples[[length(record$samples)+1L]] <- sample
+         stopifnot(valid)
+     }
+     record$alpha_shape <- I(dim(a)); record$n_variants <- p
+     record$parameters <- case$parameters
+-    if (arg$mode=='validate') {
+-        if (is.null(task$window) || task$window==case$n_variants) {
+-            reference <- fromJSON(task$frozen_reference,simplifyVector=TRUE)
+-            stopifnot(identical(as.character(reference$fit$variant_ids),ids))
+-            frozen_alpha <- unname(as.matrix(reference$fit$alpha))
+-            stopifnot(identical(dim(frozen_alpha),dim(a)))
+-            delta <- max(abs(a-frozen_alpha))
+-            bitwise <- identical(writeBin(as.vector(a),raw(),size=8L,endian='little'),
+-                                 writeBin(as.vector(frozen_alpha),raw(),size=8L,endian='little'))
+-            record$frozen_integrity <- list(available=TRUE,alpha_bitwise_equal=bitwise,
+-              alpha_values_equal=all(a==frozen_alpha),max_abs_alpha_error=delta,
+-              reference=task$frozen_reference,policy='Exact fresh-versus-frozen integrity diagnostic; no relaxed tolerance')
+-        } else {
+-            record$frozen_integrity <- list(available=FALSE,reason='New deterministic nested sub-window has no historical frozen R fit')
+-        }
++    if (arg$mode=='time') {
+         connection <- file(paste0(arg$output,'.alpha.bin'),'wb');writeBin(as.vector(a),connection,size=8L,endian='little');close(connection)
+         connection <- file(paste0(arg$output,'.pip.bin'),'wb');writeBin(pip,connection,size=8L,endian='little');close(connection)
+     }
+-    if (arg$mode=='memory') record$peak_rss_bytes <- record$samples[[1L]]$peak_rss_bytes
++    record$peak_rss_bytes <- peak
+     record$status <- 'ok'
+ },error=function(e) {record$status<<-'error';record$error<<-conditionMessage(e)})
+ write_json(record,arg$output,auto_unbox=TRUE,digits=NA,pretty=TRUE,null='null',na='null',matrix='rowmajor')

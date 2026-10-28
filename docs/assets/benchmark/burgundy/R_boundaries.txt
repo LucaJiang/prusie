@@ -1,0 +1,75 @@
+The R helper directly times the fitting stage within each complete `susie_rss`
+call. It copies the installed public function, adds two timestamps to its AST,
+and compiles the copy. Every other function still resolves through the original
+susieR namespace. The installed reference and its namespace are unchanged.
+
+Use the factory once per measurement process, before any timing:
+
+```r
+source(file.path(run_root, "instrumentation/R/fit_timer.R"))
+timer <- make_susier_fit_timer(
+    clock,
+    file.path(run_root, "instrumentation/R/pinned/susie.R.txt")
+)
+timer$reset()                           # outside complete-call timing
+start <- clock()
+fit <- do.call(timer$fit, inputs)       # existing warning handlers remain here
+complete_seconds <- clock() - start
+stage <- timer$last()                   # outside complete-call timing
+stopifnot(stage$fit_seconds >= 0,
+          stage$fit_seconds <= complete_seconds)
+```
+
+`clock` must be the existing monotonic probe function
+`function() .Call("prusie_monotonic")`. `last()` returns `fit_seconds`,
+`fit_start_monotonic`, and `fit_end_monotonic`. It errors after reset unless both
+timestamps were recorded successfully. Failed calls and `init_only` returns do
+not produce a fitting-stage measurement. The timer is sequential and is not
+reentrant. `timer$original` exposes the unchanged installed function for the
+coordinator's predeclared numerical invariance and overhead check.
+
+The start is immediately before `model <- susie_workhorse(...)` at pinned
+`R/susie.R:808`. The end is immediately before the final `return(model)` at line
+826, including optional RSS metadata after the workhorse call. The fixed panel
+uses the single-panel z/R path, no model initialization, no mismatch correction,
+no greedy-L outer loop, and no refinement.
+
+| Stage | Included in fitting seconds |
+| --- | --- |
+| Method/control validation, summary-statistics constructor, input checks, LD symmetry/NA/PSD checks, PVE adjustment, XtX construction/scaling/standardization, prior normalization, constructor configure-data | No |
+| Solver model/state initialization, residual-variance default and scalar validity checks, convergence-control and ELBO initialization | Yes |
+| All IBSS/SER updates, objective calculations, convergence decisions, variance updates, fitted-prior plausibility checks, warnings, null-effect trimming | Yes |
+| Final posterior, credible sets, PIP, z, intercept, fitted values, names, cleanup, and RSS result metadata | Yes |
+
+The lower-level inspection matters: `get_cs.ss` explicitly calls
+`susie_get_cs(check_symmetric=FALSE)`, so no full LD symmetry check occurs inside
+the fitted span. Its diagonal inspection selects a credible-set accessor; the
+accessor scales only extracted CS submatrices with `safe_cov2cor`. Those operations
+belong to final credible-set construction and are included. Small scalar
+residual-variance checks remain within solver initialization. The fitting timer
+excludes full input/LD preparation, while preserving these model-state and CS
+operations in the directly measured span.
+
+`ibss_fit` also calls `validate_prior.ss` after each iteration. With
+`check_prior=TRUE`, this checks the evolving fitted prior variance against a
+z-based scale. It is an algorithm diagnostic, includes its required vector
+operations, and remains inside fitting seconds. It does not check or repair LD.
+
+The complete-call metric comes from the same instrumented call and includes the
+two clock calls and state assignments. It is labeled as a measurement of a
+derived instrumented copy. Factory construction, source checks, reset, getter,
+recording, and serialization are outside the complete-call interval. No complete
+second campaign is required. The coordinator owns the separate eight-case
+numerical invariance and overhead check and its acceptance; source verification
+alone does not establish numerical invariance or acceptable overhead.
+
+`source_self_check.json` records the successful local source/factory check under
+R 4.4.0 and susieR 0.16.6. The factory verifies all eight copied files by SHA256,
+then checks formals and AST identity for 13 installed functions along the
+inspected path. It also verifies that deleting the two added statements restores
+the exact original public-function AST and that the namespace functions remain
+unchanged. `susie_rss.instrumentation.diff` is the exact diff between canonical
+deparsed functions; it is not a claim that upstream comments and formatting were
+preserved in the generated function text. The raw pinned source files and their
+notices are retained under `instrumentation/R/pinned/`; their archive, commit,
+file identities and hashes are in `instrumentation/R/source_manifest.json`.

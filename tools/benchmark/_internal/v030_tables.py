@@ -62,9 +62,9 @@ def render(root, pages=None, check=False):
             [
                 panel,
                 group["cases"],
-                group["timing_pairs"],
                 number(group["total_time_speedup"]) + "×",
-                number(group["geometric_mean_speedup"]) + "×",
+                number(group["fitting"]["headline_R_over_prusie"]) + "×",
+                number(group["sum_case_medians_speedup"]) + "×",
                 number(group["memory_ratio_distribution"]["median"]) + "×",
             ]
         )
@@ -73,18 +73,20 @@ def render(root, pages=None, check=False):
         [
             "Analysis",
             "Cases",
-            "Timing pairs",
-            "Total-time speed-up¹",
-            "Per-case geometric mean²",
+            "Complete-call speed-up¹",
+            "Fitting-stage speed-up¹",
+            "Complete-call sum-of-medians²",
             "Peak RSS ratio³",
         ],
         rows,
     )
     highlights += (
-        "\n¹ Sum of all seven retained R fit times divided by the corresponding prusie total. "
-        "² Geometric mean of within-case median-time ratios. "
-        "³ Median paired R/prusie fresh-process peak RSS, including interpreter and inputs. "
-        "The two speed-up summaries use different weighting.\n"
+        "\n¹ Sum of three retained R times divided by the corresponding prusie total, "
+        "on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. "
+        "² Sum of within-case R medians divided by the sum of prusie medians. "
+        "³ Median paired R/prusie fresh-process peak RSS from the earlier local AMD EPYC 9754 "
+        "measurements, including interpreter and inputs. "
+        "Runtime and memory have separate origins.\n"
     )
     for page in ("README.md", "docs/index.md", "docs/performance.md"):
         fragment(page, "highlights", highlights, "current")
@@ -104,7 +106,7 @@ def render(root, pages=None, check=False):
             "Cases",
             "Variants per case",
             "Alpha passes / failures / unavailable",
-            "Operational failures",
+            "Unresolved case failures",
         ],
         [
             [
@@ -118,29 +120,70 @@ def render(root, pages=None, check=False):
         ],
     )
     fragment("docs/performance.md", "panel", panel)
+    runtime_rows = []
+    for panel in groups:
+        current = summary["burgundy"]["panels"][panel]
+        for label, group in (("Complete call", current), ("Fitting stage", current["fitting"])):
+            runtime_rows.append(
+                [
+                    panel,
+                    label,
+                    milliseconds(group["backends"]["prusie"]["case_median_seconds"]["median"]),
+                    milliseconds(group["backends"]["R"]["case_median_seconds"]["median"]),
+                    number(group["headline_R_over_prusie"]) + "×",
+                    number(group["sum_of_medians_R_over_prusie"]) + "×",
+                    number(group["geometric_mean_case_median_ratio"]) + "×",
+                    f"{group['wins']} / {group['ties']} / {group['regressions']}",
+                ]
+            )
     fragment(
         "docs/performance.md",
         "runtime",
         table(
             [
                 "Analysis",
+                "Metric",
                 "prusie median (ms)",
                 "R median (ms)",
+                "Total R/prusie",
+                "Sum-of-medians",
+                "Geometric mean",
                 "Faster / tied / slower",
-                "prusie repeat IQR/median",
-                "R repeat IQR/median",
             ],
+            runtime_rows,
+        ),
+        "current",
+    )
+    variability = []
+    for panel in groups:
+        current = summary["burgundy"]["panels"][panel]
+        old = summary["burgundy"]["local_baseline_first3"][panel]
+        for label, group in (("Burgundy, 3 calls", current), ("Local, first 3 calls", old)):
+            for public, backend in (("prusie", "prusie"), ("susieR", "R")):
+                values = group["backends"][backend]
+                variability.append(
+                    [
+                        panel,
+                        label,
+                        public,
+                        number(values["repeat_iqr_over_median"]["median"]),
+                        values["cases_with_repeat_above_3x"],
+                        number(100 * values["total_time_fraction_from_repeats_above_2x"]) + "%",
+                    ]
+                )
+    fragment(
+        "docs/performance.md",
+        "variability",
+        table(
             [
-                [
-                    p,
-                    milliseconds(g["backends"]["prusie"]["runtime_seconds"]["median"]),
-                    milliseconds(g["backends"]["susieR"]["runtime_seconds"]["median"]),
-                    f"{g['wins']} / {g['ties']} / {g['regressions']}",
-                    number(g["backends"]["prusie"]["repeat_iqr_over_median"]["median"]),
-                    number(g["backends"]["susieR"]["repeat_iqr_over_median"]["median"]),
-                ]
-                for p, g in groups.items()
+                "Analysis",
+                "Complete-call timing",
+                "Backend",
+                "Median IQR/median",
+                "Cases with a repeat >3× median",
+                "Time in repeats >2× median",
             ],
+            variability,
         ),
         "current",
     )
@@ -177,6 +220,7 @@ def render(root, pages=None, check=False):
                     row["p"],
                     backend,
                     number(value["runtime"]["median"]),
+                    number(value["fitting_runtime"]["median"]),
                     ", ".join(map(str, niter)),
                     ", ".join(map(str, converged)),
                     number(value["peak_rss_bytes"] / 2**20 if value["peak_rss_bytes"] else None),
@@ -189,36 +233,33 @@ def render(root, pages=None, check=False):
             [
                 "Leading variants",
                 "Backend",
-                "Median fit time (s)",
+                "Complete-call median (s)",
+                "Fitting-stage median (s)",
                 "Observed iterations",
                 "Converged",
-                "Peak RSS (MiB)",
+                "Earlier EPYC 9754 peak RSS (MiB)",
             ],
             scaling,
         ),
         "current",
     )
-    provenance = summary["provenance"]
+    protocol = summary["burgundy_protocol"]
+    original = protocol["original_code_under_test"]
     identity = (
-        f"- Measured compute commit: `{provenance['compute_code_commit']}`\n"
-        f"- Measured CPython 3.12 wheel SHA-256: `{provenance['wheel_sha256']}`\n"
-        f"- Native extension SHA-256: `{provenance['native_sha256']}`\n"
-        f"- Statistical reference: susieR 0.16.6, `{provenance['reference_commit']}`.\n"
+        f"- Frozen release code: `{original['code_sha']}`\n"
+        f"- Original release wheel SHA-256: `{original['wheel_sha256']}`\n"
+        f"- Original native extension SHA-256: `{original['native_sha256']}`\n"
+        f"- Burgundy protocol SHA-256: `{summary['burgundy']['protocol_sha256']}`\n"
+        "- Statistical reference: R 4.4.0; susieR 0.16.6, "
+        "`8e56a8e038e989856d106d9ca5175cc664fea9d2`.\n\n"
+        "Both runtime metrics use run-local timing instrumentation derived from these frozen "
+        "artifacts. The native binary differs from the release binary; the original wheel is "
+        "preserved. The instrumentation patch, derived binary hashes, source boundaries and "
+        "qualification results are in the "
+        "[measurement archive](reproducibility.md#burgundy-protocol). "
+        "Earlier local memory measurements retain their original measured build identity.\n"
     )
-    release = provenance.get("qualified_release")
-    if release:
-        identity += (
-            f"- Qualified release commit: `{release['code_commit']}`\n"
-            f"- Qualified release wheel SHA-256: `{release['wheel_sha256']}`\n\n"
-            + release["relationship"]
-            + "\n"
-        )
-    fragment(
-        "docs/performance.md",
-        "identity",
-        identity,
-        "current",
-    )
+    fragment("docs/performance.md", "identity", identity, "current")
     comparison_labels = {
         "C1_V030_vs_BASE": "0.3.0 vs intermediate baseline",
         "C2_V030_vs_MAIN": "0.3.0 vs historical baseline",
@@ -277,7 +318,7 @@ def render(root, pages=None, check=False):
             ],
             gate_rows,
         )
-        + "\nThese are new paired Burgundy measurements. Cumulative totals do not replace "
+        + "\nThese are earlier controlled Burgundy measurements. Cumulative totals do not replace "
         "the fixed-panel majority, stratified non-regression check and robustness criteria. "
         "The v10 runtime count uses the median of paired-round time ratios; the additional "
         "case-median count compares the two within-case median times. These can differ. "
@@ -329,6 +370,7 @@ def render(root, pages=None, check=False):
                 outcomes(item["prusie_fit_outcomes"]),
                 outcomes(item["R_fit_outcomes"]),
                 item["both_backends_nonconverged_at_iteration_limit"],
+                item["disposition"],
             ]
         )
     failures = (
@@ -340,40 +382,29 @@ def render(root, pages=None, check=False):
                 "prusie: iterations / converged",
                 "R: iterations / converged",
                 "Both at iteration limit",
+                "Disposition",
             ],
             failure_rows,
         )
         if failure_rows
         else "No alpha failures were recorded.\n"
     )
-    fragment(
-        "docs/numerical_accuracy.md",
-        "errors",
-        table(
-            [
-                "Analysis",
-                "Fresh/frozen R: non-bitwise cases",
-                "Fresh/frozen R: unequal-value cases",
-                "Integrity unavailable",
-                "Maximum fresh/frozen |Δalpha|",
-            ],
-            [
-                [
-                    p,
-                    len(g["frozen_R_deviations"]),
-                    len(g["frozen_R_value_deviations"]),
-                    len(g["frozen_R_unavailable"]),
-                    number(g["frozen_R_max_abs_alpha_error"]),
-                ]
-                for p, g in groups.items()
-            ],
+    converged_failures = [
+        r
+        for p in summary["burgundy"]["panels"].values()
+        for r in p["exceedances"]
+        if r["any_backend_call_converged"]
+    ]
+    if converged_failures:
+        failures = (
+            "**Alpha exceedances involving a converged backend: "
+            + ", ".join(r["case_id"] for r in converged_failures)
+            + ".**\n\n"
+            + failures
         )
-        + "\nFresh R is checked before timing against the stored frozen alpha values. "
-        "Every nonzero difference remains recorded; the full-precision new R alpha is used "
-        "for the prusie comparison. Frozen decimal serialization can prevent bitwise identity.\n"
-        + "\n"
-        + failures,
-    )
+    else:
+        failures = "No alpha exceedance involved a converged backend.\n\n" + failures
+    fragment("docs/numerical_accuracy.md", "errors", failures)
     limits = table(
         ["Analysis", "prusie iteration-limit cases", "R iteration-limit cases"],
         [

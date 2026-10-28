@@ -1,0 +1,323 @@
+#!/usr/bin/env python3
+"""Construct signed double-precision LD with PLINK on a compute node."""
+from __future__ import annotations
+
+import argparse
+import csv
+import functools
+import gzip
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import time
+import zipfile
+
+import numpy as np
+
+THREADS = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "BLIS_NUM_THREADS",
+           "NUMEXPR_NUM_THREADS", "RAYON_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "PRUSIE_NUM_THREADS")
+PLINK_SHA256 = "47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062"
+
+
+def sha(path):
+    h = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def write(path, data):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+    tmp.replace(path)
+
+
+def require_compute():
+    if not os.environ.get("SLURM_JOB_ID") and not os.environ.get("COLOC_HEAVY_RECORD"):
+        raise RuntimeError("Run only inside an allocated compute job or the local shared heavy wrapper")
+
+
+def reference_prefix(manifest, key):
+    root = Path(manifest["_inputs_root"])
+    override = root / "reference" / key
+    if all(override.with_suffix(s).exists() for s in (".bed", ".bim", ".fam", ".receipt.json")):
+        return override
+    return Path(manifest["references"][key]["remote_prefix"])
+
+
+def count_missing(path, n_samples, n_variants):
+    """Inspect BED missing codes only; no genotype correlation is calculated here."""
+    width = (n_samples + 3) // 4
+    counts = np.array([sum(((byte >> shift) & 3) == 1 for shift in (0, 2, 4, 6)) for byte in range(256)], dtype=np.uint8)
+    tail = n_samples % 4
+    tail_counts = np.array([sum(((byte >> shift) & 3) == 1 for shift in range(0, 2*tail, 2)) for byte in range(256)], dtype=np.uint8)
+    missing = 0
+    with Path(path).open("rb") as stream:
+        if stream.read(3) != b"\x6c\x1b\x01":
+            raise ValueError("BED must be SNP-major with canonical header")
+        for start in range(0, n_variants, 8192):
+            size = min(8192, n_variants-start)
+            data = np.frombuffer(stream.read(size * width), dtype=np.uint8).reshape(size, width)
+            if tail:
+                missing += int(counts[data[:, :-1]].sum()) + int(tail_counts[data[:, -1]].sum())
+            else:
+                missing += int(counts[data].sum())
+        if stream.read(1):
+            raise ValueError("Unexpected BED trailing bytes")
+    return missing
+
+
+def verify_references(manifest, output):
+    require_compute()
+    records, failures, archives = [], [], []
+    for expected in manifest.get("archives", []):
+        path = Path(manifest["_inputs_root"])/expected["relpath"]
+        result = {"path": str(path), "expected_sha256": expected["sha256"]}
+        if path.exists():
+            result.update(sha256=sha(path), bytes=path.stat().st_size)
+            result["pass"] = result["sha256"] == expected["sha256"] and result["bytes"] == expected["bytes"]
+        else:
+            result.update({"pass": False, "missing": True})
+        if not result["pass"]:
+            failures.append({"archive": expected["relpath"], "error": "Missing/mismatched frozen input archive"})
+        archives.append(result)
+    for key, ref in sorted(manifest["references"].items()):
+        prefix = reference_prefix(manifest, key)
+        result = {"key": key, "prefix": str(prefix), "files": {}, "errors": []}
+        for suffix, expected in {**ref["files"], ".receipt.json": {"sha256": ref["receipt_sha256"]}}.items():
+            path = prefix.with_suffix(suffix)
+            record = {"path": str(path), "expected_sha256": expected["sha256"]}
+            if path.exists():
+                stat = path.stat()
+                record.update(sha256=sha(path), bytes=stat.st_size, mtime_ns=stat.st_mtime_ns)
+                record["pass"] = record["sha256"] == expected["sha256"]
+            else:
+                record.update({"pass": False, "missing": True})
+            if not record["pass"]:
+                result["errors"].append(f"Missing/mismatched {suffix}")
+            result["files"][suffix] = record
+        if not result["errors"]:
+            fam = [line.split() for line in prefix.with_suffix(".fam").read_text().splitlines()]
+            n_variants = sum(1 for _ in prefix.with_suffix(".bim").open())
+            assert len(fam) == ref["n_reference"]
+            assert len({tuple(x[:2]) for x in fam}) == len(fam)
+            result.update(n_reference=len(fam), n_variants=n_variants,
+                          n_original_nonfounders=sum(x[2] != "0" or x[3] != "0" for x in fam),
+                          sample_order_sha256=hashlib.sha256("\n".join("\t".join(x[:2]) for x in fam).encode()).hexdigest())
+            missing = count_missing(prefix.with_suffix(".bed"), len(fam), n_variants)
+            result.update(missing_genotypes=missing, missingness_policy="Require zero missing genotypes; no imputation/pairwise deletion is invoked")
+            if missing:
+                result["errors"].append("Missing genotypes present: construction policy needs explicit review")
+        result["pass"] = not result["errors"]
+        records.append(result)
+        failures.extend([{"reference_key": key, "error": error} for error in result["errors"]])
+        print(json.dumps({"reference": key, "pass": result["pass"], "missing_genotypes": result.get("missing_genotypes")}), flush=True)
+    report = {"state": "PASS" if not failures else "FAIL", "records": records, "failures": failures, "archives": archives,
+              "hash_scope": "All case archives plus every required BED/BIM/FAM and original reference receipt; omitted QC event tables and generation logs are not reconstruction inputs",
+              "manifest_sha256": manifest["_manifest_sha256"], "host": os.uname().nodename,
+              "slurm_job_id": os.environ.get("SLURM_JOB_ID"), "finished_epoch": time.time()}
+    write(output, report)
+    return report
+
+
+def load_manifest(path):
+    path = Path(path).resolve()
+    manifest = json.loads(path.read_text())
+    manifest["_inputs_root"] = str(path.parent)
+    manifest["_manifest_sha256"] = sha(path)
+    return manifest
+
+
+@functools.lru_cache(maxsize=2)
+def reference_bim(path, mtime_ns):
+    # The strict reference uses source-index IDs (sNNN), while portable cases
+    # use canonical chr_pos_ref_alt IDs. Frozen reference_index joins them.
+    return tuple(tuple(line.split()) for line in Path(path).open())
+
+
+def validate_matrix(path, p, tolerances):
+    if path.stat().st_size != 8*p*p:
+        raise ValueError("LD byte count mismatch")
+    matrix = np.memmap(path, mode="r", dtype="<f8", shape=(p, p))
+    diag = symmetry = maximum = 0.0
+    for start in range(0, p, 128):
+        stop = min(p, start + 128)
+        a = matrix[start:stop]
+        if not np.isfinite(a).all():
+            raise ValueError("Nonfinite signed LD")
+        diag = max(diag, float(np.max(np.abs(a[np.arange(stop-start), np.arange(start, stop)]-1))))
+        maximum = max(maximum, float(np.max(np.abs(a))))
+        symmetry = max(symmetry, float(np.max(np.abs(a-matrix[:, start:stop].T))))
+    del matrix
+    if diag > tolerances["diagonal_atol"] or symmetry > tolerances["symmetry_atol"] or maximum > 1+tolerances["range_atol"]:
+        raise ValueError(f"LD validation failed: diagonal={diag}, symmetry={symmetry}, range={maximum}")
+    return {"finite": True, "diagonal_max_abs_error": diag, "symmetry_max_abs_error": symmetry,
+            "max_abs_r": maximum, "tolerances": tolerances}
+
+
+def reconstruct(manifest, row, out_dir, plink, verification=None):
+    """Public scheduler API. Reuse the loaded manifest and reference verification."""
+    require_compute()
+    started = time.time()
+    root = Path(manifest["_inputs_root"])
+    if verification is None:
+        verification = json.loads((root / "reference_verification.json").read_text())
+    if verification["state"] != "PASS" or verification["manifest_sha256"] != manifest["_manifest_sha256"]:
+        raise ValueError("Reference verification must pass for this exact manifest before reconstruction")
+    ref = next(x for x in verification["records"] if x["key"] == row["reference_key"])
+    prefix = Path(ref["prefix"])
+    for info in ref["files"].values():
+        stat = Path(info["path"]).stat()
+        if stat.st_size != info["bytes"] or stat.st_mtime_ns != info["mtime_ns"]:
+            raise ValueError("Previously authenticated reference file changed")
+    out = Path(out_dir).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    base = (root / row["case_relpath"]).parent
+    included = row.get("remote_preparation_files", list(row["small_files"]))
+    if row.get("archive_relpath"):
+        base = out / "frozen"
+        base.mkdir(exist_ok=True)
+        with zipfile.ZipFile(root / row["archive_relpath"]) as archive:
+            for name in included:
+                with archive.open(row["archive_case_key"]+"/"+name) as source, (base/name).open("wb") as target:
+                    shutil.copyfileobj(source, target, 1024*1024)
+    for name in included:
+        expected = row["small_files"][name]
+        if sha(base / name) != expected["sha256"]:
+            raise ValueError(f"Frozen small input changed: {base/name}")
+    case = json.loads((base / "case.json").read_text())
+    p = row["p"]
+    ids = (base / "variant_ids.txt").read_text().splitlines()[:p]
+    if len(ids) != p or len(set(ids)) != p:
+        raise ValueError("Frozen variant count/order/uniqueness mismatch")
+    with gzip.open(base / "variants.tsv.gz", "rt") as stream:
+        variants = list(csv.DictReader(stream, delimiter="\t"))[:p]
+    if [x["variant_id"] for x in variants] != ids:
+        raise ValueError("Frozen allele-table order differs from variant_ids")
+    if any(x["counted_allele"] != x["alt"] for x in variants):
+        raise ValueError("Unexpected original counted-allele contract")
+    ref_bim_path = prefix.with_suffix(".bim")
+    ref_bim = reference_bim(str(ref_bim_path), ref_bim_path.stat().st_mtime_ns)
+    source_ids = []
+    for frozen in variants:
+        actual = ref_bim[int(frozen["reference_index"])]
+        if int(actual[3]) != int(frozen["pos"]) or {actual[4], actual[5]} != {frozen["ref"], frozen["alt"]}:
+            raise ValueError("Frozen reference_index does not identify the exact position/alleles")
+        source_ids.append(actual[1])
+    if len(set(source_ids)) != p:
+        raise ValueError("Frozen reference indices do not identify unique PLINK variants")
+    (out / "variant_ids.txt").write_text("\n".join(ids)+"\n")
+    (out / "extract_ids.txt").write_text("\n".join(source_ids)+"\n")
+    (out / "a1.tsv").write_text("".join(f"{source_id}\t{x['counted_allele']}\n" for source_id,x in zip(source_ids,variants)))
+    z = np.fromfile(base / "z.bin", dtype="<f8", count=p)
+    if z.size != p or not np.isfinite(z).all():
+        raise ValueError("Frozen z values invalid")
+    if not np.array_equal(z, np.array([float(x["z"]) for x in variants])):
+        raise ValueError("Frozen z differs from aligned variant provenance")
+    z.tofile(out / "z.bin")
+    plink = str(Path(plink).resolve())
+    plink_hash = sha(plink)
+    if plink_hash != PLINK_SHA256:
+        raise ValueError("PLINK executable differs from the frozen reference-preparation binary")
+    version = subprocess.check_output([plink, "--version"], text=True).strip()
+    if not ("PLINK v1.9" in version or "PLINK v1.90" in version):
+        raise ValueError(f"This adapter requires PLINK1.9, got {version}")
+    env = dict(os.environ)
+    env.update({key: "1" for key in THREADS})
+    subset, ld = out / "subset", out / "plink_ld"
+    common = ["--keep-allele-order", "--make-founders", "--threads", "1", "--memory", "2048"]
+    commands = [[plink, "--bfile", str(prefix), "--extract", str(out/"extract_ids.txt"),
+                 "--a1-allele", str(out/"a1.tsv"), "2", "1", *common,
+                 "--make-bed", "--out", str(subset)],
+                [plink, "--bfile", str(subset), *common, "--r", "square", "bin", "--out", str(ld)]]
+    for index, command in enumerate(commands):
+        with (out / f"plink_{index}.stdout.log").open("w") as log:
+            subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, env=env, check=True)
+    original_fam = [x.split()[:2] for x in prefix.with_suffix(".fam").read_text().splitlines()]
+    subset_fam = [x.split()[:2] for x in subset.with_suffix(".fam").read_text().splitlines()]
+    if original_fam != subset_fam or len(subset_fam) != ref["n_reference"]:
+        raise ValueError("PLINK sample list/order changed")
+    bim = [x.split() for x in subset.with_suffix(".bim").read_text().splitlines()]
+    if len(bim) != p or {x[1] for x in bim} != set(source_ids):
+        raise ValueError("PLINK variant set/count changed")
+    by_id = {x[1]: (i, x) for i, x in enumerate(bim)}
+    permutation, signs = [], []
+    for frozen, source_id in zip(variants, source_ids):
+        index, actual = by_id[source_id]
+        if int(actual[3]) != int(frozen["pos"]) or {actual[4], actual[5]} != {frozen["ref"], frozen["alt"]}:
+            raise ValueError("PLINK variant allele/position mismatch")
+        permutation.append(index)
+        signs.append(1 if actual[4] == frozen["counted_allele"] else -1)
+    missing = count_missing(subset.with_suffix(".bed"), len(subset_fam), p)
+    if missing:
+        raise ValueError("Selected genotypes contain missing calls")
+    raw = ld.with_suffix(".ld.bin")
+    if raw.stat().st_size != 8*p*p:
+        raise ValueError("PLINK did not emit a full float64 square matrix")
+    if permutation == list(range(p)) and all(x == 1 for x in signs):
+        raw.replace(out / "R.bin")
+    else:
+        matrix = np.memmap(raw, mode="r", dtype="<f8", shape=(p, p))
+        order, flips = np.array(permutation), np.array(signs)
+        with (out / "R.bin").open("wb") as stream:
+            for i in range(0, p, 128):
+                a = np.asarray(matrix[order[i:i+128]][:, order], dtype="<f8", order="C")
+                a *= flips[i:i+128, None] * flips[None, :]
+                a.tofile(stream)
+        del matrix
+        raw.unlink()
+    validation = validate_matrix(out / "R.bin", p, manifest["validation_tolerances"])
+    record = {"state": "PASS", "case_key": row["case_key"], "case_id": row["case_id"], "n_variants": p,
+              "n_reference": ref["n_reference"], "source_case_path": row["source_case_path"],
+              "reference_key": row["reference_key"], "reference_prefix": str(prefix),
+              "plink_version": version, "plink_sha256": plink_hash, "commands": commands,
+              "numerical_thread_environment": {key: env[key] for key in THREADS},
+              "signed_r": True, "dtype": "little-endian float64", "storage": "row-major full square",
+              "variant_order_verified": True, "alleles_verified": True, "sample_order_verified": True,
+              "PLINK_variant_id_mapping": "Frozen reference_index into authenticated BIM; portable canonical IDs restored after PLINK",
+              "reordered": permutation != list(range(p)), "post_PLINK_sign_flips": sum(x == -1 for x in signs),
+              "missing_genotypes": missing, "missingness_policy": ref["missingness_policy"],
+              "validation": validation, "R_sha256": sha(out/"R.bin"),
+              "variant_ids_sha256": sha(out/"variant_ids.txt"), "z_sha256": sha(out/"z.bin"),
+              "started_epoch": started, "finished_epoch": time.time(), "host": os.uname().nodename}
+    relocated = {**case, "n_variants": p, "parameters": row["parameters"], "R_path": "R.bin",
+                 "z_path": "z.bin", "variant_ids_path": "variant_ids.txt",
+                 "variant_provenance_path": str(base/"variants.tsv.gz"),
+                 "preparation_path": str(base/"preparation.json")}
+    for name in ("R_column_major_path", "R_gzip_path"):
+        relocated.pop(name, None)
+    write(out / "case.json", relocated)
+    write(out / "validation.json", record)
+    for suffix in (".bed", ".bim", ".fam"):
+        subset.with_suffix(suffix).unlink()
+    return {"case_path": str(out / "case.json"), "validation_path": str(out / "validation.json"), **record}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--case-key")
+    parser.add_argument("--out-dir", type=Path)
+    parser.add_argument("--plink", type=Path)
+    parser.add_argument("--verify-references", action="store_true")
+    parser.add_argument("--receipt-output", type=Path)
+    args = parser.parse_args()
+    manifest = load_manifest(args.manifest)
+    if args.verify_references:
+        report = verify_references(manifest, args.receipt_output or args.manifest.parent/"reference_verification.json")
+        return 0 if report["state"] == "PASS" else 1
+    if not all((args.case_key, args.out_dir, args.plink)):
+        parser.error("Reconstruction requires --case-key, --out-dir and --plink")
+    row = next(x for x in manifest["rows"] if x["case_key"] == args.case_key)
+    print(json.dumps(reconstruct(manifest, row, args.out_dir, args.plink)))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

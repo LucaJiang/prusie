@@ -26,6 +26,7 @@ def main():
         "--pages",
         help="Comma-separated repository-relative page paths; omit for all current blocks",
     )
+    parser.add_argument("--output-dir", type=Path, help="Figure destination; defaults to --assets")
     args = parser.parse_args()
     pages = args.pages.split(",") if args.pages else None
     if args.action == "import":
@@ -40,8 +41,8 @@ def main():
         print("Qualified, separately untimed release:", release["code_commit"])
     elif args.action == "figures":
         summary, m1, records = load_public(args.assets)
-        plot(summary, m1, records, args.assets)
-        print("Rendered eight SVG/PDF figure pairs from retained measurements")
+        plot(summary, m1, records, args.output_dir or args.assets)
+        print("Rendered SVG/PDF figure pairs from retained measurements")
     else:
         assert args.assets.resolve() == (ROOT / "docs/assets/benchmark").resolve(), (
             "Tables use the checkout's published records"

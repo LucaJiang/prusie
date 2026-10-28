@@ -1,0 +1,109 @@
+--- a/rust/prusie-core/src/lib.rs
++++ b/rust/prusie-core/src/lib.rs
+@@ -43,3 +43,17 @@
+ }
+ 
+ mod activation;
++
++// Run-local benchmark instrumentation only. Scientific outputs are unchanged.
++std::thread_local! {
++    static BENCHMARK_FIT_NANOSECONDS: std::cell::Cell<u128> = const { std::cell::Cell::new(0) };
++}
++pub fn benchmark_timing_reset() {
++    BENCHMARK_FIT_NANOSECONDS.with(|value| value.set(0));
++}
++pub fn benchmark_timing_add(nanoseconds: u128) {
++    BENCHMARK_FIT_NANOSECONDS.with(|value| value.set(value.get() + nanoseconds));
++}
++pub fn benchmark_timing_seconds() -> f64 {
++    BENCHMARK_FIT_NANOSECONDS.with(|value| value.get() as f64 / 1e9)
++}
+--- a/rust/prusie-core/src/ibss.rs
++++ b/rust/prusie-core/src/ibss.rs
+@@ -211,6 +211,7 @@
+         return Err("XtX diagonal cannot be negative".into());
+     }
+     let pool = make_pool(control.n_threads, p)?;
++    let benchmark_operator_start = std::time::Instant::now();
+     let mut gram = DenseGram {
+         pool: pool.as_ref().map(std::borrow::Borrow::borrow),
+         matrix,
+@@ -221,6 +222,7 @@
+         discovery_checked: false,
+         activation: Default::default(),
+     };
++    crate::benchmark_timing_add(benchmark_operator_start.elapsed().as_nanos());
+     fit_operator(&mut gram, xty, yty, n, options, control)
+ }
+ 
+@@ -234,6 +236,7 @@
+     control: &FitControl,
+ ) -> Result<FitOutput, String> {
+     let p = xty.len();
++    let benchmark_control_start = std::time::Instant::now();
+     let model_pip = control.model.slot_prior.is_some()
+         || (control.model.residual_method == ResidualMethod::Nig && options.l > 1);
+     let mut effective_control;
+@@ -246,12 +249,14 @@
+     } else {
+         control
+     };
++    crate::benchmark_timing_add(benchmark_control_start.elapsed().as_nanos());
+     let diagonal = gram.diagonal().to_vec();
+     if diagonal.len() != p || diagonal.iter().any(|&d| !d.is_finite() || d < 0.) {
+         return Err("Gram diagonal must have p finite nonnegative entries".into());
+     }
+     validate_fit_options(p, xty, yty, n, options)?;
+     validate_model(&control.model, n, options.l)?;
++    let benchmark_initial_start = std::time::Instant::now();
+     let log_prior: Vec<f64> = options
+         .prior_weights
+         .iter()
+@@ -318,6 +323,7 @@
+         output.slot_weights = Some(weights);
+         state
+     });
++    crate::benchmark_timing_add(benchmark_initial_start.elapsed().as_nanos());
+     if control.min_iter < 2
+         || control.cycle_lag > 5
+         || !control.alpha_tol.is_finite()
+@@ -377,6 +383,7 @@
+             output.sigma2 = v;
+         }
+     }
++    let benchmark_solver_start = std::time::Instant::now();
+     let mut component = vec![0.0; p];
+     let mut product = vec![0.0; p];
+     let mut residual = vec![0.0; p];
+@@ -828,6 +835,7 @@
+         ),
+     );
+     output.diagnostics.exact_activation = gram.exact_diagnostics();
++    crate::benchmark_timing_add(benchmark_solver_start.elapsed().as_nanos());
+     Ok(output)
+ }
+ 
+--- a/rust/prusie-python/src/lib.rs
++++ b/rust/prusie-python/src/lib.rs
+@@ -63,6 +63,7 @@
+     options: &Bound<'py, PyDict>,
+     executor: Option<&Bound<'py, executor::FitExecutor>>,
+ ) -> PyResult<Bound<'py, PyDict>> {
++    solver::benchmark_timing_reset();
+     let (settings, control) = options::parse(options)?;
+     // Python numeric/sequence conversion can execute callbacks. Finish every
+     // option extraction before checking raw array metadata or borrowing memory.
+@@ -211,7 +212,12 @@
+         )
+         .map_err(PyValueError::new_err)?
+     };
+-    output::fit_result(py, output, p, control.track)
++    let benchmark_export_start = std::time::Instant::now();
++    let result = output::fit_result(py, output, p, control.track)?;
++    let benchmark_export_seconds = benchmark_export_start.elapsed().as_secs_f64();
++    result.set_item("_benchmark_native_fitting_seconds", solver::benchmark_timing_seconds())?;
++    result.set_item("_benchmark_native_export_seconds", benchmark_export_seconds)?;
++    Ok(result)
+ }
+ 
+ #[pymodule]

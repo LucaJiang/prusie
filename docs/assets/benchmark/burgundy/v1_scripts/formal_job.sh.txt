@@ -1,0 +1,6 @@
+#!/bin/bash
+set -euo pipefail
+cd /home/wjiang49/prusie_project/bench_20261028
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 BLIS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 RAYON_NUM_THREADS=1 PRUSIE_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1
+export PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 TMPDIR=/scratch/wjiang49/prusie_project/bench_20261028/formal_tmp
+srun --kill-on-bad-exit=0 --nodes="$SLURM_JOB_NUM_NODES" --ntasks="$SLURM_JOB_NUM_NODES" --ntasks-per-node=1 --cpus-per-task=128 --exclusive /home/wjiang49/prusie_project/bench_20261028/envs/native/bin/python -B scripts/campaign.py "${1:-node}"

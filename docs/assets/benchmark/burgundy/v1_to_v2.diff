@@ -1,0 +1,145 @@
+--- v1/scripts/m2_native.py
++++ v2/scripts/m2_native.py
+@@ -132,7 +132,7 @@
+         record["input_load_seconds"] = (time.perf_counter_ns() - before) / 1e9
+         shape = (min(case["parameters"]["L"], p), p)
+         fit = None
+-        for repeat in range(8 if args.mode == "time" else 1):
++        for repeat in range(1 + int(read(request["protocol_path"])["timing"]["retained_calls"]) if args.mode == "time" else 1):
+             fit = None
+             gc.collect()
+             with warnings.catch_warnings(record=True) as caught:
+--- v1/scripts/m2_reference.R
++++ v2/scripts/m2_reference.R
+@@ -7,6 +7,7 @@
+ suppressPackageStartupMessages(library(susieR))
+ stopifnot(as.character(packageVersion('susieR')) == '0.16.6')
+ request <- fromJSON(arg$request,simplifyVector=FALSE)
++protocol <- fromJSON(request$protocol_path,simplifyVector=FALSE)
+ task <- request$task
+ case <- fromJSON(task$case_path,simplifyVector=FALSE)
+ base <- dirname(task$case_path)
+@@ -93,7 +94,7 @@
+     inputs <- c(list(z=z,R=R),params)
+     record$input_load_seconds <- clock()-input_started
+     fit <- NULL
+-    for (i in if (arg$mode=='time') 0:7 else 0L) {
++    for (i in if (arg$mode=='time') 0:as.integer(protocol$timing$retained_calls) else 0L) {
+         fit <- NULL; gc(verbose=FALSE)
+         warns <- character()
+         if (!is.null(fit_timer)) fit_timer$reset()
+--- v1/scripts/campaign.py
++++ v2/scripts/campaign.py
+@@ -19,8 +19,8 @@
+ 
+ RUN=Path(__file__).resolve().parents[1]
+ DATA=Path('/scratch/wjiang49/prusie_project/bench_20261028')
+-RESULTS=DATA/'formal_results'
+-CLAIMS=DATA/'formal_claims'
++RESULTS=DATA/'formal_results_v2'
++CLAIMS=DATA/'formal_claims_v2'
+ COMMIT='8e56a8e038e989856d106d9ca5175cc664fea9d2'
+ THREAD_VARS=('OMP_NUM_THREADS OPENBLAS_NUM_THREADS MKL_NUM_THREADS BLIS_NUM_THREADS '
+              'VECLIB_MAXIMUM_THREADS NUMEXPR_NUM_THREADS RAYON_NUM_THREADS PRUSIE_NUM_THREADS').split()
+@@ -178,7 +178,7 @@
+             result['commands'].append(dict(backend=backend,returncode=process.returncode,status=metadata.get('status'),argv=argv))
+             if process.returncode or metadata.get('status')!='ok':
+                 raise RuntimeError(f'{backend} failed: exit {process.returncode}, {metadata.get("error")}')
+-            assert len(metadata['samples'])==8 and all(s['validity_pass'] for s in metadata['samples'])
++            assert len(metadata['samples'])==1+read(RUN/'protocol.json')['timing']['retained_calls'] and all(s['validity_pass'] for s in metadata['samples'])
+             assert sum(s['warmup'] for s in metadata['samples'])==1
+             for sample in metadata['samples']:
+                 fitting=sample['fitting'].get('fitting_seconds',sample['fitting'].get('fit_seconds'))
+@@ -249,7 +249,7 @@
+                     process=subprocess.run(argv,env=settings,stdout=log,stderr=subprocess.STDOUT)
+                 assert process.returncode==0,(backend,state,process.returncode)
+                 record=read(target/'output.json');assert record['status']=='ok'
+-                samples=record['samples'];assert len(samples)==8 and all(s['validity_pass'] for s in samples)
++                samples=record['samples'];assert len(samples)==1+read(RUN/'instrumentation/validation_plan.json').get('timing',{'retained_calls':7})['retained_calls'] and all(s['validity_pass'] for s in samples)
+                 if state=='instrumented':
+                     for sample in samples:
+                         value=sample['fitting'].get('fitting_seconds',sample['fitting'].get('fit_seconds'))
+@@ -344,6 +344,8 @@
+     protocol=read(RUN/'protocol.json');protocol_sha=sha(RUN/'protocol.json')
+     for name,digest in protocol['scripts'].items():assert sha(RUN/'scripts'/name)==digest,name
+     for name,digest in protocol['runtime_assets'].items():assert sha(RUN/name)==digest,name
++    if not (DATA/'smoke_v2/PASS.json').exists(): smoke(args)
++    assert read(DATA/'smoke_v2/PASS.json')['protocol_sha256']==protocol_sha
+     canonical_project=Path('/scratch/wjiang49/prusie_project').resolve()
+     assert protocol['storage']['state']=='CONCURRENT_MIGRATION_AUTHORIZED'
+     for path in (RESULTS,CLAIMS,DATA/'formal_tmp'):
+@@ -375,11 +377,17 @@
+         r=read(path)
+         assert r['case_key'] not in known, 'Ambiguous duplicate case: '+r['case_key']
+         known[r['case_key']]=(path,r)
++    adoption=read(RUN/'protocol_versions/v1_adoption.json')['completed']
++    for key,item in adoption.items():
++        path=Path(item['result_directory'])/'result.json'
++        assert sha(path)==item['result_sha256']
++        assert key not in known
++        known[key]=(path,read(path))
+     pending=[]
+     def authenticate_completed(path,task):
+         record=read(path)
+         assert record['state']=='COMPLETE', 'Manual operational-failure disposition required: '+str(path)
+-        assert record['protocol_sha256']==protocol_sha, 'Completed case belongs to a different protocol: '+str(path)
++        assert record['protocol_sha256']==(adoption[task['case_key']]['protocol_sha256'] if task['case_key'] in adoption else protocol_sha), 'Completed case belongs to a different protocol: '+str(path)
+         expected=rows_by_key[task['case_key']]
+         assert record['case_key']==task['case_key']
+         assert all(record[k]==expected[k] for k in ('case_id','panel','p','kind'))
+@@ -495,6 +503,55 @@
+                 if not interrupted.exists():shutil.copytree(partial,interrupted)
+         shutil.rmtree(base)
+ 
++def smoke(args):
++    """Two user-required v2 end-to-end checks; excluded from formal records."""
++    topo=topology()
++    assert topo['hostname']=='cpunode-029'
++    os.sched_setaffinity(0,[topo['controller_domain']['cpu']])
++    old=Path('/tmp/prusie_bench_20261028_700768_cpunode-029')
++    if old.exists():
++        recovery=DATA/'formal_results/cpunode-029/700768/.protocol_amendment_aborts'
++        recovery.mkdir(parents=True,exist_ok=True)
++        for partial in (old/'cases').glob('*'):
++            if (partial/'input').exists():shutil.rmtree(partial/'input')
++            dest=recovery/partial.name
++            assert not dest.exists(),str(dest)
++            shutil.copytree(partial,dest)
++        shutil.rmtree(old)
++    archive=DATA/'smoke_v2'/os.environ['SLURM_JOB_ID'];archive.mkdir(parents=True,exist_ok=True)
++    base=Path('/tmp')/('prusie_v2_smoke_'+os.environ['SLURM_JOB_ID'])
++    base.mkdir()
++    manifest=read(RUN/'inputs/campaign_manifest.json')
++    selected=[min((r for r in manifest['rows'] if r['panel']==p),key=lambda r:(r['p'],r['case_key'])) for p in ('GWAS','eQTL')]
++    plan=read(RUN/'campaign_plan.json')
++    tasks={t['case_key']:t for sh in plan['shards'] for t in sh['tasks']}
++    protocol_sha=sha(RUN/'protocol.json');outcomes=[]
++    try:
++        manifest,verification=stage(manifest,selected,base)
++        lane=topo['lanes'][0]
++        for row in selected:
++            out=base/'cases'/row['case_key'];out.mkdir(parents=True)
++            minimal={k:manifest[k] for k in ('_inputs_root','_manifest_sha256','validation_tolerances')}
++            minimal.update(rows=[],references={row['reference_key']:manifest['references'][row['reference_key']]})
++            receipt=dict(verification,records=[r for r in verification['records'] if r['key']==row['reference_key']])
++            execution=dict(row=row,task=tasks[row['case_key']],manifest=minimal,verification=receipt,protocol_sha256=protocol_sha,
++                placement=dict(cpus=[lane['cpu']],numa=lane['numa'],socket=lane['socket'],l3_cpus=lane['l3_cpus'],binding='membind'))
++            write(out/'execution.json',execution)
++            argv=['taskset','--cpu-list',','.join(map(str,topo['allowed_cpus'])),'numactl',f"--membind={lane['numa']}",f"--physcpubind={lane['cpu']}",str(RUN/'envs/native/bin/python'),'-B',str(Path(__file__).resolve()),'case','--request',str(out/'execution.json')]
++            with (out/'worker.log').open('w') as log:
++                rc=subprocess.run(argv,stdout=log,stderr=subprocess.STDOUT).returncode
++            shutil.copytree(out,archive/row['case_key'])
++            assert rc==0 and read(out/'result.json')['state']=='COMPLETE',str(out)
++            for backend in ('R','prusie'):
++                samples=read(out/(backend+'.json'))['samples']
++                assert len(samples)==4 and sum(s['warmup'] for s in samples)==1
++                assert all(s['validity_pass'] and 0<s['fitting'].get('fitting_seconds',s['fitting'].get('fit_seconds'))<=s['time_seconds'] for s in samples)
++            outcomes.append(dict(case_key=row['case_key'],p=row['p'],state='PASS'))
++        write(DATA/'smoke_v2/PASS.json',dict(state='PASS',protocol_sha256=protocol_sha,cases=outcomes,job_id=os.environ['SLURM_JOB_ID'],formal_timing_result=False,epoch=time.time()))
++    finally:
++        if base.exists():shutil.rmtree(base)
++        os.sched_setaffinity(0,topo['allowed_cpus'])
++
+ def main():
+     p=argparse.ArgumentParser();sub=p.add_subparsers(dest='action',required=True)
+     s=sub.add_parser('plan');s.add_argument('--nodes',type=int,required=True)

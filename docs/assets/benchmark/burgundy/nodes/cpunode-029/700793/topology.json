@@ -1,0 +1,650 @@
+{
+  "model": "AMD EPYC 7742 64-Core Processor",
+  "lanes": [
+    {
+      "cpu": 0,
+      "numa": 0,
+      "socket": 0,
+      "l3_cpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "smt_siblings": [
+        0
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 4,
+      "numa": 0,
+      "socket": 0,
+      "l3_cpus": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "smt_siblings": [
+        4
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 8,
+      "numa": 0,
+      "socket": 0,
+      "l3_cpus": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "smt_siblings": [
+        8
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 12,
+      "numa": 0,
+      "socket": 0,
+      "l3_cpus": [
+        12,
+        13,
+        14,
+        15
+      ],
+      "smt_siblings": [
+        12
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 16,
+      "numa": 1,
+      "socket": 0,
+      "l3_cpus": [
+        16,
+        17,
+        18,
+        19
+      ],
+      "smt_siblings": [
+        16
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 20,
+      "numa": 1,
+      "socket": 0,
+      "l3_cpus": [
+        20,
+        21,
+        22,
+        23
+      ],
+      "smt_siblings": [
+        20
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 24,
+      "numa": 1,
+      "socket": 0,
+      "l3_cpus": [
+        24,
+        25,
+        26,
+        27
+      ],
+      "smt_siblings": [
+        24
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 28,
+      "numa": 1,
+      "socket": 0,
+      "l3_cpus": [
+        28,
+        29,
+        30,
+        31
+      ],
+      "smt_siblings": [
+        28
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 32,
+      "numa": 2,
+      "socket": 0,
+      "l3_cpus": [
+        32,
+        33,
+        34,
+        35
+      ],
+      "smt_siblings": [
+        32
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 36,
+      "numa": 2,
+      "socket": 0,
+      "l3_cpus": [
+        36,
+        37,
+        38,
+        39
+      ],
+      "smt_siblings": [
+        36
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 40,
+      "numa": 2,
+      "socket": 0,
+      "l3_cpus": [
+        40,
+        41,
+        42,
+        43
+      ],
+      "smt_siblings": [
+        40
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 44,
+      "numa": 2,
+      "socket": 0,
+      "l3_cpus": [
+        44,
+        45,
+        46,
+        47
+      ],
+      "smt_siblings": [
+        44
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 48,
+      "numa": 3,
+      "socket": 0,
+      "l3_cpus": [
+        48,
+        49,
+        50,
+        51
+      ],
+      "smt_siblings": [
+        48
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 52,
+      "numa": 3,
+      "socket": 0,
+      "l3_cpus": [
+        52,
+        53,
+        54,
+        55
+      ],
+      "smt_siblings": [
+        52
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 56,
+      "numa": 3,
+      "socket": 0,
+      "l3_cpus": [
+        56,
+        57,
+        58,
+        59
+      ],
+      "smt_siblings": [
+        56
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 60,
+      "numa": 3,
+      "socket": 0,
+      "l3_cpus": [
+        60,
+        61,
+        62,
+        63
+      ],
+      "smt_siblings": [
+        60
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 64,
+      "numa": 4,
+      "socket": 1,
+      "l3_cpus": [
+        64,
+        65,
+        66,
+        67
+      ],
+      "smt_siblings": [
+        64
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 68,
+      "numa": 4,
+      "socket": 1,
+      "l3_cpus": [
+        68,
+        69,
+        70,
+        71
+      ],
+      "smt_siblings": [
+        68
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 72,
+      "numa": 4,
+      "socket": 1,
+      "l3_cpus": [
+        72,
+        73,
+        74,
+        75
+      ],
+      "smt_siblings": [
+        72
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 76,
+      "numa": 4,
+      "socket": 1,
+      "l3_cpus": [
+        76,
+        77,
+        78,
+        79
+      ],
+      "smt_siblings": [
+        76
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 80,
+      "numa": 5,
+      "socket": 1,
+      "l3_cpus": [
+        80,
+        81,
+        82,
+        83
+      ],
+      "smt_siblings": [
+        80
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 84,
+      "numa": 5,
+      "socket": 1,
+      "l3_cpus": [
+        84,
+        85,
+        86,
+        87
+      ],
+      "smt_siblings": [
+        84
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 88,
+      "numa": 5,
+      "socket": 1,
+      "l3_cpus": [
+        88,
+        89,
+        90,
+        91
+      ],
+      "smt_siblings": [
+        88
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 92,
+      "numa": 5,
+      "socket": 1,
+      "l3_cpus": [
+        92,
+        93,
+        94,
+        95
+      ],
+      "smt_siblings": [
+        92
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 96,
+      "numa": 6,
+      "socket": 1,
+      "l3_cpus": [
+        96,
+        97,
+        98,
+        99
+      ],
+      "smt_siblings": [
+        96
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 100,
+      "numa": 6,
+      "socket": 1,
+      "l3_cpus": [
+        100,
+        101,
+        102,
+        103
+      ],
+      "smt_siblings": [
+        100
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 104,
+      "numa": 6,
+      "socket": 1,
+      "l3_cpus": [
+        104,
+        105,
+        106,
+        107
+      ],
+      "smt_siblings": [
+        104
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 108,
+      "numa": 6,
+      "socket": 1,
+      "l3_cpus": [
+        108,
+        109,
+        110,
+        111
+      ],
+      "smt_siblings": [
+        108
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 112,
+      "numa": 7,
+      "socket": 1,
+      "l3_cpus": [
+        112,
+        113,
+        114,
+        115
+      ],
+      "smt_siblings": [
+        112
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 116,
+      "numa": 7,
+      "socket": 1,
+      "l3_cpus": [
+        116,
+        117,
+        118,
+        119
+      ],
+      "smt_siblings": [
+        116
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    },
+    {
+      "cpu": 120,
+      "numa": 7,
+      "socket": 1,
+      "l3_cpus": [
+        120,
+        121,
+        122,
+        123
+      ],
+      "smt_siblings": [
+        120
+      ],
+      "binding": "membind",
+      "binding_probe_stderr": ""
+    }
+  ],
+  "controller_domain": {
+    "cpu": 124,
+    "numa": 7,
+    "socket": 1,
+    "l3_cpus": [
+      124,
+      125,
+      126,
+      127
+    ],
+    "smt_siblings": [
+      124
+    ]
+  },
+  "hostname": "cpunode-029",
+  "allowed_cpus": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    120,
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127
+  ],
+  "numactl": "available: 8 nodes (0-7)\nnode 0 cpus: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15\nnode 0 size: 64194 MB\nnode 0 free: 60571 MB\nnode 1 cpus: 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31\nnode 1 size: 64506 MB\nnode 1 free: 61917 MB\nnode 2 cpus: 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47\nnode 2 size: 64506 MB\nnode 2 free: 61662 MB\nnode 3 cpus: 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63\nnode 3 size: 64494 MB\nnode 3 free: 60692 MB\nnode 4 cpus: 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79\nnode 4 size: 64506 MB\nnode 4 free: 52335 MB\nnode 5 cpus: 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95\nnode 5 size: 64506 MB\nnode 5 free: 60874 MB\nnode 6 cpus: 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111\nnode 6 size: 64506 MB\nnode 6 free: 61514 MB\nnode 7 cpus: 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127\nnode 7 size: 64457 MB\nnode 7 free: 55126 MB\nnode distances:\nnode     0    1    2    3    4    5    6    7 \n   0:   10   12   12   12   32   32   32   32 \n   1:   12   10   12   12   32   32   32   32 \n   2:   12   12   10   12   32   32   32   32 \n   3:   12   12   12   10   32   32   32   32 \n   4:   32   32   32   32   10   12   12   12 \n   5:   32   32   32   32   12   10   12   12 \n   6:   32   32   32   32   12   12   10   12 \n   7:   32   32   32   32   12   12   12   10 \n",
+  "lscpu": "Architecture:                            x86_64\nCPU op-mode(s):                          32-bit, 64-bit\nAddress sizes:                           48 bits physical, 48 bits virtual\nByte Order:                              Little Endian\nCPU(s):                                  128\nOn-line CPU(s) list:                     0-127\nVendor ID:                               AuthenticAMD\nModel name:                              AMD EPYC 7742 64-Core Processor\nCPU family:                              23\nModel:                                   49\nThread(s) per core:                      1\nCore(s) per socket:                      64\nSocket(s):                               2\nStepping:                                0\nBogoMIPS:                                4491.63\nFlags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd amd_ppin arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif v_spec_ctrl umip rdpid overflow_recov succor smca\nVirtualization:                          AMD-V\nL1d cache:                               4 MiB (128 instances)\nL1i cache:                               4 MiB (128 instances)\nL2 cache:                                64 MiB (128 instances)\nL3 cache:                                512 MiB (32 instances)\nNUMA node(s):                            8\nNUMA node0 CPU(s):                       0-15\nNUMA node1 CPU(s):                       16-31\nNUMA node2 CPU(s):                       32-47\nNUMA node3 CPU(s):                       48-63\nNUMA node4 CPU(s):                       64-79\nNUMA node5 CPU(s):                       80-95\nNUMA node6 CPU(s):                       96-111\nNUMA node7 CPU(s):                       112-127\nVulnerability Gather data sampling:      Not affected\nVulnerability Indirect target selection: Not affected\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Not affected\nVulnerability Mds:                       Not affected\nVulnerability Meltdown:                  Not affected\nVulnerability Mmio stale data:           Not affected\nVulnerability Old microcode:             Not affected\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Mitigation; untrained return thunk; SMT disabled\nVulnerability Spec rstack overflow:      Mitigation; SMT disabled\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; Retpolines; IBPB conditional; STIBP disabled; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Not affected\nVulnerability Vmscape:                   Mitigation; IBPB before exit to userspace\n",
+  "slurm": "JobId=700793 JobName=pb28-formal-bios-2\n   UserId=wjiang49(90743257) GroupId=wjiang49(90743257) MCS_label=N/A\n   Priority=1964 Nice=0 Account=pa_bios_department QOS=proj_biostat_dept\n   JobState=RUNNING Reason=None Dependency=(null)\n   Requeue=1 Restarts=0 BatchFlag=1 Reboot=0 ExitCode=0:0\n   RunTime=00:00:15 TimeLimit=06:00:00 TimeMin=N/A\n   SubmitTime=2026-10-28T16:09:55 EligibleTime=2026-10-28T16:26:51\n   AccrueTime=2026-10-28T16:26:51\n   StartTime=2026-10-28T16:26:53 EndTime=2026-10-28T22:26:53 Deadline=2026-10-29T07:27:05\n   PreemptEligibleTime=2026-10-28T16:26:53 PreemptTime=None\n   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-10-28T16:26:53 Scheduler=Main\n   Partition=special_bios_cpu AllocNode:Sid=hpclogin02:2418841\n   ReqNodeList=(null) ExcNodeList=(null)\n   NodeList=cpunode-029\n   BatchHost=cpunode-029\n   NumNodes=1 NumCPUs=128 NumTasks=1 CPUs/Task=128 ReqB:S:C:T=0:0:*:*\n   ReqTRES=cpu=128,mem=498126M,node=1\n   AllocTRES=cpu=128,mem=498126M,node=1\n   Socks/Node=* NtasksPerN:B:S:C=1:0:*:* CoreSpec=*\n   MinCPUsNode=128 MinMemoryNode=0 MinTmpDiskNode=0\n   Features=(null) DelayBoot=00:00:00\n   OverSubscribe=NO Contiguous=0 Licenses=(null) Network=(null)\n   Command=/home/wjiang49/prusie_project/bench_20261028/scripts/formal_job.sh\n   WorkDir=/home/wjiang49/prusie_project/bench_20261028\n   StdErr=/home/wjiang49/prusie_project/bench_20261028/logs/formal-bios-2-700793.log\n   StdIn=/dev/null\n   StdOut=/home/wjiang49/prusie_project/bench_20261028/logs/formal-bios-2-700793.log\n   Power=\n   TresPerTask=cpu:128\n   \n\n",
+  "job_id": "700793"
+}

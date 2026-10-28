@@ -1,0 +1,499 @@
+{
+  "state": "V1_FROZEN_AFTER_STOP",
+  "completed": {
+    "GWAS_00021": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00021",
+      "result_sha256": "38c4f319329b5569dfc4d1b033fc76410fe6f8a52ab7e32ae837fa4973c9952e",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00032": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00032",
+      "result_sha256": "ae626597e2fe6bb5545be6d8ecfc817f3694d487f0b72395fd97c2f8c817c6e8",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00051": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00051",
+      "result_sha256": "96c667c1c1eb9504768f411ff9a7b3fc2cb29dff1763c55f75c67115c4d985a1",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00053": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00053",
+      "result_sha256": "b7c208884b52b1dcd6934e0ec7044cbecec6143a98184183cfb2fc691cf72ae0",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00055": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00055",
+      "result_sha256": "13f1ba1b938512a686b8875b9eb4280fda7e038dbacc3ba9589c93db8d7b06ac",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00057": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00057",
+      "result_sha256": "7e7e1134f3f9c2763432591e625524dada832ef42216b45b49c5704cade308aa",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00076": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00076",
+      "result_sha256": "26396768e330124a8e68b4c7bae94971c366a82e957b4889da1687d3aa001232",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00077": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00077",
+      "result_sha256": "f07028bb4de1592e349974f654647bae3e10f23e59a486685332043efd82023b",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00082": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00082",
+      "result_sha256": "cd9c6ad6fa88ab6fc0720518c532732de25f3646a01eb87ee03d94ff0ddd5af4",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00084": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00084",
+      "result_sha256": "d1f7d4287ddcf146f7c2434f60aa14c7b43f7f6f47b0416bfddd98052364930e",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00089": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00089",
+      "result_sha256": "25043c5e2ca755c00a8c2f3c36eb23885f13e6691633b54e837033e371729853",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00090": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00090",
+      "result_sha256": "27565661c1ee3ae9df1e181e622ecaa5d6792c2061f53051e0c3ee5bcd9dfce7",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00105": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00105",
+      "result_sha256": "9046dc8a8fefdb9d834b73f5597248402ab4d83fae870a367a12a3b04c550836",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00107": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00107",
+      "result_sha256": "92bc3fb75268651c2901ec4c7aa9b31ff398ef444b5e1021e2bac97300698e05",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00116": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00116",
+      "result_sha256": "e9f78d9a37f7c4134ffd7b1bb1ca19912e093f85ce80ec9f0553799aa5b19ef4",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00119": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00119",
+      "result_sha256": "f24f90c9ead1159cd5fe806ad9507ec658891a7b6d5f006c7d724806f486f96c",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00124": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00124",
+      "result_sha256": "b4a5a5e311e11527c7938421a7fd790877d61496fc568c42cdd5ec75e1d7940a",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00131": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00131",
+      "result_sha256": "e82bf872825f2176d108318d71e0e073da6f352576dfac35cac0382728ba6364",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00133": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00133",
+      "result_sha256": "5955333ca61fb1dba3e75a1277a1a453d2cfeaebb84958e45c3293d44a4198f0",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00141": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00141",
+      "result_sha256": "08260bac8838feac756bf517fc1cb2a2a417ca6e14c13d4087711a6305eed474",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00170": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00170",
+      "result_sha256": "20b865e7dcf93e9990203c6c8cfc3dbe4842f480a977c1323d992d49e59c4867",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "GWAS_00172": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/GWAS_00172",
+      "result_sha256": "95cbe953cc833b081675c4330bfc1f612dd9bd98b2edbc0a4f3d5a7ae5b9e691",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "eQTL_14089": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/eQTL_14089",
+      "result_sha256": "180d542b24f857395b49312186514e5d448c23ff47c7cc5df450559aafe7e71e",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    },
+    "eQTL_14090": {
+      "result_directory": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results/cpunode-029/700768/eQTL_14090",
+      "result_sha256": "a645dcdbfe088887642a6bc290fd8bcb24f633f10d54a8e7067131ab2e0a7ab5",
+      "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+    }
+  },
+  "aborts": [
+    {
+      "case_key": "GWAS_00022",
+      "original_claim": {
+        "case_key": "GWAS_00022",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.6855886,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00038",
+      "original_claim": {
+        "case_key": "GWAS_00038",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175262.851126,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00060",
+      "original_claim": {
+        "case_key": "GWAS_00060",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175744.3424487,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00066",
+      "original_claim": {
+        "case_key": "GWAS_00066",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.679985,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00070",
+      "original_claim": {
+        "case_key": "GWAS_00070",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.6599572,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00091",
+      "original_claim": {
+        "case_key": "GWAS_00091",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175638.4380105,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00102",
+      "original_claim": {
+        "case_key": "GWAS_00102",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.6710522,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00103",
+      "original_claim": {
+        "case_key": "GWAS_00103",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175797.2570982,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00108",
+      "original_claim": {
+        "case_key": "GWAS_00108",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175520.0399044,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00110",
+      "original_claim": {
+        "case_key": "GWAS_00110",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175721.9632301,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00111",
+      "original_claim": {
+        "case_key": "GWAS_00111",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.6626787,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00118",
+      "original_claim": {
+        "case_key": "GWAS_00118",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.6682227,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00123",
+      "original_claim": {
+        "case_key": "GWAS_00123",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.66548,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00164",
+      "original_claim": {
+        "case_key": "GWAS_00164",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175148.4754236,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00169",
+      "original_claim": {
+        "case_key": "GWAS_00169",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.6913238,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00171",
+      "original_claim": {
+        "case_key": "GWAS_00171",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175577.4502456,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00195",
+      "original_claim": {
+        "case_key": "GWAS_00195",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175633.125176,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "GWAS_00201",
+      "original_claim": {
+        "case_key": "GWAS_00201",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175589.3943713,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_03743",
+      "original_claim": {
+        "case_key": "eQTL_03743",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175674.684197,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_03752",
+      "original_claim": {
+        "case_key": "eQTL_03752",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175433.589138,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_05002",
+      "original_claim": {
+        "case_key": "eQTL_05002",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175450.9409006,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_05761",
+      "original_claim": {
+        "case_key": "eQTL_05761",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.7215686,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_10779",
+      "original_claim": {
+        "case_key": "eQTL_10779",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175193.4529335,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_10922",
+      "original_claim": {
+        "case_key": "eQTL_10922",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175571.6955178,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_11978",
+      "original_claim": {
+        "case_key": "eQTL_11978",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175532.5868423,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_12942",
+      "original_claim": {
+        "case_key": "eQTL_12942",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.7245934,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_12950",
+      "original_claim": {
+        "case_key": "eQTL_12950",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.747072,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_13523",
+      "original_claim": {
+        "case_key": "eQTL_13523",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175372.9705148,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_14103",
+      "original_claim": {
+        "case_key": "eQTL_14103",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175712.5949204,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "eQTL_14104",
+      "original_claim": {
+        "case_key": "eQTL_14104",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793175400.262638,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    },
+    {
+      "case_key": "window_19221",
+      "original_claim": {
+        "case_key": "window_19221",
+        "job_id": "700768",
+        "host": "cpunode-029",
+        "state": "CLAIMED",
+        "epoch": 1793174722.6578026,
+        "protocol_sha256": "3730765a6571cb6a3be1779197bc5870f5718a0f9859170af063b96064d88a81"
+      },
+      "disposition": "PROTOCOL_AMENDMENT_ABORT_RESTART_AT_1_PLUS_3"
+    }
+  ]
+}

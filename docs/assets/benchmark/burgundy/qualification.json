@@ -1,0 +1,1553 @@
+{
+  "state": "PASS",
+  "cases": [
+    {
+      "case_key": "GWAS_00146",
+      "state": "PASS",
+      "started_epoch": 1793161818.4873483,
+      "ld": {
+        "case_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00146/input/case.json",
+        "validation_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00146/input/validation.json",
+        "state": "PASS",
+        "case_key": "GWAS_00146",
+        "case_id": "T2D_chr13_49021959_52021959",
+        "n_variants": 4305,
+        "n_reference": 99,
+        "source_case_path": "/home/wjiang49/group/wjiang49/data/prusie_realdata_r13_v11/inputs/strict_snp_maf05_v1/gwas/T2D_chr13_49021959_52021959/case.json",
+        "reference_key": "FIN/chr13",
+        "reference_prefix": "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/FIN/chr13",
+        "plink_version": "PLINK v1.9.0 64-bit (27 Sep 2026)",
+        "plink_sha256": "47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062",
+        "commands": [
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/FIN/chr13",
+            "--extract",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00146/input/extract_ids.txt",
+            "--a1-allele",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00146/input/a1.tsv",
+            "2",
+            "1",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--make-bed",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00146/input/subset"
+          ],
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00146/input/subset",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--r",
+            "square",
+            "bin",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00146/input/plink_ld"
+          ]
+        ],
+        "numerical_thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "MKL_NUM_THREADS": "1",
+          "BLIS_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": "1",
+          "RAYON_NUM_THREADS": "1",
+          "VECLIB_MAXIMUM_THREADS": "1",
+          "PRUSIE_NUM_THREADS": "1"
+        },
+        "signed_r": true,
+        "dtype": "little-endian float64",
+        "storage": "row-major full square",
+        "variant_order_verified": true,
+        "alleles_verified": true,
+        "sample_order_verified": true,
+        "PLINK_variant_id_mapping": "Frozen reference_index into authenticated BIM; portable canonical IDs restored after PLINK",
+        "reordered": false,
+        "post_PLINK_sign_flips": 0,
+        "missing_genotypes": 0,
+        "missingness_policy": "Require zero missing genotypes; no imputation/pairwise deletion is invoked",
+        "validation": {
+          "finite": true,
+          "diagonal_max_abs_error": 0.0,
+          "symmetry_max_abs_error": 0.0,
+          "max_abs_r": 1.0,
+          "tolerances": {
+            "diagonal_atol": 1e-10,
+            "range_atol": 1e-10,
+            "symmetry_atol": 1e-12
+          }
+        },
+        "R_sha256": "faaed2140ac7aa6c8166cec2b6fae4efa151efe68b8a81c1c226034dc2b7b2b3",
+        "variant_ids_sha256": "9fca1d5d9bac272506ac4d7389eab8f6aa48cf71b4345cf0b707d56e1783e849",
+        "z_sha256": "75273888f36b0e62619be584176b304af53a3e7dbd3dec3a46dc747c759f499f",
+        "started_epoch": 1793161818.48737,
+        "finished_epoch": 1793161819.6764026,
+        "host": "cpunode-029"
+      },
+      "checks": {
+        "R": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": null,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        },
+        "prusie": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": true,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        }
+      },
+      "overhead": {
+        "R": {
+          "original_retained_seconds": [
+            15.9458425715566,
+            15.6639909520745,
+            15.9099865304306,
+            14.7840483244509,
+            14.6953846625984,
+            14.4456786233932,
+            14.5451160091907
+          ],
+          "instrumented_retained_seconds": [
+            14.6281651891768,
+            14.5010393606499,
+            14.5090263765305,
+            14.9208900500089,
+            14.5360636012629,
+            14.5622529694811,
+            14.695567548275
+          ],
+          "instrumented_over_original_median_ratio": 0.984997657603501,
+          "instrumented_fitting_seconds": [
+            14.3219166202471,
+            14.1731443908066,
+            14.1896082973108,
+            14.6152835506946,
+            14.2287226347253,
+            14.2576827965677,
+            14.3907926492393
+          ]
+        },
+        "prusie": {
+          "original_retained_seconds": [
+            0.285110338,
+            0.282977221,
+            0.287793692,
+            0.278848557,
+            0.282672297,
+            0.286892043,
+            0.28634271
+          ],
+          "instrumented_retained_seconds": [
+            0.287592202,
+            0.27607808,
+            0.2757809,
+            0.28750089,
+            0.281334148,
+            0.288802071,
+            0.287009535
+          ],
+          "instrumented_over_original_median_ratio": 1.0066612702062034,
+          "instrumented_fitting_seconds": [
+            0.247184758,
+            0.239279344,
+            0.236460854,
+            0.245593903,
+            0.243725648,
+            0.242549783,
+            0.24713199200000002
+          ]
+        }
+      },
+      "p": 4305,
+      "case_id": "T2D_chr13_49021959_52021959",
+      "states": [
+        "original",
+        "instrumented"
+      ],
+      "backends": [
+        "R",
+        "prusie"
+      ],
+      "finished_epoch": 1793162071.9161823
+    },
+    {
+      "case_key": "GWAS_00031",
+      "state": "PASS",
+      "started_epoch": 1793161818.4871235,
+      "ld": {
+        "case_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00031/input/case.json",
+        "validation_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00031/input/validation.json",
+        "state": "PASS",
+        "case_key": "GWAS_00031",
+        "case_id": "T2D_chr3_10834457_13834457",
+        "n_variants": 5389,
+        "n_reference": 99,
+        "source_case_path": "/home/wjiang49/group/wjiang49/data/prusie_realdata_r13_v11/inputs/strict_snp_maf05_v1/gwas/T2D_chr3_10834457_13834457/case.json",
+        "reference_key": "FIN/chr3",
+        "reference_prefix": "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/FIN/chr3",
+        "plink_version": "PLINK v1.9.0 64-bit (27 Sep 2026)",
+        "plink_sha256": "47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062",
+        "commands": [
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/FIN/chr3",
+            "--extract",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00031/input/extract_ids.txt",
+            "--a1-allele",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00031/input/a1.tsv",
+            "2",
+            "1",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--make-bed",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00031/input/subset"
+          ],
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00031/input/subset",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--r",
+            "square",
+            "bin",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00031/input/plink_ld"
+          ]
+        ],
+        "numerical_thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "MKL_NUM_THREADS": "1",
+          "BLIS_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": "1",
+          "RAYON_NUM_THREADS": "1",
+          "VECLIB_MAXIMUM_THREADS": "1",
+          "PRUSIE_NUM_THREADS": "1"
+        },
+        "signed_r": true,
+        "dtype": "little-endian float64",
+        "storage": "row-major full square",
+        "variant_order_verified": true,
+        "alleles_verified": true,
+        "sample_order_verified": true,
+        "PLINK_variant_id_mapping": "Frozen reference_index into authenticated BIM; portable canonical IDs restored after PLINK",
+        "reordered": false,
+        "post_PLINK_sign_flips": 0,
+        "missing_genotypes": 0,
+        "missingness_policy": "Require zero missing genotypes; no imputation/pairwise deletion is invoked",
+        "validation": {
+          "finite": true,
+          "diagonal_max_abs_error": 0.0,
+          "symmetry_max_abs_error": 0.0,
+          "max_abs_r": 1.0,
+          "tolerances": {
+            "diagonal_atol": 1e-10,
+            "range_atol": 1e-10,
+            "symmetry_atol": 1e-12
+          }
+        },
+        "R_sha256": "fc74502c02844f3b7095906f8809f196fdd2dbb7dab76496dbefc660e45c51a3",
+        "variant_ids_sha256": "5168f1fcefca210b2b78d6eb69f54429ffab31e963cdbfaabce029c363124d19",
+        "z_sha256": "0cf85d0e848d88274b8445691a5e9292ce0e8deb8c2de528e9eeff08b405590b",
+        "started_epoch": 1793161818.4871454,
+        "finished_epoch": 1793161820.370213,
+        "host": "cpunode-029"
+      },
+      "checks": {
+        "prusie": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": true,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        },
+        "R": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": null,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        }
+      },
+      "overhead": {
+        "prusie": {
+          "original_retained_seconds": [
+            0.553384126,
+            0.617792162,
+            0.616887359,
+            0.624349973,
+            0.562308264,
+            0.615825077,
+            0.579681495
+          ],
+          "instrumented_retained_seconds": [
+            0.461954126,
+            0.462073441,
+            0.532010691,
+            0.553933731,
+            0.588869098,
+            0.586203969,
+            0.55827104
+          ],
+          "instrumented_over_original_median_ratio": 0.89949849671354,
+          "instrumented_fitting_seconds": [
+            0.406419711,
+            0.40424309,
+            0.47462933,
+            0.485257777,
+            0.5157028770000001,
+            0.515062851,
+            0.49479221500000004
+          ]
+        },
+        "R": {
+          "original_retained_seconds": [
+            19.0974801359698,
+            19.0911674983799,
+            19.0756700150669,
+            17.9932051859796,
+            17.8710880437866,
+            17.870767059736,
+            17.8110948391259
+          ],
+          "instrumented_retained_seconds": [
+            20.5176928648725,
+            20.3041194975376,
+            19.0470813978463,
+            19.0403452459723,
+            18.9111460782588,
+            19.0235525565222,
+            19.0702234432101
+          ],
+          "instrumented_over_original_median_ratio": 1.0585707883044586,
+          "instrumented_fitting_seconds": [
+            19.8194237295538,
+            19.6096718125045,
+            18.4206316806376,
+            18.3467915141955,
+            18.280811727047,
+            18.4063666164875,
+            18.4484981503338
+          ]
+        }
+      },
+      "p": 5389,
+      "case_id": "T2D_chr3_10834457_13834457",
+      "states": [
+        "instrumented",
+        "original"
+      ],
+      "backends": [
+        "prusie",
+        "R"
+      ],
+      "finished_epoch": 1793162142.1218016
+    },
+    {
+      "case_key": "GWAS_00119",
+      "state": "PASS",
+      "started_epoch": 1793161818.4895377,
+      "ld": {
+        "case_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00119/input/case.json",
+        "validation_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00119/input/validation.json",
+        "state": "PASS",
+        "case_key": "GWAS_00119",
+        "case_id": "T2D_chr11_13007046_18887083",
+        "n_variants": 10015,
+        "n_reference": 99,
+        "source_case_path": "/home/wjiang49/group/wjiang49/data/prusie_realdata_r13_v11/inputs/strict_snp_maf05_v1/gwas/T2D_chr11_13007046_18887083/case.json",
+        "reference_key": "FIN/chr11",
+        "reference_prefix": "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/FIN/chr11",
+        "plink_version": "PLINK v1.9.0 64-bit (27 Sep 2026)",
+        "plink_sha256": "47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062",
+        "commands": [
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/FIN/chr11",
+            "--extract",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00119/input/extract_ids.txt",
+            "--a1-allele",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00119/input/a1.tsv",
+            "2",
+            "1",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--make-bed",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00119/input/subset"
+          ],
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00119/input/subset",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--r",
+            "square",
+            "bin",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/GWAS_00119/input/plink_ld"
+          ]
+        ],
+        "numerical_thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "MKL_NUM_THREADS": "1",
+          "BLIS_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": "1",
+          "RAYON_NUM_THREADS": "1",
+          "VECLIB_MAXIMUM_THREADS": "1",
+          "PRUSIE_NUM_THREADS": "1"
+        },
+        "signed_r": true,
+        "dtype": "little-endian float64",
+        "storage": "row-major full square",
+        "variant_order_verified": true,
+        "alleles_verified": true,
+        "sample_order_verified": true,
+        "PLINK_variant_id_mapping": "Frozen reference_index into authenticated BIM; portable canonical IDs restored after PLINK",
+        "reordered": false,
+        "post_PLINK_sign_flips": 0,
+        "missing_genotypes": 0,
+        "missingness_policy": "Require zero missing genotypes; no imputation/pairwise deletion is invoked",
+        "validation": {
+          "finite": true,
+          "diagonal_max_abs_error": 0.0,
+          "symmetry_max_abs_error": 0.0,
+          "max_abs_r": 1.0,
+          "tolerances": {
+            "diagonal_atol": 1e-10,
+            "range_atol": 1e-10,
+            "symmetry_atol": 1e-12
+          }
+        },
+        "R_sha256": "882ddbbbbd121464ee9d97cd5eee8bd0aa2d272e6e1fb476b88db0f73103b5ea",
+        "variant_ids_sha256": "b1136655811d1eac93f201dda12b7247bfc1de92b287bd6120e51882591ed348",
+        "z_sha256": "5db140bd7fa512eef62601682b8f79c76dcd15824ff66aaf3068016ad71cb57f",
+        "started_epoch": 1793161818.4895585,
+        "finished_epoch": 1793161824.7296596,
+        "host": "cpunode-029"
+      },
+      "checks": {
+        "R": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": null,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        },
+        "prusie": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": true,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        }
+      },
+      "overhead": {
+        "R": {
+          "original_retained_seconds": [
+            104.299108755775,
+            101.511964123696,
+            97.6775978086516,
+            96.9649184420705,
+            97.6596360998228,
+            97.8435325492173,
+            98.0714382780716
+          ],
+          "instrumented_retained_seconds": [
+            98.0600297721103,
+            98.057891077362,
+            97.9049092549831,
+            97.5298994574696,
+            98.1027602888644,
+            97.9707940891385,
+            97.836930423975
+          ],
+          "instrumented_over_original_median_ratio": 1.0013006637904982,
+          "instrumented_fitting_seconds": [
+            96.0753432782367,
+            96.0704616615549,
+            96.0161672318354,
+            95.6369202258065,
+            96.1142464522272,
+            96.0846618041396,
+            95.9477156363428
+          ]
+        },
+        "prusie": {
+          "original_retained_seconds": [
+            1.273793103,
+            1.273060121,
+            1.267311436,
+            1.270462535,
+            1.274020551,
+            1.274465832,
+            1.27354187
+          ],
+          "instrumented_retained_seconds": [
+            1.269749311,
+            1.270256718,
+            1.272272347,
+            1.271045804,
+            1.270868371,
+            1.269800798,
+            1.271914772
+          ],
+          "instrumented_over_original_median_ratio": 0.9979007372564829,
+          "instrumented_fitting_seconds": [
+            1.097898178,
+            1.098363304,
+            1.1003315040000001,
+            1.099286523,
+            1.098103306,
+            1.0988643690000002,
+            1.101125091
+          ]
+        }
+      },
+      "p": 10015,
+      "case_id": "T2D_chr11_13007046_18887083",
+      "states": [
+        "original",
+        "instrumented"
+      ],
+      "backends": [
+        "R",
+        "prusie"
+      ],
+      "finished_epoch": 1793163441.9342144
+    },
+    {
+      "case_key": "eQTL_12661",
+      "state": "PASS",
+      "started_epoch": 1793161818.4916956,
+      "ld": {
+        "case_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_12661/input/case.json",
+        "validation_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_12661/input/validation.json",
+        "state": "PASS",
+        "case_key": "eQTL_12661",
+        "case_id": "ENSG00000268027.5",
+        "n_variants": 2571,
+        "n_reference": 525,
+        "source_case_path": "/home/wjiang49/coloc_r2py/runs/20261018_prusie_gtex_blood/inputs/cases/ENSG00000268027.5/case.json",
+        "reference_key": "EUR/chr19",
+        "reference_prefix": "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/EUR/chr19",
+        "plink_version": "PLINK v1.9.0 64-bit (27 Sep 2026)",
+        "plink_sha256": "47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062",
+        "commands": [
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/EUR/chr19",
+            "--extract",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_12661/input/extract_ids.txt",
+            "--a1-allele",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_12661/input/a1.tsv",
+            "2",
+            "1",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--make-bed",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_12661/input/subset"
+          ],
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_12661/input/subset",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--r",
+            "square",
+            "bin",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_12661/input/plink_ld"
+          ]
+        ],
+        "numerical_thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "MKL_NUM_THREADS": "1",
+          "BLIS_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": "1",
+          "RAYON_NUM_THREADS": "1",
+          "VECLIB_MAXIMUM_THREADS": "1",
+          "PRUSIE_NUM_THREADS": "1"
+        },
+        "signed_r": true,
+        "dtype": "little-endian float64",
+        "storage": "row-major full square",
+        "variant_order_verified": true,
+        "alleles_verified": true,
+        "sample_order_verified": true,
+        "PLINK_variant_id_mapping": "Frozen reference_index into authenticated BIM; portable canonical IDs restored after PLINK",
+        "reordered": false,
+        "post_PLINK_sign_flips": 0,
+        "missing_genotypes": 0,
+        "missingness_policy": "Require zero missing genotypes; no imputation/pairwise deletion is invoked",
+        "validation": {
+          "finite": true,
+          "diagonal_max_abs_error": 0.0,
+          "symmetry_max_abs_error": 0.0,
+          "max_abs_r": 1.0,
+          "tolerances": {
+            "diagonal_atol": 1e-10,
+            "range_atol": 1e-10,
+            "symmetry_atol": 1e-12
+          }
+        },
+        "R_sha256": "bdf720e4cd32fdaea51c28e6c0abd9fd8115c3dee668380dc4a97a537bb926f8",
+        "variant_ids_sha256": "fb81ee47c538838f1e1433b352f03e3959a760aad02a938f416039868eb41b4d",
+        "z_sha256": "7045bb3312b4558b9b0914b4f39b3a5750a1a66ae526111742b4590d2a6e2386",
+        "started_epoch": 1793161818.4917169,
+        "finished_epoch": 1793161819.1579864,
+        "host": "cpunode-029"
+      },
+      "checks": {
+        "prusie": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": true,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        },
+        "R": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": null,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        }
+      },
+      "overhead": {
+        "prusie": {
+          "original_retained_seconds": [
+            0.068054093,
+            0.066021946,
+            0.066419985,
+            0.066531295,
+            0.067847273,
+            0.071249191,
+            0.07016571
+          ],
+          "instrumented_retained_seconds": [
+            0.067907107,
+            0.065788196,
+            0.065561869,
+            0.065097114,
+            0.064316644,
+            0.069554599,
+            0.070134752
+          ],
+          "instrumented_over_original_median_ratio": 0.9696512931330341,
+          "instrumented_fitting_seconds": [
+            0.05450157800000001,
+            0.052480139,
+            0.052373189,
+            0.051967466999999996,
+            0.051441045,
+            0.056010980999999994,
+            0.055458371
+          ]
+        },
+        "R": {
+          "original_retained_seconds": [
+            3.84480011183769,
+            3.94665649719536,
+            3.85944094602019,
+            3.87695747613907,
+            3.86450944188982,
+            3.94152640551329,
+            3.90331603121012
+          ],
+          "instrumented_retained_seconds": [
+            3.78488340415061,
+            3.87324789073318,
+            3.92953042220324,
+            3.8806042149663,
+            3.89463028218597,
+            3.9141620574519,
+            3.88906809594482
+          ],
+          "instrumented_over_original_median_ratio": 1.00312374326525,
+          "instrumented_fitting_seconds": [
+            3.66208378225565,
+            3.75977715943009,
+            3.80814345274121,
+            3.75453941524029,
+            3.77745035476983,
+            3.78295010235161,
+            3.76734629459679
+          ]
+        }
+      },
+      "p": 2571,
+      "case_id": "ENSG00000268027.5",
+      "states": [
+        "instrumented",
+        "original"
+      ],
+      "backends": [
+        "prusie",
+        "R"
+      ],
+      "finished_epoch": 1793161890.8863475
+    },
+    {
+      "case_key": "eQTL_00987",
+      "state": "PASS",
+      "started_epoch": 1793161818.4944882,
+      "ld": {
+        "case_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_00987/input/case.json",
+        "validation_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_00987/input/validation.json",
+        "state": "PASS",
+        "case_key": "eQTL_00987",
+        "case_id": "ENSG00000299055.1",
+        "n_variants": 3488,
+        "n_reference": 525,
+        "source_case_path": "/home/wjiang49/coloc_r2py/runs/20261018_prusie_gtex_blood/inputs/cases/ENSG00000299055.1/case.json",
+        "reference_key": "EUR/chr1",
+        "reference_prefix": "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/EUR/chr1",
+        "plink_version": "PLINK v1.9.0 64-bit (27 Sep 2026)",
+        "plink_sha256": "47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062",
+        "commands": [
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/EUR/chr1",
+            "--extract",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_00987/input/extract_ids.txt",
+            "--a1-allele",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_00987/input/a1.tsv",
+            "2",
+            "1",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--make-bed",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_00987/input/subset"
+          ],
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_00987/input/subset",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--r",
+            "square",
+            "bin",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_00987/input/plink_ld"
+          ]
+        ],
+        "numerical_thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "MKL_NUM_THREADS": "1",
+          "BLIS_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": "1",
+          "RAYON_NUM_THREADS": "1",
+          "VECLIB_MAXIMUM_THREADS": "1",
+          "PRUSIE_NUM_THREADS": "1"
+        },
+        "signed_r": true,
+        "dtype": "little-endian float64",
+        "storage": "row-major full square",
+        "variant_order_verified": true,
+        "alleles_verified": true,
+        "sample_order_verified": true,
+        "PLINK_variant_id_mapping": "Frozen reference_index into authenticated BIM; portable canonical IDs restored after PLINK",
+        "reordered": false,
+        "post_PLINK_sign_flips": 0,
+        "missing_genotypes": 0,
+        "missingness_policy": "Require zero missing genotypes; no imputation/pairwise deletion is invoked",
+        "validation": {
+          "finite": true,
+          "diagonal_max_abs_error": 0.0,
+          "symmetry_max_abs_error": 0.0,
+          "max_abs_r": 1.0,
+          "tolerances": {
+            "diagonal_atol": 1e-10,
+            "range_atol": 1e-10,
+            "symmetry_atol": 1e-12
+          }
+        },
+        "R_sha256": "50663a0da99d8db25bbc575d1f90ac2e9853d290e20c02c652ffaa28b1e31ba1",
+        "variant_ids_sha256": "a46cc9696929780758f1c2fe10bb0f44cd097af6f9c34941982bb826ff7cdd82",
+        "z_sha256": "2fc060cbebc2b5c94f3f1a79c605b21a40f2d55e28a0ec2e95d1d3e692b2f6b9",
+        "started_epoch": 1793161818.494511,
+        "finished_epoch": 1793161819.796718,
+        "host": "cpunode-029"
+      },
+      "checks": {
+        "R": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": null,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        },
+        "prusie": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": true,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        }
+      },
+      "overhead": {
+        "R": {
+          "original_retained_seconds": [
+            4.54552359692752,
+            4.35794246569276,
+            4.40081975143403,
+            3.98252332862467,
+            4.52377610746771,
+            4.49780988134444,
+            4.51771409157664
+          ],
+          "instrumented_retained_seconds": [
+            4.31738974899054,
+            4.27637390885502,
+            3.9281523572281,
+            4.45391143299639,
+            4.34719546511769,
+            4.30349002964795,
+            3.96519885025918
+          ],
+          "instrumented_over_original_median_ratio": 0.9567967840298296,
+          "instrumented_fitting_seconds": [
+            4.1450881967321,
+            4.10604853834957,
+            3.7666589608416,
+            4.28351627103984,
+            4.17572446539998,
+            4.13549332506955,
+            3.79317487031221
+          ]
+        },
+        "prusie": {
+          "original_retained_seconds": [
+            0.140751772,
+            0.139936407,
+            0.138753549,
+            0.137663295,
+            0.136049857,
+            0.144995094,
+            0.141274016
+          ],
+          "instrumented_retained_seconds": [
+            0.144547261,
+            0.143731575,
+            0.140757453,
+            0.149308809,
+            0.13579142,
+            0.141341052,
+            0.143602051
+          ],
+          "instrumented_over_original_median_ratio": 1.0261950701649785,
+          "instrumented_fitting_seconds": [
+            0.11707436799999998,
+            0.118098818,
+            0.116270266,
+            0.12303034600000001,
+            0.110579185,
+            0.111682362,
+            0.116558677
+          ]
+        }
+      },
+      "p": 3488,
+      "case_id": "ENSG00000299055.1",
+      "states": [
+        "original",
+        "instrumented"
+      ],
+      "backends": [
+        "R",
+        "prusie"
+      ],
+      "finished_epoch": 1793161900.2085965
+    },
+    {
+      "case_key": "eQTL_09479",
+      "state": "PASS",
+      "started_epoch": 1793161818.4980237,
+      "ld": {
+        "case_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_09479/input/case.json",
+        "validation_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_09479/input/validation.json",
+        "state": "PASS",
+        "case_key": "eQTL_09479",
+        "case_id": "ENSG00000198894.8",
+        "n_variants": 4429,
+        "n_reference": 525,
+        "source_case_path": "/home/wjiang49/coloc_r2py/runs/20261018_prusie_gtex_blood/inputs/cases/ENSG00000198894.8/case.json",
+        "reference_key": "EUR/chr14",
+        "reference_prefix": "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/EUR/chr14",
+        "plink_version": "PLINK v1.9.0 64-bit (27 Sep 2026)",
+        "plink_sha256": "47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062",
+        "commands": [
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/EUR/chr14",
+            "--extract",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_09479/input/extract_ids.txt",
+            "--a1-allele",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_09479/input/a1.tsv",
+            "2",
+            "1",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--make-bed",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_09479/input/subset"
+          ],
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_09479/input/subset",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--r",
+            "square",
+            "bin",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_09479/input/plink_ld"
+          ]
+        ],
+        "numerical_thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "MKL_NUM_THREADS": "1",
+          "BLIS_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": "1",
+          "RAYON_NUM_THREADS": "1",
+          "VECLIB_MAXIMUM_THREADS": "1",
+          "PRUSIE_NUM_THREADS": "1"
+        },
+        "signed_r": true,
+        "dtype": "little-endian float64",
+        "storage": "row-major full square",
+        "variant_order_verified": true,
+        "alleles_verified": true,
+        "sample_order_verified": true,
+        "PLINK_variant_id_mapping": "Frozen reference_index into authenticated BIM; portable canonical IDs restored after PLINK",
+        "reordered": false,
+        "post_PLINK_sign_flips": 0,
+        "missing_genotypes": 0,
+        "missingness_policy": "Require zero missing genotypes; no imputation/pairwise deletion is invoked",
+        "validation": {
+          "finite": true,
+          "diagonal_max_abs_error": 0.0,
+          "symmetry_max_abs_error": 0.0,
+          "max_abs_r": 1.0,
+          "tolerances": {
+            "diagonal_atol": 1e-10,
+            "range_atol": 1e-10,
+            "symmetry_atol": 1e-12
+          }
+        },
+        "R_sha256": "999562ca271f262a256fef3097dd39d5640bdc4629a161223ccaa1df672b4496",
+        "variant_ids_sha256": "ec31a58d75a27b8913743c3412122c58295a39aef69364fdfbf7fbc4531e5f89",
+        "z_sha256": "0ea9567222aae55117e8c6ea22c977a884297adc69c6f4d5a992cd99468d26d7",
+        "started_epoch": 1793161818.4980447,
+        "finished_epoch": 1793161820.282726,
+        "host": "cpunode-029"
+      },
+      "checks": {
+        "prusie": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": true,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        },
+        "R": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": null,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        }
+      },
+      "overhead": {
+        "prusie": {
+          "original_retained_seconds": [
+            0.253081535,
+            0.268957696,
+            0.273487998,
+            0.27346259,
+            0.254817353,
+            0.259516605,
+            0.25091231
+          ],
+          "instrumented_retained_seconds": [
+            0.202751323,
+            0.208829881,
+            0.207336538,
+            0.205782782,
+            0.209728624,
+            0.214799875,
+            0.247077858
+          ],
+          "instrumented_over_original_median_ratio": 0.8046879350937871,
+          "instrumented_fitting_seconds": [
+            0.167135927,
+            0.173621131,
+            0.17191053799999997,
+            0.169702709,
+            0.17213512,
+            0.177949622,
+            0.20497796699999998
+          ]
+        },
+        "R": {
+          "original_retained_seconds": [
+            5.8050762815401,
+            5.82380468770862,
+            5.86597932875156,
+            5.44244231749326,
+            5.43812090903521,
+            5.43797850236297,
+            5.44317318685353
+          ],
+          "instrumented_retained_seconds": [
+            5.7201082855463,
+            5.74960684217513,
+            5.79183910228312,
+            5.79518885165453,
+            5.69144345726818,
+            5.79632133431733,
+            5.79089669883251
+          ],
+          "instrumented_over_original_median_ratio": 1.0638825001597982,
+          "instrumented_fitting_seconds": [
+            5.4025785876438,
+            5.40620448533446,
+            5.47299889847636,
+            5.48568296711892,
+            5.37881294824183,
+            5.48637769557536,
+            5.48058506567031
+          ]
+        }
+      },
+      "p": 4429,
+      "case_id": "ENSG00000198894.8",
+      "states": [
+        "instrumented",
+        "original"
+      ],
+      "backends": [
+        "prusie",
+        "R"
+      ],
+      "finished_epoch": 1793161923.1230824
+    },
+    {
+      "case_key": "eQTL_07860",
+      "state": "PASS",
+      "started_epoch": 1793161818.4998462,
+      "ld": {
+        "case_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_07860/input/case.json",
+        "validation_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_07860/input/validation.json",
+        "state": "PASS",
+        "case_key": "eQTL_07860",
+        "case_id": "ENSG00000110203.10",
+        "n_variants": 3042,
+        "n_reference": 525,
+        "source_case_path": "/home/wjiang49/coloc_r2py/runs/20261018_prusie_gtex_blood/inputs/cases/ENSG00000110203.10/case.json",
+        "reference_key": "EUR/chr11",
+        "reference_prefix": "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/EUR/chr11",
+        "plink_version": "PLINK v1.9.0 64-bit (27 Sep 2026)",
+        "plink_sha256": "47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062",
+        "commands": [
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/EUR/chr11",
+            "--extract",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_07860/input/extract_ids.txt",
+            "--a1-allele",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_07860/input/a1.tsv",
+            "2",
+            "1",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--make-bed",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_07860/input/subset"
+          ],
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_07860/input/subset",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--r",
+            "square",
+            "bin",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_07860/input/plink_ld"
+          ]
+        ],
+        "numerical_thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "MKL_NUM_THREADS": "1",
+          "BLIS_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": "1",
+          "RAYON_NUM_THREADS": "1",
+          "VECLIB_MAXIMUM_THREADS": "1",
+          "PRUSIE_NUM_THREADS": "1"
+        },
+        "signed_r": true,
+        "dtype": "little-endian float64",
+        "storage": "row-major full square",
+        "variant_order_verified": true,
+        "alleles_verified": true,
+        "sample_order_verified": true,
+        "PLINK_variant_id_mapping": "Frozen reference_index into authenticated BIM; portable canonical IDs restored after PLINK",
+        "reordered": false,
+        "post_PLINK_sign_flips": 0,
+        "missing_genotypes": 0,
+        "missingness_policy": "Require zero missing genotypes; no imputation/pairwise deletion is invoked",
+        "validation": {
+          "finite": true,
+          "diagonal_max_abs_error": 0.0,
+          "symmetry_max_abs_error": 0.0,
+          "max_abs_r": 1.0,
+          "tolerances": {
+            "diagonal_atol": 1e-10,
+            "range_atol": 1e-10,
+            "symmetry_atol": 1e-12
+          }
+        },
+        "R_sha256": "ae76f002716b58170c48b1a967513934fbf5c4d96d2332d97f1e8e90ace18010",
+        "variant_ids_sha256": "b7727557c54477337f4c855d58ba63f45ca599f49967519c69eb658a75cb5b9c",
+        "z_sha256": "cc275375083b39db4a53ca51e0ef43bbe19705d6d12e6016ac5bdeb134fce2be",
+        "started_epoch": 1793161818.4998684,
+        "finished_epoch": 1793161819.480843,
+        "host": "cpunode-029"
+      },
+      "checks": {
+        "R": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": null,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        },
+        "prusie": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": true,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        }
+      },
+      "overhead": {
+        "R": {
+          "original_retained_seconds": [
+            40.1779905036092,
+            38.3682651603594,
+            37.7792448876426,
+            37.7018273351714,
+            37.8585750600323,
+            37.7984103476629,
+            37.8382589267567
+          ],
+          "instrumented_retained_seconds": [
+            37.7427445547655,
+            37.7782116672024,
+            37.8533292943612,
+            37.8251604177058,
+            37.8347161468118,
+            37.826679659076,
+            37.8081135638058
+          ],
+          "instrumented_over_original_median_ratio": 0.9996538289704012,
+          "instrumented_fitting_seconds": [
+            37.5029656309634,
+            37.6515802908689,
+            37.7264969488606,
+            37.6995493518189,
+            37.7069400167093,
+            37.6997240139171,
+            37.6808870788664
+          ]
+        },
+        "prusie": {
+          "original_retained_seconds": [
+            0.833112611,
+            0.825463151,
+            0.828433276,
+            0.837337549,
+            0.833236434,
+            0.836587927,
+            0.826631311
+          ],
+          "instrumented_retained_seconds": [
+            0.825143258,
+            0.829141379,
+            0.8203404,
+            0.822669739,
+            0.821160415,
+            0.822063416,
+            0.827547928
+          ],
+          "instrumented_over_original_median_ratio": 0.9874652335565233,
+          "instrumented_fitting_seconds": [
+            0.807763628,
+            0.8117594260000001,
+            0.8033204589999999,
+            0.805285541,
+            0.803806533,
+            0.805040108,
+            0.810232009
+          ]
+        }
+      },
+      "p": 3042,
+      "case_id": "ENSG00000110203.10",
+      "states": [
+        "original",
+        "instrumented"
+      ],
+      "backends": [
+        "R",
+        "prusie"
+      ],
+      "finished_epoch": 1793162450.97053
+    },
+    {
+      "case_key": "eQTL_13504",
+      "state": "PASS",
+      "started_epoch": 1793161818.501712,
+      "ld": {
+        "case_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_13504/input/case.json",
+        "validation_path": "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_13504/input/validation.json",
+        "state": "PASS",
+        "case_key": "eQTL_13504",
+        "case_id": "ENSG00000277117.6",
+        "n_variants": 7,
+        "n_reference": 525,
+        "source_case_path": "/home/wjiang49/coloc_r2py/runs/20261018_prusie_gtex_blood/inputs/cases/ENSG00000277117.6/case.json",
+        "reference_key": "EUR/chr21",
+        "reference_prefix": "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/EUR/chr21",
+        "plink_version": "PLINK v1.9.0 64-bit (27 Sep 2026)",
+        "plink_sha256": "47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062",
+        "commands": [
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/inputs/reference/EUR/chr21",
+            "--extract",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_13504/input/extract_ids.txt",
+            "--a1-allele",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_13504/input/a1.tsv",
+            "2",
+            "1",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--make-bed",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_13504/input/subset"
+          ],
+          [
+            "/gpfs1/home/wjiang49/prusie_project/bench_20261028/inputs/tools/plink1/plink",
+            "--bfile",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_13504/input/subset",
+            "--keep-allele-order",
+            "--make-founders",
+            "--threads",
+            "1",
+            "--memory",
+            "2048",
+            "--r",
+            "square",
+            "bin",
+            "--out",
+            "/tmp/prusie_bench_20261028_qualification_700081/cases/eQTL_13504/input/plink_ld"
+          ]
+        ],
+        "numerical_thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "MKL_NUM_THREADS": "1",
+          "BLIS_NUM_THREADS": "1",
+          "NUMEXPR_NUM_THREADS": "1",
+          "RAYON_NUM_THREADS": "1",
+          "VECLIB_MAXIMUM_THREADS": "1",
+          "PRUSIE_NUM_THREADS": "1"
+        },
+        "signed_r": true,
+        "dtype": "little-endian float64",
+        "storage": "row-major full square",
+        "variant_order_verified": true,
+        "alleles_verified": true,
+        "sample_order_verified": true,
+        "PLINK_variant_id_mapping": "Frozen reference_index into authenticated BIM; portable canonical IDs restored after PLINK",
+        "reordered": false,
+        "post_PLINK_sign_flips": 0,
+        "missing_genotypes": 0,
+        "missingness_policy": "Require zero missing genotypes; no imputation/pairwise deletion is invoked",
+        "validation": {
+          "finite": true,
+          "diagonal_max_abs_error": 0.0,
+          "symmetry_max_abs_error": 0.0,
+          "max_abs_r": 1.0,
+          "tolerances": {
+            "diagonal_atol": 1e-10,
+            "range_atol": 1e-10,
+            "symmetry_atol": 1e-12
+          }
+        },
+        "R_sha256": "d4859e6e4a5ab4b61796823fb47915009d4b02006122fb9a8ae9b488b280a26d",
+        "variant_ids_sha256": "f9074af06a1ed584bbd4a52065a65861728e2d6e9a40f64a3ca5fc3c926685d9",
+        "z_sha256": "5c40498e07d938900cb4567017f43557831a5f04826615775e444ce7d280d9c4",
+        "started_epoch": 1793161818.5017326,
+        "finished_epoch": 1793161818.583608,
+        "host": "cpunode-029"
+      },
+      "checks": {
+        "prusie": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": true,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        },
+        "R": {
+          "alpha_bitwise_equal": true,
+          "pip_bitwise_equal": true,
+          "all_native_call_alpha_hashes_equal": null,
+          "max_abs_alpha_difference": 0.0,
+          "call_outcomes_equal": true
+        }
+      },
+      "overhead": {
+        "prusie": {
+          "original_retained_seconds": [
+            0.000880097,
+            0.000867304,
+            0.000836215,
+            0.000838408,
+            0.000835023,
+            0.000847857,
+            0.000836946
+          ],
+          "instrumented_retained_seconds": [
+            0.000915715,
+            0.000844441,
+            0.000841615,
+            0.000846394,
+            0.000844099,
+            0.000852074,
+            0.000830455
+          ],
+          "instrumented_over_original_median_ratio": 1.0071957805746128,
+          "instrumented_fitting_seconds": [
+            0.0005042600000000001,
+            0.00048461399999999996,
+            0.000489161,
+            0.000489422,
+            0.0004914450000000001,
+            0.000485464,
+            0.00047461399999999994
+          ]
+        },
+        "R": {
+          "original_retained_seconds": [
+            0.0319263804703951,
+            0.0334009984508157,
+            0.0311668301001191,
+            0.0331550054252148,
+            0.0339288022369146,
+            0.0367696629837155,
+            0.032101140357554
+          ],
+          "instrumented_retained_seconds": [
+            0.0312338061630726,
+            0.0312772570177913,
+            0.0327822435647249,
+            0.0365995122119784,
+            0.0326494025066495,
+            0.0312072858214378,
+            0.0339377978816628
+          ],
+          "instrumented_over_original_median_ratio": 0.9847503291861691,
+          "instrumented_fitting_seconds": [
+            0.0304387491196394,
+            0.0305687729269266,
+            0.0320147071033716,
+            0.0357127012684941,
+            0.0319149782881141,
+            0.0305392378941178,
+            0.0330624002963305
+          ]
+        }
+      },
+      "p": 7,
+      "case_id": "ENSG00000277117.6",
+      "states": [
+        "instrumented",
+        "original"
+      ],
+      "backends": [
+        "prusie",
+        "R"
+      ],
+      "finished_epoch": 1793161827.087486
+    }
+  ],
+  "plan_sha256": "2f62f2687b463515a652ef77593fd3b3da30ad89766d3ad294b4fd2ab0c3fc61",
+  "instrumented_environment": {
+    "passed": true,
+    "native": {
+      "python": "3.12.4 | packaged by Anaconda, Inc. | (main, Jun 18 2024, 15:12:24) [GCC 11.2.0]",
+      "numpy": "1.26.4",
+      "prusie": "0.3.0",
+      "backend": "prusie-rust/0.3.0; susieR-reference/0.16.6@8e56a8e038e989856d106d9ca5175cc664fea9d2"
+    },
+    "python": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/envs/instrumented/bin/python",
+    "R_paths": {
+      "rscript": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/envs/R/bin/Rscript",
+      "R_LIBS": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/envs/R/lib/R/library",
+      "R_LIBS_USER": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/envs/R/lib/R/library"
+    },
+    "R_expected": {
+      "R": "R version 4.4.0 (2024-04-24)",
+      "version": "0.16.6",
+      "path": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/envs/R/lib/R/library/susieR",
+      "blas": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/envs/R/lib/libblas.so.3",
+      "blas_probe": {
+        "threads": 1,
+        "config": "OpenBLAS 0.3.20 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Zen MAX_THREADS=64",
+        "dgemm_library": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/envs/R/lib/R/bin/exec/../../lib/../../libblas.so.3",
+        "dpotrf_library": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/envs/R/lib/libopenblas.so.0"
+      },
+      "session": [
+        "R version 4.4.0 (2024-04-24)",
+        "Platform: x86_64-conda-linux-gnu",
+        "Running under: Rocky Linux 9.8 (Blue Onyx)",
+        "",
+        "Matrix products: default",
+        "BLAS:   /gpfs1/home/wjiang49/prusie_project/bench_20261028/envs/R/lib/libblas.so.3 ",
+        "LAPACK: /gpfs1/home/wjiang49/prusie_project/bench_20261028/envs/R/lib/libopenblas.so.0;  LAPACK version 3.10.0",
+        "",
+        "locale:",
+        " [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       ",
+        " [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   ",
+        " [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          ",
+        "[10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   ",
+        "",
+        "time zone: Asia/Hong_Kong",
+        "tzcode source: system (glibc)",
+        "",
+        "attached base packages:",
+        "[1] stats     graphics  grDevices utils     datasets  methods   base     ",
+        "",
+        "other attached packages:",
+        "[1] jsonlite_2.0.0 susieR_0.16.6 ",
+        "",
+        "loaded via a namespace (and not attached):",
+        " [1] crayon_1.5.3       mixsqp_0.3-54      vctrs_0.7.1        cli_3.6.5         ",
+        " [5] rlang_1.1.7        S7_0.2.2           RcppZiggurat_0.1.8 RcppParallel_5.1.9",
+        " [9] glue_1.8.0         plyr_1.8.9         scales_1.4.0       grid_4.4.0        ",
+        "[13] lifecycle_1.0.5    compiler_4.4.0     irlba_2.3.7        RColorBrewer_1.1-3",
+        "[17] Rcpp_1.1.1         Rfast_2.1.0        farver_2.1.2       lattice_0.23-1    ",
+        "[21] R6_2.6.1           parallel_4.4.0     Matrix_1.7-6       tools_4.4.0       ",
+        "[25] gtable_0.3.6       reshape_0.8.10     matrixStats_1.5.0  ggplot2_4.0.3     "
+      ]
+    },
+    "blas_probe": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/runtime/blas_probe.so",
+    "reference_commit": "8e56a8e038e989856d106d9ca5175cc664fea9d2",
+    "native_sha256": "95b764e5c99c4c1c851c0c8b5d1aa9a4577201a826ad2db6eb436bae635df577",
+    "wheel_sha256": "ea54f79bae02240370811345ac34d751b6c58f4affd54477b31d649f90fd0af8",
+    "host": "cpunode-029",
+    "slurm_job": "699887",
+    "original_wheel_sha256": "85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59",
+    "instrumented": true,
+    "fit_timing": {
+      "native_helper_directory": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/instrumentation/native",
+      "R_helper": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/instrumentation/R/fit_timer.R",
+      "R_source_file": "/gpfs1/home/wjiang49/prusie_project/bench_20261028/instrumentation/R/pinned/susie.R.txt"
+    }
+  },
+  "job_id": "700081",
+  "finished_epoch": 1793163441.9856231
+}

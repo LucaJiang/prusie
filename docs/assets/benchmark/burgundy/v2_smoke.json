@@ -1,0 +1,19 @@
+{
+  "state": "PASS",
+  "protocol_sha256": "3893ec7f92fc042f15eade88a4c27a452835bf3285dfda037d6133c55fc56825",
+  "cases": [
+    {
+      "case_key": "GWAS_00005",
+      "p": 1575,
+      "state": "PASS"
+    },
+    {
+      "case_key": "eQTL_13504",
+      "p": 7,
+      "state": "PASS"
+    }
+  ],
+  "job_id": "700793",
+  "formal_timing_result": false,
+  "epoch": 1793176028.0780163
+}

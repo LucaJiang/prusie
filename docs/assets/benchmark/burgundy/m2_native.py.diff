@@ -1,0 +1,352 @@
+--- v030/m2_worker.py
++++ burgundy/m2_native.py
+@@ -17,7 +17,7 @@
+ import traceback
+ import warnings
+ 
+-from m2 import COMMIT, RUN, THREAD_VARS, output_root, read, sha, write
++from campaign import COMMIT, RUN, THREAD_VARS, read, sha, write
+ 
+ 
+ def host():
+@@ -53,240 +53,16 @@
+     return libraries
+ 
+ 
+-def reference_files(request):
+-    task = request["task"]
+-    kind = task["kind"]
+-    directory = output_root() / task["panel"] / task["case_id"]
+-    fresh = directory / (kind if kind.startswith("window") else "primary") / "R_validate.json"
+-    return fresh, Path(str(fresh) + ".alpha.bin"), Path(str(fresh) + ".pip.bin")
+-
+-
+ def verify_request(request):
+     payload = {k: v for k, v in request.items() if k != "signature_sha256"}
+     import hashlib
+     assert hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest() == request["signature_sha256"]
+-    for path, expected in request["identity"]["scripts"].items():
+-        assert sha(path) == expected, "M2 software changed after freeze: " + path
+-    task = request["task"]
+-    case = read(task["case_path"])
+-    assert case["parameters"] == task["parameters"] and case["n_variants"] == task["p"]
+-    assert sha(task["case_path"]) == task["hashes"]["case.json"]
+-    assert sha(request["blas_probe"]) == request["blas_probe_sha256"]
+-    assert read(RUN / "status/code_freeze.json") == request["identity"]["freeze"]
+-    placement = request.get("placement")
+-    assert placement and placement["hostname"] == os.uname().nodename, "Missing or changed signed timing placement"
+-    assert sorted(os.sched_getaffinity(0)) == sorted(placement["cpus"]), "Active CPU mask differs from the signed timing placement"
++    case = read(request["task"]["case_path"])
++    assert case["parameters"] == request["task"]["parameters"]
++    assert sorted(os.sched_getaffinity(0)) == request["placement"]["cpus"]
+     assert case["parameters"]["max_iter"] == 100
++    assert sha(request["protocol_path"]) == request["protocol_sha256"]
+     return case
+-
+-
+-def load_partial_output(path):
+-    try:
+-        value = read(path)
+-        if not isinstance(value, dict):
+-            return None, "Interrupted backend JSON has an unexpected non-object root"
+-        return value, None
+-    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+-        return None, f"Malformed interrupted backend JSON: {type(error).__name__}: {error}"
+-
+-
+-def reference_ready(request):
+-    fresh, alpha, pip = reference_files(request)
+-    if not fresh.exists():
+-        return False, "Fresh R validation metadata is missing"
+-    metadata, error = load_partial_output(fresh)
+-    if error or metadata.get("status") != "ok":
+-        return False, error or "Fresh R validation did not complete successfully"
+-    task = request["task"]
+-    p = task["window"] or task["p"]
+-    shape = [min(task["parameters"]["L"], p), p]
+-    if metadata.get("alpha_shape") != shape:
+-        return False, "Fresh R validation alpha shape differs from the declared request"
+-    if not alpha.exists() or alpha.stat().st_size != 8 * shape[0] * p or not pip.exists() or pip.stat().st_size != 8 * p:
+-        return False, "Fresh R validation binary outputs are missing or truncated"
+-    if task["window"] is None or task["window"] == task["p"]:
+-        if not (metadata.get("frozen_integrity") or {}).get("available"):
+-            return False, "Fresh R validation has no completed frozen-reference integrity check"
+-    return True, None
+-
+-
+-def finite_absolute_error(left, right, np):
+-    """Invalid scientific values remain explicit JSON-safe failures."""
+-    if not bool(np.isfinite(left).all() and np.isfinite(right).all()):
+-        return None
+-    difference = float(np.max(abs(left - right)))
+-    return difference if math.isfinite(difference) else None
+-
+-
+-def reusable_backend_output(previous, mode, backend, request, required):
+-    if previous is None or previous.get("status") != "ok" or previous.get("signature_sha256") != request["signature_sha256"]:
+-        return False
+-    if not all(file.exists() for file in required):
+-        return False
+-    samples = previous.get("samples", [])
+-    if mode == "time":
+-        retained = [s for s in samples if s.get("warmup") is False]
+-        return (len(samples) == 8 and len(retained) == 7 and sum(s.get("warmup") is True for s in samples) == 1
+-                and all(isinstance(s.get("time_seconds"), (int, float)) and math.isfinite(s["time_seconds"])
+-                        and s["time_seconds"] > 0 and s.get("validity_pass") is True for s in samples))
+-    if len(samples) != 1 or samples[0].get("validity_pass") is not True:
+-        return False
+-    if mode == "memory":
+-        peak = previous.get("peak_rss_bytes")
+-        return isinstance(peak, (int, float)) and math.isfinite(peak) and peak > 0
+-    if backend == "R":
+-        return reference_ready(request)[0]
+-    task = request["task"]
+-    p = task["window"] or task["p"]
+-    shape = [min(task["parameters"]["L"], p), p]
+-    return (previous.get("alpha_shape") == shape and required[1].stat().st_size == 8 * shape[0] * p
+-            and required[2].stat().st_size == 8 * p)
+-
+-
+-def task_main(path):
+-    assert os.environ.get("COLOC_HEAVY_RECORD"), "Every task enters the existing heavy wrapper"
+-    request = read(path)
+-    directory = path.parent
+-    task_lock = (directory / "task.lock").open("a+")
+-    fcntl.flock(task_lock, fcntl.LOCK_EX)
+-    case = verify_request(request)
+-    task = request["task"]
+-    result_path = directory / "result.json"
+-    if result_path.exists():
+-        previous = read(result_path)
+-        if previous.get("state") == "COMPLETE" and previous.get("signature_sha256") == request["signature_sha256"]:
+-            for name, expected in previous.get("outputs", {}).items():
+-                assert sha(name) == expected, "Changed completed task output: " + name
+-            print(json.dumps(dict(state="REUSED_COMPLETE_TASK", signature_sha256=request["signature_sha256"])))
+-            return 0
+-        result_path.rename(directory / f"attempt_failed_{time.time_ns()}.json")
+-    record = dict(task=task, signature_sha256=request["signature_sha256"],
+-                  heavy_record=os.environ["COLOC_HEAVY_RECORD"], started_epoch=time.time(),
+-                  host_start=host(), state="FAILED", commands=[], outputs={}, resume_repairs=[])
+-    order = ["R", "prusie"] if task["index"] % 2 == 0 else ["prusie", "R"]
+-    if task["kind"] == "primary" or task["kind"].startswith("window"):
+-        # Integrity validation is completed before either timed backend starts.
+-        jobs = [("R", "validate"), ("prusie", "validate")]
+-        jobs += [(backend, mode) for mode in ("time", "memory") for backend in order]
+-    elif task["kind"] == "overwrite":
+-        jobs = [("prusie", "memory")]
+-    else:
+-        jobs = [("prusie", "validate"), ("prusie", "time"), ("prusie", "memory")]
+-    environment = dict(os.environ, R_ENVIRON_USER="/dev/null", R_PROFILE_USER="/dev/null")
+-    environment.update({key: "1" for key in THREAD_VARS})
+-    environment.update({key: request["R_paths"][key] for key in ("R_LIBS", "R_LIBS_USER")})
+-    try:
+-        # Reuse preserved input hashes only when frozen stat evidence still
+-        # matches; otherwise check bytes, without changing the source input.
+-        checked = {}
+-        base = Path(task["case_path"]).parent
+-        paths = {case[key] for key in ("z_path", "R_path", "R_column_major_path", "R_gzip_path", "variant_ids_path") if key in case}
+-        for name in sorted(paths):
+-            file = base / name
+-            expected = task["hashes"].get(name)
+-            st = file.stat()
+-            saved = task.get("file_identities", {}).get(name, {}).get("stat", {})
+-            stable = dict(size=st.st_size, mtime_ns=st.st_mtime_ns, inode=st.st_ino, device=st.st_dev)
+-            stat_match = bool(saved) and all(saved.get(k) == v for k, v in stable.items())
+-            if expected and not stat_match:
+-                assert sha(file) == expected, "Changed frozen input: " + str(file)
+-            checked[name] = dict(sha256=expected, frozen_stat_match=stat_match,
+-                                 assurance="frozen SHA256 plus unchanged file identity" if stat_match else "fresh SHA256" if expected else "no saved SHA256; declared length checked by backend")
+-        record["input_checks"] = checked
+-        frozen_reference = Path(task["frozen_reference"])
+-        if frozen_reference.exists():
+-            digest = sha(frozen_reference)
+-            if task.get("frozen_reference_sha256"):
+-                assert digest == task["frozen_reference_sha256"], "Changed frozen R reference bytes"
+-            record["frozen_reference_sha256"] = digest
+-        for backend, mode in jobs:
+-            output = directory / f"{backend}_{mode}.json"
+-            if backend != "R" or mode != "validate":
+-                ready, reason = reference_ready(request)
+-                if not ready:
+-                    record["commands"].append(dict(backend=backend, mode=mode, exit_code=None,
+-                      status="blocked_fresh_R_validation", error=reason, output=str(output)))
+-                    continue
+-            if output.exists():
+-                previous, partial_error = load_partial_output(output)
+-                required = [output]
+-                if mode == "validate":
+-                    required += [Path(str(output) + suffix) for suffix in (".alpha.bin", ".pip.bin")]
+-                if reusable_backend_output(previous, mode, backend, request, required):
+-                    # The raw backend result itself is the checkpoint; no
+-                    # separate micro-step approval/receipt files are needed.
+-                    record["commands"].append(dict(backend=backend, mode=mode, exit_code=None,
+-                      status="ok", error=None, output=str(output), reused_completed_output=True,
+-                      exit_status_evidence="Interrupted parent retained complete successful raw backend output; original exit status unavailable"))
+-                    for file in required:
+-                        record["outputs"][str(file)] = sha(file)
+-                    continue
+-                # An incomplete task's raw outputs are preserved before retry.
+-                preserved = directory / "interrupted" / str(time.time_ns())
+-                preserved.mkdir(parents=True)
+-                for file in directory.glob(output.name + "*"):
+-                    file.rename(preserved / file.name)
+-                record["resume_repairs"].append(dict(backend=backend, mode=mode,
+-                    reason=partial_error or "Incomplete backend output or changed signature", preserved_directory=str(preserved)))
+-            if backend == "R":
+-                command = [request["R_paths"]["rscript"], "--vanilla", str(RUN / "scripts/m2_reference.R"),
+-                           "--request", str(path), "--mode", mode, "--output", str(output)]
+-            else:
+-                command = [request["identity"]["python"], "-B", str(Path(__file__).resolve()), "native",
+-                           "--request", str(path), "--mode", mode, "--output", str(output)]
+-            log = directory / f"{backend}_{mode}.log"
+-            before = host()
+-            with log.open("a") as handle:
+-                process = subprocess.run(command, env=environment, stdout=handle, stderr=subprocess.STDOUT,
+-                                         preexec_fn=limit_native if backend == "prusie" else None)
+-            if output.exists():
+-                value, partial_error = load_partial_output(output)
+-                if value is None:
+-                    value = {"status": "malformed_json", "error": partial_error}
+-            else:
+-                value = {"status": "process_failed", "error": "Backend did not produce output"}
+-            record["commands"].append(dict(backend=backend, mode=mode, argv=command, exit_code=process.returncode,
+-                                           status=value.get("status"), error=value.get("error"),
+-                                           host_start=before, host_end=host(), log=str(log), output=str(output)))
+-            for file in directory.glob(output.name + "*"):
+-                if file.is_file():
+-                    record["outputs"][str(file)] = sha(file)
+-        complete = all((c["exit_code"] == 0 or c.get("reused_completed_output")) and c["status"] == "ok" for c in record["commands"])
+-        record["state"] = "COMPLETE" if complete else "BACKEND_FAILURE"
+-        fresh, _, _ = reference_files(request)
+-        if fresh.exists():
+-            fresh_metadata, _ = load_partial_output(fresh)
+-            record["fresh_R_integrity"] = (fresh_metadata or {}).get("frozen_integrity")
+-        numerical = []
+-        for command in record["commands"]:
+-            if command["backend"] == "prusie" and Path(command["output"]).exists():
+-                value, _ = load_partial_output(command["output"])
+-                numerical.extend((value or {}).get("samples", []))
+-        if numerical:
+-            native_commands = [c for c in record["commands"] if c["backend"] == "prusie"]
+-            measured_failure = any(s.get("alpha_pass") is False or s.get("validity_pass") is False for s in numerical)
+-            record["alpha_pass"] = (False if measured_failure else
+-                True if all(c["status"] == "ok" for c in native_commands)
+-                and all(s.get("alpha_pass") is True for s in numerical) else None)
+-            for metric in ("max_abs_alpha_error", "max_abs_pip_error"):
+-                finite_values = [s[metric] for s in numerical
+-                                 if s.get(metric) is not None and math.isfinite(s[metric])]
+-                record[metric] = max(finite_values) if len(finite_values) == len(numerical) else None
+-            record["validity_failures"] = [dict(repeat=s.get("repeat"), reasons=s.get("validity_failures", []))
+-                                            for s in numerical if s.get("validity_pass") is not True]
+-    except Exception as error:
+-        record.update(error=repr(error), traceback=traceback.format_exc())
+-    record.update(finished_epoch=time.time(), host_end=host())
+-    write(directory / "result.json", record)
+-    print(json.dumps({key: record.get(key) for key in ("state", "alpha_pass", "max_abs_alpha_error", "error")}))
+-    return 0 if record["state"] == "COMPLETE" else 1
+-
+-
+-def limit_native():
+-    _, hard = resource.getrlimit(resource.RLIMIT_AS)
+-    value = min(16 * 1024**3, hard) if hard != resource.RLIM_INFINITY else 16 * 1024**3
+-    resource.setrlimit(resource.RLIMIT_AS, (value, value))
+-
+ 
+ def native_main(args):
+     import numpy as np
+@@ -296,6 +72,11 @@
+     request = read(args.request)
+     task = request["task"]
+     case = verify_request(request)
++    stage_timer = None
++    if request.get("fit_timing"):
++        sys.path.insert(0, request["fit_timing"]["native_helper_directory"])
++        from stage_timer import install
++        stage_timer = install()
+     record = dict(backend="prusie", version=prusie.__version__, mode=args.mode, status="error",
+                   samples=[], signature_sha256=request["signature_sha256"], environment=host(),
+                   pid=os.getpid(), rlimit_as=list(resource.getrlimit(resource.RLIMIT_AS)),
+@@ -306,6 +87,7 @@
+     try:
+         assert prusie.__version__ == "0.3.0"
+         assert COMMIT in _native.backend_version()
++        assert record["native_sha256"] == request["identity"]["native_sha256"]
+         assert Path(prusie.__file__).resolve().is_relative_to(Path(request["identity"]["python"]).parent.parent.resolve())
+         assert all(os.environ.get(key) == "1" for key in THREAD_VARS)
+         assert all(item["threads"] in (None, 1) for item in record["numerical_libraries"])
+@@ -348,12 +130,7 @@
+         inputs = dict(z=z, R=matrix, variant_ids=ids, **case["parameters"],
+                       n_threads=task["n_threads"], overwrite_ld=task["overwrite"])
+         record["input_load_seconds"] = (time.perf_counter_ns() - before) / 1e9
+-        fresh, alpha_path, pip_path = reference_files(request)
+-        reference = read(fresh)
+-        shape = tuple(reference["alpha_shape"])
+-        expected_alpha = np.fromfile(alpha_path, dtype="<f8").reshape(shape, order="F")
+-        expected_pip = np.fromfile(pip_path, dtype="<f8")
+-        assert shape == (min(case["parameters"]["L"], p), p)
++        shape = (min(case["parameters"]["L"], p), p)
+         fit = None
+         for repeat in range(8 if args.mode == "time" else 1):
+             fit = None
+@@ -365,6 +142,7 @@
+                 fit = prusie.susie_rss(**inputs)
+                 elapsed = (time.perf_counter_ns() - clock) / 1e9
+                 end_epoch = time.time()
++            fitting = stage_timer.latest() if stage_timer is not None else None
+             # Capture before comparisons, serialization, or exported copies.
+             peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+             alpha = np.asarray(fit.alpha)
+@@ -379,35 +157,23 @@
+             parameter_checks = {key: bool(fit.params[key] == value) for key, value in case["parameters"].items()
+                                 if key in fit.params and key != "prior_weights"}
+             valid = valid and all(parameter_checks.values())
+-            alpha_error = finite_absolute_error(alpha, expected_alpha, np)
+-            pip_error = finite_absolute_error(pip, expected_pip, np)
+-            alpha_finite = alpha_error is not None
+-            pip_finite = pip_error is not None
+-            validity_failures = []
+-            if not alpha_finite:
+-                validity_failures.append("Nonfinite alpha or fresh R alpha; absolute-error metric is null")
+-            if not pip_finite:
+-                validity_failures.append("Nonfinite PIP or fresh R PIP; absolute-error metric is null")
+-            if not valid and not validity_failures:
+-                validity_failures.append("Basic probability/input/model validity failed")
++            validity_failures = [] if valid else ["Basic probability/input/model validity failed"]
+             record["samples"].append(dict(repeat=repeat, warmup=args.mode == "time" and repeat == 0,
+                   time_seconds=elapsed if args.mode == "time" else None, peak_rss_bytes=peak if args.mode == "memory" else None,
+                   start_epoch=start_epoch, end_epoch=end_epoch, niter=int(fit.niter), converged=bool(fit.converged),
+                   cs_count=len(fit.sets["cs_index"]), warnings=[str(w.message) for w in caught], validity_pass=valid,
+                   parameter_checks=parameter_checks,
+                   validity_failures=validity_failures,
+-                  max_abs_alpha_error=alpha_error, alpha_pass=alpha_error is not None and alpha_error <= 1e-5,
+-                  max_abs_pip_error=pip_error,
+-                  alpha_bitwise_equal=bool(alpha_finite and np.array_equal(alpha.view(np.uint64), expected_alpha.copy(order="C").view(np.uint64)))))
++                  fitting=fitting,
++                  alpha_sha256=__import__("hashlib").sha256(alpha.astype("<f8").tobytes()).hexdigest()))
+             assert valid, "; ".join(validity_failures)
+         record.update(status="ok", alpha_shape=list(alpha.shape), n_variants=p,
+                       n_threads=task["n_threads"], overwrite_ld=task["overwrite"],
+                       parameters=case["parameters"], environment_end=host())
+-        if args.mode == "validate":
++        if args.mode == "time":
+             alpha.astype("<f8").T.tofile(str(args.output) + ".alpha.bin")
+             pip.astype("<f8").tofile(str(args.output) + ".pip.bin")
+-        if args.mode == "memory":
+-            record["peak_rss_bytes"] = record["samples"][0]["peak_rss_bytes"]
++        record["peak_rss_bytes"] = peak
+     except Exception as error:
+         record.update(error=repr(error), traceback=traceback.format_exc())
+     write(args.output, record)
+@@ -416,9 +182,7 @@
+ 
+ if __name__ == "__main__":
+     parser = argparse.ArgumentParser(description=__doc__)
+-    parser.add_argument("action", choices=["task", "native"])
+     parser.add_argument("--request", type=Path, required=True)
+-    parser.add_argument("--mode", choices=["validate", "time", "memory"])
+-    parser.add_argument("--output", type=Path)
+-    arguments = parser.parse_args()
+-    raise SystemExit(task_main(arguments.request) if arguments.action == "task" else native_main(arguments))
++    parser.add_argument("--mode", choices=["time"], default="time")
++    parser.add_argument("--output", type=Path, required=True)
++    raise SystemExit(native_main(parser.parse_args()))

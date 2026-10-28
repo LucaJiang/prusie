@@ -1,0 +1,219 @@
+"""One submission/accounting ledger for all owned Burgundy jobs."""
+from pathlib import Path
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+import shlex
+import subprocess
+import sys
+import time
+
+RUN=Path(__file__).resolve().parents[1]
+REMOTE='/home/wjiang49/prusie_project/bench_20261028'
+HOST='wjiang49@burgundy.hpc.cityu.edu.hk'
+SSH=['ssh','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes','-o','UpdateHostKeys=no','-o','ControlMaster=auto','-o','ControlPath='+str(RUN/'tmp/ssh.sock'),'-o','ControlPersist=300','-o','ConnectTimeout=20']
+TERMINAL={'COMPLETED','FAILED','CANCELLED','TIMEOUT','PREEMPTED','NODE_FAIL','OUT_OF_MEMORY','BOOT_FAIL','DEADLINE','REVOKED','SPECIAL_EXIT'}
+
+# Frontend user amendment, 20261028: preserve running jobs; notify their coordinator.
+FIT_TIMING_AMENDMENT = RUN/'status/USER_AMENDMENT_FIT_TIMING.md'
+FIT_TIMING_ACK = RUN/'status/fit_timing_amendment_ack.json'
+SCRATCH_DATA_AMENDMENT = RUN/'status/USER_AMENDMENT_SCRATCH_DATA.md'
+SCRATCH_DATA_ACK = RUN/'status/scratch_data_migration_ack.json'
+SCRATCH_DATA_READY = RUN/'status/scratch_data_migration_ready.json'
+START_NOW_AMENDMENT = RUN/'status/USER_AMENDMENT_START_BENCHMARK_NOW.md'
+START_NOW_ACK = RUN/'status/start_benchmark_now_ack.json'
+if START_NOW_AMENDMENT.exists() and not START_NOW_ACK.exists():
+    print('URGENT USER PRIORITY: Read '+str(START_NOW_AMENDMENT)+
+          '; submit the full formal benchmark NOW using verified case inputs on a separate exclusive node. '
+          'Do not wait for historical-data migration or whole-project cutover. '
+          'Record acknowledgement and actual job IDs in '+str(START_NOW_ACK)+'.', file=sys.stderr)
+if SCRATCH_DATA_AMENDMENT.exists() and not SCRATCH_DATA_ACK.exists() and not START_NOW_AMENDMENT.exists():
+    print('NEW USER REQUIREMENT: Read '+str(SCRATCH_DATA_AMENDMENT)+
+          '; move ALL this project Burgundy home data to scratch with verified cutover '
+          'before formal timing. Preserve current qualification and scientific data.', file=sys.stderr)
+if FIT_TIMING_AMENDMENT.exists() and not FIT_TIMING_ACK.exists():
+    print('NEW USER REQUIREMENT: Read '+str(FIT_TIMING_AMENDMENT)+
+          '; add comparable fitting-stage timing for BOTH R and prusie before formal submission. '
+          'Keep the existing complete-call metric and all completed work.', file=sys.stderr)
+
+def env():
+    e=dict(os.environ);e.pop('LD_LIBRARY_PATH',None);return e
+
+def ssh(command,check=True,timeout=120):
+    return subprocess.run([*SSH,HOST,command],text=True,capture_output=True,env=env(),check=check,timeout=timeout)
+
+def save(path,value):
+    path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
+    temp=path.with_suffix(path.suffix+'.tmp');temp.write_text(json.dumps(value,indent=2)+'\n');temp.replace(path)
+
+def account(ledger):
+    if ledger['jobs']:
+        result=ssh('sacct -X -nP -j '+','.join(j['job_id'] for j in ledger['jobs'])+' -o JobID,State,ElapsedRaw,AllocNodes,NodeList')
+        rows={r[0]:r for line in result.stdout.splitlines() if (r:=line.split('|')) and len(r)>4}
+        for job in ledger['jobs']:
+            if row:=rows.get(job['job_id']):
+                job.update(state=row[1],elapsed_seconds=int(row[2]),allocated_nodes=int(row[3]),node_list=row[4])
+                job['charged_node_hours']=int(row[2])*int(row[3])/3600
+    ledger['node_hours_used']=sum(j.get('charged_node_hours',0) for j in ledger['jobs'])
+    ledger['updated_epoch']=time.time()
+    return ledger
+
+def submit(args,ledger):
+    prerequisite_only = args.script_arg in (['inspect_node'], ['qualify'])
+    if Path(args.script).name == 'formal_job.sh' and not prerequisite_only and SCRATCH_DATA_AMENDMENT.exists() and not START_NOW_AMENDMENT.exists():
+        ready = json.loads(SCRATCH_DATA_READY.read_text()) if SCRATCH_DATA_READY.exists() else {}
+        if ready.get('state') != 'COMPLETE':
+            raise SystemExit('Formal timing awaits user-requested verified project-data relocation to scratch. Read '+
+                             str(SCRATCH_DATA_AMENDMENT)+'; acknowledge and complete the move, then record '+
+                             str(SCRATCH_DATA_READY)+'. Current qualification/preparation may continue.')
+    if Path(args.script).name == 'formal_job.sh' and not prerequisite_only and FIT_TIMING_AMENDMENT.exists():
+        ack = json.loads(FIT_TIMING_ACK.read_text()) if FIT_TIMING_ACK.exists() else {}
+        if ack.get('state') != 'IMPLEMENTED_AND_VALIDATED':
+            raise SystemExit('Formal timing awaits the additional fitting-stage metric. Read '+
+                             str(FIT_TIMING_AMENDMENT)+' and record actual implementation/validation in '+
+                             str(FIT_TIMING_ACK)+'. Preparation and existing jobs may continue.')
+    account(ledger)
+    active=[j for j in ledger['jobs'] if j.get('state','').split('+')[0].split()[0] not in TERMINAL]
+    assert sum(j['nodes'] for j in active)+args.nodes<=4
+    booked=sum(j['nodes']*j['wall_hours'] for j in active)
+    used=sum(j.get('charged_node_hours',0) for j in ledger['jobs'] if j not in active)
+    assert used+booked+args.nodes*args.hours<=40,(used,booked)
+    assert 0<args.hours<=6
+    deadline=json.loads((RUN/'status/deadline.json').read_text())
+    assert time.time()+args.hours*3600<=deadline['hard_stop_epoch'], 'Allocation would exceed the run hard stop'
+    script=Path(args.script).resolve();assert script.is_relative_to(RUN)
+    remote_script=REMOTE+'/'+str(script.relative_to(RUN))
+    ssh('mkdir -p '+shlex.quote(str(Path(remote_script).parent))+' '+REMOTE+'/logs')
+    subprocess.run(['scp',*SSH[1:],str(script),HOST+':'+remote_script],env=env(),check=True)
+    bios=args.partition.startswith('special_bios')
+    command=['sbatch','--parsable','--partition='+args.partition,'--account='+('pa_bios_department' if bios else 'ga_bios_mingxcai'),
+             '--qos='+('proj_biostat_dept' if bios else 'normal'),'--nodes='+str(args.nodes),'--exclusive','--ntasks-per-node=1',
+             '--cpus-per-task=128','--mem=0','--time='+str(int(args.hours*60)), '--job-name=pb28-'+args.label,
+             '--output='+REMOTE+'/logs/'+args.label+'-%j.log','--chdir='+REMOTE]
+    command.append('--deadline='+time.strftime('%Y-%m-%dT%H:%M:%S',time.localtime(deadline['hard_stop_epoch'])))
+    if args.nodelist:command+=['--nodelist='+args.nodelist]
+    if args.exclude:command+=['--exclude='+args.exclude]
+    if args.dependency:command+=['--dependency='+args.dependency]
+    command.append(remote_script)
+    command.extend(args.script_arg)
+    test=ssh(shlex.join(command[:1]+['--test-only']+command[1:]),check=False)
+    save(RUN/'status'/('slurm_test_'+args.label+'.json'),dict(argv=command,returncode=test.returncode,stdout=test.stdout,stderr=test.stderr))
+    assert test.returncode==0,test.stderr
+    result=ssh(shlex.join(command));job_id=result.stdout.strip().split(';')[0]
+    assert job_id.isdigit(),result.stdout
+    job=dict(job_id=job_id,label=args.label,argv=command,nodes=args.nodes,wall_hours=args.hours,state='SUBMITTED',submitted_epoch=time.time(),script=str(script.relative_to(RUN)),script_sha256=hashlib.sha256(script.read_bytes()).hexdigest())
+    ledger['jobs'].append(job)
+    print(json.dumps(job),flush=True)
+
+def fetch_once():
+    """Fetch and verify raw case payloads; preserve canonical scratch originals."""
+    assert os.environ.get('COLOC_HEAVY_RECORD')
+    target=RUN/'results';target.mkdir(exist_ok=True)
+    result=subprocess.run(['rsync','-a','--exclude=.pending_*','-e',shlex.join(SSH),HOST+':/scratch/wjiang49/prusie_project/bench_20261028/formal_results/',str(target)+'/'],env=env(),text=True,capture_output=True)
+    if result.returncode:
+        print(json.dumps(dict(fetch_returncode=result.returncode,stderr=result.stderr)),flush=True)
+        return
+    ack=[]
+    for file in target.glob('*/*/*/result.json'):
+        folder=file.parent
+        if (folder/'local_archive.json').exists():continue
+        record=json.loads(file.read_text())
+        if record.get('state')!='COMPLETE':continue
+        for name,digest in record['outputs'].items():
+            path=folder/name
+            with path.open('rb') as stream:actual=hashlib.file_digest(stream,'sha256').hexdigest()
+            assert actual==digest,str(path)
+        selected=dict(record['outputs'])
+        receipt=dict(local_directory=str(folder),verified_files=selected,
+                     result_sha256=hashlib.sha256(file.read_bytes()).hexdigest(),verified_epoch=time.time())
+        ack.append(dict(relative=str(folder.relative_to(RUN)),receipt=receipt))
+    for row in ack:save(RUN/row['relative']/'local_archive.json',row['receipt'])
+    if ack:print(json.dumps(dict(verified_local_cases=len(ack),remote_raw_preserved=True)),flush=True)
+
+def transfer_fidelity():
+    assert os.environ.get('COLOC_HEAVY_RECORD')
+    ready=json.loads(ssh('cat '+REMOTE+'/status/fidelity_transport.json').stdout)
+    path=Path(ready['reference_root']);assert str(path).startswith('/tmp/prusie_bench_20261028_fidelity_')
+    argv=['srun','--jobid='+ready['job_id'],'--nodes=1','--ntasks=1','--cpus-per-task=1','--overlap',
+          '--nodelist='+ready['host'],'tar','-xf','-','-C',str(path)]
+    sender=subprocess.Popen(['tar','-C',str(RUN/'inputs/fidelity_references'),'-cf','-','.'],stdout=subprocess.PIPE)
+    receiver=subprocess.run([*SSH,HOST,shlex.join(argv)],stdin=sender.stdout,env=env(),text=True,capture_output=True)
+    sender.stdout.close();rc=sender.wait()
+    assert rc==receiver.returncode==0,(rc,receiver.returncode,receiver.stderr)
+    ssh('touch '+REMOTE+'/status/fidelity_transfer_'+ready['job_id']+'.done')
+    save(RUN/'status/fidelity_transport.json',dict(ready,transferred_epoch=time.time(),transfer='tar stream to allocated node-local scratch via srun'))
+    print('Fidelity matrices streamed to '+ready['host'],flush=True)
+
+def freeze_protocol():
+    """Freeze after qualification and the current user storage authorization."""
+    if START_NOW_AMENDMENT.exists():
+        storage_receipt=START_NOW_AMENDMENT
+        ready=dict(state='CONCURRENT_MIGRATION_AUTHORIZED',
+                   amendment=str(START_NOW_AMENDMENT.relative_to(RUN)),
+                   whole_project_cutover_required_before_timing=False,
+                   case_inputs='Verified inputs staged untimed on node-local storage',
+                   migration_completion='Pending independent verification; not claimed complete',
+                   input_policy='Verified original home dependencies read-only until staged to node-local storage; no cutover during use',
+                   results='/scratch/wjiang49/prusie_project/bench_20261028/formal_results',
+                   claims='/scratch/wjiang49/prusie_project/bench_20261028/formal_claims',
+                   temporary='/scratch/wjiang49/prusie_project/bench_20261028/formal_tmp')
+    else:
+        storage_receipt=SCRATCH_DATA_READY
+        ready=json.loads(storage_receipt.read_text())
+        assert ready['state']=='COMPLETE'
+    summary=RUN/'instrumentation/qualification/700081/summary.json'
+    qualification=json.loads(summary.read_text())
+    assert qualification['state']=='PASS' and len(qualification['cases'])==8
+    native_audit=RUN/'reports/fit_timing/native/qualification_audit.json'
+    R_audit=RUN/'reports/fit_timing/R/qualification_audit.json'
+    assert json.loads(native_audit.read_text())['state'].startswith('PASS')
+    assert json.loads(R_audit.read_text())['state']=='PASS'
+    digest=lambda p:hashlib.sha256(Path(p).read_bytes()).hexdigest()
+    protocol=json.loads((RUN/'protocol.draft.json').read_text())
+    protocol.update(state='FROZEN_BEFORE_FIRST_FORMAL_CALL',frozen_epoch=time.time())
+    protocol['scripts']={name:digest(RUN/'scripts'/name) for name in protocol['scripts']}
+    protocol['runtime_assets']={name:digest(RUN/name) for name in protocol['runtime_assets']}
+    protocol['storage']=dict(ready,canonical_data_root='/scratch/wjiang49/prusie_project',
+        logical_home_compatibility_root='/home/wjiang49/prusie_project',
+        storage_authorization=str(storage_receipt.relative_to(RUN)),
+        storage_authorization_sha256=digest(storage_receipt),future_raw_policy='Retain canonical scratch raw outputs; verify local copies without deleting remote originals')
+    protocol['qualification']['R_independent_audit_sha256']=digest(R_audit)
+    protocol['qualification']['native_and_combined_audit_sha256']=digest(native_audit)
+    protocol['qualification']['remote_assets_receipt_sha256']=digest(RUN/'reports/protocol/qualification_remote_assets.json')
+    protocol['run_config_sha256']=digest(RUN/'run_config.json')
+    target=RUN/'protocol.json'
+    assert not target.exists(), 'Protocol already frozen; do not overwrite'
+    save(target,protocol)
+    save(FIT_TIMING_ACK,dict(state='IMPLEMENTED_AND_VALIDATED',epoch=time.time(),
+        protocol='protocol.json',protocol_sha256=digest(target),qualification=str(summary.relative_to(RUN)),
+        qualification_sha256=digest(summary),native_audit=str(native_audit.relative_to(RUN)),R_audit=str(R_audit.relative_to(RUN)),
+        boundaries=protocol['timing'],storage_authorization=str(storage_receipt.relative_to(RUN))))
+    print(json.dumps(dict(protocol_sha256=digest(target),state=protocol['state'])),flush=True)
+
+def main():
+    p=argparse.ArgumentParser();sub=p.add_subparsers(dest='action',required=True)
+    sub.add_parser('account')
+    s=sub.add_parser('fetch');s.add_argument('--loop',action='store_true')
+    sub.add_parser('transfer-fidelity')
+    sub.add_parser('freeze')
+    s=sub.add_parser('submit');s.add_argument('--script',required=True);s.add_argument('--label',required=True)
+    s.add_argument('--partition',default='special_bios_cpu');s.add_argument('--nodes',type=int,default=1);s.add_argument('--hours',type=float,required=True);s.add_argument('--nodelist');s.add_argument('--exclude');s.add_argument('--dependency');s.add_argument('--script-arg',action='append',default=[])
+    a=p.parse_args()
+    if a.action=='freeze':freeze_protocol();return
+    if a.action=='transfer-fidelity':transfer_fidelity();return
+    if a.action=='fetch':
+        while True:
+            fetch_once()
+            deadline=json.loads((RUN/'status/deadline.json').read_text())['hard_stop_epoch']
+            if not a.loop or (RUN/'status/STOP_FETCH').exists() or time.time()>=deadline:return
+            time.sleep(30)
+    with (RUN/'status/submission.lock').open('a') as f:
+        fcntl.flock(f,fcntl.LOCK_EX)
+        path=RUN/'reports/ledger.json';ledger=json.loads(path.read_text())
+        if a.action=='submit': submit(a,ledger)
+        else: print(json.dumps(account(ledger)),flush=True)
+        save(path,ledger)
+
+if __name__=='__main__':main()

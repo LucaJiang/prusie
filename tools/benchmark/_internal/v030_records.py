@@ -693,7 +693,6 @@ def write_records(output, records):
     ]
     for name, selected in (
         ("primary", primary),
-        ("threads", [r for r in records if r["kind"].startswith("threads")]),
         ("overwrite", [r for r in records if r["kind"] == "overwrite"]),
         ("windows", [r for r in records if r["kind"].startswith("window")]),
     ):
@@ -794,4 +793,99 @@ def load_public(output):
     output = Path(output)
     with gzip.open(output / "v030_records.jsonl.gz", "rt") as stream:
         records = [json.loads(line) for line in stream]
-    return read(output / "v030_summary.json"), read(output / "v030_m1.json"), records
+    summary = read(output / "v030_summary.json")
+    burgundy = read(output / "burgundy_summary.json")
+    protocol = read(output / "burgundy_protocol.json")
+    assert digest(output / "burgundy_records.jsonl.gz") == burgundy["records_sha256"]
+    with gzip.open(output / "burgundy_records.jsonl.gz", "rt") as stream:
+        current = [json.loads(line) for line in stream]
+    assert len(current) == 14363
+    lookup = {(r["panel"], r["case_id"], r["kind"]): r for r in records}
+    for row in current:
+        panel = "GWAS" if row["panel"] == "windows" else row["panel"]
+        prior = lookup[(panel, row["case_id"], row["kind"])]
+        prior.update(
+            alpha_pass=row["alpha_pass"],
+            max_abs_alpha_error=row["max_abs_alpha_error"],
+            max_abs_pip_error=row["max_abs_pip_error"],
+            task_state="COMPLETE",
+            result_sha256=row["result_sha256"],
+            timing_pair=True,
+            measurement_protocol_version=row["measurement_protocol_version"],
+            retained_selection=row["retained_selection"],
+            numerical_final_saved_repeat=row["numerical_final_saved_repeat"],
+        )
+        for public, backend in (("prusie", "prusie"), ("susieR", "R")):
+            value, fresh = prior[public], row[backend]
+            stats = distribution(fresh["times"])
+            value.update(
+                retained_seconds=fresh["times"],
+                runtime=stats,
+                fitting_runtime=distribution(fresh["fitting_times"]),
+                fitting_seconds=fresh["fitting_times"],
+                time_complete=True,
+                repeat_iqr_over_median=(stats["q3"] - stats["q1"]) / stats["median"],
+                niter=fresh["niter"][1:],
+                converged=fresh["converged"][1:],
+                cs_count=fresh["cs_count"][1:],
+            )
+        prior["speedup"] = (
+            prior["susieR"]["runtime"]["median"] / prior["prusie"]["runtime"]["median"]
+        )
+        prior["fitting_speedup"] = (
+            prior["susieR"]["fitting_runtime"]["median"]
+            / prior["prusie"]["fitting_runtime"]["median"]
+        )
+    for panel, group in summary["groups"].items():
+        measured = burgundy["panels"][panel]
+        selected = [r for r in current if r["panel"] == panel]
+        group.update(
+            timing_pairs=len(selected),
+            total_time_speedup=measured["headline_R_over_prusie"],
+            sum_case_medians_speedup=measured["sum_of_medians_R_over_prusie"],
+            geometric_mean_speedup=measured["geometric_mean_case_median_ratio"],
+            **{
+                k: measured[k]
+                for k in ("wins", "ties", "regressions", "max_abs_alpha_error", "max_abs_pip_error")
+            },
+            alpha_passes=sum(r["alpha_pass"] for r in selected),
+            alpha_failures=[r["case_id"] for r in selected if not r["alpha_pass"]],
+            alpha_unavailable=[],
+            operational_failures=[],
+            fitting=measured["fitting"],
+        )
+        for public, backend in (("prusie", "prusie"), ("susieR", "R")):
+            group["backends"][public].update(
+                runtime_seconds=measured["backends"][backend]["case_median_seconds"],
+                repeat_iqr_over_median=measured["backends"][backend]["repeat_iqr_over_median"],
+                iteration_limit_cases=[
+                    r["case_id"]
+                    for r in selected
+                    if any(
+                        n == 100 and not c
+                        for n, c in zip(r[backend]["niter"], r[backend]["converged"], strict=True)
+                    )
+                ],
+            )
+    summary["alpha_failures"] = [
+        dict(
+            case_id=r["case_id"],
+            series=r["kind"],
+            error=r["max_abs_alpha_error"],
+            prusie_fit_outcomes=[
+                dict(niter=n, converged=c)
+                for n, c in zip(r["prusie"]["niter"], r["prusie"]["converged"], strict=True)
+            ],
+            R_fit_outcomes=[
+                dict(niter=n, converged=c)
+                for n, c in zip(r["R"]["niter"], r["R"]["converged"], strict=True)
+            ],
+            both_backends_nonconverged_at_iteration_limit=r["both_nonconverged_at_limit"],
+            disposition=r["numerical_disposition"],
+        )
+        for r in current
+        if not r["alpha_pass"]
+    ]
+    summary["burgundy"] = burgundy
+    summary["burgundy_protocol"] = protocol
+    return summary, read(output / "v030_m1.json"), records

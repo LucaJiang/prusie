@@ -1,0 +1,181 @@
+{
+  "state": "FROZEN_BEFORE_FIRST_FORMAL_CALL",
+  "run": "20261028_prusie_burgundy_bench",
+  "original_code_under_test": {
+    "version": "0.3.0",
+    "code_sha": "6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7",
+    "wheel": "runs/20261026_prusie_v030/artifacts/v030r12/prusie-0.3.0-cp312-cp312-manylinux_2_34_x86_64.whl",
+    "wheel_sha256": "85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59",
+    "native_sha256": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e"
+  },
+  "R_reference": {
+    "R": "4.4.0",
+    "susieR": "0.16.6 commit 8e56a8e038e989856d106d9ca5175cc664fea9d2",
+    "local_identity_source": "runs/20261026_prusie_v030/inputs/m2_manifest.json (R_paths, R_expected, blas_probe)",
+    "blas_threads": 1
+  },
+  "panel": {
+    "manifest": "runs/20261026_prusie_v030/inputs/m2_manifest.json",
+    "GWAS": 200,
+    "eQTL": 14157,
+    "windows": "the six nested windows of T2D_chr10_61277948_71054950 used by v030 M2 (500, 1000, 2000, 4000, 10000, 19221)",
+    "subsampling": false
+  },
+  "manifest_sha256": "5bf51037720b5b5021c2d4951ec0c7288845efc160ed42506071702cd08d8833",
+  "timing": {
+    "warmup_calls": 1,
+    "retained_calls": 7,
+    "fresh_process": "Each case/backend",
+    "complete_call": "Complete public susie_rss call with unchanged v030 M2 settings, including all validation/preparation, solver, result construction; inputs loaded before clock; gc and output recording outside clock",
+    "fitting": "Direct same-call spans, including solver initialization, IBSS/SER, ELBO/convergence, posterior and credible-set result construction; full input/LD preparation and repair excluded",
+    "order": "Seed20261028, fixed balanced per panel in campaign_plan.json; sequential backends on one lane",
+    "clocks": "Python perf_counter_ns and Rust Instant; R CLOCK_MONOTONIC shared probe; wall clock start/end also recorded",
+    "complete_metric_tradeoff": "Both complete and fitting times are measured on timing-instrumented copies; native binary differs from frozen release wheel. Scientific code/settings unchanged; qualification checks observed invariance and describes overhead without a new threshold.",
+    "R_boundary": "R/susie.R immediately before top-level susie_workhorse call through immediately before final public return",
+    "native_boundary": "Four explicit native initialization/solver spans, native output export, then Python finalization until public return; exact patch and boundary documentation retained",
+    "boundary_details": [
+      "reports/fit_timing/native/README.md",
+      "reports/fit_timing/R/README.md"
+    ],
+    "boundary_limits": "Implicit native Gram scaling inside solver matvec remains fit work; R scaled Gram construction occurs in preparation. Minor scalar initialization checks and final-CS submatrix normalization remain included as documented. Tiny native span transitions are omitted. No separately measured cost subtraction."
+  },
+  "environment": {
+    "cpu_model": "AMD EPYC 7742 64-Core Processor",
+    "node_selection": "Available authorized cpunode hosts; CPU/AVX2 and topology verified on each allocation before timing; actual node list in per-node topology records and ledger",
+    "exclusive": true,
+    "max_concurrent_nodes": 4,
+    "max_node_hours": 40,
+    "max_walltime_hours": 6,
+    "lanes": "One physical core per L3 domain; last L3 domain reserved for node coordinator. Other physical cores and SMT siblings in each timing domain idle.",
+    "numa": "numactl --membind and --physcpubind; localalloc fallback only if actual membind probe fails, recorded per lane",
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "BLIS_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "RAYON_NUM_THREADS": "1",
+      "PRUSIE_NUM_THREADS": "1"
+    },
+    "native_n_threads": 1,
+    "R_blas_probe_threads": 1,
+    "diagnostics": "Per-node Slurm/topology/numactl metadata, governor/frequency/load/memory every15seconds; per-call timestamps and per-process VmHWM diagnostic only",
+    "memory": "Reservation max(2GiB,1.5*v030 measured peak,4*LD bytes); sum<=90% node MemTotal; large LD>1GiB at most4concurrent/socket. Estimates, not hard memory guarantees."
+  },
+  "queue_policy": "shared_predeclared_priority_atomic_case_claims",
+  "queue_details": "Flatten predeclared plan shards and sort descending local planning seconds then case key; atomic complete-file hardlink claims prevent duplicate admission across nodes. Completed records bind current protocol; stale/failed claims require explicit operational disposition. Node queue drained does not imply full panel complete.",
+  "walltime_admission": "Only admit when remaining allocation seconds>=max(180,3*old complete-case estimate+120). Deferred unclaimed cases remain in global queue for another allocation; this does not truncate the run.",
+  "ld_policy": {
+    "source": "1000G-derived strict QC genotype reference strict_snp_maf05_v1 already on burgundy under /home/wjiang49/prusie_project/data/prusie_realdata_r13_v11/reference/strict_snp_maf05_v1 (SHA256-verified transfer 20261023); transfer only missing or mismatched genotype files",
+    "reconstruction": "per case on the compute node before timing with PLINK (user amendment 20261028; the original Python construction code is no longer required), using the frozen variant list, order and allele alignment, node-local storage, deleted after the case",
+    "bitwise_identity_with_local_ld_required": false,
+    "fidelity_sample_cases": 24,
+    "fidelity_gross_mismatch_max_abs": 1e-06,
+    "tool": "PLINK 1.9 or PLINK 2, signed r (not r^2), full square matrix, double-precision binary output, one thread",
+    "fidelity_sign_check": "no sign disagreement where |r_local| > 0.01",
+    "amendment": "status/USER_AMENDMENT_PLINK_LD.md"
+  },
+  "fidelity": {
+    "state": "PASS",
+    "sample_cases": 24,
+    "max_abs_error": 2.1538326677728037e-14,
+    "sign_disagreements": 0,
+    "asymmetry_change": "22of24 originals have tiny nonzero asymmetry; all24PLINK outputs exactly symmetric. This may alter native validation allocation; host-interference attribution is confounded by LD arithmetic."
+  },
+  "staging": "All required archives and authenticated genotype triplets copied to node-local storage before lane timing starts. Each case PLINK LD built before fits and removed after both backends; archive/serialization outside timed calls.",
+  "failures": "Only operational node/OOM/preemption failures may rerun whole case with identical settings after explicit ledger entry; never timing/numerical outcome reruns; preserve failed attempts; every fixed case stays in denominator.",
+  "numerical_acceptance": {
+    "policy": "runs/20261020_prusie_susier_alignment/status/acceptance_policy.json",
+    "quantity": "final alpha[l,j] in original component and SNP order, native versus R on the same burgundy inputs",
+    "atol": 1e-05,
+    "rtol": 0,
+    "user_exception": "runs/20261026_prusie_v030/status/USER_DISPOSITION_C3_L17_M2_NONCONVERGED.md: exceedances where BOTH backends stop at max_iter without convergence are accepted and listed individually; any exceedance where either backend converged must be reported"
+  },
+  "published_memory": "Unchanged v030 local AMD EPYC9754 fresh-process RSS; current HWM diagnostic only",
+  "dropped_experiments": [
+    "M2 thread series (controlled thread results come from v030 M1 C4 on burgundy)",
+    "M2 overwrite_ld series and separate fresh-process memory runs (CPU contention does not affect RSS; v030 local M2 memory is reused and labeled)",
+    "fresh-R versus frozen decimal-JSON bitwise integrity check (uninformative)",
+    "AA/null controls for this descriptive R comparison",
+    "new Claude review (no source change)"
+  ],
+  "scripts": {
+    "campaign.py": "2db628f7aa39522d9a322d897f690cd341e2b15ad338b2be3de0da7585ee9a92",
+    "m2_native.py": "a5bf85050cc4bc3de2a3b61bd43a45301ba0cb9f885bb127b9093f78d0c3ce7e",
+    "m2_reference.R": "64f25b91ca847444346bfe01ac709550c00e4416f54ed8524dfb8b3954e90393",
+    "reconstruct_ld.py": "59caf67ec939344ac746e808da96c39fe80d6ae916dc02da665e23012cce3c6e",
+    "formal_job.sh": "aa1b19f19a440ae6ee51164079b7e143d7498905a0869ecfe36607099ab4ca63"
+  },
+  "runtime_assets": {
+    "instrumentation/native/stage_timer.py": "d904907dedf5a8afae76a1dc6d606e14e133f47266977e09449306946f45011b",
+    "instrumentation/native/timing_only.patch": "f558de65c0eb3a6d7047f30a2c0f9a84e944616a42e921a51a2d5387df8ec8c2",
+    "instrumentation/native/build.json": "dda68de6942631a2a0ad6833bb6713656667bf03ef5df0b72d8e42318ff0791d",
+    "instrumentation/native/source_provenance.json": "2c1bcebcaacba695fa7c5cee3197e6ffa66e023746a4236d8d3e0efbb9479a03",
+    "instrumentation/R/fit_timer.R": "7e688f6cb146befe3f37ce2bd95a966c2f811e11180cdadd25515420a9158e6a",
+    "instrumentation/R/source_manifest.json": "4f9a0e5d899c8013b0d48c28ddfb5427da439eb7b9018763cb822793906beeda",
+    "instrumentation/R/instrumentation_manifest.json": "ab3b4df9d5f9fbe2f24a3d617a5b07b85fd81a9b49c29bb1c75512a82b4d479f",
+    "runtime/environment.json": "56f802dfcd451cfd2342f4416f5db8afd8b4118efe85b555cc62448b714184d5",
+    "inputs/campaign_manifest.json": "5bf51037720b5b5021c2d4951ec0c7288845efc160ed42506071702cd08d8833",
+    "inputs/reference_verification.json": "5a7d717e01af33bd599e8123202bb5bc8d3afda21665d5ac81dace4a6157acb2",
+    "inputs/fidelity_results.json": "0504b6eec61fe08645d1c83a99325177928feb573a40eae719e22bd7c6a24c20",
+    "campaign_plan.json": "b00a3fba3daeeea4a89db9730151c0cdce7a78c2575d463d85c35f265892314c",
+    "instrumentation/R/pinned/DESCRIPTION.txt": "9fbe78846852ce7492fc73caf089b37d23e087f10d7bc007c756ccde59abb7e7",
+    "instrumentation/R/pinned/LICENSE.txt": "07cd2b1e331b328a0da14ec16bc3931f82721ee764672b39ba487808a41d3fd9",
+    "instrumentation/R/pinned/iterative_bayesian_stepwise_selection.R.txt": "b5cfea0703b88d0b555e9a2b92c64b13a1b978a6bb36adc77b22284c2c03df9f",
+    "instrumentation/R/pinned/model_methods.R.txt": "96ce911755a5ae00c3f66848ce41da59d27a26ea2fee8c21e55000179c7c03f5",
+    "instrumentation/R/pinned/sufficient_stats_methods.R.txt": "b10c6c3a2ebbf249aaf02579f3cb7fd68586b22b3b1662fcba514daef628ef73",
+    "instrumentation/R/pinned/susie.R.txt": "13a8a1144ad14025350e5c9a0fa28136b0171bd4e542d35e217b973de2c9b975",
+    "instrumentation/R/pinned/susie_constructors.R.txt": "1dc44c68632e82485c8f19fbcdbf2775e601efe4c5b6cbdc49aa3b9dc1151361",
+    "instrumentation/R/pinned/susie_get_functions.R.txt": "cac45881f0fd8044e1a568469a243f2245d0637d90dc8be57510157134c3728e",
+    "instrumentation/R/pinned/susie_utils.R.txt": "e10d53e5ac5c4d1f9a10ac8540b13e7f1e59e9a7cbaa863f1a66622c3d41eb52",
+    "instrumentation/R/pinned/susie_workhorse.R.txt": "c75de9bcc93811a631c434f28ce7038f5c2513d28b9ed2d51264559ed13cbef3",
+    "runtime/instrumented_environment.json": "c39ac4927b6d2281263cced1eabde5eb27eb7431192fef7250bae5118799dedb"
+  },
+  "diffs": {
+    "reports/protocol/m2_native.py.diff": "cb9198c0d543d2119c17ecc1e5a8080886ebe26d2574cdfc7ea2df1488c1d2cc",
+    "reports/protocol/m2_reference.R.diff": "5f0615f940b6d63f5b895ed12fc8d23f9a23f737d67e494a26c3466dbc216bf7"
+  },
+  "qualification": {
+    "state": "PASS",
+    "job_id": "700081",
+    "case_count": 8,
+    "summary": "instrumentation/qualification/700081/summary.json",
+    "summary_sha256": "cdbd75ea28cd0d7dc77594009f4b0fab4be2e5469a8387be64427cdd8d7d9741",
+    "native_and_combined_audit": "reports/fit_timing/native/qualification_audit.json",
+    "native_and_combined_audit_sha256": "7741d6e1e5a83a166caeaad13e026da2566d88470eb46f1118797137ad62a564",
+    "R_independent_audit": "reports/fit_timing/R/qualification_audit.json",
+    "R_independent_audit_sha256": "c883602e3f4082b24896a5a740f00b214fd5912cfe6e24f5b580ce04ce8a4ea2",
+    "posterior_scope": "Final alpha/PIP pairs bitwise invariant for8cases; all8nativealpha hashes/case invariant; all256call outcomes recorded; no claim of per-call Ralpha or fullCSmember equality",
+    "observed_median_time_ratio_instrumented_over_original": {
+      "prusie_range": [
+        0.8046879,
+        1.026195
+      ],
+      "R_range": [
+        0.956797,
+        1.063883
+      ]
+    },
+    "interpretation": "Descriptive original-versus-instrumented shifts, not isolated timestamp cost; co-running phase/order and binary layout can affect the changes. No negligible-overhead claim and no invented threshold.",
+    "remote_assets_receipt_sha256": "55a7663c80a6fb0ca144d9e73824965343bd3f27b2198883957663d4b250c8f4"
+  },
+  "storage": {
+    "state": "CONCURRENT_MIGRATION_AUTHORIZED",
+    "amendment": "status/USER_AMENDMENT_START_BENCHMARK_NOW.md",
+    "whole_project_cutover_required_before_timing": false,
+    "case_inputs": "Verified inputs staged untimed on node-local storage",
+    "migration_completion": "Pending independent verification; not claimed complete",
+    "input_policy": "Verified original home dependencies read-only until staged to node-local storage; no cutover during use",
+    "results": "/scratch/wjiang49/prusie_project/bench_20261028/formal_results",
+    "claims": "/scratch/wjiang49/prusie_project/bench_20261028/formal_claims",
+    "temporary": "/scratch/wjiang49/prusie_project/bench_20261028/formal_tmp",
+    "canonical_data_root": "/scratch/wjiang49/prusie_project",
+    "logical_home_compatibility_root": "/home/wjiang49/prusie_project",
+    "storage_authorization": "status/USER_AMENDMENT_START_BENCHMARK_NOW.md",
+    "storage_authorization_sha256": "1d59dfda71d3bbfd3c7641daffe482a15ae07318e27e39b187a1f403d33cd6a4",
+    "future_raw_policy": "Retain canonical scratch raw outputs; verify local copies without deleting remote originals"
+  },
+  "frozen_epoch": 1793173502.0683148,
+  "run_config_sha256": "ffc5ae5088c71966cd89b1dfca75c208f623d45d6a4d19ad182f84b02e6f48a7"
+}
