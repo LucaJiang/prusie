@@ -582,16 +582,83 @@ it materializes that matrix once. If the ordinary factored product has a
 nonfinite intermediate or result, it is retried with a temporary materialized
 matrix.
 
+### Validation passes
+
+Each full traversal of `R` reads $8p^2$ bytes, about as much as one dense
+product. The general validator checks finiteness, nonnegative diagonal entries
+and exact symmetry in one traversal, comparing transposed pairs in tiles
+without a $p\times p$ temporary. For known-$n$ RSS it compares the scaled
+entries $(n-1)R_{ij}$ and $(n-1)R_{ji}$.
+
+| Step | Applies when | Effect |
+| --- | --- | --- |
+| Sufficient symmetry check | x86-64; ordinary RSS; contiguous `R` with diagonal within $10^{-8}$ of one, entries of magnitude at most $1+10^{-8}$, exact symmetry and a non-overflowing multiplier | Vectorized pair comparison; success skips the general traversal. Failure is not a rejection |
+| Fused validation and repair | `overwrite_ld=False`; known `n`, `var_y=None`; plain, aligned, C-contiguous float64 NumPy `R` | One traversal checks raw and scaled entries while filling a private repair buffer, kept only for asymmetric input |
+| Separate traversals | Other inputs | Validation, then repair when required |
+
+LD written by external tools often has rounding-level asymmetries, around
+$10^{-15}$, that trigger repair and its buffer. `overwrite_ld=True` can then
+repair in place instead.
+
+### Dense products
+
 The column-major product kernel skips zero coefficients and adds columns in
 ascending order, grouping four nonzero columns per output update. On x86-64,
 runtime CPU detection selects AVX2 when available, with a portable fallback.
+Both builds perform the same sequence of separate float64 multiplications and
+additions.
 [Exact signed-column classes](optimization.md#exact-signed-column-classes) can
 combine coefficients after proving column relations, keeping separate posterior
 coordinates for every variant. [Native threading](#native-threading) describes
 parallel product dispatch and sequential component updates.
 
+### Single-effect regression kernels
+
+During a prior-variance search, each objective evaluation fills the log
+weights $\log\mathrm{BF}_j(V)+\log w_j$, exponentiates them after subtracting
+the maximum and sums them.
+
+| Step | Applies when | Otherwise |
+| --- | --- | --- |
+| Shared group terms | At most 16 distinct floored sampling variances | Per-variant formula |
+| AVX2 log-weight fill, four variants at a time | Vector exponentials available, AVX2, equal prior weights, at most four groups | Scalar fill from the same group terms |
+| Vector exponentials (glibc `libmvec`) | GNU/Linux x86-64, default rounding and subnormal modes, no `portable-math` | Scalar `exp` |
+| Balanced pairwise-tree sum of the weights | Always, in the search objective | — |
+
+The tree sum passes each term through at most $\lceil\log_2 p\rceil$ additions
+and reuses the evaluation's scratch storage. Posterior normalization and signed
+sums such as the ER2 dot products keep compensated summation.
+
+### Credible-set purity
+
+`_native.cs_pairwise_abs` reads pair entries of a supplied matrix directly. With
+`min_abs_corr` set and `median_abs_corr=None`, it returns at the first pair below
+the threshold, before allocating the $m(m-1)/2$ pair values of an $m$-member set;
+the set is recorded with `purity_evaluation="threshold_short_circuit"`. Retained
+sets receive complete minimum, mean and median purity.
+
 Runtime and memory depend on the input, matrix structure, preparation, iterations
 and threads. Reducing temporary storage or adding threads need not reduce runtime.
+
+## Individual-level designs and imports
+
+`susie` never forms $\mathbf X^\top\mathbf X$. Each product is applied as
+$\mathbf X^\top(\mathbf X\mathbf v)$ by the `Design` operator, with centering and
+standardization folded in through column means and scales.
+
+| Design | Work per product | Workspace |
+| --- | --- | --- |
+| Dense `X` | $O(np)$ | $O(n+p)$ |
+| Sparse CSC `X` | $O(\mathrm{nnz}+n+p)$ | $O(n+p)$ |
+| `susie_trendfilter`, order $k$ | $O((k+1)n)$ by repeated cumulative sums | $O(n)$ |
+
+A positive `null_weight` adds a virtual zero column. These products are serial;
+`n_threads` does not apply to them.
+
+`import prusie` loads only the fitting interface. The `analysis`, `comparison`,
+`ld`, `plots`, `report` and `viz` modules, and the names they export, load on
+first attribute access through the package `__getattr__`, so a fitting process
+does not import SciPy or Matplotlib.
 
 ## Reference source mapping
 

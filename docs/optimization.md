@@ -439,11 +439,12 @@ candidate-by-all-variant correlation blocks. Purity from a design matrix
 forms the requested blocks as described under
 [Individual-level designs](#individual-level-designs).
 
-In the [real-data overwrite series](performance.md#ld-overwrite), enabling
-`overwrite_ld` on 200 GWAS cases produced a material fresh-process peak-RSS
-reduction in 173 cases and no material saving in 27. The median within-case
-False/True peak ratio was 1.72. This is a measured process peak, including
-inputs and interpreter, rather than the matrix-size arithmetic above. The
+`overwrite_ld=True` saves memory only when the input needs symmetry repair or
+a layout conversion. In the [LD overwrite comparison](performance.md#ld-overwrite)
+the 200 GWAS LD matrices were exactly symmetric, so the default path needed no
+repair buffer and peak memory was unchanged in 198 of 200 loci. LD computed by
+other tools can carry rounding-level asymmetries, of order $10^{-15}$, which
+trigger repair; overwriting then avoids the private repair buffer. The
 [LD workspace contract](api.md#optional-ld-workspace) describes ownership
 requirements and when the caller must reload its array.
 

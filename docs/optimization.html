@@ -452,11 +452,12 @@ using <span class="arithmatex"><span class="katex"><span class="katex-mathml"><m
 candidate-by-all-variant correlation blocks. Purity from a design matrix
 forms the requested blocks as described under
 <a href="#individual-level-designs">Individual-level designs</a>.</p>
-<p>In the <a href="performance.html#ld-overwrite">real-data overwrite series</a>, enabling
-<code>overwrite_ld</code> on 200 GWAS cases produced a material fresh-process peak-RSS
-reduction in 173 cases and no material saving in 27. The median within-case
-False/True peak ratio was 1.72. This is a measured process peak, including
-inputs and interpreter, rather than the matrix-size arithmetic above. The
+<p><code>overwrite_ld=True</code> saves memory only when the input needs symmetry repair or
+a layout conversion. In the <a href="performance.html#ld-overwrite">LD overwrite comparison</a>
+the 200 GWAS LD matrices were exactly symmetric, so the default path needed no
+repair buffer and peak memory was unchanged in 198 of 200 loci. LD computed by
+other tools can carry rounding-level asymmetries, of order <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>15</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-15}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">15</span></span></span></span></span></span></span></span></span></span></span></span></span>, which
+trigger repair; overwriting then avoids the private repair buffer. The
 <a href="api.html#optional-ld-workspace">LD workspace contract</a> describes ownership
 requirements and when the caller must reload its array.</p>
 <h2 id="threads">Threads</h2>
