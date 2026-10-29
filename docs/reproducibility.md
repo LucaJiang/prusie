@@ -109,8 +109,8 @@ Every fixed case remains in the summaries. Peak memory comes from the
 high-water marks of these same backend processes.
 
 One retained susieR call for the 10,000-variant nested window took 1,576 s,
-while its fitting stage took 70 s. The published susieR values for that window
-come from a dedicated replay on the same node and core: two fresh R processes
+while its fitting stage took 70 s. The published susieR runtime and peak-memory
+values for that window come from a dedicated replay on the same node and core: two fresh R processes
 with one warm-up and three, then seven, retained calls; all ten agreed within
 0.6%. [window10000_retime.json](assets/benchmark/window10000_retime.json)
 records the replay.

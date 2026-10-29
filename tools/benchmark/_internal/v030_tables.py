@@ -51,6 +51,7 @@ def records_of(assets):
                 row["R"],
                 times=retime["retained_complete_seconds"],
                 fitting_times=retime["retained_fitting_seconds"],
+                peak_rss_diagnostic_bytes=retime["peak_rss_bytes"],
             )
     return summary, records
 

@@ -233,7 +233,7 @@ paths, not independent loci or a complexity law.
 | 4,000 | prusie | 0.169 | 0.127 | 11 | 251 |
 | 4,000 | susieR | 10.2 | 9.94 | 11 | 1.33e+03 |
 | 10,000 | prusie | 1.02 | 0.795 | 17 | 915 |
-| 10,000 | susieR | 59.3 | 58 | 17 | 4.67e+03 |
+| 10,000 | susieR | 59.3 | 58 | 17 | 5.43e+03 |
 | 19,221 | prusie | 5.84 | 4.92 | 28 | 3.09e+03 |
 | 19,221 | susieR | 415 | 408 | 28 | 1.94e+04 |
 <!-- current:scaling:end -->
@@ -241,9 +241,9 @@ paths, not independent loci or a complexity law.
 ![Complete-call and fitting-stage medians, peak memory and IBSS iterations for six nested windows.](assets/benchmark/v030_controlled_scaling.svg)
 
 Iteration counts change with window size, so runtime need not grow
-monotonically with the number of variants. The susieR values at 10,000 variants
-come from a dedicated replay on the same node and core, because one of the
-original retained calls stalled outside the solver; see
+monotonically with the number of variants. The susieR runtime and peak-memory
+values at 10,000 variants come from a dedicated replay on the same node and
+core, because one of the original retained calls stalled outside the solver; see
 [window10000_retime.json](assets/benchmark/window10000_retime.json).
 
 ## Reproducibility

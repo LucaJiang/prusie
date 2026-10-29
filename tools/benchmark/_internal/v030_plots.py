@@ -404,7 +404,14 @@ def controlled_scaling(records, replay, output):
         ax.set_title(title)
     memory = axes[1, 0]
     for backend in ("susieR", "prusie"):
-        peaks = np.array([windows[s][KEYS[backend]]["peak_rss_diagnostic_bytes"] for s in WINDOWS])
+        peaks = np.array(
+            [
+                replay["peak_rss_bytes"]
+                if backend == "susieR" and s == 10000
+                else windows[s][KEYS[backend]]["peak_rss_diagnostic_bytes"]
+                for s in WINDOWS
+            ]
+        )
         median_line(memory, p, peaks / GIB, backend)
     memory.plot(p, 8 * p**2 / GIB, color=INK2, lw=0.9, ls=(0, (4, 2)), zorder=3)
     memory.set_yscale("log")
