@@ -42,7 +42,7 @@ def load_example() -> dict[str, Any]:
     (500, 500)
     """
     directory = files("prusie").joinpath("data/toy")
-    hashes = json.loads(directory.joinpath("checksums.json").read_text(encoding="utf-8"))
+    hashes = json.loads(directory.joinpath("checksums.json").read_text())
     blobs = {
         name: directory.joinpath(name).read_bytes() for name in ("inputs.npz", "metadata.json")
     }
@@ -85,7 +85,7 @@ def load_convergence_example() -> dict[str, Any]:
     objective and stopping rules. Floating-point posteriors need not be identical.
     """
     directory = files("prusie").joinpath("data/convergence")
-    manifest = json.loads(directory.joinpath("checksums.json").read_text(encoding="utf-8"))
+    manifest = json.loads(directory.joinpath("checksums.json").read_text())
     blobs = {name: directory.joinpath(name).read_bytes() for name in manifest}
     for name, blob in blobs.items():
         if hashlib.sha256(blob).hexdigest() != manifest[name]:
