@@ -1,6 +1,7 @@
 """Single-effect and utility comparisons against pinned susieR outputs."""
 
 import json
+import math
 import warnings
 from pathlib import Path
 
@@ -52,6 +53,16 @@ def test_frozen_R_utilities(name):
             np.testing.assert_allclose(
                 observed[key], case["reference"][key], atol=1e-10, rtol=1e-12
             )
+    elif name == "univar_order":
+        # Platform BLAS can round identical columns differently, so compare the
+        # orders up to exact ties of a correctly rounded coefficient.
+        X, y = np.asarray(inputs["X"], float), np.asarray(inputs["y"], float)
+        key = np.array(
+            [abs(math.fsum(X[:, j] * y) / math.fsum(X[:, j] ** 2)) for j in range(X.shape[1])]
+        )
+        expected = np.asarray(case["reference"])
+        assert sorted(observed) == sorted(expected)
+        np.testing.assert_array_equal(key[observed], key[expected])
     else:
         np.testing.assert_array_equal(observed, case["reference"])
 
