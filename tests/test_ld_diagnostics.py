@@ -1,13 +1,14 @@
-"""Independent conditional-model checks and optional pinned official R oracles."""
+"""Conditional-model checks and comparisons with pinned susieR 0.16.6 oracles."""
 
 import json
-import os
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 from prusie.ld import estimate_s_rss, kriging_rss, prepare_ld
+
+ORACLES = Path(__file__).parent / "fixtures/susier_ld_0166"
 
 
 def test_conditional_formula_matches_gaussian_schur_complement():
@@ -63,10 +64,7 @@ def test_missing_z_is_recorded_without_automatic_flip():
 
 
 def test_official_r_oracles():
-    path = os.environ.get("PRUSIE_LD_ORACLE")
-    if not path:
-        pytest.skip("set PRUSIE_LD_ORACLE to independently generated pinned R oracle JSON")
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    payload = json.loads((ORACLES / "ld_oracles.json").read_text(encoding="utf-8"))
     assert payload["source_commit"] == "8e56a8e038e989856d106d9ca5175cc664fea9d2"
     for name, case in payload["cases"].items():
         R, z = np.array(case["R"]), np.array(case["z"])
@@ -97,12 +95,8 @@ def test_official_r_oracles():
 
 
 def test_independent_r_full_likelihood_mixture_certificate():
-    raw_path = os.environ.get("PRUSIE_LD_ORACLE")
-    certified_path = os.environ.get("PRUSIE_LD_CERTIFIED_ORACLE")
-    if not raw_path or not certified_path:
-        pytest.skip("set pinned raw and independently certified R oracle paths")
-    raw = json.loads(Path(raw_path).read_text(encoding="utf-8"))
-    certified = json.loads(Path(certified_path).read_text(encoding="utf-8"))
+    raw = json.loads((ORACLES / "ld_oracles.json").read_text(encoding="utf-8"))
+    certified = json.loads((ORACLES / "kriging_certified.json").read_text(encoding="utf-8"))
     disagreements = []
     for key, oracle in certified["cases"].items():
         name, _kind = key.split("/")
