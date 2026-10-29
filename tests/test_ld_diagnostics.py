@@ -66,7 +66,7 @@ def test_official_r_oracles():
     path = os.environ.get("PRUSIE_LD_ORACLE")
     if not path:
         pytest.skip("set PRUSIE_LD_ORACLE to independently generated pinned R oracle JSON")
-    payload = json.loads(Path(path).read_text())
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
     assert payload["source_commit"] == "8e56a8e038e989856d106d9ca5175cc664fea9d2"
     for name, case in payload["cases"].items():
         R, z = np.array(case["R"]), np.array(case["z"])
@@ -101,8 +101,8 @@ def test_independent_r_full_likelihood_mixture_certificate():
     certified_path = os.environ.get("PRUSIE_LD_CERTIFIED_ORACLE")
     if not raw_path or not certified_path:
         pytest.skip("set pinned raw and independently certified R oracle paths")
-    raw = json.loads(Path(raw_path).read_text())
-    certified = json.loads(Path(certified_path).read_text())
+    raw = json.loads(Path(raw_path).read_text(encoding="utf-8"))
+    certified = json.loads(Path(certified_path).read_text(encoding="utf-8"))
     disagreements = []
     for key, oracle in certified["cases"].items():
         name, _kind = key.split("/")

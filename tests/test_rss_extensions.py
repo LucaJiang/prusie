@@ -9,7 +9,9 @@ import pytest
 import prusie
 
 FIXTURE = json.loads(
-    (Path(__file__).parent / "fixtures/susier_parity_0166/reference.json").read_text()
+    (Path(__file__).parent / "fixtures/susier_parity_0166/reference.json").read_text(
+        encoding="utf-8"
+    )
 )
 
 
@@ -98,7 +100,9 @@ def test_mismatch_alpha(name):
 )
 def test_finite_reference_alpha(name):
     reference = json.loads(
-        (Path(__file__).parent / "fixtures/susier_parity_0166/supplement.json").read_text()
+        (Path(__file__).parent / "fixtures/susier_parity_0166/supplement.json").read_text(
+            encoding="utf-8"
+        )
     )
     case = reference["cases"][name]
     data = FIXTURE["datasets"]["N2finemapping"]
@@ -146,7 +150,9 @@ def test_reference_genotype_sample_size(case_id, sparse):
     from scipy.sparse import csc_matrix
 
     fixture = json.loads(
-        (Path(__file__).parent / "fixtures/susier_parity_0166/operator_inputs.json").read_text()
+        (Path(__file__).parent / "fixtures/susier_parity_0166/operator_inputs.json").read_text(
+            encoding="utf-8"
+        )
     )
     case = fixture["cases"][case_id]
     inputs = fixture["inputs"][case["input"]]
@@ -163,7 +169,9 @@ def test_reference_genotype_sample_size(case_id, sparse):
 @pytest.mark.parametrize("name", ["rss_R_finite_numeric", "rss_mismatch_eb"])
 def test_finite_reference_reliability_matches_R(name):
     fixture = json.loads(
-        (Path(__file__).parent / "fixtures/susier_parity_0166/qc_public.json").read_text()
+        (Path(__file__).parent / "fixtures/susier_parity_0166/qc_public.json").read_text(
+            encoding="utf-8"
+        )
     )
     case = fixture["cases"][name]
     data = FIXTURE["datasets"]["N2finemapping"]
@@ -221,7 +229,7 @@ def test_finite_reference_nig_residual_posterior_matches_R():
     fixture = json.loads(
         (
             Path(__file__).parent / "fixtures/susier_parity_0166/nig_finite_interaction.json"
-        ).read_text()
+        ).read_text(encoding="utf-8")
     )
     case = fixture["cases"]["N2_finite_NIG"]
     fit = prusie.susie_rss(**case["input"], **case["options"])

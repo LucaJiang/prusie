@@ -182,7 +182,7 @@ denoting the original pair of matrix entries:
 | Action | State of `R` after a successful call |
 | --- | --- |
 | `ordered_scaled_xtx` | Both orientations contain `(Rij*s + Rji*s)/2` in float64, in that operation order; `R` is now scaled `XtX` |
-| `symmetric_no_write` | Exact-symmetry proof succeeded; original bytes retained |
+| `symmetric_no_write` | Exact-symmetry proof succeeded (x86-64 builds); original bytes retained |
 | `no_witness_eager_no_write` | No finite pair had unequal scaled entries; ordinary owned preparation was used and original bytes retained |
 
 See [dense storage and matrix products](implementation.md#dense-storage-and-matrix-products)

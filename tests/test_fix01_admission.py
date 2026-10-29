@@ -4,6 +4,7 @@ import contextlib
 import io
 import logging
 import pickle
+import platform
 import sys
 import threading
 import warnings
@@ -12,6 +13,14 @@ import numpy as np
 import pytest
 
 from prusie import _execution, _native, rss, susie_rss
+
+# The exact-symmetry proof is compiled only for x86-64; other targets take the
+# ordinary owned preparation for symmetric input.
+SYMMETRIC_ACTION = (
+    "symmetric_no_write"
+    if platform.machine().lower() in ("x86_64", "amd64")
+    else "no_witness_eager_no_write"
+)
 
 
 def request(**updates):
@@ -138,7 +147,7 @@ def test_instrumentation_and_numpy_scalars_preserve_path_and_alpha(
     monkeypatch.setattr(_native, "validate_and_overwrite_rss", destructive)
     monkeypatch.setattr(warnings, "warn", warn)
     expected_path = (
-        ("overwrite", "ordered_scaled_xtx" if asymmetric else "symmetric_no_write")
+        ("overwrite", "ordered_scaled_xtx" if asymmetric else SYMMETRIC_ACTION)
         if overwrite
         else ("parallel", _native._parallel_preparation_available())
     )

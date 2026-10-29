@@ -35,7 +35,7 @@ def run_example(tmp_path, data=DATA, case=None):
     result = subprocess.run(
         args, cwd=tmp_path, env=env, capture_output=True, text=True, check=False
     )
-    return result, json.loads((tmp_path / "result/report.json").read_text())
+    return result, json.loads((tmp_path / "result/report.json").read_text(encoding="utf-8"))
 
 
 def copy_data(tmp_path):
@@ -50,13 +50,13 @@ def alter_npz(path, key):
 
 
 def update_checksum(data, filename):
-    checks = json.loads((data / "checksums.json").read_text())
+    checks = json.loads((data / "checksums.json").read_text(encoding="utf-8"))
     path = data / filename
     checks["files"][filename] = {
         "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         "bytes": path.stat().st_size,
     }
-    manifest = json.loads((data / "manifest.json").read_text())
+    manifest = json.loads((data / "manifest.json").read_text(encoding="utf-8"))
     manifest["input_reference_sha256"][filename] = checks["files"][filename]["sha256"]
     (data / "manifest.json").write_text(json.dumps(manifest))
     checks["files"]["manifest.json"] = {
@@ -105,10 +105,10 @@ def test_unknown_case_has_useful_failure(tmp_path):
 def test_native_version_identity_is_diagnostic(tmp_path):
     data = copy_data(tmp_path)
     path = data / "expected_native.json"
-    value = json.loads(path.read_text())
+    value = json.loads(path.read_text(encoding="utf-8"))
     value["runtime"]["pyrsusie"] = "0.0.0-reference-identity-test"
     path.write_text(json.dumps(value))
-    checks = json.loads((data / "native_checksums.json").read_text())
+    checks = json.loads((data / "native_checksums.json").read_text(encoding="utf-8"))
     checks["files"][path.name] = {
         "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         "bytes": path.stat().st_size,

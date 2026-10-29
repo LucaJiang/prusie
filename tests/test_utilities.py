@@ -11,9 +11,11 @@ from scipy import sparse
 import prusie
 
 DIRECTORY = Path(__file__).parent / "fixtures/susier_parity_0166"
-REFERENCE = json.loads((DIRECTORY / "ser_utilities.json").read_text())
-BOUNDARIES = json.loads((DIRECTORY / "auxiliary_boundaries.json").read_text())
-DATA = json.loads((DIRECTORY / "reference.json").read_text())["datasets"]["N2finemapping"]
+REFERENCE = json.loads((DIRECTORY / "ser_utilities.json").read_text(encoding="utf-8"))
+BOUNDARIES = json.loads((DIRECTORY / "auxiliary_boundaries.json").read_text(encoding="utf-8"))
+DATA = json.loads((DIRECTORY / "reference.json").read_text(encoding="utf-8"))["datasets"][
+    "N2finemapping"
+]
 
 
 @pytest.mark.parametrize("name", list(REFERENCE["cases"]))
@@ -72,7 +74,7 @@ def test_block_ascent_rejects_decreasing_mutating_callback():
 
 @pytest.mark.parametrize("name", ["scalar_shat", "raw_prior_weights_null"])
 def test_ser_boundary_inputs_match_R(name):
-    fixture = json.loads((DIRECTORY / "ser_boundaries.json").read_text())
+    fixture = json.loads((DIRECTORY / "ser_boundaries.json").read_text(encoding="utf-8"))
     case = fixture["cases"][name]
     fit = prusie.susie_ser(**case["input"], **(case["options"] or {}))
     expected = case["reference"]

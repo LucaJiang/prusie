@@ -1,0 +1,3 @@
+# Keep checkouts byte-identical on every platform; packaged data and fixtures are
+# verified by SHA-256.
+* -text

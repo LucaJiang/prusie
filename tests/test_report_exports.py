@@ -75,7 +75,7 @@ def test_text_and_report_do_not_fit_compute_ld_or_import_plotting(monkeypatch, t
     assert "component 7" in result and "requested elbo, effective elbo" in result
     assert "Refinement: not requested." in result and "LD: not assessed." in result
     receipt = write_report(supplied, tmp_path)
-    assert Path(receipt["text_summary"]).read_text() == result + "\n"
+    assert Path(receipt["text_summary"]).read_text(encoding="utf-8") == result + "\n"
     assert supplied == before == load_analysis(tmp_path)["summary"]
 
 
@@ -135,7 +135,7 @@ def test_regional_maximum_ids_respect_observation_support_and_candidate_selectio
     assert not row["in_candidate_view"] and row["evidence_pointer"] == "/comparison/variants/1"
     assert "outside candidate view" in summary_text(summary(), comparison=comparison)
     receipt = write_report(summary(), tmp_path, comparison=comparison)
-    page = Path(receipt["html"]).read_text()
+    page = Path(receipt["html"]).read_text(encoding="utf-8")
     assert "Outside the candidate view:" in page and "tables/comparison_variants.csv" in page
     assert comparison == before
     # A valid common-mode comparison supplies only its global-intersection rows.
@@ -159,7 +159,7 @@ def test_regional_maximum_ids_respect_observation_support_and_candidate_selectio
 def test_probability_precision_exports_and_semantic_navigation(tmp_path):
     supplied = summary()
     receipt = write_report(supplied, tmp_path, annotations={"trait": "recorded trait"})
-    page = Path(receipt["html"]).read_text()
+    page = Path(receipt["html"]).read_text(encoding="utf-8")
     assert "&gt;0.9999" in page or "&gt; 0.9999" in page
     assert "2e-12" in page and 'title="Full precision: 0.999999991"' in page
     assert "recorded trait" in page and '<nav aria-label="On this page">' in page
@@ -169,7 +169,7 @@ def test_probability_precision_exports_and_semantic_navigation(tmp_path):
     assert "CS member, top PIP, PIP threshold" in page
     assert "<td>None</td><td>top PIP</td>" in page  # Known non-CS member, not unassessed.
     assert 'href="#main-results"' in page
-    compact = json.loads(Path(receipt["analysis_summary"]).read_text())
+    compact = json.loads(Path(receipt["analysis_summary"]).read_text(encoding="utf-8"))
     assert compact["results"]["candidates"][0]["pip"] == 0.999999991
     assert compact["results"]["candidates"][0]["selection_sources"] == [
         "formal_CS_member",
@@ -191,7 +191,7 @@ def test_cold_fit_record_reports_search_not_requested_without_changing_status(tm
     assert compact["refinement"]["status"] == "not_executed"
     assert compact["refinement"]["stop_reason"] == "not_requested"
     receipt = write_report(supplied, tmp_path)
-    page = Path(receipt["html"]).read_text()
+    page = Path(receipt["html"]).read_text(encoding="utf-8")
     assert "Refinement: not requested." in page
     assert "Refinement objective, logged ELBO and controls" not in page
     assert "0 exclusion attempts" not in page
@@ -204,12 +204,12 @@ def test_complete_large_cs_long_ids_and_no_cs_are_explicit(tmp_path):
     supplied["variants"] = [dict(variant_id=name, pip=1 / 35) for name in names]
     supplied["credible_sets"][0].update(members=names, size=35)
     receipt = write_report(supplied, tmp_path / "large")
-    page = Path(receipt["html"]).read_text()
+    page = Path(receipt["html"]).read_text(encoding="utf-8")
     assert "first 20 of 35" in page and "All 35 selected candidates" in page
     assert names[-1] in page
     no_cs = dict(variants=[], components=[], credible_sets=[])
     receipt = write_report(no_cs, tmp_path / "empty")
-    page = Path(receipt["html"]).read_text()
+    page = Path(receipt["html"]).read_text(encoding="utf-8")
     assert "0 retained credible sets" in page and "No iteration trajectory" in page
     assert "LD diagnostics were not assessed" in page
 
@@ -257,8 +257,8 @@ def test_display_and_export_leave_probabilities_and_objectives_unchanged(tmp_pat
     assert json.loads(stages[0]["excluded_ids"]) == ["near_one"]
     assert stages[0]["solver_settings"] == ""  # Not recorded by this producer.
     assert json.loads(stages[1]["solver_settings"]) == {"tol": 0.001}
-    assert "Stage A changes the prior" in Path(receipt["html"]).read_text()
-    assert json.loads(Path(receipt["figure_index"]).read_text()) == []
+    assert "Stage A changes the prior" in Path(receipt["html"]).read_text(encoding="utf-8")
+    assert json.loads(Path(receipt["figure_index"]).read_text(encoding="utf-8")) == []
 
 
 def test_report_uses_recorded_search_objective_and_does_not_promote_zero_pip(tmp_path):
@@ -277,7 +277,7 @@ def test_report_uses_recorded_search_objective_and_does_not_promote_zero_pip(tmp
     assert compact["refinement"]["objective_definition"].startswith("last_logged_elbo")
     assert "zero" not in [r["variant_id"] for r in compact["results"]["candidates"]]
     write_report(supplied, tmp_path)
-    page = (tmp_path / "index.html").read_text()
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "Recorded search objective: last_logged_elbo" in page
     assert "evaluated after zeroing components" not in page
     assert "zero-based fit row" in page

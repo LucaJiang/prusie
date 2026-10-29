@@ -231,7 +231,7 @@ def test_evidence_and_offline_html(summary, tmp_path):
         def handle_starttag(self, tag, attrs):
             self.references.extend(v for k, v in attrs if k in ("href", "src"))
 
-    page = (tmp_path / "index.html").read_text()
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
     parser = Links()
     parser.feed(page)
     assert parser.references

@@ -11,8 +11,10 @@ import prusie
 from prusie import _native
 
 FIXTURES = Path(__file__).parent / "fixtures/susier_parity_0166"
-REFERENCE = json.loads((FIXTURES / "reference.json").read_text())
-BOUNDARIES = json.loads((FIXTURES / "trend_constructor_boundaries.json").read_text())
+REFERENCE = json.loads((FIXTURES / "reference.json").read_text(encoding="utf-8"))
+BOUNDARIES = json.loads(
+    (FIXTURES / "trend_constructor_boundaries.json").read_text(encoding="utf-8")
+)
 
 
 @pytest.fixture

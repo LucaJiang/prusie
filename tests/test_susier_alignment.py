@@ -9,7 +9,9 @@ import pytest
 
 from prusie import _native, susie_rss, susie_suff_stat
 
-FIXTURE = json.loads((Path(__file__).parent / "fixtures/pinned_susier_checks.json").read_text())
+FIXTURE = json.loads(
+    (Path(__file__).parent / "fixtures/pinned_susier_checks.json").read_text(encoding="utf-8")
+)
 
 
 def numeric(value):

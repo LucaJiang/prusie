@@ -10,7 +10,9 @@ import pytest
 import prusie
 
 FIXTURE = json.loads(
-    (Path(__file__).parent / "fixtures/susier_refine_0166/refine_convergence.json").read_text()
+    (Path(__file__).parent / "fixtures/susier_refine_0166/refine_convergence.json").read_text(
+        encoding="utf-8"
+    )
 )
 OPTIONS = {
     "refine_pip": {"convergence_method": "pip", "refine": True},

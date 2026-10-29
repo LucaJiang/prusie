@@ -66,7 +66,7 @@ def parse_task_stat(raw):
 
 def read_task_record(tid):
     try:
-        return parse_task_stat(Path(f"/proc/self/task/{tid}/stat").read_text())
+        return parse_task_stat(Path(f"/proc/self/task/{tid}/stat").read_text(encoding="utf-8"))
     except FileNotFoundError:
         # Listing a task and opening stat are separate procfs observations.
         return None

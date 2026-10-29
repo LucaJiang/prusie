@@ -54,10 +54,12 @@ def test_each_cs_reference_uses_own_alpha_and_exports_complete_ordered_series(tm
             assert ax.get_ylim() == (-0.03, 1.03)
         assert data["ld_reference"] == "b"  # Legacy alias identifies first displayed series.
         receipt = write_report(summary, tmp_path, figures={"locus overview": (figure, axes, data)})
-        exported = json.loads((tmp_path / "plot_data.json").read_text())["locus overview"]
+        exported = json.loads((tmp_path / "plot_data.json").read_text(encoding="utf-8"))[
+            "locus overview"
+        ]
         assert len(exported["ld_references"]) == 2
         assert exported["variant_ids"] == ["a", "b", "c", "d"]
-        page = (tmp_path / "index.html").read_text()
+        page = (tmp_path / "index.html").read_text(encoding="utf-8")
         assert "zero-based fit row" in page and "highest-alpha" in page
         assert receipt["html"]
     finally:

@@ -105,7 +105,7 @@ def test_ld_assessment_is_preserved_through_plot_and_report(kind, monkeypatch, t
         ld=result,
         figures={"LD assessment": view},
     )
-    page = (tmp_path / "index.html").read_text()
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "conditional" in page.lower() and "unassessed" in page.lower()
     assert "No flagged variants" not in page
     plt.close(view[0])

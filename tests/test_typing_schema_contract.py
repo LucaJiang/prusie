@@ -13,7 +13,7 @@ import prusie
 @pytest.fixture(scope="module")
 def frozen_data():
     path = Path(__file__).parent / "fixtures/susier_parity_0166/reference.json"
-    return json.loads(path.read_text())["datasets"]["N2finemapping"]
+    return json.loads(path.read_text(encoding="utf-8"))["datasets"]["N2finemapping"]
 
 
 @pytest.mark.parametrize("route", ["susie", "suff_stat", "rss", "rss_overwrite", "rss_lambda"])

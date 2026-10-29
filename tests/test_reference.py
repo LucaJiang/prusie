@@ -9,7 +9,9 @@ import pytest
 
 import prusie
 
-REFERENCE = json.loads((Path(__file__).parent / "fixtures/pinned_susieR_gaussian.json").read_text())
+REFERENCE = json.loads(
+    (Path(__file__).parent / "fixtures/pinned_susieR_gaussian.json").read_text(encoding="utf-8")
+)
 
 
 @pytest.mark.parametrize("case", REFERENCE["cases"], ids=[c["label"] for c in REFERENCE["cases"]])

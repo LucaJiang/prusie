@@ -1,6 +1,7 @@
 """Exact storage, alias and failure contracts of explicit RSS overwrite."""
 
 import inspect
+import platform
 import subprocess
 import sys
 import warnings
@@ -12,6 +13,13 @@ from prusie import _native, susie_rss
 from prusie import rss as api
 
 _PUBLIC_ARGUMENTS = set(inspect.signature(susie_rss).parameters)
+# The exact-symmetry proof is compiled only for x86-64; other targets take the
+# ordinary owned preparation for symmetric input.
+SYMMETRIC_ACTION = (
+    "symmetric_no_write"
+    if platform.machine().lower() in ("x86_64", "amd64")
+    else "no_witness_eager_no_write"
+)
 
 
 def matrix(p=9, late=False):
@@ -126,7 +134,7 @@ def test_overwrite_retains_thread_option_and_same_count_determinism(threads):
 @pytest.mark.parametrize(
     "kind,action",
     [
-        ("unit", "symmetric_no_write"),
+        ("unit", SYMMETRIC_ACTION),
         ("diagonal", "no_witness_eager_no_write"),
         ("rounded", "no_witness_eager_no_write"),
     ],

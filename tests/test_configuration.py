@@ -9,8 +9,8 @@ import pytest
 import prusie
 
 DIRECTORY = Path(__file__).parent / "fixtures/susier_parity_0166"
-REFERENCE = json.loads((DIRECTORY / "reference.json").read_text())
-POST = json.loads((DIRECTORY / "post_outcome.json").read_text())
+REFERENCE = json.loads((DIRECTORY / "reference.json").read_text(encoding="utf-8"))
+POST = json.loads((DIRECTORY / "post_outcome.json").read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")

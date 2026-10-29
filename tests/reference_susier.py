@@ -37,7 +37,7 @@ def sha256(path):
 
 
 def read_json(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def require(condition, message):
@@ -454,7 +454,7 @@ def main(argv=None):
             print(
                 f"{'PASS' if row['passed'] else 'FAIL'}"
                 f" {row['case']}"
-                f": max |PIP − R|={error_text}"
+                f": max |PIP - R|={error_text}"
                 f"; "
                 f"validity=PASS; CS={len(row['validity']['cs'])}"
                 f"; niter={row['niter_native']}"

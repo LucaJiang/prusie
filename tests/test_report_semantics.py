@@ -72,11 +72,11 @@ def test_compact_summary_preserves_all_large_cs_members_and_full_precision(tmp_p
     )
     assert result["results"]["credible_sets"][0]["effective_candidates"] == 20.0
     receipt = write_report(summary, tmp_path)
-    compact = json.loads(Path(receipt["analysis_summary"]).read_text())
+    compact = json.loads(Path(receipt["analysis_summary"]).read_text(encoding="utf-8"))
     assert compact["fit"]["last"]["elbo"] == -17.12345678901234
     assert compact["fit"]["requested_criterion"] == "joint"
     assert compact["fit"]["trajectory_available"]
-    page = (tmp_path / "index.html").read_text()
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "-17.12" in page
     assert "-17.12345678901234" not in page[: page.index('id="details"')]
     assert "-17.12345678901234" in page[page.index('id="details"') :]
@@ -109,8 +109,8 @@ def test_report_reading_order_safe_local_exports_and_no_fact_dom(tmp_path):
         provenance={"reference_sources": hostile},
         annotations={"note": hostile},
     )
-    page = Path(receipt["html"]).read_text()
-    assert page == Path(again["html"]).read_text()
+    page = Path(receipt["html"]).read_text(encoding="utf-8")
+    assert page == Path(again["html"]).read_text(encoding="utf-8")
     parser = Page(page)
     assert not parser.scripts and "&lt;script" in page and hostile not in page
     assert parser.links
@@ -132,12 +132,12 @@ def test_report_reading_order_safe_local_exports_and_no_fact_dom(tmp_path):
         )
     ]
     assert [page.index(name) for name in headings] == sorted(page.index(name) for name in headings)
-    evidence = json.loads(Path(receipt["evidence"]).read_text())
+    evidence = json.loads(Path(receipt["evidence"]).read_text(encoding="utf-8"))
     assert len(evidence["facts"]) > 3000
-    assert "detail_999" in Path(receipt["evidence"]).read_text()
+    assert "detail_999" in Path(receipt["evidence"]).read_text(encoding="utf-8")
     assert "detail_999" not in page
     assert not any(fact["id"] in page for fact in evidence["facts"])
-    assert len(page) < len(Path(receipt["evidence"]).read_text()) / 3
+    assert len(page) < len(Path(receipt["evidence"]).read_text(encoding="utf-8")) / 3
     assert "query" in page and "analysis_summary.json" in page
 
 
@@ -199,7 +199,7 @@ def test_refinement_reports_recorded_objective_accepted_candidates_and_stage_con
     assert search["history"][0]["incumbent_objective"] == -18.0
     assert search["history"][0]["stages"]["B"]["solver_settings"] == control
     write_report(summary, tmp_path)
-    page = (tmp_path / "index.html").read_text()
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "Accepted attempts" in page
     assert "Recorded search objective: " + expected_definition in page
     assert "Recomputed post-finalization ELBO is a separate diagnostic" in page
@@ -234,7 +234,7 @@ def test_ld_report_counts_keep_unknown_distinct(rows, expected, tmp_path):
         == expected
     )
     write_report(example_summary(), tmp_path, ld=ld)
-    page = (tmp_path / "index.html").read_text()
+    page = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert f"{expected[0]} assessed (" in page
     assert f"{expected[2]} conditional-only; {expected[3]} unassessed" in page
     if expected[0] == 0:
@@ -263,11 +263,11 @@ def test_failed_mixture_and_missing_z_diagnose_plot_report(monkeypatch, tmp_path
     assert result["variants"][1]["standardized_residual"] is None
     figure = plot_ld_diagnostics(result)
     receipt = write_report(example_summary(), tmp_path, ld=result, figures={"LD states": figure})
-    compact = json.loads(Path(receipt["analysis_summary"]).read_text())
+    compact = json.loads(Path(receipt["analysis_summary"]).read_text(encoding="utf-8"))
     assert compact["ld"]["assessed"] == 0
     assert compact["ld"]["conditional_only"] == 2
     assert compact["ld"]["unassessed"] == 1
-    page = Path(receipt["html"]).read_text()
+    page = Path(receipt["html"]).read_text(encoding="utf-8")
     assert (
         "0 assessed (0 flagged; 0 assessed and not flagged); 2 conditional-only; 1 unassessed"
         in page
@@ -312,9 +312,9 @@ def test_report_prefers_baseline_cs_layer_but_retains_complete_component_relatio
     compact = analysis_summary(example_summary(), comparison=comparison)
     assert compact["sensitivity"]["relation_counts"] == {"matched": 1}
     receipt = write_report(example_summary(), tmp_path, comparison=comparison)
-    evidence = json.loads(Path(receipt["evidence"]).read_text())
+    evidence = json.loads(Path(receipt["evidence"]).read_text(encoding="utf-8"))
     assert evidence["data"]["comparison"]["component_relations"][0]["posterior_overlap"] == 1.0
-    page = Path(receipt["html"]).read_text()
+    page = Path(receipt["html"]).read_text(encoding="utf-8")
     assert page.index("component_overlap") > page.index('id="details"')
     assert "component_overlap" not in page[: page.index('id="details"')]
 
@@ -370,8 +370,8 @@ def test_legacy_reason_only_missing_working_values_never_become_observed(tmp_pat
         "unavailable_reason": "missing_z_replaced_by_zero_upstream",
     }
     receipt = write_report(example_summary(), tmp_path, ld={"variants": [row]})
-    page = Path(receipt["html"]).read_text()
+    page = Path(receipt["html"]).read_text(encoding="utf-8")
     assert "legacy_missing" in page and "-987.654" not in page
     assert '<td>NA</td><td class="numeric">2</td><td>NA</td>' in page
-    saved = json.loads(Path(receipt["evidence"]).read_text())
+    saved = json.loads(Path(receipt["evidence"]).read_text(encoding="utf-8"))
     assert saved["data"]["ld_diagnostics"]["variants"][0] == row

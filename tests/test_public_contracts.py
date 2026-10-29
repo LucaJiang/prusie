@@ -87,6 +87,6 @@ def test_installed_package_declares_inline_types():
 
 def test_frozen_parity_manifest_checksums():
     directory = Path(__file__).parent / "fixtures/susier_parity_0166"
-    manifest = json.loads((directory / "manifest.json").read_text())
+    manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
     for name, expected in manifest["files"].items():
         assert hashlib.sha256((directory / name).read_bytes()).hexdigest() == expected, name

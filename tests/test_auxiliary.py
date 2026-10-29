@@ -14,7 +14,7 @@ from prusie.posterior import credible_sets
 @pytest.fixture(scope="module")
 def oracle():
     path = Path(__file__).parent / "fixtures/susier_parity_0166/reference.json"
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")

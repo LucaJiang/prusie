@@ -28,7 +28,7 @@ def test_packaged_reference_and_probability_identities():
         io.BytesIO(folder.joinpath("reference.npz").read_bytes()), allow_pickle=False
     ) as ref:
         np.testing.assert_allclose(fit.pip, ref["pip"], atol=1e-5, rtol=0)
-    meta = json.loads(folder.joinpath("reference.json").read_text())
+    meta = json.loads(folder.joinpath("reference.json").read_text(encoding="utf-8"))
     assert meta["susieR_version"] == "0.16.6"
     assert fit.converged and fit.niter <= 100
     np.testing.assert_allclose(fit.alpha.sum(axis=1), 1.0, atol=1e-10, rtol=0)

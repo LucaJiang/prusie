@@ -10,7 +10,7 @@ from scipy import sparse
 import prusie
 
 REFERENCE = Path(__file__).parent / "fixtures/susier_parity_0166/reference.json"
-FIXTURE = json.loads(REFERENCE.read_text())
+FIXTURE = json.loads(REFERENCE.read_text(encoding="utf-8"))
 CASES = [
     name
     for name, case in FIXTURE["cases"].items()

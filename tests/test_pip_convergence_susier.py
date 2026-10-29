@@ -18,7 +18,9 @@ def quiet(fitter, *args, **options):
 
 
 def test_pip_history_keeps_variances_of_earlier_sweeps():
-    reference = json.loads((FIXTURES / "susier_refine_0166/refine_convergence.json").read_text())
+    reference = json.loads(
+        (FIXTURES / "susier_refine_0166/refine_convergence.json").read_text(encoding="utf-8")
+    )
     case = reference["cases"]["pip_zero_weights"]
     result = quiet(
         prusie.susie_ss,
@@ -32,10 +34,12 @@ def test_pip_history_keeps_variances_of_earlier_sweeps():
 
 def test_nan_elbo_sweeps_use_the_pip_rule_by_default():
     directory = FIXTURES / "susier_parity_0166"
-    case = json.loads((directory / "combination_L1.json").read_text())["cases"][
+    case = json.loads((directory / "combination_L1.json").read_text(encoding="utf-8"))["cases"][
         "suff_stat_mixture_NIG_L1"
     ]
-    data = json.loads((directory / "reference.json").read_text())["datasets"]["N2finemapping"]
+    data = json.loads((directory / "reference.json").read_text(encoding="utf-8"))["datasets"][
+        "N2finemapping"
+    ]
     options = {
         key: np.asarray(value) if key in ("prior_variance_grid", "mixture_weights") else value
         for key, value in case["options"].items()
