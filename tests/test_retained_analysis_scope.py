@@ -155,7 +155,7 @@ def test_default_advanced_fit_and_tracking_do_not_expose_unsafe_snapshot(kind):
 
 @pytest.mark.filterwarnings("ignore:IBSS did not converge:RuntimeWarning")
 @pytest.mark.parametrize("kind", ["mixture", "NIG", "slot", "pip", "finite", "lambda"])
-def test_advanced_warm_start_does_not_enable_legacy_retained_analysis(kind):
+def test_advanced_warm_start_does_not_enable_retained_analysis(kind):
     initial = call_fitter(kind)
     fit = call_fitter(kind, model_init=initial)
     assert fit._prepared is None
@@ -183,9 +183,9 @@ def test_static_materialized_gaussian_retains_existing_helpers(route):
 
 
 @pytest.mark.filterwarnings("ignore:IBSS did not converge:RuntimeWarning")
-def test_requested_pip_rule_keeps_legacy_configuration_separate():
-    legacy = prusie.ConvergenceConfig(criterion="joint", alpha_tol=0.1, pip_tol=0.2)
-    fit = call_fitter("pip", convergence=legacy, tol=0.002)
+def test_requested_pip_rule_keeps_caller_configuration_separate():
+    caller = prusie.ConvergenceConfig(criterion="joint", alpha_tol=0.1, pip_tol=0.2)
+    fit = call_fitter("pip", convergence=caller, tol=0.002)
     record = fit.convergence
     assert record["requested_convergence_method"] == "pip"
     assert record["requested_criterion"] == "pip"
@@ -194,8 +194,8 @@ def test_requested_pip_rule_keeps_legacy_configuration_separate():
     assert record["requested_config"]["pip_tol"] == 0.002
     assert record["alpha_tol"] == 0.002
     assert record["pip_tol"] == 0.002
-    assert record["legacy_requested_config"] == legacy.options()
-    assert fit.params["convergence"] == legacy.options()
+    assert record["caller_convergence_config"] == caller.options()
+    assert fit.params["convergence"] == caller.options()
 
 
 @pytest.mark.filterwarnings("ignore:IBSS did not converge:RuntimeWarning")
@@ -204,7 +204,7 @@ def test_dynamic_rule_override_preserves_callers_requested_method():
     assert fit.convergence["requested_convergence_method"] == "elbo"
     assert fit.convergence["requested_criterion"] == "pip"
     assert fit.convergence["requested_config"]["criterion"] == "pip"
-    assert fit.convergence["legacy_requested_config"]["criterion"] == "elbo"
+    assert fit.convergence["caller_convergence_config"]["criterion"] == "elbo"
 
 
 @pytest.mark.filterwarnings("ignore:IBSS did not converge:RuntimeWarning")

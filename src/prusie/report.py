@@ -621,7 +621,7 @@ def analysis_summary(
             pairs=_plain(pairs),
             layer="CS-supported signals",
             layer_summary=_plain(comparison.get("layer_summary", {})),
-            legacy_format=comparison.get("schema_version") != "prusie.comparison.v2",
+            older_schema=comparison.get("schema_version") != "prusie.comparison.v2",
             mode=comparison.get("mode"),
             support=_plain(comparison.get("support", {})),
             regional_maxima=[],

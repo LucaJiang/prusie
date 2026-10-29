@@ -167,7 +167,7 @@ def plot_refinement(
     table_rows.extend(other_attempts)
     shown_count = min(len(table_rows), table_page_size) if table_page_size else len(table_rows)
     count = 3 if compact or (axes is not None and np.asarray(axes, dtype=object).size == 3) else 4
-    legacy_three = count == 3 and not compact
+    three_panel = count == 3 and not compact
     table_height = max(2.6, 0.38 * shown_count)
     figure, axs = _axes(
         axes,
@@ -276,7 +276,7 @@ def plot_refinement(
             incumbent_path.append(
                 {"round": round_id, "objective": objective, "stage": "accepted B candidate"}
             )
-    if not legacy_three and incumbent_path:
+    if not three_panel and incumbent_path:
         axs[2].plot(
             range(len(incumbent_path)),
             [row["objective"] for row in incumbent_path],
@@ -292,15 +292,15 @@ def plot_refinement(
             ],
             fontsize=9,
         )
-    elif not legacy_three:
+    elif not three_panel:
         _missing(axs[2], "Accepted incumbent trajectory not recorded")
-    if not legacy_three:
+    if not three_panel:
         axs[2].set_ylabel("Full-model ELBO")
     best = refinement.get("best_objective")
-    axs[1 if legacy_three else 2].set_title(
+    axs[1 if three_panel else 2].set_title(
         "Final best: "
         + (format_number(best, precision=7) if best is not None else "not recorded")
-        + ("; incumbent path in returned data (3-axis layout)" if legacy_three else ""),
+        + ("; incumbent path in returned data (3-axis layout)" if three_panel else ""),
         fontsize=10,
     )
     if not history:
@@ -321,7 +321,7 @@ def plot_refinement(
         )
     if not compact:
         axs[-1].axis("off")
-    for ax in axs[: 3 if not legacy_three else 2]:
+    for ax in axs[: 3 if not three_panel else 2]:
         ax.grid(axis="y")
     figure.suptitle(
         f"Refinement · {sum(bool(row.get('accepted')) for row in history)}"

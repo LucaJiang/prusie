@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- Rename recorded fields whose `legacy` prefix was unclear:
+  `fit.convergence["legacy_requested_config"]` is now
+  `fit.convergence["caller_convergence_config"]`; the convergence-resolution
+  sources `"legacy_default"` and `"recovered_legacy_diagnostics"` are now
+  `"default_unrecorded"` and `"recovered_from_diagnostics"`; and comparison rows
+  use `support_status` instead of `legacy_support_status`. Saved results that
+  contain the old names keep them.
+- Add a tag-triggered release workflow that builds wheels for CPython
+  3.10–3.13 on Linux (x86-64, ARM64), macOS (Intel, Apple silicon) and Windows,
+  tests each wheel, and attaches the wheels, sdist and checksums to the GitHub
+  Release.
+- Add a CI coverage job and README badges.
+- Documentation reports benchmark ratios for the evaluated cases only,
+  describes alpha differences by their distribution, and drops comparisons
+  with earlier development builds.
+
 ## 0.3.0 — 2026-10-26
 
 - Add per-call `n_threads` to the main fitting functions, defaulting to 1.

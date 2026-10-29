@@ -307,7 +307,7 @@ def test_baseline_pairwise_view_component_permutation_and_missing_ids():
     )
 
 
-def test_legacy_comparison_reader_reclassifies_available_cs_support():
+def test_older_comparison_schema_reclassifies_available_cs_support():
     old = dict(
         schema_version="prusie.comparison.v1",
         baseline="base",
@@ -430,7 +430,7 @@ def test_sensitivity_explicit_override_and_serialized_config_roundtrip():
     )
 
 
-def test_legacy_baseline_convergence_recovery_never_uses_effective_fallback():
+def test_unrecorded_controls_recovery_never_uses_effective_fallback():
     from prusie import susie_rss
     from prusie.diagnostics import ConvergenceConfig
 
@@ -440,12 +440,12 @@ def test_legacy_baseline_convergence_recovery_never_uses_effective_fallback():
     fit.params.pop("convergence")
     fit.convergence["effective_criterion"] = "alpha_pip"
     recovered = run_sensitivity(inputs, [dict(name="L2", changes={"L": 2})], baseline=fit)
-    assert recovered["convergence_resolution"]["source"] == "recovered_legacy_diagnostics"
+    assert recovered["convergence_resolution"]["source"] == "recovered_from_diagnostics"
     assert recovered["fits"]["L2"].params["convergence"] == control.options()
     fit.convergence = {}
     fit._prepared = None
     fallback = run_sensitivity(inputs, [dict(name="L2", changes={"L": 2})], baseline=fit)
-    assert fallback["convergence_resolution"]["source"] == "legacy_default"
+    assert fallback["convergence_resolution"]["source"] == "default_unrecorded"
     assert "No inheritance" in fallback["convergence_resolution"]["compatibility_note"]
     assert fallback["fits"]["L2"].params["convergence"] == ConvergenceConfig().options()
 

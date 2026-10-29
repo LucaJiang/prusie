@@ -174,24 +174,6 @@ def test_uniform_new_ids_extend_equal_raw_weights(prior, provided):
     assert out["records"][-1]["prior_resolution"]["policy"] == "extend_equal_existing_weights"
 
 
-@pytest.mark.parametrize(
-    "prior",
-    [[0.0, 0.0], [-1.0, 1.0], [np.nan, 1.0], [np.inf, 1.0], [1e308, 1e308], [1.0], [[0.5, 0.5]]],
-)
-def test_invalid_alternative_weights_reject_entire_plan_before_any_fit(prior):
-    calls = []
-    with pytest.raises(ValueError, match=r"prior_weights"):
-        run_sensitivity(
-            inputs(),
-            [
-                dict(name="valid", changes={"L": 2}),
-                dict(name="bad", inputs=dict(inputs([0, 1]), prior_weights=prior)),
-            ],
-            fit_function=lambda **kw: calls.append(kw),
-        )
-    assert calls == []
-
-
 @pytest.mark.parametrize("null", [0.0, 0.2])
 def test_zero_support_subset_is_rejected_even_with_null(null):
     calls = []
@@ -206,20 +188,32 @@ def test_zero_support_subset_is_rejected_even_with_null(null):
 
 
 @pytest.mark.parametrize(
-    "change",
+    ("change", "message"),
     [
-        dict(variant_ids=["rsA", "rsA"]),
-        dict(variant_ids=["", "rsB"]),
-        dict(variant_ids=[["rsA", "rsB"]]),
-        dict(z=[1.0]),
-        dict(R=np.eye(3)),
-        dict(variant_metadata={"position": [1]}),
-        dict(z=[np.nan, 1.0]),
+        *[
+            (dict(prior_weights=prior), "prior_weights")
+            for prior in (
+                [0.0, 0.0],
+                [-1.0, 1.0],
+                [np.nan, 1.0],
+                [np.inf, 1.0],
+                [1e308, 1e308],
+                [1.0],
+                [[0.5, 0.5]],
+            )
+        ],
+        (dict(variant_ids=["rsA", "rsA"]), None),
+        (dict(variant_ids=["", "rsB"]), None),
+        (dict(variant_ids=[["rsA", "rsB"]]), None),
+        (dict(z=[1.0]), None),
+        (dict(R=np.eye(3)), None),
+        (dict(variant_metadata={"position": [1]}), None),
+        (dict(z=[np.nan, 1.0]), None),
     ],
 )
-def test_input_dimensions_ids_and_metadata_validated_before_any_fit(change):
+def test_invalid_alternative_rejects_entire_plan_before_any_fit(change, message):
     calls = []
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=message):
         run_sensitivity(
             inputs(),
             [

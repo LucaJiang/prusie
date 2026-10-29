@@ -101,7 +101,7 @@ def resolve_convergence(
     fallback is never inherited.
     """
     previous = None
-    source = "default" if fit is None else "legacy_default"
+    source = "default" if fit is None else "default_unrecorded"
     if fit is not None:
         saved = getattr(fit, "params", {}).get("convergence")
         if saved is not None:
@@ -120,7 +120,7 @@ def resolve_convergence(
                 previous = ConvergenceConfig.from_dict(
                     {k: diagnostic[v] for k, v in fields.items()}
                 )
-                source = "recovered_legacy_diagnostics"
+                source = "recovered_from_diagnostics"
             else:
                 prepared = getattr(fit, "_prepared", None)
                 options = prepared.options if prepared is not None else {}
@@ -137,7 +137,7 @@ def resolve_convergence(
         )
     control = previous or ConvergenceConfig()
     provenance = dict(source=source)
-    if source == "legacy_default":
+    if source == "default_unrecorded":
         provenance["compatibility_note"] = (
             "Original requested controls were not recorded; current default "
             "ELBO controls are used. No inheritance can be established."

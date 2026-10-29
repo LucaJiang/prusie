@@ -69,12 +69,12 @@ def test_nonfinite_effective_fallback_is_not_next_request():
     del fit.params["convergence"]
     control, source = resolve_convergence(fit)
     assert control == STRICT
-    assert source["source"] == "recovered_legacy_diagnostics"
+    assert source["source"] == "recovered_from_diagnostics"
     fit.convergence = {}
     assert resolve_convergence(fit)[1]["source"] == "recovered_prepared_options"
     fit._prepared = None
     control, source = resolve_convergence(fit)
-    assert control == ConvergenceConfig() and source["source"] == "legacy_default"
+    assert control == ConvergenceConfig() and source["source"] == "default_unrecorded"
     assert "No inheritance" in source["compatibility_note"]
 
 
@@ -115,7 +115,7 @@ def test_cycle_warning_uses_actual_iterations_and_reason(monkeypatch):
     assert not any("100 iterations" in warning for warning in fit.warnings)
 
 
-def old_signature(matrix, response, yty, n, scales, multiplier, ids, metadata):
+def unstreamed_signature(matrix, response, yty, n, scales, multiplier, ids, metadata):
     h = hashlib.sha256()
     for a in (matrix, response, np.asarray([yty, n, multiplier]), scales):
         a = np.asarray(a, dtype=np.float64)
@@ -135,7 +135,7 @@ def old_signature(matrix, response, yty, n, scales, multiplier, ids, metadata):
 @pytest.mark.parametrize(
     "layout", ["C", "F", "transpose", "strided", "reversed", "float32", "empty"]
 )
-def test_streamed_signature_preserves_exact_legacy_digest(layout):
+def test_streamed_signature_matches_unstreamed_digest(layout):
     matrix = np.arange(30.0, dtype=np.float64).reshape(5, 6)
     if layout == "F":
         matrix = np.asfortranarray(matrix)
@@ -159,7 +159,7 @@ def test_streamed_signature_preserves_exact_legacy_digest(layout):
         ["a", "b"],
         {"effect_allele": ["A", "T"], "other_allele": ["C", "G"]},
     )
-    assert data_signature(*args) == old_signature(*args)
+    assert data_signature(*args) == unstreamed_signature(*args)
 
 
 def test_identity_changes_remain_detectable():
@@ -206,9 +206,9 @@ def test_hash_implementation_and_tracking_leave_default_posterior_exact(monkeypa
     current = fit_small(retain_data=False)
     compact = fit_small(track_fit="compact")
     dense = fit_small(track_fit="dense")
-    monkeypatch.setattr(signature_module, "data_signature", old_signature)
-    legacy = fit_small(retain_data=True)
-    for fit in (legacy, compact, dense):
+    monkeypatch.setattr(signature_module, "data_signature", unstreamed_signature)
+    unstreamed = fit_small(retain_data=True)
+    for fit in (unstreamed, compact, dense):
         for name in ("pip", "alpha", "mu", "mu2", "V", "elbo", "KL", "XtXr", "lbf", "lbf_variable"):
             assert getattr(fit, name).tobytes() == getattr(current, name).tobytes(), name
         assert fit.sigma2 == current.sigma2

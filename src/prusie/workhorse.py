@@ -12,8 +12,8 @@ from numpy.typing import NDArray
 from . import _native
 from ._request import (
     _FitRequest,
-    _legacy_analysis_limitations,
-    _require_legacy_analysis,
+    _replay_limitations,
+    _require_replayable_analysis,
 )
 from ._rss_qc import summarize_attenuation
 from ._trend import TrendDesign
@@ -37,7 +37,7 @@ def _fit(request: _FitRequest, *, _executor=None) -> SusieResult | SusieInputs:
     limitations = tuple(
         dict.fromkeys(
             request.analysis_limitations
-            + _legacy_analysis_limitations(
+            + _replay_limitations(
                 request.options,
                 design=request.design,
                 dynamic=request.dynamic,
@@ -95,7 +95,7 @@ def _fit(request: _FitRequest, *, _executor=None) -> SusieResult | SusieInputs:
         )
     # refine=True on these models uses the refitting search below; a
     # RefinementConfig still requires the retained-analysis engine.
-    _require_legacy_analysis(
+    _require_replayable_analysis(
         bool(params.get("retain_data")),
         refine if isinstance(refine, RefinementConfig) else False,
         limitations,
@@ -168,7 +168,7 @@ def _fit(request: _FitRequest, *, _executor=None) -> SusieResult | SusieInputs:
         intercept = y_mean_value - float(np.sum(means * mean / scales))
     summary, trace = convergence_summary(native, options, control)
     summary["config_resolution"] = resolution.copy()
-    summary["legacy_requested_config"] = control.options()
+    summary["caller_convergence_config"] = control.options()
     summary["requested_convergence_method"] = request.requested_convergence_method
     summary["requested_config"] = {
         name: options[name]

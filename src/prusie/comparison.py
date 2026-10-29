@@ -216,9 +216,7 @@ def comparison_relations(
             for side in ("a", "b"):
                 row[f"cs_retained_{side}"] = bool(row.get(f"cs_size_{side}"))
             row["matching_layer"] = "components"
-            row["legacy_support_status"] = (
-                "inferred_from_recorded_cs_size; unmatched_support_unavailable"
-            )
+            row["support_status"] = "inferred_from_recorded_cs_size; unmatched_support_unavailable"
             sources = []
             if row.get("posterior_overlap", -1) >= comparison.get("thresholds", {}).get(
                 "posterior_overlap", 0.5
@@ -282,7 +280,7 @@ def comparison_relations(
                             matching_layer="signals",
                             support_sources=["formal_cs"],
                             unobserved_mass=row.get(f"unobserved_mass_{side}"),
-                            legacy_support_status="formal_CS_identity_recovered_from_recorded_cs_size",
+                            support_status="formal_CS_identity_recovered_from_recorded_cs_size",
                         )
                     )
         else:

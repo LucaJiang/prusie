@@ -37,7 +37,7 @@ from .refinement import RefinementConfig, initial_options, make_prepared
 from .result import SusieResult
 
 
-def _legacy_analysis_limitations(
+def _replay_limitations(
     options: Mapping[str, Any],
     *,
     design: Any = None,
@@ -61,7 +61,7 @@ def _legacy_analysis_limitations(
     return tuple(reason for active, reason in conditions if active)
 
 
-def _require_legacy_analysis(
+def _require_replayable_analysis(
     retain_data: bool,
     refine: bool | RefinementConfig,
     limitations: tuple[str, ...],
@@ -478,7 +478,7 @@ def _prepare_request(
     # Ordinary fits do not retain caller buffers or scan an unused hash.
     signature = None
     prepared = None
-    analysis_limitations = _legacy_analysis_limitations(
+    analysis_limitations = _replay_limitations(
         options,
         design=_design,
         dynamic=_dynamic,

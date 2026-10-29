@@ -211,8 +211,8 @@ def test_result_repr_only_reads_stored_shape_and_status():
     assert "stop_reason='not_available'" in repr(fit)
 
 
-def test_legacy_nonzero_z_ld_weight_is_invalid():
-    with pytest.raises(ValueError, match=r"absent from susieR 0\.16\.6"):
+def test_nonzero_z_ld_weight_is_invalid():
+    with pytest.raises(ValueError, match=r"removed in susieR 0\.16\.6"):
         susie_rss([1.0, 2.0], np.eye(2), n=100, z_ld_weight=0.1)
 
 

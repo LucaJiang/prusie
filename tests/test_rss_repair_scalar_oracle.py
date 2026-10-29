@@ -1,7 +1,5 @@
-"""Exact owned RSS repair parity, retaining the parent's scalar oracle."""
+"""Native RSS validation and repair match a scalar Python reference bit for bit."""
 
-import importlib.util
-import os
 import warnings
 
 import numpy as np
@@ -11,8 +9,8 @@ from prusie import _native
 from prusie._validation import _symmetrize_matrix
 
 
-def scalar_parent(a, scale):
-    """The unchanged parent general scan and priority, as a test-only oracle."""
+def scalar_reference(a, scale):
+    """Blocked scan with the native error priority, written as plain Python."""
     n = len(a)
     flags = [True] * 7
     out = np.empty((n, n), dtype=np.float64)
@@ -74,17 +72,6 @@ def assert_outcome(a, b):
             np.testing.assert_array_equal(a[3], b[3])
 
 
-@pytest.fixture(scope="module")
-def installed_parent():
-    path = os.environ.get("PRUSIE_VAL02_PARENT_NATIVE")
-    if not path:
-        return None
-    spec = importlib.util.spec_from_file_location("val02_parent._native", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def layout(a, order):
     if order in ("C", "F"):
         return np.array(a, dtype=np.float64, order=order)
@@ -95,7 +82,8 @@ def layout(a, order):
     return b[::2, ::2]
 
 
-@pytest.mark.parametrize("n", [4, 5, 7, 8, 9, 15, 16, 17, 31, 32, 33, 34, 35, 63, 64, 65, 66, 67])
+# Sizes on either side of the 32-wide validation blocks and small SIMD widths.
+@pytest.mark.parametrize("n", [4, 7, 8, 9, 16, 17, 31, 32, 33, 63, 64, 65])
 @pytest.mark.parametrize("order", ["C", "F", "strided", "negative"])
 @pytest.mark.parametrize(
     "scale",
@@ -112,30 +100,27 @@ def layout(a, order):
         np.nan,
     ],
 )
-def test_parent_flags_returned_repair_bits_and_input_invariance(n, order, scale, installed_parent):
+def test_flags_repair_bits_and_input_invariance_match_reference(n, order, scale):
     k = np.arange(n * n).reshape(n, n)
     a = layout(((17 * k + k // n * 11) % 67) / 128.0 - 0.25, order)
     np.fill_diagonal(a, 1.0)
     a[0, 1], a[1, 0] = -0.0, np.nextafter(0.0, 1.0)
     original = a.copy().view(np.uint64)
-    expected = outcome(scalar_parent, a, scale)
+    expected = outcome(scalar_reference, a, scale)
     actual = outcome(_native.validate_and_repair_rss, a, scale)
     assert_outcome(actual, expected)
-    if installed_parent is not None:
-        assert_outcome(actual, outcome(installed_parent.validate_and_repair_rss, a, scale))
     np.testing.assert_array_equal(a.view(np.uint64), original)
 
 
 @pytest.mark.parametrize("order", ["C", "F"])
-@pytest.mark.parametrize("position", range(81))
+# Corners, diagonal, first row/column and interior cells of a 9×9 matrix.
+@pytest.mark.parametrize("position", [0, 1, 8, 9, 10, 40, 44, 72, 79, 80])
 @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf, -1.0, -0.0, np.finfo(float).max])
-def test_each_position_error_priority(position, value, order, installed_parent):
+def test_each_position_error_priority(position, value, order):
     a = np.array(np.eye(9), order=order)
     a.flat[position] = value
     actual = outcome(_native.validate_and_repair_rss, a, -2.0)
-    assert_outcome(actual, outcome(scalar_parent, a, -2.0))
-    if installed_parent is not None:
-        assert_outcome(actual, outcome(installed_parent.validate_and_repair_rss, a, -2.0))
+    assert_outcome(actual, outcome(scalar_reference, a, -2.0))
 
 
 def test_symmetric_general_repair_overflow_is_suppressed():

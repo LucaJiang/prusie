@@ -15,7 +15,7 @@ from ._execution import close_executor, create_executor
 from ._overwrite import _overwrite_prepare, _overwrite_recheck
 from ._request import (
     _prepare_request,
-    _require_legacy_analysis,
+    _require_replayable_analysis,
 )
 from ._validation import (
     _scalar,
@@ -208,8 +208,8 @@ def susie_rss(
     ------
     ValueError
         Ambiguous or incomplete input, an invalid correlation matrix,
-        invalid summary values, invalid parameter ranges, or a nonzero legacy
-        ``z_ld_weight`` absent from susieR 0.16.6.
+        invalid summary values, invalid parameter ranges, or a nonzero
+        ``z_ld_weight`` (removed in susieR 0.16.6).
 
     Warns
     -----
@@ -295,7 +295,7 @@ def susie_rss(
     if multipanel:
         # Panel selection fits candidate models before the final shared fitter.
         if not init_only:
-            _require_legacy_analysis(retain_data, refine, ("multi-panel RSS",))
+            _require_replayable_analysis(retain_data, refine, ("multi-panel RSS",))
         return prepare_multipanel(dict(locals()))
     design_data = None
     if R_finite is True:
@@ -307,7 +307,7 @@ def susie_rss(
     else:
         R_finite = None
     if z_ld_weight != 0:
-        raise ValueError("z_ld_weight is absent from susieR 0.16.6; only legacy zero is accepted")
+        raise ValueError("z_ld_weight was removed in susieR 0.16.6; it must be 0")
     if z is not None and (bhat is not None or shat is not None):
         raise ValueError("Provide either z or bhat/shat, not both")
     has_effects = z is None
