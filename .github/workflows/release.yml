@@ -1,0 +1,154 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+  OMP_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+  PRUSIE_NUM_THREADS: '1'
+jobs:
+  linux:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64
+          - runner: ubuntu-24.04-arm
+            target: aarch64
+    steps:
+      - uses: actions/checkout@v5
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: '1.10.2'
+          target: ${{ matrix.target }}
+          manylinux: '2_28'
+          args: --release --locked --out dist -i python3.10 python3.11 python3.12 python3.13
+      - uses: actions/upload-artifact@v5
+        with:
+          name: wheels-linux-${{ matrix.target }}
+          path: dist/*.whl
+  macos:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-13
+            target: x86_64
+          - runner: macos-latest
+            target: aarch64
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: |
+            3.10
+            3.11
+            3.12
+            3.13
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: '1.10.2'
+          target: ${{ matrix.target }}
+          args: --release --locked --out dist -i python3.10 python3.11 python3.12 python3.13
+      - uses: actions/upload-artifact@v5
+        with:
+          name: wheels-macos-${{ matrix.target }}
+          path: dist/*.whl
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: |
+            3.10
+            3.11
+            3.12
+            3.13
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: '1.10.2'
+          target: x64
+          args: --release --locked --out dist -i python3.10 python3.11 python3.12 python3.13
+      - uses: actions/upload-artifact@v5
+        with:
+          name: wheels-windows-x64
+          path: dist/*.whl
+  sdist:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: '1.10.2'
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v5
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+  smoke:
+    needs: [linux, macos, windows]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            artifact: wheels-linux-x86_64
+          - os: ubuntu-24.04-arm
+            artifact: wheels-linux-aarch64
+          - os: macos-13
+            artifact: wheels-macos-x86_64
+          - os: macos-latest
+            artifact: wheels-macos-aarch64
+          - os: windows-latest
+            artifact: wheels-windows-x64
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v6
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist
+      - name: Install the wheel without a source build and run the tests
+        run: |
+          python -m pip install --only-binary=:all: --no-index --find-links dist prusie
+          python -m pip install 'pytest>=8,<9' 'scipy>=1.11' 'matplotlib>=3.7'
+          python -m pytest tests -q
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [smoke, sdist]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Write checksums
+        run: cd dist && sha256sum * > SHA256SUMS.txt
+      - name: Attach packages to the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          if [[ "$GITHUB_REF_NAME" =~ (a|b|rc)[0-9]+$ ]]; then prerelease="--prerelease"; fi
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+                 --title "prusie ${GITHUB_REF_NAME#v}" --notes-from-tag --verify-tag $prerelease
+          gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --clobber

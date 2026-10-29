@@ -100,6 +100,15 @@ benchmark tools remain in the checkout.
 Retain `LICENSE`, `THIRD_PARTY_NOTICES.md` and the
 notices in adapted source and frozen data when distributing packages.
 
+Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`. It builds wheels
+for CPython 3.10–3.13 on Linux (x86-64 and ARM64, manylinux 2.28), macOS
+(Intel and Apple silicon) and Windows x86-64, plus the sdist. It installs
+each wheel without a source build and runs the test suite on both the oldest
+and newest supported Python, then attaches the packages and `SHA256SUMS.txt`
+to the GitHub Release for that tag. Tags ending in `aN`, `bN` or `rcN` are
+marked as prereleases. Running the workflow by hand builds and tests the
+packages without publishing them.
+
 ## Benchmark scripts
 
 `tools/benchmark/reproduce.py` runs new comparisons with pinned susieR;

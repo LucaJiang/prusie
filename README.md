@@ -1,5 +1,10 @@
 # prusie: SuSiE fine-mapping in Python
 
+[![tests](https://github.com/LucaJiang/prusie/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/LucaJiang/prusie/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/LucaJiang/prusie/badges/coverage.json)](https://github.com/LucaJiang/prusie/actions/workflows/ci.yml)
+[![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)](pyproject.toml)
+[![license: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+
 <p align="center">
   <a href="docs/assets/logos/logo_title.jpeg"><img src="docs/assets/logos/prusie-banner-1792.jpg" alt="prusie — Python and Rust software for SuSiE fine-mapping" width="960"></a>
 </p>
@@ -70,14 +75,14 @@ sets (CS) and then produces figures and an offline report from the same fit.
 ## Accuracy and performance
 
 <!-- current:highlights:start -->
-Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.
+Measured **prusie 0.3.0** against **susieR 0.16.6** on the same inputs.
 
-| Analysis | Cases | Complete-call speed-up¹ | Fitting-stage speed-up¹ | Complete-call sum-of-medians² | Peak RSS ratio³ |
-| --- | --- | --- | --- | --- | --- |
-| GWAS | 200 | 49.2× | 55.4× | 42.9× | 3.66× |
-| eQTL | 14157 | 26.6× | 29.8× | 26.6× | 3.77× |
+| Evaluated cases | Cases | Cumulative runtime ratio | Cumulative fitting-stage ratio | Median peak-memory ratio |
+| --- | --- | --- | --- | --- |
+| GWAS | 200 | 49.2× | 55.4× | 5.11× |
+| eQTL | 14,157 | 26.6× | 29.8× | 4.60× |
 
-¹ Sum of three retained R times divided by the corresponding prusie total, on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. ² Sum of within-case R medians divided by the sum of prusie medians. ³ Median paired R/prusie fresh-process peak RSS from the earlier local workstation measurements, including interpreter and inputs. Runtime and memory have separate origins.
+The cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](docs/performance.md).
 <!-- current:highlights:end -->
 
 The performance report identifies the measured software, hardware, data and protocol.

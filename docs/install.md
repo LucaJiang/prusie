@@ -40,17 +40,29 @@ bitwise identical results across platforms; see
 
 ## Use a prebuilt wheel
 
-Use a prusie 0.3.0 wheel that matches your Python interpreter and platform.
-For example, the following filename identifies a wheel for CPython 3.12 on
-Linux x86-64 with glibc ≥2.34. From the directory containing the wheel:
+Each tagged [GitHub Release](https://github.com/LucaJiang/prusie/releases)
+provides wheels for CPython 3.10–3.13 on these platforms, together with a
+source distribution and `SHA256SUMS.txt`:
+
+| Platform | Wheel tag |
+| --- | --- |
+| Linux x86-64, glibc ≥2.28 | `manylinux_2_28_x86_64` |
+| Linux ARM64, glibc ≥2.28 | `manylinux_2_28_aarch64` |
+| macOS Intel | `macosx_*_x86_64` |
+| macOS Apple silicon | `macosx_*_arm64` |
+| Windows x86-64 | `win_amd64` |
+
+Download the wheel for your interpreter and platform, check it against
+`SHA256SUMS.txt`, and install it from its directory, for example:
 
 ```sh
-python -m pip install ./prusie-0.3.0-cp312-cp312-manylinux_2_34_x86_64.whl
+python -m pip install ./prusie-0.3.0-cp312-cp312-manylinux_2_28_x86_64.whl
 ```
 
-If a checksum is supplied, verify it before installation. The wheel contains
-the compiled extension, so installing prusie itself does not require Rust or a
-compiler. A source distribution still requires the
+A wheel contains the compiled extension, so it needs neither Rust nor a
+compiler. Only the Linux x86-64 wheel includes the optional vector-math helper;
+the other wheels use scalar exponentials, as with
+[`portable-math`](#build-from-source). A source distribution requires the
 [build toolchain](#build-from-source).
 
 See [contributing](contributing.md#building-packages) for package-building and

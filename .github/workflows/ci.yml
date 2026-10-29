@@ -78,6 +78,50 @@ jobs:
       - if: matrix.os == 'ubuntu-24.04' && matrix.python == '3.13'
         run: |
           cargo test --locked -p prusie-core -- --test-threads=1
+  coverage:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'numpy==2.5.3' 'pytest>=8,<9' 'scipy>=1.11' 'matplotlib>=3.7' 'maturin==1.10.2' 'coverage[toml]>=7.6'
+      - run: maturin build --release --locked --out dist
+      - run: python -m pip install dist/*.whl
+      - name: Measure line coverage of the installed package
+        run: |
+          package=$(python -c 'import pathlib, prusie; print(pathlib.Path(prusie.__file__).parent)')
+          python -m coverage run --source="$package" -m pytest tests -q
+          python -m coverage report --precision=1 | tail -n 1
+          python -m coverage json -o coverage.json
+      - name: Write the badge endpoint
+        run: |
+          python - <<'PY'
+          import json
+          percent = json.load(open("coverage.json"))["totals"]["percent_covered"]
+          color = "brightgreen" if percent >= 90 else "green" if percent >= 80 else "yellow" if percent >= 70 else "red"
+          badge = {"schemaVersion": 1, "label": "coverage", "message": f"{percent:.0f}%", "color": color}
+          json.dump(badge, open("coverage-badge.json", "w"))
+          PY
+      - uses: actions/upload-artifact@v5
+        with:
+          name: coverage
+          path: coverage.json
+      - name: Publish the badge on the badges branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          content=$(base64 -w0 coverage-badge.json)
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/contents/coverage.json?ref=badges" --jq .sha 2>/dev/null || true)
+          if ! gh api "repos/$GITHUB_REPOSITORY/branches/badges" >/dev/null 2>&1; then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref=refs/heads/badges -f sha="$GITHUB_SHA"
+          fi
+          gh api -X PUT "repos/$GITHUB_REPOSITORY/contents/coverage.json" \
+            -f message="Update coverage badge for $GITHUB_SHA" -f branch=badges \
+            -f content="$content" ${sha:+-f sha="$sha"}
   r-reference:
     if: github.event_name == 'workflow_dispatch' && inputs.r_reference
     runs-on: ubuntu-24.04
