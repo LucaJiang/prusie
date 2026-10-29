@@ -1,11 +1,18 @@
-"""Render current 0.3.0 marker blocks from public retained measurements."""
+"""Render generated documentation blocks from the published 0.3.0 benchmark records."""
 
 from __future__ import annotations
 
+import gzip
+import json
 import re
+import statistics
 from pathlib import Path
 
-from v030_records import finite, load_public, read
+from v030_records import digest, finite, read
+
+ASSETS = Path("docs/assets/benchmark")
+PANELS = ("GWAS", "eQTL")
+THREADS = (("C4_t2_vs_t1", 2), ("C4_t4_vs_t1", 4), ("C4_t8_vs_t1", 8))
 
 
 def table(headers, rows):
@@ -26,21 +33,40 @@ def number(value, digits=3):
     return f"{value:.{digits}g}" if finite(value) else "unavailable"
 
 
-def milliseconds(value):
-    return number(value * 1000 if finite(value) else None)
+def quartiles(values):
+    q1, median, q3 = statistics.quantiles(values, n=4, method="inclusive")
+    return q1, median, q3
 
 
-def acceptance_counts(group):
-    return (
-        f"{group['alpha_passes']} / {len(group['alpha_failures'])} / "
-        f"{len(group['alpha_unavailable'])}"
-    )
+def records_of(assets):
+    summary = read(assets / "benchmark_summary.json")
+    path = assets / "benchmark_records.jsonl.gz"
+    assert digest(path) == summary["records_sha256"]
+    with gzip.open(path, "rt") as stream:
+        records = [json.loads(line) for line in stream]
+    retime = read(assets / "window10000_retime.json")
+    for row in records:
+        if row["kind"] == "window10000":
+            row["R"] = dict(
+                row["R"],
+                times=retime["retained_complete_seconds"],
+                fitting_times=retime["retained_fitting_seconds"],
+            )
+    return summary, records
+
+
+def ratios(rows, field):
+    return [statistics.median(r["R"][field]) / statistics.median(r["prusie"][field]) for r in rows]
 
 
 def render(root, pages=None, check=False):
     root = Path(root)
-    summary, m1, records = load_public(root / "docs/assets/benchmark")
-    groups = summary["groups"]
+    assets = root / ASSETS
+    summary, records = records_of(assets)
+    primary = {
+        p: [r for r in records if r["kind"] == "primary" and r["panel"] == p] for p in PANELS
+    }
+    windows = sorted((r for r in records if r["kind"].startswith("window")), key=lambda r: r["p"])
     allowed = set(pages) if pages is not None else None
     outputs = {}
 
@@ -56,84 +82,94 @@ def render(root, pages=None, check=False):
             pattern, lambda _: start + "\n" + value.rstrip() + "\n" + end, text, flags=re.S
         )
 
+    def ratio_cell(values):
+        q1, median, q3 = quartiles(values)
+        return f"{median:.1f}× [{q1:.1f}-{q3:.1f}]"
+
+    def cumulative(cases, field):
+        return sum(sum(r["R"][field]) for r in cases) / sum(sum(r["prusie"][field]) for r in cases)
+
     rows = []
-    for panel, group in groups.items():
+    for panel, cases in primary.items():
+        memory = [
+            r["R"]["peak_rss_diagnostic_bytes"] / r["prusie"]["peak_rss_diagnostic_bytes"]
+            for r in cases
+        ]
         rows.append(
             [
                 panel,
-                group["cases"],
-                number(group["total_time_speedup"]) + "×",
-                number(group["fitting"]["headline_R_over_prusie"]) + "×",
-                number(group["sum_case_medians_speedup"]) + "×",
-                number(group["memory_ratio_distribution"]["median"]) + "×",
+                f"{len(cases):,}",
+                f"{cumulative(cases, 'times'):.1f}×",
+                f"{cumulative(cases, 'fitting_times'):.1f}×",
+                f"{statistics.median(memory):.2f}×",
             ]
         )
-    highlights = "Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.\n"
+    highlights = "Measured **prusie 0.3.0** against **susieR 0.16.6** on the same inputs.\n"
     highlights += table(
         [
-            "Analysis",
+            "Evaluated cases",
             "Cases",
-            "Complete-call speed-up¹",
-            "Fitting-stage speed-up¹",
-            "Complete-call sum-of-medians²",
-            "Peak RSS ratio³",
+            "Cumulative runtime ratio",
+            "Cumulative fitting-stage ratio",
+            "Median peak-memory ratio",
         ],
         rows,
     )
     highlights += (
-        "\n¹ Sum of three retained R times divided by the corresponding prusie total, "
-        "on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. "
-        "² Sum of within-case R medians divided by the sum of prusie medians. "
-        "³ Median paired R/prusie fresh-process peak RSS from the earlier local workstation "
-        "measurements, including interpreter and inputs. "
-        "Runtime and memory have separate origins.\n"
+        "\nThe cumulative ratios divide the summed susieR time by the summed prusie time over "
+        "three retained complete calls of every evaluated case, with one numerical thread; "
+        "the fitting stage excludes input and LD preparation. The memory ratio is the median "
+        "of paired susieR/prusie ratios of peak backend-process memory. All measurements are "
+        "from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes "
+        "and LD references may differ; see [performance](docs/performance.md).\n"
     )
     for page in ("README.md", "docs/index.md", "docs/performance.md"):
-        fragment(page, "highlights", highlights, "current")
+        link = "docs/performance.md" if page == "README.md" else "performance.md"
+        fragment(
+            page,
+            "highlights",
+            highlights.replace("(docs/performance.md)", f"({link})"),
+            "current",
+        )
 
-    panel = (
+    panel_text = (
         "The fixed panel contains **200 FinnGen R13 type 2 diabetes GWAS loci** "
         "(n = 486,019; 89,727 cases and 396,292 controls) and **14,157 GTEx v11 "
-        "Whole_Blood genes** (n = 800). GWAS is fitted with the frozen Gaussian "
-        "RSS approximation. All cases remain accounted for, including iteration-limit "
-        "outputs, empty credible sets, numerical discrepancies and operational failures. "
-        "Gene windows and study participants overlap; cases are not independent "
-        "biological replications.\n"
+        "Whole_Blood genes** (n = 800). GWAS is fitted with the Gaussian RSS "
+        "approximation. Every case is included, including iteration-limit fits and "
+        "cases with no credible set. Gene windows and study participants "
+        "overlap, so cases are not independent biological replicates.\n"
     )
-    panel += table(
-        [
-            "Analysis",
-            "Cases",
-            "Variants per case",
-            "Alpha passes / failures / unavailable",
-            "Unresolved case failures",
-        ],
+    panel_text += table(
+        ["Analysis", "Cases", "Variants per case", "Cases where neither program converged"],
         [
             [
                 p,
-                g["cases"],
-                " to ".join(map(str, g["p_range"])),
-                acceptance_counts(g),
-                len(g["operational_failures"]),
+                f"{len(cases):,}",
+                f"{min(r['p'] for r in cases):,} to {max(r['p'] for r in cases):,}",
+                sum(r["both_nonconverged_at_limit"] for r in cases),
             ]
-            for p, g in groups.items()
+            for p, cases in primary.items()
         ],
     )
-    fragment("docs/performance.md", "panel", panel)
+    fragment("docs/performance.md", "panel", panel_text)
+
     runtime_rows = []
-    for panel in groups:
-        current = summary["benchmark"]["panels"][panel]
-        for label, group in (("Complete call", current), ("Fitting stage", current["fitting"])):
+    for panel, cases in primary.items():
+        for label, field in (("Complete call", "times"), ("Fitting stage", "fitting_times")):
+            values = ratios(cases, field)
+            q1, median, q3 = quartiles(values)
+            native = sum(statistics.median(r["prusie"][field]) for r in cases)
+            reference = sum(statistics.median(r["R"][field]) for r in cases)
             runtime_rows.append(
                 [
                     panel,
                     label,
-                    milliseconds(group["backends"]["prusie"]["case_median_seconds"]["median"]),
-                    milliseconds(group["backends"]["R"]["case_median_seconds"]["median"]),
-                    number(group["headline_R_over_prusie"]) + "×",
-                    number(group["sum_of_medians_R_over_prusie"]) + "×",
-                    number(group["geometric_mean_case_median_ratio"]) + "×",
-                    f"{group['wins']} / {group['ties']} / {group['regressions']}",
+                    f"{cumulative(cases, field):.1f}×",
+                    f"{median:.1f}× [{q1:.1f}-{q3:.1f}]",
+                    f"{native / 60:.1f} min",
+                    f"{reference / 3600:.2f} h",
+                    f"{sum(v > 1 for v in values):,} / {len(values):,}",
                 ]
             )
     fragment(
@@ -143,87 +179,120 @@ def render(root, pages=None, check=False):
             [
                 "Analysis",
                 "Metric",
-                "prusie median (ms)",
-                "R median (ms)",
-                "Total R/prusie",
-                "Sum-of-medians",
-                "Geometric mean",
-                "Faster / tied / slower",
+                "Cumulative susieR/prusie ratio",
+                "Per-case ratio, median [IQR]",
+                "prusie total",
+                "susieR total",
+                "Cases faster with prusie",
             ],
             runtime_rows,
         ),
         "current",
     )
+
     variability = []
-    for panel in groups:
-        current = summary["benchmark"]["panels"][panel]
-        old = summary["benchmark"]["local_baseline_first3"][panel]
-        for label, group in (("EPYC 7742, 3 calls", current), ("Local, first 3 calls", old)):
-            for public, backend in (("prusie", "prusie"), ("susieR", "R")):
-                values = group["backends"][backend]
-                variability.append(
-                    [
-                        panel,
-                        label,
-                        public,
-                        number(values["repeat_iqr_over_median"]["median"]),
-                        values["cases_with_repeat_above_3x"],
-                        number(100 * values["total_time_fraction_from_repeats_above_2x"]) + "%",
-                    ]
-                )
+    for panel in PANELS:
+        for public, backend in (("prusie", "prusie"), ("susieR", "R")):
+            values = summary["panels"][panel]["backends"][backend]
+            variability.append(
+                [
+                    panel,
+                    public,
+                    number(values["repeat_iqr_over_median"]["median"]),
+                    values["cases_with_repeat_above_2x"],
+                    number(100 * values["total_time_fraction_from_repeats_above_2x"]) + "%",
+                ]
+            )
     fragment(
         "docs/performance.md",
         "variability",
         table(
             [
                 "Analysis",
-                "Complete-call timing",
                 "Backend",
-                "Median IQR/median",
-                "Cases with a repeat >3× median",
-                "Time in repeats >2× median",
+                "Median repeat IQR/median",
+                "Cases with a call >2× its case median",
+                "Share of total time in those calls",
             ],
             variability,
         ),
         "current",
     )
+
+    memory_rows = []
+    for panel, cases in primary.items():
+        for public, backend in (("prusie", "prusie"), ("susieR", "R")):
+            peaks = [r[backend]["peak_rss_diagnostic_bytes"] / 2**20 for r in cases]
+            memory_rows.append([panel, public, number(statistics.median(peaks)), f"{len(cases):,}"])
     fragment(
         "docs/performance.md",
         "memory",
         table(
+            ["Analysis", "Backend", "Peak RSS, median across cases (MiB)", "Cases"],
+            memory_rows,
+        ),
+        "current",
+    )
+
+    thread_records = read(assets / "thread_scaling.json")["records"]
+    thread_rows = []
+    for comparison, count in THREADS:
+        values = [r["ratio"] for r in thread_records if r["comparison"] == comparison]
+        thread_rows.append(
             [
-                "Analysis / backend",
-                "Fresh-process peak RSS, across-case median (MiB)",
-                "Measured cases",
-            ],
+                count,
+                f"{statistics.median(values):.3f}",
+                f"{sum(v < 1 for v in values)} / {sum(v == 1 for v in values)} / "
+                f"{sum(v > 1 for v in values)}",
+            ]
+        )
+    fragment(
+        "docs/performance.md",
+        "threads",
+        table(
+            ["Threads", "Median time / one-thread time", "Faster / tied / slower, out of 87"],
+            thread_rows,
+        ),
+        "current",
+    )
+
+    with gzip.open(assets / "benchmark_overwrite_records.jsonl.gz", "rt") as stream:
+        overwrite = [json.loads(line) for line in stream]
+    differences = [
+        r["measurements"]["overwrite"]["peak_rss_bytes"]
+        - r["measurements"]["default"]["peak_rss_bytes"]
+        for r in overwrite
+    ]
+    fragment(
+        "docs/performance.md",
+        "overwrite",
+        table(
+            ["Loci", "Equal peaks", "Lower with overwrite", "Higher with overwrite", "Largest gap"],
             [
                 [
-                    f"{p} / {b}",
-                    number(g["backends"][b]["full_process_peak_mib"]["median"]),
-                    g["backends"][b]["full_process_peak_mib"]["n"],
+                    len(overwrite),
+                    sum(d == 0 for d in differences),
+                    sum(d < 0 for d in differences),
+                    sum(d > 0 for d in differences),
+                    f"{max(abs(d) for d in differences) / 1024:.0f} KiB",
                 ]
-                for p, g in groups.items()
-                for b in ("prusie", "susieR")
             ],
         ),
         "current",
     )
-    windows = sorted([r for r in records if r["kind"].startswith("window")], key=lambda r: r["p"])
+
     scaling = []
     for row in windows:
-        for backend in ("prusie", "susieR"):
+        for public, backend in (("prusie", "prusie"), ("susieR", "R")):
             value = row[backend]
-            niter = sorted(set(v for v in value["niter"] if v is not None))
-            converged = sorted(set(v for v in value["converged"] if v is not None))
             scaling.append(
                 [
-                    row["p"],
-                    backend,
-                    number(value["runtime"]["median"]),
-                    number(value["fitting_runtime"]["median"]),
-                    ", ".join(map(str, niter)),
-                    ", ".join(map(str, converged)),
-                    number(value["peak_rss_bytes"] / 2**20 if value["peak_rss_bytes"] else None),
+                    f"{row['p']:,}",
+                    public,
+                    number(statistics.median(value["times"])),
+                    number(statistics.median(value["fitting_times"])),
+                    value["niter"][1],
+                    number(value["peak_rss_diagnostic_bytes"] / 2**20),
                 ]
             )
     fragment(
@@ -235,103 +304,50 @@ def render(root, pages=None, check=False):
                 "Backend",
                 "Complete-call median (s)",
                 "Fitting-stage median (s)",
-                "Observed iterations",
-                "Converged",
-                "Earlier local peak RSS (MiB)",
+                "Iterations",
+                "Peak RSS (MiB)",
             ],
             scaling,
         ),
         "current",
     )
-    protocol = summary["benchmark_protocol"]
+
+    protocol = read(assets / "benchmark_protocol.json")
     original = protocol["original_code_under_test"]
     identity = (
-        f"- Frozen release code: `{original['code_sha']}`\n"
-        f"- Original release wheel SHA-256: `{original['wheel_sha256']}`\n"
-        f"- Original native extension SHA-256: `{original['native_sha256']}`\n"
-        f"- Benchmark protocol SHA-256: `{summary['benchmark']['protocol_sha256']}` "
+        f"- Release code: `{original['code_sha']}`\n"
+        f"- Release wheel SHA-256: `{original['wheel_sha256']}`\n"
+        f"- Release native extension SHA-256: `{original['native_sha256']}`\n"
+        f"- Benchmark protocol SHA-256: `{summary['protocol_sha256']}` "
         "(hash of the protocol file as executed; the published copy was later edited "
         "only to remove host names, so its bytes differ)\n"
         "- Statistical reference: R 4.4.0; susieR 0.16.6, "
         "`8e56a8e038e989856d106d9ca5175cc664fea9d2`.\n\n"
-        "Both runtime metrics use run-local timing instrumentation derived from these frozen "
-        "artifacts. The native binary differs from the release binary; the original wheel is "
-        "preserved. The instrumentation patch, derived binary hashes, source boundaries and "
-        "qualification results are in the "
-        "[measurement archive](reproducibility.md#benchmark-protocol). "
-        "Earlier local memory measurements retain their original measured build identity.\n"
+        "Both runtime metrics use timing-instrumented copies of these release artifacts; the "
+        "instrumented native binary is not byte-identical to the release wheel. The patch, "
+        "derived binary hashes and timing boundaries are in the "
+        "[measurement archive](reproducibility.md#benchmark-protocol).\n"
     )
     fragment("docs/performance.md", "identity", identity, "current")
-    comparison_labels = {
-        "C1_V030_vs_BASE": "0.3.0 vs intermediate baseline",
-        "C2_V030_vs_MAIN": "0.3.0 vs historical baseline",
-        "C3_V030_vs_ENG01": "0.3.0 vs previously optimized baseline",
-        "C4_t2_vs_t1": "n_threads=2 vs 1",
-        "C4_t4_vs_t1": "n_threads=4 vs 1",
-        "C4_t8_vs_t1": "n_threads=8 vs 1",
-        "C5_true_vs_false": "overwrite_ld=True vs False",
-    }
-    role_labels = {
-        "default-veto": "non-regression check",
-        "thread-option": "four-thread option",
-        "memory-only": "memory comparison",
-    }
-    gate_rows = []
-    for item in m1["comparisons"]:
-        if item["id"].startswith("AA_"):
-            continue
-        d = item["decision"]
-        runtime = d.get("runtime", {})
-        memory = d.get("memory", {})
-        gate_rows.append(
+
+    def percent_at_most(values, bound):
+        return f"{100 * sum(v <= bound for v in values) / len(values):.1f}%"
+
+    alpha_rows = []
+    for panel, cases in primary.items():
+        values = [r["max_abs_alpha_error"] for r in cases]
+        q1, median, q3 = quartiles(values)
+        alpha_rows.append(
             [
-                comparison_labels[item["id"]],
-                {
-                    "panel": "Primary (87)",
-                    "fresh_panel": "Confirmation (80)",
-                    "largep": "Large-p (17)",
-                }.get(item["panel"], item["panel"]),
-                d["state"],
-                d["rounds"],
-                f"{d['applicable_cases']} / {d['cases']}",
-                " / ".join(str(runtime.get(key, "—")) for key in ("wins", "ties", "regressions")),
-                " / ".join(
-                    str(item["case_median_runtime_counts"][key])
-                    for key in ("wins", "ties", "regressions")
-                ),
-                " / ".join(str(memory.get(key, "—")) for key in ("wins", "ties", "regressions")),
-                "descriptive" if item["diagnostic_only"] else role_labels[item["kind"]],
+                panel,
+                f"{len(cases):,}",
+                f"{number(median)} [{number(q1)}, {number(q3)}]",
+                percent_at_most(values, 1e-8),
+                number(max(values)),
+                number(statistics.median(r["max_abs_pip_error"] for r in cases)),
+                number(max(r["max_abs_pip_error"] for r in cases)),
             ]
         )
-    fragment(
-        "docs/performance.md",
-        "earlier",
-        table(
-            [
-                "Comparison",
-                "Fixed panel",
-                "v10 decision",
-                "Retained rounds",
-                "Applicable / all cases",
-                "v10 paired-round runtime W / T / R",
-                "Case-median runtime W / T / R",
-                "Incremental-memory W / T / R",
-                "Role",
-            ],
-            gate_rows,
-        )
-        + "\nThese are earlier controlled measurements on the same AMD EPYC 7742 nodes. "
-        "Cumulative totals do not replace the fixed-panel majority, "
-        "stratified non-regression check and robustness criteria. "
-        "The v10 runtime count uses the median of paired-round time ratios; the additional "
-        "case-median count compares the two within-case median times. These can differ. "
-        "Memory counts compare within-case medians of incremental peaks. "
-        "W / T / R means lower, equal and higher candidate measurements. "
-        "A comparison with 16 retained rounds uses the protocol's single quality retry, "
-        "pooling both complete windows only for comparisons whose first-window decision "
-        "was unresolved. Other comparisons retain the original eight rounds. Initial "
-        "decisions remain in the paired measurement records.\n",
-    )
     fragment(
         "docs/numerical_accuracy.md",
         "maxima",
@@ -339,116 +355,72 @@ def render(root, pages=None, check=False):
             [
                 "Analysis",
                 "Cases",
-                "Alpha passes / failures / unavailable",
-                "Maximum |Δalpha|",
-                "Maximum |ΔPIP|",
+                "Per-case max |Δalpha|, median [IQR]",
+                "Cases ≤ 1e-8",
+                "Largest",
+                "Per-case max |ΔPIP|, median",
+                "Largest",
             ],
-            [
-                [
-                    p,
-                    g["cases"],
-                    acceptance_counts(g),
-                    number(g["max_abs_alpha_error"]),
-                    number(g["max_abs_pip_error"]),
-                ]
-                for p, g in groups.items()
-            ],
-        )
-        + "\nThe gate remains absolute alpha error ≤ 1e-5, with relative tolerance zero. "
-        "Iteration-limit exceedances remain failures of this numerical threshold.\n",
+            alpha_rows,
+        ),
     )
-    failure_rows = []
 
-    def outcomes(values):
-        return (
-            ", ".join(sorted({f"{v['niter']} / {v['converged']}" for v in values})) or "unavailable"
-        )
-
-    for item in summary["alpha_failures"]:
-        failure_rows.append(
-            [
-                item["case_id"],
-                item["series"],
-                number(item["error"], 8),
-                outcomes(item["prusie_fit_outcomes"]),
-                outcomes(item["R_fit_outcomes"]),
-                item["both_backends_nonconverged_at_iteration_limit"],
-                item["disposition"],
-            ]
-        )
-    failures = (
-        table(
-            [
-                "Case",
-                "Setting",
-                "Maximum |Δalpha|",
-                "prusie: iterations / converged",
-                "R: iterations / converged",
-                "Both at iteration limit",
-                "Disposition",
-            ],
-            failure_rows,
-        )
-        if failure_rows
-        else "No alpha failures were recorded.\n"
-    )
-    converged_failures = [
-        r
-        for p in summary["benchmark"]["panels"].values()
-        for r in p["exceedances"]
-        if r["any_backend_call_converged"]
-    ]
-    if converged_failures:
-        failures = (
-            "**Alpha exceedances involving a converged backend: "
-            + ", ".join(r["case_id"] for r in converged_failures)
-            + ".**\n\n"
-            + failures
-        )
-    else:
-        failures = "No alpha exceedance involved a converged backend.\n\n" + failures
-    fragment("docs/numerical_accuracy.md", "errors", failures)
-    limits = table(
-        ["Analysis", "prusie iteration-limit cases", "R iteration-limit cases"],
+    largest = sorted(
+        (r for r in records if r["kind"] == "primary"), key=lambda r: -r["max_abs_alpha_error"]
+    )[:6]
+    largest_text = table(
+        [
+            "Case",
+            "Variants",
+            "Max |Δalpha|",
+            "Max |ΔPIP|",
+            "Iterations (prusie / susieR)",
+            "Converged",
+            "Credible sets (prusie / susieR)",
+        ],
         [
             [
-                p,
-                len(g["backends"]["prusie"]["iteration_limit_cases"]),
-                len(g["backends"]["susieR"]["iteration_limit_cases"]),
+                r["case_id"],
+                f"{r['p']:,}",
+                number(r["max_abs_alpha_error"]),
+                number(r["max_abs_pip_error"]),
+                f"{r['prusie']['niter'][1]} / {r['R']['niter'][1]}",
+                "neither" if r["both_nonconverged_at_limit"] else "both",
+                f"{r['prusie']['cs_count'][1]} / {r['R']['cs_count'][1]}",
             ]
-            for p, g in groups.items()
+            for r in largest
         ],
     )
-    limits += (
-        "\nAll completed positive timing pairs enter the performance summaries, "
-        "independently of convergence, alpha agreement and credible-set presence. "
-        "Per-case records list every status.\n"
+    fragment("docs/numerical_accuracy.md", "errors", largest_text)
+
+    def at_limit(cases, backend):
+        return sum(not all(r[backend]["converged"]) for r in cases)
+
+    fragment(
+        "docs/numerical_accuracy.md",
+        "limits",
+        table(
+            ["Analysis", "prusie nonconverged", "susieR nonconverged"],
+            [[p, at_limit(cases, "prusie"), at_limit(cases, "R")] for p, cases in primary.items()],
+        )
+        + "\nNonconverged fits stopped at `max_iter=100`. They remain in every runtime and "
+        "memory summary.\n",
     )
-    fragment("docs/numerical_accuracy.md", "limits", limits)
+
     cs = []
-    for p in groups:
-        rows = [r for r in records if r["panel"] == p and r["kind"] == "primary"]
-        for b in ("prusie", "susieR"):
-            available = [r for r in rows if r[b] and r[b]["cs_count"]]
-            counts = [r[b]["cs_count"][0] for r in available]
-            cs.append([p, b, len(available), sum(counts), sum(v == 0 for v in counts)])
+    for panel, cases in primary.items():
+        for public, backend in (("prusie", "prusie"), ("susieR", "R")):
+            counts = [r[backend]["cs_count"][1] for r in cases]
+            cs.append([panel, public, f"{sum(counts):,}", f"{sum(v == 0 for v in counts):,}"])
     fragment(
         "docs/numerical_accuracy.md",
         "cs",
-        table(
-            [
-                "Analysis",
-                "Backend",
-                "Cases with recorded counts",
-                "Credible sets (first retained fit)",
-                "Empty-CS cases",
-            ],
-            cs,
-        )
-        + "\nThis full-panel campaign records set counts; it does not compare full member "
-        "identities, returned mass or purity. "
-        "The separate packaged example and regression suites check those quantities.\n",
+        table(["Analysis", "Backend", "Credible sets", "Cases with no credible set"], cs)
+        + "\nCounts come from the first retained call. The full-panel comparison does not "
+        "compare set members, coverage or purity; the packaged example and the regression "
+        "tests check those.\n",
     )
+
     toy = root / "docs/assets/toy_result.json"
     if toy.exists():
         result = read(toy)
@@ -473,9 +445,10 @@ def render(root, pages=None, check=False):
             ],
         )
         fragment("docs/example.md", "toy-cs", cs)
+
     stale = [str(p.relative_to(root)) for p, text in outputs.items() if p.read_text() != text]
     if check:
-        assert not stale, "Stale generated 0.3.0 blocks: " + ", ".join(stale)
+        assert not stale, "Stale generated blocks: " + ", ".join(stale)
     else:
         for path, text in outputs.items():
             path.write_text(text)

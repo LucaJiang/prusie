@@ -59,15 +59,48 @@ not require BLAS development libraries.</p>
 bitwise identical results across platforms; see
 <a href="implementation.html#numerical-reproducibility">numerical reproducibility</a>.</p>
 <h2 id="use-a-prebuilt-wheel">Use a prebuilt wheel</h2>
-<p>Use a prusie 0.3.0 wheel that matches your Python interpreter and platform.
-For example, the following filename identifies a wheel for CPython 3.12 on
-Linux x86-64 with glibc ≥2.34. From the directory containing the wheel:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./prusie-0.3.0-cp312-cp312-manylinux_2_34_x86_64.whl
+<p>Each tagged <a href="https://github.com/LucaJiang/prusie/releases">GitHub Release</a>
+provides wheels for CPython 3.10–3.13 on these platforms, together with a
+source distribution and <code>SHA256SUMS.txt</code>:</p>
+<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Wheel tag</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linux x86-64, glibc ≥2.28</td>
+<td><code>manylinux_2_28_x86_64</code></td>
+</tr>
+<tr>
+<td>Linux ARM64, glibc ≥2.28</td>
+<td><code>manylinux_2_28_aarch64</code></td>
+</tr>
+<tr>
+<td>macOS Intel</td>
+<td><code>macosx_*_x86_64</code></td>
+</tr>
+<tr>
+<td>macOS Apple silicon</td>
+<td><code>macosx_*_arm64</code></td>
+</tr>
+<tr>
+<td>Windows x86-64</td>
+<td><code>win_amd64</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Download the wheel for your interpreter and platform, check it against
+<code>SHA256SUMS.txt</code>, and install it from its directory, for example:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./prusie-0.3.0-cp312-cp312-manylinux_2_28_x86_64.whl
 </code></pre></div>
 
-<p>If a checksum is supplied, verify it before installation. The wheel contains
-the compiled extension, so installing prusie itself does not require Rust or a
-compiler. A source distribution still requires the
+<p>A wheel contains the compiled extension, so it needs neither Rust nor a
+compiler. Only the Linux x86-64 wheel includes the optional vector-math helper;
+the other wheels use scalar exponentials, as with
+<a href="#build-from-source"><code>portable-math</code></a>. A source distribution requires the
 <a href="#build-from-source">build toolchain</a>.</p>
 <p>See <a href="contributing.html#building-packages">contributing</a> for package-building and
 validation commands.</p>

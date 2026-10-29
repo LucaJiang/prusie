@@ -60,7 +60,7 @@ command writes SVG and PDF files to <code>docs/assets/benchmark/</code>.
 <code>tools/generate_results.py</code> updates the generated measurement tables and text.
 Add <code>--check</code> to <code>tools/model_examples.py</code> or
 <code>tools/generate_results.py</code> to check its generated Markdown without rewriting it.</p>
-<p>The records in <code>docs/assets/benchmark/</code> have distinct measurement origins:</p>
+<p>The records in <code>docs/assets/benchmark/</code> are:</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -70,40 +70,37 @@ Add <code>--check</code> to <code>tools/model_examples.py</code> or
 </thead>
 <tbody>
 <tr>
-<td><a href="assets/benchmark/benchmark_summary.json">benchmark_summary.json</a></td>
-<td>Complete-call and fitting-stage summaries, variant-count quintiles, repeat variability and earlier local comparisons.</td>
+<td><a href="assets/benchmark/benchmark_records.jsonl.gz">benchmark_records.jsonl.gz</a></td>
+<td>All 14,363 cases: three retained complete-call and fitting-stage times per backend, timestamps, peak memory, iteration and convergence outcomes and numerical differences.</td>
 </tr>
 <tr>
-<td><a href="assets/benchmark/benchmark_records.jsonl.gz">benchmark_records.jsonl.gz</a></td>
-<td>All 14,363 cases, three retained times per backend/metric, timestamps, outcomes and numerical differences.</td>
+<td><a href="assets/benchmark/benchmark_summary.json">benchmark_summary.json</a></td>
+<td>Panel summaries, variant-count quintiles and repeat variability.</td>
 </tr>
 <tr>
 <td><a href="assets/benchmark/benchmark_protocol.json">benchmark_protocol.json</a></td>
-<td>Frozen protocol v2 and artifact hashes.</td>
+<td>Measurement protocol and artifact hashes.</td>
 </tr>
 <tr>
-<td><a href="assets/benchmark/v030_summary.json">v030_summary.json</a> and <a href="assets/benchmark/v030_records.jsonl.gz">v030_records.jsonl.gz</a></td>
-<td>Earlier local workstation measurements, retained as the source of published peak RSS. Their old runtime fields are historical.</td>
+<td><a href="assets/benchmark/window10000_retime.json">window10000_retime.json</a></td>
+<td>Dedicated susieR replay for the 10,000-variant nested window.</td>
 </tr>
 <tr>
-<td><a href="assets/benchmark/v030_m1.json">v030_m1.json</a></td>
-<td>Earlier controlled optimization and thread measurements on the same AMD EPYC 7742 nodes, with unchanged acceptance decisions.</td>
+<td><a href="assets/benchmark/benchmark_overwrite_records.jsonl.gz">benchmark_overwrite_records.jsonl.gz</a></td>
+<td>Paired single-call peak memory with <code>overwrite_ld</code> disabled and enabled for 200 GWAS loci.</td>
 </tr>
 <tr>
-<td><a href="assets/benchmark/nonconverged_records.jsonl.gz">nonconverged_records.jsonl.gz</a></td>
-<td>Separate local 1,000-iteration diagnostic for all 224 originally nonconverged genes.</td>
+<td><a href="assets/benchmark/thread_scaling.json">thread_scaling.json</a></td>
+<td>Paired runtimes with <code>n_threads</code> 2, 4 and 8 against one thread for 87 cases.</td>
 </tr>
 <tr>
-<td><a href="assets/benchmark/c3_instructions.tsv">c3_instructions.tsv</a></td>
-<td>Instruction-count follow-up on the 17 large-p cases.</td>
+<td><a href="assets/benchmark/release_qualification.json">release_qualification.json</a></td>
+<td>Release numerical checks against fixed susieR references on 184 cases.</td>
 </tr>
 </tbody>
 </table></div>
-<p>These records contain case identifiers and measurements; association vectors,
-LD matrices and individual genotypes are not included. The earlier
-<a href="assets/benchmark/v030_overwrite.tsv">v030_overwrite.tsv</a> retains the paired
-local memory results. Historical per-case timing fields are preserved in the
-compressed archive but do not supply the new runtime figures.</p>
+<p>These records contain case identifiers and measurements; association
+statistics, LD matrices and individual genotypes are not included.</p>
 <h2 id="benchmark-protocol">Benchmark protocol</h2>
 <p>The full panel is 200 GWAS loci, 14,157 eQTL genes and six nested windows of one
 GWAS locus. Each backend starts a fresh process, loads inputs untimed, makes
@@ -123,7 +120,7 @@ alleles. The reference has no missing genotypes for the selected samples.
 The EUR sample list contains one nonfounder; <code>--make-founders</code> includes all
 525 selected samples in this calculation. Genotype/reference receipts are
 verified before staging. The 24-case fidelity sample checks signs and the
-maximum absolute difference from local LD; its observed maximum is
+maximum absolute difference from the prepared LD; its observed maximum is
 <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.15</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>14</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.15\times10^{-14}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">2.15</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">14</span></span></span></span></span></span></span></span></span></span></span></span></span>. This establishes rounding-level agreement on the
 sample, not bitwise equality or an unmeasured full-panel LD comparison.</p>
 <p>Complete-call timing includes validation and preparation. Fitting-stage
@@ -157,10 +154,14 @@ The 19,221-variant nested window required one retry after R was killed by a
 NUMA-local out-of-memory event. The failed attempt is preserved; the whole
 case completed on another node with the same protocol. Node-wide memory
 admission did not guarantee enough free memory within each NUMA domain.
-Every fixed case remains in the denominator. The old seven-repeat local
-statistics and a first-three-retained sensitivity accompany the new repeat
-variability results. The new process high-water marks are diagnostics;
-published memory remains the earlier local fresh-process experiment.</p>
+Every fixed case remains in the summaries. Peak memory comes from the
+high-water marks of these same backend processes.</p>
+<p>One retained susieR call for the 10,000-variant nested window took 1,576 s,
+while its fitting stage took 70 s. The published susieR values for that window
+come from a dedicated replay on the same node and core: two fresh R processes
+with one warm-up and three, then seven, retained calls; all ten agreed within
+0.6%. <a href="assets/benchmark/window10000_retime.json">window10000_retime.json</a>
+records the replay.</p>
 <h2 id="toy-example">Toy example</h2>
 <p>Use the packaged synthetic toy example to repeat a small fit offline. The
 wheel includes inputs, metadata, checksums and a separate susieR reference
@@ -234,10 +235,9 @@ commit, then choose a new output directory:</p>
 
 <p><code>--validation-only</code> fits both implementations on the toy inputs and writes
 results and numerical comparisons below the new directory. It omits the
-timing and memory series and requires no BLAS-probe compilation. The comparison
-applies the
-<a href="model.html#computational-compatibility">complete-alpha validation criterion</a>;
-PIP and credible-set differences remain diagnostics. The
+timing and memory series and requires no BLAS-probe compilation. It reports the
+<a href="model.html#computational-compatibility">complete-alpha comparison</a>; PIP and
+credible-set differences are reported separately. The
 <a href="https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md">comparison guide</a>
 describes the output records, timing and memory protocols, and portable input
 format.</p>
@@ -330,15 +330,11 @@ loaded library identities and thread probes recorded in the archive.</p>
 </tr>
 </tbody>
 </table></div>
-<p>All formal fits use <code>refine=False</code>. Earlier local peak-RSS measurements used
-code <code>a4bddf00dbb6b19e7e13d4267fc739f928ff0c5a</code>, wheel
-<code>b4627f9116b4fbbbe6338c40d965d21e1e0e63e8ecaf4c148af7b4cd7bac65f3</code>,
-on an earlier local workstation with CPython 3.12.2. That native extension and the frozen
-release native extension have SHA-256
-<code>a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e</code>.
-The derived timing binary is explicitly distinct. See
-<a href="numerical_accuracy.html">numerical accuracy</a> for the separate engineering
-qualification and full-panel numerical by-product.</p>
+<p>All formal fits use <code>refine=False</code>. The release native extension has SHA-256
+<code>a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e</code>; the
+timing-instrumented binary is distinct. See
+<a href="numerical_accuracy.html">numerical accuracy</a> for the release qualification and
+the full-panel comparison.</p>
 <p>The numerical reference is susieR 0.16.6 at commit
 <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>; the
 <a href="model.html#computational-compatibility">model page</a> defines the comparison

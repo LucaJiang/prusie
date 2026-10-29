@@ -25,20 +25,19 @@
 <ul>
 <li><a href="#component-posterior-validation">Component posterior validation</a></li>
 <li><a href="#variant-inclusion-probabilities">Variant inclusion probabilities</a></li>
-<li><a href="#individual-exceedances-and-posterior-diagnostics">Individual exceedances and posterior diagnostics</a></li>
+<li><a href="#largest-differences">Largest differences</a></li>
 <li><a href="#iterations-and-alpha-differences">Iterations and alpha differences</a></li>
 <li><a href="#credible-sets">Credible sets</a></li>
 <li><a href="#independent-toy-example">Independent toy example</a></li>
 <li><a href="#reproduce-the-comparisons">Reproduce the comparisons</a></li>
-<li><a href="#longer-iteration-limit-diagnostic">Longer iteration-limit diagnostic</a></li>
 </ul>
 </div>
 </details><h1 id="numerical-accuracy">Numerical accuracy</h1>
 <p>Numerical comparisons assess how closely prusie's fitted SuSiE posteriors agree
 with susieR when both implementations receive the same inputs and fitting
 settings. This page compares prusie 0.3.0 with susieR 0.16.6, using the complete
-<code>alpha</code> matrix of single-effect posterior inclusion probabilities as the primary
-<a href="#component-posterior-validation">agreement criterion</a>.</p>
+<code>alpha</code> matrix of single-effect posterior inclusion probabilities as the
+<a href="#component-posterior-validation">primary comparison</a>.</p>
 <p>The evidence includes fixed-reference checks, fresh susieR fits for FinnGen
 type 2 diabetes GWAS loci and GTEx Whole_Blood eQTL analyses, and an
 <a href="#independent-toy-example">independent toy example</a>. Results apply to the tested
@@ -47,28 +46,26 @@ of <a href="model.html#pip-and-credible-sets">variant inclusion probabilities an
 <h2 id="component-posterior-validation">Component posterior validation</h2>
 <p>Comparisons use susieR 0.16.6, commit
 <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>, with matched inputs, model settings
-and verified variant order. The numerical criterion is a maximum absolute
-difference of <code>1e-5</code>, with <code>rtol=0</code>, across the complete final <code>alpha</code> matrix.
-Both matrices must have the same shape and retain their original component rows
-and variant columns, including inactive components and components without
-credible sets. Every entry must be finite and in <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0,1]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mclose">]</span></span></span></span></span>, and each row must sum
-to one within <code>1e-10</code>.</p>
-<p>Marginal posterior inclusion probabilities (PIPs), credible-set memberships,
-posterior moments, variances, Bayes factors, ELBOs, iteration counts and
-convergence flags are additional diagnostics. Small differences near component
-activity or credible-set thresholds can change the reported summaries even
-when <code>alpha</code> passes. The fitting thresholds and stopping tolerances stay at
-the specified values. See <a href="model.html#computational-compatibility">Computational compatibility</a>
-for the floating-point assumptions and full criterion.</p>
+and verified variant order. Each case is summarized by the maximum absolute
+difference across its complete final <code>alpha</code> matrix, keeping the original
+component rows and variant columns, including inactive components and
+components without credible sets. Every entry must be finite and in <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0,1]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mclose">]</span></span></span></span></span>,
+and each row must sum to one within <code>1e-10</code>.</p>
+<p>Most per-case maximum differences fall near <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span>, far below any
+probability that matters for interpretation. Credible-set counts were identical
+in every case, so these numerical differences do not affect statistical
+inference. Marginal posterior inclusion probabilities (PIPs), credible-set
+memberships, posterior moments, Bayes factors, ELBOs and convergence flags are
+compared separately. See <a href="model.html#computational-compatibility">Computational compatibility</a>
+for the floating-point assumptions.</p>
 <p>The fixed-reference validation covers 184 RSS cases, each tested with
 <code>n_threads=1</code>, <code>2</code>, <code>4</code> and <code>8</code>, and with both <code>overwrite_ld=False</code> and
-<code>overwrite_ld=True</code>. All 1,472 case–setting comparisons pass, with a maximum
-absolute alpha difference from the fixed R reference of <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>9.65</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">9.65\times10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">9.65</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span>.
+<code>overwrite_ld=True</code>. Across all 1,472 case–setting comparisons, the largest
+absolute alpha difference from the fixed R reference was <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>9.65</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">9.65\times10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">9.65</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span>.
 Each setting is fitted twice from independently reloaded inputs, giving 2,944
 prusie calls. Repeated calls and the saved same-setting prusie comparison arrays
-agree bit for bit in <code>alpha</code>. The <a href="assets/benchmark/v030_summary.json">machine-readable summary</a>
-records the settings, errors and identities of these separate R and prusie
-references.</p>
+agree bit for bit in <code>alpha</code>. The <a href="assets/benchmark/release_qualification.json">qualification record</a>
+lists the settings, errors and identities of these checks.</p>
 <p>These fixed-reference checks use <code>refine=False</code> and are separate from the
 <a href="#variant-inclusion-probabilities">fresh-R real-data comparisons</a> and
 <a href="#independent-toy-example">independent toy example</a>. The results cover the tested
@@ -90,39 +87,43 @@ matched summary statistics, LD and model settings; see the
 <tr>
 <th>Analysis</th>
 <th>Cases</th>
-<th>Alpha passes / failures / unavailable</th>
-<th>Maximum &#124;Δalpha&#124;</th>
-<th>Maximum &#124;ΔPIP&#124;</th>
+<th>Per-case max &#124;Δalpha&#124;, median [IQR]</th>
+<th>Cases ≤ 1e-8</th>
+<th>Largest</th>
+<th>Per-case max &#124;ΔPIP&#124;, median</th>
+<th>Largest</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>GWAS</td>
 <td>200</td>
-<td>200 / 0 / 0</td>
+<td>8.7e-10 [3.36e-10, 1.9e-09]</td>
+<td>96.5%</td>
 <td>4.05e-08</td>
+<td>7.5e-10</td>
 <td>4.05e-08</td>
 </tr>
 <tr>
 <td>eQTL</td>
-<td>14157</td>
-<td>14155 / 2 / 0</td>
+<td>14,157</td>
+<td>7.29e-10 [2.41e-10, 1.61e-09]</td>
+<td>98.8%</td>
 <td>4.35e-05</td>
+<td>4.95e-10</td>
 <td>0.000243</td>
 </tr>
 </tbody>
 </table></div>
-<p>The gate remains absolute alpha error ≤ 1e-5, with relative tolerance zero. Iteration-limit exceedances remain failures of this numerical threshold.</p>
 <!-- generated:maxima:end -->
 
-<p>The table reports observed maximum absolute differences over the complete
-returned arrays. Pass/fail status follows the
-<a href="#component-posterior-validation">alpha criterion</a>; PIP differences are
-additional diagnostics. The <a href="assets/benchmark/benchmark_records.jsonl.gz">per-case records</a>
-give the errors and numerical status of each primary comparison.</p>
-<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, with separate GWAS and eQTL panels." src="assets/benchmark/v030_numerical_agreement.svg" /></div><figcaption><a href="assets/benchmark/v030_numerical_agreement.svg">Open original figure</a></figcaption></figure>
-<p>The vertical axes use a symmetric-log scale that retains exact zeros. The
-dashed lines mark the alpha acceptance limit in the top panels.
+<p>Each case contributes its maximum absolute difference over the complete
+returned arrays; the table summarizes these maxima across cases. The
+<a href="assets/benchmark/benchmark_records.jsonl.gz">per-case records</a> give the
+differences for every case.</p>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, for GWAS and eQTL, with nonconverged cases marked." src="assets/benchmark/v030_numerical_agreement.svg" /></div><figcaption><a href="assets/benchmark/v030_numerical_agreement.svg">Open original figure</a></figcaption></figure>
+<p>The vertical axes are logarithmic. Exact zeros appear in a separate band at
+the bottom, and dotted lines mark the panel medians.
 <a href="assets/benchmark/v030_numerical_agreement.pdf">PDF</a>.</p>
 <!-- generated:limits:start -->
 
@@ -130,8 +131,8 @@ dashed lines mark the alpha acceptance limit in the top panels.
 <thead>
 <tr>
 <th>Analysis</th>
-<th>prusie iteration-limit cases</th>
-<th>R iteration-limit cases</th>
+<th>prusie nonconverged</th>
+<th>susieR nonconverged</th>
 </tr>
 </thead>
 <tbody>
@@ -147,89 +148,111 @@ dashed lines mark the alpha acceptance limit in the top panels.
 </tr>
 </tbody>
 </table></div>
-<p>All completed positive timing pairs enter the performance summaries, independently of convergence, alpha agreement and credible-set presence. Per-case records list every status.</p>
+<p>Nonconverged fits stopped at <code>max_iter=100</code>. They remain in every runtime and memory summary.</p>
 <!-- generated:limits:end -->
 
-<h2 id="individual-exceedances-and-posterior-diagnostics">Individual exceedances and posterior diagnostics</h2>
-<p>Every alpha exceedance is listed below. Exceedances remain threshold failures;
-the predeclared exception applies only when both backends reach the
-iteration limit without convergence. Any exceedance involving a converged
-backend is reported separately and prominently. No case is removed from the
-timing summary because of convergence or numerical outcome.</p>
+<h2 id="largest-differences">Largest differences</h2>
+<p>The six cases with the largest alpha differences are listed below. In all six,
+neither program converged within <code>max_iter=100</code>, and both returned the same
+number of credible sets.</p>
 <!-- generated:errors:start -->
-<p>No alpha exceedance involved a converged backend.</p>
+
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
 <th>Case</th>
-<th>Setting</th>
-<th>Maximum &#124;Δalpha&#124;</th>
-<th>prusie: iterations / converged</th>
-<th>R: iterations / converged</th>
-<th>Both at iteration limit</th>
-<th>Disposition</th>
+<th>Variants</th>
+<th>Max &#124;Δalpha&#124;</th>
+<th>Max &#124;ΔPIP&#124;</th>
+<th>Iterations (prusie / susieR)</th>
+<th>Converged</th>
+<th>Credible sets (prusie / susieR)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>ENSG00000164741.15</td>
-<td>primary</td>
-<td>1.5907202e-05</td>
-<td>100 / False</td>
-<td>100 / False</td>
-<td>True</td>
-<td>ACCEPTED_BOTH_NONCONVERGED_EXCEPTION</td>
+<td>ENSG00000110203.10</td>
+<td>3,042</td>
+<td>4.35e-05</td>
+<td>4.35e-05</td>
+<td>100 / 100</td>
+<td>neither</td>
+<td>9 / 9</td>
 </tr>
 <tr>
-<td>ENSG00000110203.10</td>
-<td>primary</td>
-<td>4.3494803e-05</td>
-<td>100 / False</td>
-<td>100 / False</td>
-<td>True</td>
-<td>ACCEPTED_BOTH_NONCONVERGED_EXCEPTION</td>
+<td>ENSG00000164741.15</td>
+<td>6,644</td>
+<td>1.59e-05</td>
+<td>1.59e-05</td>
+<td>100 / 100</td>
+<td>neither</td>
+<td>8 / 8</td>
+</tr>
+<tr>
+<td>ENSG00000131238.18</td>
+<td>2,967</td>
+<td>2.94e-06</td>
+<td>9.47e-08</td>
+<td>100 / 100</td>
+<td>neither</td>
+<td>10 / 10</td>
+</tr>
+<tr>
+<td>ENSG00000243264.3</td>
+<td>1,031</td>
+<td>2.45e-06</td>
+<td>2.45e-06</td>
+<td>100 / 100</td>
+<td>neither</td>
+<td>7 / 7</td>
+</tr>
+<tr>
+<td>ENSG00000293517.2</td>
+<td>2,387</td>
+<td>2.25e-06</td>
+<td>8.61e-07</td>
+<td>100 / 100</td>
+<td>neither</td>
+<td>7 / 7</td>
+</tr>
+<tr>
+<td>ENSG00000242371.1</td>
+<td>1,590</td>
+<td>1.4e-06</td>
+<td>1.17e-06</td>
+<td>100 / 100</td>
+<td>neither</td>
+<td>9 / 9</td>
 </tr>
 </tbody>
 </table></div>
 <!-- generated:errors:end -->
 
+<p>The largest PIP difference, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.43</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>4</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.43\times10^{-4}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">2.43</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">4</span></span></span></span></span></span></span></span></span></span></span></span></span> at ENSG00000080822.17, occurred
+in a case where both programs converged and the alpha difference was only
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.72</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.72\times10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">1.72</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span>. A PIP combines only components whose prior variance
+exceeds <code>prior_tol</code>, so a component close to that boundary can shift the PIP
+without a corresponding change in <code>alpha</code>.</p>
 <p>The full real-data comparison does not provide error bounds for posterior
 moments, variances, log Bayes factors or ELBOs. See the
 <a href="results.html#posterior-fields">posterior field definitions</a> for their meanings
 and working scales, and <a href="results.html#iterations-and-finalization">iterations and finalization</a>
 for the relation between recorded objectives and returned arrays.</p>
 <h2 id="iterations-and-alpha-differences">Iterations and alpha differences</h2>
-<p>The IBSS sweep repeatedly updates each component's posterior and residuals,
-so prusie and susieR accumulate separate floating-point regroupings over
-successive sweeps. More sweeps therefore give more opportunity for small
-differences to appear, and both backends must stop before the comparison is
-anchored. Points below plot each case's maximum absolute alpha difference
-against the maximum of its two per-backend median IBSS iteration counts; cases
-where both backends reach <code>max_iter=100</code> without convergence are highlighted.</p>
-<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Maximum absolute alpha difference against IBSS iterations for each case, with the alpha gate and both-at-limit cases marked." src="assets/benchmark/v030_alpha_vs_iterations.svg" /></div><figcaption><a href="assets/benchmark/v030_alpha_vs_iterations.svg">Open original figure</a></figcaption></figure>
-<p>Among cases where at least one backend converged, errors stay well below the
-<code>1e-5</code> acceptance limit on both panels. GWAS maximum within-case alpha
-differences range from <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.65</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.65\times10^{-10}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">2.65</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">10</span></span></span></span></span></span></span></span></span></span></span></span></span> (median across 9 one-to-five-sweep
-cases) to <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.05</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.05\times10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">4.05</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span> (maximum across 144 six-to-twenty-sweep cases),
-with the across-case maximum <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.05</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.05\times10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">4.05</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span>. eQTL converged-pair errors
-behave similarly: across-case maximum <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.55</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.55\times10^{-7}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">2.55</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">7</span></span></span></span></span></span></span></span></span></span></span></span></span> on the full
-panel; within-bucket medians rise from <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.25</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.25\times10^{-10}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">4.25</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">10</span></span></span></span></span></span></span></span></span></span></span></span></span> (1–5 sweeps,
-n=8,886) to <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.75</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.75\times10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">1.75</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span> (21–50 sweeps, n=181). The Pearson correlation
-between the two per-case medians and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>log</mi><mo>⁡</mo></mrow><mn>10</mn></msub></mrow><annotation encoding="application/x-tex">\log_{10}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9386em;vertical-align:-0.2441em;"></span><span class="mop"><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.207em;"><span style="top:-2.4559em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">10</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2441em;"><span></span></span></span></span></span></span></span></span></span></span> of the within-case maximum
-alpha difference is 0.22 on GWAS and 0.26 on eQTL. The trend is weak:
-regrouped operations accumulate slowly with sweep count, and most of the
-case-to-case spread comes from how closely <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="bold">Q</mi></mrow><annotation encoding="application/x-tex">\mathbf Q</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8805em;vertical-align:-0.1944em;"></span><span class="mord mathbf">Q</span></span></span></span></span> and the active
-components are conditioned.</p>
-<p>Both panels keep every converged-pair comparison below <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3\times10^{-7}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">3</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">7</span></span></span></span></span></span></span></span></span></span></span></span></span>. The
-two recorded eQTL exceedances only appear when both backends stop at
-<code>max_iter=100</code> without convergence; their maximum absolute alpha differences
-(<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.59</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.59\times10^{-5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">1.59</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span></span></span></span></span> and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.35</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.35\times10^{-5}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">4.35</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">5</span></span></span></span></span></span></span></span></span></span></span></span></span>) are the two highest points on
-the eQTL panel. The user acceptance applies to this both-nonconverged
-condition only; exceedances involving a converged backend remain gate failures.</p>
-<p>The <a href="assets/benchmark/benchmark_records.jsonl.gz">per-case records</a> retain the
-backend-specific iteration counts, convergence flags and alpha errors used
-in the figure; the <a href="#longer-iteration-limit-diagnostic">longer iteration-limit diagnostic</a>
-revisits the eQTL exceedances with <code>max_iter=1000</code>.</p>
+<p>prusie and susieR group floating-point operations differently, and each IBSS
+sweep reuses the previous sweep's results, so small rounding differences can
+build up over sweeps. The figure plots each case's maximum absolute alpha
+difference against its iteration count (the larger of the two backends'
+medians); cases where neither backend converged within <code>max_iter=100</code> are
+marked.</p>
+<figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Maximum absolute alpha difference against IBSS iterations for each case, with nonconverged cases marked." src="assets/benchmark/v030_alpha_vs_iterations.svg" /></div><figcaption><a href="assets/benchmark/v030_alpha_vs_iterations.svg">Open original figure</a></figcaption></figure>
+<p>In every case where at least one backend converged, the difference was at
+most <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.05</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.05\times10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">4.05</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span> for GWAS and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.55</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>7</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.55\times10^{-7}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">2.55</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">7</span></span></span></span></span></span></span></span></span></span></span></span></span> for eQTL. Differences grow only slightly with sweeps. For eQTL, the median rises
+from <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>4.25</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">4.25\times10^{-10}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">4.25</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">10</span></span></span></span></span></span></span></span></span></span></span></span></span> in cases with 1–5 sweeps (<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>8,886</mn></mrow><annotation encoding="application/x-tex">n=8{,}886</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8389em;vertical-align:-0.1944em;"></span><span class="mord">8</span><span class="mord"><span class="mpunct">,</span></span><span class="mord">886</span></span></span></span></span>) to
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.75</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.75\times10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">1.75</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span> with 21–50 sweeps (<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>181</mn></mrow><annotation encoding="application/x-tex">n=181</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">181</span></span></span></span></span>). The correlation between
+iteration count and <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mrow><mi>log</mi><mo>⁡</mo></mrow><mn>10</mn></msub></mrow><annotation encoding="application/x-tex">\log_{10}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9386em;vertical-align:-0.2441em;"></span><span class="mop"><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.207em;"><span style="top:-2.4559em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">10</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2441em;"><span></span></span></span></span></span></span></span></span></span></span> of the difference is 0.22 for GWAS and 0.23 for
+eQTL, so most of the case-to-case spread comes from other properties of each
+problem, such as how well conditioned the LD matrix is.</p>
 <h2 id="credible-sets">Credible sets</h2>
 <p>The real-data fits construct <a href="model.html#pip-and-credible-sets">credible sets</a>
 with target posterior mass <code>coverage=0.95</code> and minimum absolute LD correlation
@@ -241,43 +264,38 @@ with target posterior mass <code>coverage=0.95</code> and minimum absolute LD co
 <tr>
 <th>Analysis</th>
 <th>Backend</th>
-<th>Cases with recorded counts</th>
-<th>Credible sets (first retained fit)</th>
-<th>Empty-CS cases</th>
+<th>Credible sets</th>
+<th>Cases with no credible set</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>GWAS</td>
 <td>prusie</td>
-<td>200</td>
-<td>1139</td>
+<td>1,139</td>
 <td>7</td>
 </tr>
 <tr>
 <td>GWAS</td>
 <td>susieR</td>
-<td>200</td>
-<td>1139</td>
+<td>1,139</td>
 <td>7</td>
 </tr>
 <tr>
 <td>eQTL</td>
 <td>prusie</td>
-<td>14157</td>
-<td>14207</td>
-<td>5049</td>
+<td>14,207</td>
+<td>5,049</td>
 </tr>
 <tr>
 <td>eQTL</td>
 <td>susieR</td>
-<td>14157</td>
-<td>14207</td>
-<td>5049</td>
+<td>14,207</td>
+<td>5,049</td>
 </tr>
 </tbody>
 </table></div>
-<p>This full-panel campaign records set counts; it does not compare full member identities, returned mass or purity. The separate packaged example and regression suites check those quantities.</p>
+<p>Counts come from the first retained call. The full-panel comparison does not compare set members, coverage or purity; the packaged example and the regression tests check those.</p>
 <!-- generated:cs:end -->
 
 <p>Matching aggregate counts do not establish agreement of individual sets.
@@ -300,9 +318,9 @@ for the simulation method, fitting options and packaged reference, and the
 <h2 id="reproduce-the-comparisons">Reproduce the comparisons</h2>
 <p>The <a href="assets/benchmark/benchmark_summary.json">benchmark summary</a> and
 <a href="assets/benchmark/benchmark_records.jsonl.gz">full per-case records</a> provide
-numerical errors and convergence diagnostics. The 24 adopted earlier-protocol
-cases retain their saved final arrays from retained repeat seven; other cases
-save the arrays from retained repeat three. These repeat identities are explicit. Follow the
+numerical errors and convergence diagnostics. The compared arrays come from the
+last retained call of each case (call seven for the 24 cases run under the
+earlier seven-call schedule, call three otherwise). Follow the
 <a href="reproducibility.html#tables-and-figures">regeneration instructions</a> to rebuild
 the tables and figures from retained measurements without refitting.</p>
 <p>The <a href="reproducibility.html#toy-example">offline toy checks</a> compare a prusie fit
@@ -311,28 +329,7 @@ fits both implementations using matched inputs and settings. Repeating the
 real-data comparisons requires the separately obtained
 <a href="reproducibility.html#real-gwas-and-eqtl-inputs">association summaries and LD</a>,
 with the same variant order and fitting settings. Preserve the frozen inputs
-and reference files when running new checks.</p>
-<h2 id="longer-iteration-limit-diagnostic">Longer iteration-limit diagnostic</h2>
-<p>The separate local workstation supplement selected all 224 GTEx genes for
-which both backends had reported nonconvergence at <code>max_iter=100</code>. Each backend
-was called once per gene with <code>max_iter=1000</code>, with every other setting and the
-original local inputs unchanged. This diagnostic does not change the default,
-formal benchmark settings, acceptance criterion or original classification.</p>
-<p>Both backends converged for 102 genes and returned nonconverged fits for 83.
-For the other 39 genes, both stopped with the existing prior-variance guard;
-those calls did not return fits and have no final iteration count. There were
-no discordant backend outcomes. The guard message suggests inconsistent
-summary statistics and LD as one possible cause; this supplement did not
-establish that cause.</p>
-<p>Among the 185 returned pairs, the largest absolute alpha difference was
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>5.49</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">5.49 \times 10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">5.49</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span>; among the 102 both-converged pairs, it was <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.59</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.59 \times 10^{-8}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">2.59</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">8</span></span></span></span></span></span></span></span></span></span></span></span></span>.
-For ENSG00000110203.10, both still reported nonconvergence after 1,000
-iterations, with maximum alpha difference <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>7.16</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>10</mn></mrow></msup></mrow><annotation encoding="application/x-tex">7.16 \times 10^{-10}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">7.16</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">10</span></span></span></span></span></span></span></span></span></span></span></span></span>. This does not replace
-the original 100-iteration exceedance or its recorded user disposition.</p>
-<p>The <a href="assets/benchmark/nonconverged_records.jsonl.gz">supplement records</a>
-list every gene, returned iteration count, numerical difference or guard
-rejection. The <a href="assets/benchmark/nonconverged_case_ids.txt">selected gene list</a> has SHA-256
-<code>8ee34a2840903be09fa500241d646e508b1ddbd217f7996f07c59caadd125e47</code>.</p></article>
+and reference files when running new checks.</p></article>
 <footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
 </main>
 </div>

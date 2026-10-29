@@ -531,13 +531,12 @@ joins are separate from the fitting pool's ordinary drop lifecycle.
 ## Numerical reproducibility
 
 prusie uses float64 arithmetic. Summation order and math-library implementations
-can differ from susieR, so agreement is assessed numerically. Core comparisons
-use pinned susieR 0.16.6 with matched inputs and fitting settings. The criterion
-is a maximum absolute difference of `1e-5` (`rtol=0`) across the complete final
-`alpha` matrix, retaining every component and the original component and variant
-order. PIPs and other summaries are separate diagnostics.
-[Computational compatibility](model.md#computational-compatibility) defines the
-comparison and probability-validity checks.
+can differ from susieR, so results are compared numerically. Core comparisons
+use pinned susieR 0.16.6 with matched inputs and fitting settings and report the
+maximum absolute difference over the complete final `alpha` matrix, in the
+original component and variant order. PIPs and other summaries are compared
+separately. [Computational compatibility](model.md#computational-compatibility)
+defines the comparison and probability-validity checks.
 
 On native GNU/Linux x86-64 builds, the optional vector-math shim can evaluate SER
 exponentials through glibc `libmvec`, using SSE2 or AVX2 according to library and

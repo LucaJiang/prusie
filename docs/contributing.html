@@ -108,6 +108,14 @@ and Rust sources, tests and frozen test data; documentation, examples and
 benchmark tools remain in the checkout.</p>
 <p>Retain <code>LICENSE</code>, <code>THIRD_PARTY_NOTICES.md</code> and the
 notices in adapted source and frozen data when distributing packages.</p>
+<p>Pushing a tag <code>vX.Y.Z</code> runs <code>.github/workflows/release.yml</code>. It builds wheels
+for CPython 3.10–3.13 on Linux (x86-64 and ARM64, manylinux 2.28), macOS
+(Intel and Apple silicon) and Windows x86-64, plus the sdist. It installs
+each wheel without a source build and runs the test suite on both the oldest
+and newest supported Python, then attaches the packages and <code>SHA256SUMS.txt</code>
+to the GitHub Release for that tag. Tags ending in <code>aN</code>, <code>bN</code> or <code>rcN</code> are
+marked as prereleases. Running the workflow by hand builds and tests the
+packages without publishing them.</p>
 <h2 id="benchmark-scripts">Benchmark scripts</h2>
 <p><code>tools/benchmark/reproduce.py</code> runs new comparisons with pinned susieR;
 helper drivers live in <code>tools/benchmark/_internal/</code>. The

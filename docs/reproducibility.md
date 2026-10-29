@@ -31,23 +31,20 @@ command writes SVG and PDF files to `docs/assets/benchmark/`.
 Add `--check` to `tools/model_examples.py` or
 `tools/generate_results.py` to check its generated Markdown without rewriting it.
 
-The records in `docs/assets/benchmark/` have distinct measurement origins:
+The records in `docs/assets/benchmark/` are:
 
 | File | Contents |
 | --- | --- |
-| [benchmark_summary.json](assets/benchmark/benchmark_summary.json) | Complete-call and fitting-stage summaries, variant-count quintiles, repeat variability and earlier local comparisons. |
-| [benchmark_records.jsonl.gz](assets/benchmark/benchmark_records.jsonl.gz) | All 14,363 cases, three retained times per backend/metric, timestamps, outcomes and numerical differences. |
-| [benchmark_protocol.json](assets/benchmark/benchmark_protocol.json) | Frozen protocol v2 and artifact hashes. |
-| [v030_summary.json](assets/benchmark/v030_summary.json) and [v030_records.jsonl.gz](assets/benchmark/v030_records.jsonl.gz) | Earlier local workstation measurements, retained as the source of published peak RSS. Their old runtime fields are historical. |
-| [v030_m1.json](assets/benchmark/v030_m1.json) | Earlier controlled optimization and thread measurements on the same AMD EPYC 7742 nodes, with unchanged acceptance decisions. |
-| [nonconverged_records.jsonl.gz](assets/benchmark/nonconverged_records.jsonl.gz) | Separate local 1,000-iteration diagnostic for all 224 originally nonconverged genes. |
-| [c3_instructions.tsv](assets/benchmark/c3_instructions.tsv) | Instruction-count follow-up on the 17 large-p cases. |
+| [benchmark_records.jsonl.gz](assets/benchmark/benchmark_records.jsonl.gz) | All 14,363 cases: three retained complete-call and fitting-stage times per backend, timestamps, peak memory, iteration and convergence outcomes and numerical differences. |
+| [benchmark_summary.json](assets/benchmark/benchmark_summary.json) | Panel summaries, variant-count quintiles and repeat variability. |
+| [benchmark_protocol.json](assets/benchmark/benchmark_protocol.json) | Measurement protocol and artifact hashes. |
+| [window10000_retime.json](assets/benchmark/window10000_retime.json) | Dedicated susieR replay for the 10,000-variant nested window. |
+| [benchmark_overwrite_records.jsonl.gz](assets/benchmark/benchmark_overwrite_records.jsonl.gz) | Paired single-call peak memory with `overwrite_ld` disabled and enabled for 200 GWAS loci. |
+| [thread_scaling.json](assets/benchmark/thread_scaling.json) | Paired runtimes with `n_threads` 2, 4 and 8 against one thread for 87 cases. |
+| [release_qualification.json](assets/benchmark/release_qualification.json) | Release numerical checks against fixed susieR references on 184 cases. |
 
-These records contain case identifiers and measurements; association vectors,
-LD matrices and individual genotypes are not included. The earlier
-[v030_overwrite.tsv](assets/benchmark/v030_overwrite.tsv) retains the paired
-local memory results. Historical per-case timing fields are preserved in the
-compressed archive but do not supply the new runtime figures.
+These records contain case identifiers and measurements; association
+statistics, LD matrices and individual genotypes are not included.
 
 ## Benchmark protocol
 
@@ -70,7 +67,7 @@ alleles. The reference has no missing genotypes for the selected samples.
 The EUR sample list contains one nonfounder; `--make-founders` includes all
 525 selected samples in this calculation. Genotype/reference receipts are
 verified before staging. The 24-case fidelity sample checks signs and the
-maximum absolute difference from local LD; its observed maximum is
+maximum absolute difference from the prepared LD; its observed maximum is
 $2.15\times10^{-14}$. This establishes rounding-level agreement on the
 sample, not bitwise equality or an unmeasured full-panel LD comparison.
 
@@ -108,10 +105,15 @@ The 19,221-variant nested window required one retry after R was killed by a
 NUMA-local out-of-memory event. The failed attempt is preserved; the whole
 case completed on another node with the same protocol. Node-wide memory
 admission did not guarantee enough free memory within each NUMA domain.
-Every fixed case remains in the denominator. The old seven-repeat local
-statistics and a first-three-retained sensitivity accompany the new repeat
-variability results. The new process high-water marks are diagnostics;
-published memory remains the earlier local fresh-process experiment.
+Every fixed case remains in the summaries. Peak memory comes from the
+high-water marks of these same backend processes.
+
+One retained susieR call for the 10,000-variant nested window took 1,576 s,
+while its fitting stage took 70 s. The published susieR values for that window
+come from a dedicated replay on the same node and core: two fresh R processes
+with one warm-up and three, then seven, retained calls; all ten agreed within
+0.6%. [window10000_retime.json](assets/benchmark/window10000_retime.json)
+records the replay.
 
 ## Toy example
 
@@ -183,10 +185,9 @@ python tools/benchmark/reproduce.py --rscript Rscript \
 
 `--validation-only` fits both implementations on the toy inputs and writes
 results and numerical comparisons below the new directory. It omits the
-timing and memory series and requires no BLAS-probe compilation. The comparison
-applies the
-[complete-alpha validation criterion](model.md#computational-compatibility);
-PIP and credible-set differences remain diagnostics. The
+timing and memory series and requires no BLAS-probe compilation. It reports the
+[complete-alpha comparison](model.md#computational-compatibility); PIP and
+credible-set differences are reported separately. The
 [comparison guide](https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md)
 describes the output records, timing and memory protocols, and portable input
 format.
@@ -244,15 +245,11 @@ loaded library identities and thread probes recorded in the archive.
 | R timing helper | `7e688f6cb146befe3f37ce2bd95a966c2f811e11180cdadd25515420a9158e6a` |
 | PLINK binary | `47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062` |
 
-All formal fits use `refine=False`. Earlier local peak-RSS measurements used
-code `a4bddf00dbb6b19e7e13d4267fc739f928ff0c5a`, wheel
-`b4627f9116b4fbbbe6338c40d965d21e1e0e63e8ecaf4c148af7b4cd7bac65f3`,
-on an earlier local workstation with CPython 3.12.2. That native extension and the frozen
-release native extension have SHA-256
-`a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e`.
-The derived timing binary is explicitly distinct. See
-[numerical accuracy](numerical_accuracy.md) for the separate engineering
-qualification and full-panel numerical by-product.
+All formal fits use `refine=False`. The release native extension has SHA-256
+`a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e`; the
+timing-instrumented binary is distinct. See
+[numerical accuracy](numerical_accuracy.md) for the release qualification and
+the full-panel comparison.
 
 The numerical reference is susieR 0.16.6 at commit
 `8e56a8e038e989856d106d9ca5175cc664fea9d2`; the

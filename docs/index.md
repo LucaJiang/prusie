@@ -69,23 +69,19 @@ and GTEx v11 Whole_Blood eQTL analyses. Time and memory ratios below are
 susieR divided by prusie.
 
 <!-- current:highlights:start -->
-Measured **prusie 0.3.0** against fresh **susieR 0.16.6** fits.
+Measured **prusie 0.3.0** against **susieR 0.16.6** on the same inputs.
 
-| Analysis | Cases | Complete-call speed-up¹ | Fitting-stage speed-up¹ | Complete-call sum-of-medians² | Peak RSS ratio³ |
-| --- | --- | --- | --- | --- | --- |
-| GWAS | 200 | 49.2× | 55.4× | 42.9× | 3.66× |
-| eQTL | 14157 | 26.6× | 29.8× | 26.6× | 3.77× |
+| Evaluated cases | Cases | Cumulative runtime ratio | Cumulative fitting-stage ratio | Median peak-memory ratio |
+| --- | --- | --- | --- | --- |
+| GWAS | 200 | 49.2× | 55.4× | 5.11× |
+| eQTL | 14,157 | 26.6× | 29.8× | 4.60× |
 
-¹ Sum of three retained R times divided by the corresponding prusie total, on exclusive AMD EPYC 7742 nodes. The fitting stage excludes input/LD preparation. ² Sum of within-case R medians divided by the sum of prusie medians. ³ Median paired R/prusie fresh-process peak RSS from the earlier local workstation measurements, including interpreter and inputs. Runtime and memory have separate origins.
+The cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](performance.md).
 <!-- current:highlights:end -->
 
-Runtime uses one numerical thread per fit on exclusive AMD EPYC 7742
-nodes, with complete-call and fitting-stage measurements from the same calls.
-Memory retains the earlier local workstation measurements, including the
-interpreter, inputs and returned fit. See [performance](performance.md) for
-methods and software identities, and [numerical accuracy](numerical_accuracy.md)
-for the complete-alpha comparison, individual exceedances and convergence
-diagnostics.
+See [performance](performance.md) for methods and software identities, and
+[numerical accuracy](numerical_accuracy.md) for the complete-alpha comparison
+and convergence diagnostics.
 
 ## Sensitivity and refinement
 

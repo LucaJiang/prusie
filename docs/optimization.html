@@ -63,14 +63,14 @@ agreement with susieR is assessed numerically; see
 <a href="implementation.html">Implementation</a> describes the fitting routes, and
 <a href="performance.html">Performance</a> reports runtimes and memory for the inputs,
 settings and hardware measured there.</p>
-<p>The current <a href="performance.html#runtime">benchmark measurements</a> compare prusie
-and susieR 0.16.6 on 200 FinnGen T2D GWAS loci and 14,157 GTEx Whole_Blood
-eQTL genes, with three retained complete calls per case on exclusive EPYC
-7742 nodes. Across-case within-case R/prusie median-time ratios are 49.2×
-complete-call and 55.4× fitting-stage on GWAS, and 26.6× and 29.8× on eQTL;
-prusie was faster than susieR in every case on both panels. These are paired
-runtime results; the per-panel memory and thread-scaling comparisons on the
-performance page record their own gains and limitations.</p>
+<p>The <a href="performance.html#runtime">benchmark measurements</a> compare prusie and
+susieR 0.16.6 on 200 FinnGen T2D GWAS loci and 14,157 GTEx Whole_Blood eQTL
+genes, with three retained complete calls per case on exclusive EPYC 7742
+nodes. For these evaluated cases, the cumulative runtime of susieR was 49.2
+times that of prusie for GWAS and 26.6 times for eQTL (55.4 and 29.8 for the
+fitting stage), and prusie was faster in every case. Ratios for other regions
+and references may differ. The performance page also reports memory and
+thread scaling.</p>
 <h2 id="principles">Principles</h2>
 <p>The optimizations reduce the work needed to evaluate the SuSiE updates while
 retaining float64 arithmetic. They introduce no LD thresholding, variant
@@ -88,8 +88,8 @@ collected during the fit.</p>
 regroup products or sums. Numerical validation compares the complete final
 <code>alpha</code> matrix with pinned susieR under matched inputs and fitting settings,
 in the original component and variant order. The
-<a href="model.html#computational-compatibility">computational compatibility criterion</a>
-defines the tolerance; <a href="numerical_accuracy.html">numerical accuracy</a> reports the
+<a href="model.html#computational-compatibility">computational compatibility</a> section
+defines the comparison; <a href="numerical_accuracy.html">numerical accuracy</a> reports the
 tested configurations and results.</p>
 <h2 id="where-the-time-and-memory-go">Where the time and memory go</h2>
 <p>Let <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">p</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.1944em;"></span><span class="mord mathnormal">p</span></span></span></span></span> be the number of variants, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span></span></span></span></span> the maximum number of single-effect
@@ -504,7 +504,7 @@ choices. IBSS components retain their
 susieR or across platforms. Regrouped operations and math-library
 implementations can change results. Numerical agreement is assessed on the
 complete final <code>alpha</code> matrix under matched inputs and fitting settings.
-The <a href="model.html#computational-compatibility">computational compatibility criterion</a>
+The <a href="model.html#computational-compatibility">computational compatibility</a> section
 defines the comparison, and <a href="numerical_accuracy.html">numerical accuracy</a>
 reports the tested configurations.</p></article>
 <footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>

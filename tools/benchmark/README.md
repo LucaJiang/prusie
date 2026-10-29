@@ -13,8 +13,7 @@ domain and NUMA-local memory. Each fresh backend process makes one warmup and
 three retained calls. Complete-call and fitting-stage times describe the same
 fits; backends run sequentially within each case in a seeded balanced order.
 LD is reconstructed untimed with PLINK from the frozen genotype/sample source,
-variant order and allele alignment. It is not required to be bitwise identical
-to earlier local LD.
+variant order and allele alignment.
 
 `benchmark_records.jsonl.gz`, `benchmark_summary.json` and `benchmark_protocol.json`
 under `docs/assets/benchmark/` supply the current runtime and numerical results.
@@ -23,12 +22,10 @@ instrumentation, the adoption of 24 completed seven-repeat cases, operational
 handling and the direct fitting-stage boundaries. Exact cluster scripts and
 patches are [archived](../../docs/assets/benchmark/archive/README.txt).
 
-`v030_records.jsonl.gz` and `v030_summary.json` retain the earlier local
-workstation results, which still supply published fresh-process peak RSS.
-Their runtime fields are historical. `v030_m1.json` supplies the separate
-controlled optimization/thread results on the same AMD EPYC 7742 nodes and
-unchanged acceptance decisions. Dense figure
-layers are rasterized within SVG/PDF; axes and labels remain vector graphics.
+`benchmark_overwrite_records.jsonl.gz`, `thread_scaling.json` and
+`window10000_retime.json` supply the LD-overwrite, thread-scaling and
+10,000-variant replay results. Dense figure layers are rasterized within
+SVG/PDF; axes and labels remain vector graphics.
 
 These commands redraw current figures and verify generated text without R,
 association inputs or new fits:
@@ -156,10 +153,12 @@ files for matrices that are not bitwise symmetric.
 
 Validation exports alpha, moments, PIPs, natural-log BFs, variances, ELBO, KL and
 original CS component/member IDs, returned mass and purity.
-The internal comparator checks complete final alpha matrices in their original component
-row order, with absolute error ≤1e-5 and rtol=0, plus input/model/probability
-validity. No component is filtered or permuted. Rows must sum to one within
-1e-10. PIP, CS and intermediate differences remain diagnostics.
+The internal comparator reports the maximum absolute difference between the
+complete final alpha matrices, in their original component row order, and checks
+input, model and probability validity. No component is filtered or permuted, and
+rows must sum to one within 1e-10. For development it also flags differences
+above 1e-5; this is a regression check, not a statistical criterion. PIP, CS and
+intermediate differences are reported separately.
 
 ## Retained-record analysis
 

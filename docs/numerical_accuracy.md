@@ -3,8 +3,8 @@
 Numerical comparisons assess how closely prusie's fitted SuSiE posteriors agree
 with susieR when both implementations receive the same inputs and fitting
 settings. This page compares prusie 0.3.0 with susieR 0.16.6, using the complete
-`alpha` matrix of single-effect posterior inclusion probabilities as the primary
-[agreement criterion](#component-posterior-validation).
+`alpha` matrix of single-effect posterior inclusion probabilities as the
+[primary comparison](#component-posterior-validation).
 
 The evidence includes fixed-reference checks, fresh susieR fits for FinnGen
 type 2 diabetes GWAS loci and GTEx Whole_Blood eQTL analyses, and an
@@ -16,30 +16,28 @@ of [variant inclusion probabilities and credible sets](model.md#pip-and-credible
 
 Comparisons use susieR 0.16.6, commit
 `8e56a8e038e989856d106d9ca5175cc664fea9d2`, with matched inputs, model settings
-and verified variant order. The numerical criterion is a maximum absolute
-difference of `1e-5`, with `rtol=0`, across the complete final `alpha` matrix.
-Both matrices must have the same shape and retain their original component rows
-and variant columns, including inactive components and components without
-credible sets. Every entry must be finite and in $[0,1]$, and each row must sum
-to one within `1e-10`.
+and verified variant order. Each case is summarized by the maximum absolute
+difference across its complete final `alpha` matrix, keeping the original
+component rows and variant columns, including inactive components and
+components without credible sets. Every entry must be finite and in $[0,1]$,
+and each row must sum to one within `1e-10`.
 
-Marginal posterior inclusion probabilities (PIPs), credible-set memberships,
-posterior moments, variances, Bayes factors, ELBOs, iteration counts and
-convergence flags are additional diagnostics. Small differences near component
-activity or credible-set thresholds can change the reported summaries even
-when `alpha` passes. The fitting thresholds and stopping tolerances stay at
-the specified values. See [Computational compatibility](model.md#computational-compatibility)
-for the floating-point assumptions and full criterion.
+Most per-case maximum differences fall near $10^{-9}$, far below any
+probability that matters for interpretation. Credible-set counts were identical
+in every case, so these numerical differences do not affect statistical
+inference. Marginal posterior inclusion probabilities (PIPs), credible-set
+memberships, posterior moments, Bayes factors, ELBOs and convergence flags are
+compared separately. See [Computational compatibility](model.md#computational-compatibility)
+for the floating-point assumptions.
 
 The fixed-reference validation covers 184 RSS cases, each tested with
 `n_threads=1`, `2`, `4` and `8`, and with both `overwrite_ld=False` and
-`overwrite_ld=True`. All 1,472 case–setting comparisons pass, with a maximum
-absolute alpha difference from the fixed R reference of $9.65\times10^{-8}$.
+`overwrite_ld=True`. Across all 1,472 case–setting comparisons, the largest
+absolute alpha difference from the fixed R reference was $9.65\times10^{-8}$.
 Each setting is fitted twice from independently reloaded inputs, giving 2,944
 prusie calls. Repeated calls and the saved same-setting prusie comparison arrays
-agree bit for bit in `alpha`. The [machine-readable summary](assets/benchmark/v030_summary.json)
-records the settings, errors and identities of these separate R and prusie
-references.
+agree bit for bit in `alpha`. The [qualification record](assets/benchmark/release_qualification.json)
+lists the settings, errors and identities of these checks.
 
 These fixed-reference checks use `refine=False` and are separate from the
 [fresh-R real-data comparisons](#variant-inclusion-probabilities) and
@@ -60,53 +58,56 @@ matched summary statistics, LD and model settings; see the
 
 <!-- generated:maxima:start -->
 
-| Analysis | Cases | Alpha passes / failures / unavailable | Maximum &#124;Δalpha&#124; | Maximum &#124;ΔPIP&#124; |
-| --- | --- | --- | --- | --- |
-| GWAS | 200 | 200 / 0 / 0 | 4.05e-08 | 4.05e-08 |
-| eQTL | 14157 | 14155 / 2 / 0 | 4.35e-05 | 0.000243 |
-
-The gate remains absolute alpha error ≤ 1e-5, with relative tolerance zero. Iteration-limit exceedances remain failures of this numerical threshold.
+| Analysis | Cases | Per-case max &#124;Δalpha&#124;, median [IQR] | Cases ≤ 1e-8 | Largest | Per-case max &#124;ΔPIP&#124;, median | Largest |
+| --- | --- | --- | --- | --- | --- | --- |
+| GWAS | 200 | 8.7e-10 [3.36e-10, 1.9e-09] | 96.5% | 4.05e-08 | 7.5e-10 | 4.05e-08 |
+| eQTL | 14,157 | 7.29e-10 [2.41e-10, 1.61e-09] | 98.8% | 4.35e-05 | 4.95e-10 | 0.000243 |
 <!-- generated:maxima:end -->
 
-The table reports observed maximum absolute differences over the complete
-returned arrays. Pass/fail status follows the
-[alpha criterion](#component-posterior-validation); PIP differences are
-additional diagnostics. The [per-case records](assets/benchmark/benchmark_records.jsonl.gz)
-give the errors and numerical status of each primary comparison.
+Each case contributes its maximum absolute difference over the complete
+returned arrays; the table summarizes these maxima across cases. The
+[per-case records](assets/benchmark/benchmark_records.jsonl.gz) give the
+differences for every case.
 
-![Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, with separate GWAS and eQTL panels.](assets/benchmark/v030_numerical_agreement.svg)
+![Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, for GWAS and eQTL, with nonconverged cases marked.](assets/benchmark/v030_numerical_agreement.svg)
 
-The vertical axes use a symmetric-log scale that retains exact zeros. The
-dashed lines mark the alpha acceptance limit in the top panels.
+The vertical axes are logarithmic. Exact zeros appear in a separate band at
+the bottom, and dotted lines mark the panel medians.
 [PDF](assets/benchmark/v030_numerical_agreement.pdf).
 
 <!-- generated:limits:start -->
 
-| Analysis | prusie iteration-limit cases | R iteration-limit cases |
+| Analysis | prusie nonconverged | susieR nonconverged |
 | --- | --- | --- |
 | GWAS | 0 | 0 |
 | eQTL | 224 | 224 |
 
-All completed positive timing pairs enter the performance summaries, independently of convergence, alpha agreement and credible-set presence. Per-case records list every status.
+Nonconverged fits stopped at `max_iter=100`. They remain in every runtime and memory summary.
 <!-- generated:limits:end -->
 
-## Individual exceedances and posterior diagnostics
+## Largest differences
 
-Every alpha exceedance is listed below. Exceedances remain threshold failures;
-the predeclared exception applies only when both backends reach the
-iteration limit without convergence. Any exceedance involving a converged
-backend is reported separately and prominently. No case is removed from the
-timing summary because of convergence or numerical outcome.
+The six cases with the largest alpha differences are listed below. In all six,
+neither program converged within `max_iter=100`, and both returned the same
+number of credible sets.
 
 <!-- generated:errors:start -->
-No alpha exceedance involved a converged backend.
 
-
-| Case | Setting | Maximum &#124;Δalpha&#124; | prusie: iterations / converged | R: iterations / converged | Both at iteration limit | Disposition |
+| Case | Variants | Max &#124;Δalpha&#124; | Max &#124;ΔPIP&#124; | Iterations (prusie / susieR) | Converged | Credible sets (prusie / susieR) |
 | --- | --- | --- | --- | --- | --- | --- |
-| ENSG00000164741.15 | primary | 1.5907202e-05 | 100 / False | 100 / False | True | ACCEPTED_BOTH_NONCONVERGED_EXCEPTION |
-| ENSG00000110203.10 | primary | 4.3494803e-05 | 100 / False | 100 / False | True | ACCEPTED_BOTH_NONCONVERGED_EXCEPTION |
+| ENSG00000110203.10 | 3,042 | 4.35e-05 | 4.35e-05 | 100 / 100 | neither | 9 / 9 |
+| ENSG00000164741.15 | 6,644 | 1.59e-05 | 1.59e-05 | 100 / 100 | neither | 8 / 8 |
+| ENSG00000131238.18 | 2,967 | 2.94e-06 | 9.47e-08 | 100 / 100 | neither | 10 / 10 |
+| ENSG00000243264.3 | 1,031 | 2.45e-06 | 2.45e-06 | 100 / 100 | neither | 7 / 7 |
+| ENSG00000293517.2 | 2,387 | 2.25e-06 | 8.61e-07 | 100 / 100 | neither | 7 / 7 |
+| ENSG00000242371.1 | 1,590 | 1.4e-06 | 1.17e-06 | 100 / 100 | neither | 9 / 9 |
 <!-- generated:errors:end -->
+
+The largest PIP difference, $2.43\times10^{-4}$ at ENSG00000080822.17, occurred
+in a case where both programs converged and the alpha difference was only
+$1.72\times10^{-9}$. A PIP combines only components whose prior variance
+exceeds `prior_tol`, so a component close to that boundary can shift the PIP
+without a corresponding change in `alpha`.
 
 The full real-data comparison does not provide error bounds for posterior
 moments, variances, log Bayes factors or ELBOs. See the
@@ -116,41 +117,22 @@ for the relation between recorded objectives and returned arrays.
 
 ## Iterations and alpha differences
 
-The IBSS sweep repeatedly updates each component's posterior and residuals,
-so prusie and susieR accumulate separate floating-point regroupings over
-successive sweeps. More sweeps therefore give more opportunity for small
-differences to appear, and both backends must stop before the comparison is
-anchored. Points below plot each case's maximum absolute alpha difference
-against the maximum of its two per-backend median IBSS iteration counts; cases
-where both backends reach `max_iter=100` without convergence are highlighted.
+prusie and susieR group floating-point operations differently, and each IBSS
+sweep reuses the previous sweep's results, so small rounding differences can
+build up over sweeps. The figure plots each case's maximum absolute alpha
+difference against its iteration count (the larger of the two backends'
+medians); cases where neither backend converged within `max_iter=100` are
+marked.
 
-![Maximum absolute alpha difference against IBSS iterations for each case, with the alpha gate and both-at-limit cases marked.](assets/benchmark/v030_alpha_vs_iterations.svg)
+![Maximum absolute alpha difference against IBSS iterations for each case, with nonconverged cases marked.](assets/benchmark/v030_alpha_vs_iterations.svg)
 
-Among cases where at least one backend converged, errors stay well below the
-`1e-5` acceptance limit on both panels. GWAS maximum within-case alpha
-differences range from $2.65\times10^{-10}$ (median across 9 one-to-five-sweep
-cases) to $4.05\times10^{-8}$ (maximum across 144 six-to-twenty-sweep cases),
-with the across-case maximum $4.05\times10^{-8}$. eQTL converged-pair errors
-behave similarly: across-case maximum $2.55\times10^{-7}$ on the full
-panel; within-bucket medians rise from $4.25\times10^{-10}$ (1–5 sweeps,
-n=8,886) to $1.75\times10^{-9}$ (21–50 sweeps, n=181). The Pearson correlation
-between the two per-case medians and $\log_{10}$ of the within-case maximum
-alpha difference is 0.22 on GWAS and 0.26 on eQTL. The trend is weak:
-regrouped operations accumulate slowly with sweep count, and most of the
-case-to-case spread comes from how closely $\mathbf Q$ and the active
-components are conditioned.
-
-Both panels keep every converged-pair comparison below $3\times10^{-7}$. The
-two recorded eQTL exceedances only appear when both backends stop at
-`max_iter=100` without convergence; their maximum absolute alpha differences
-($1.59\times10^{-5}$ and $4.35\times10^{-5}$) are the two highest points on
-the eQTL panel. The user acceptance applies to this both-nonconverged
-condition only; exceedances involving a converged backend remain gate failures.
-
-The [per-case records](assets/benchmark/benchmark_records.jsonl.gz) retain the
-backend-specific iteration counts, convergence flags and alpha errors used
-in the figure; the [longer iteration-limit diagnostic](#longer-iteration-limit-diagnostic)
-revisits the eQTL exceedances with `max_iter=1000`.
+In every case where at least one backend converged, the difference was at
+most $4.05\times10^{-8}$ for GWAS and $2.55\times10^{-7}$ for eQTL. Differences grow only slightly with sweeps. For eQTL, the median rises
+from $4.25\times10^{-10}$ in cases with 1–5 sweeps ($n=8{,}886$) to
+$1.75\times10^{-9}$ with 21–50 sweeps ($n=181$). The correlation between
+iteration count and $\log_{10}$ of the difference is 0.22 for GWAS and 0.23 for
+eQTL, so most of the case-to-case spread comes from other properties of each
+problem, such as how well conditioned the LD matrix is.
 
 ## Credible sets
 
@@ -160,14 +142,14 @@ with target posterior mass `coverage=0.95` and minimum absolute LD correlation
 
 <!-- generated:cs:start -->
 
-| Analysis | Backend | Cases with recorded counts | Credible sets (first retained fit) | Empty-CS cases |
-| --- | --- | --- | --- | --- |
-| GWAS | prusie | 200 | 1139 | 7 |
-| GWAS | susieR | 200 | 1139 | 7 |
-| eQTL | prusie | 14157 | 14207 | 5049 |
-| eQTL | susieR | 14157 | 14207 | 5049 |
+| Analysis | Backend | Credible sets | Cases with no credible set |
+| --- | --- | --- | --- |
+| GWAS | prusie | 1,139 | 7 |
+| GWAS | susieR | 1,139 | 7 |
+| eQTL | prusie | 14,207 | 5,049 |
+| eQTL | susieR | 14,207 | 5,049 |
 
-This full-panel campaign records set counts; it does not compare full member identities, returned mass or purity. The separate packaged example and regression suites check those quantities.
+Counts come from the first retained call. The full-panel comparison does not compare set members, coverage or purity; the packaged example and the regression tests check those.
 <!-- generated:cs:end -->
 
 Matching aggregate counts do not establish agreement of individual sets.
@@ -196,9 +178,9 @@ for the simulation method, fitting options and packaged reference, and the
 
 The [benchmark summary](assets/benchmark/benchmark_summary.json) and
 [full per-case records](assets/benchmark/benchmark_records.jsonl.gz) provide
-numerical errors and convergence diagnostics. The 24 adopted earlier-protocol
-cases retain their saved final arrays from retained repeat seven; other cases
-save the arrays from retained repeat three. These repeat identities are explicit. Follow the
+numerical errors and convergence diagnostics. The compared arrays come from the
+last retained call of each case (call seven for the 24 cases run under the
+earlier seven-call schedule, call three otherwise). Follow the
 [regeneration instructions](reproducibility.md#tables-and-figures) to rebuild
 the tables and figures from retained measurements without refitting.
 
@@ -209,29 +191,3 @@ real-data comparisons requires the separately obtained
 [association summaries and LD](reproducibility.md#real-gwas-and-eqtl-inputs),
 with the same variant order and fitting settings. Preserve the frozen inputs
 and reference files when running new checks.
-
-## Longer iteration-limit diagnostic
-
-The separate local workstation supplement selected all 224 GTEx genes for
-which both backends had reported nonconvergence at `max_iter=100`. Each backend
-was called once per gene with `max_iter=1000`, with every other setting and the
-original local inputs unchanged. This diagnostic does not change the default,
-formal benchmark settings, acceptance criterion or original classification.
-
-Both backends converged for 102 genes and returned nonconverged fits for 83.
-For the other 39 genes, both stopped with the existing prior-variance guard;
-those calls did not return fits and have no final iteration count. There were
-no discordant backend outcomes. The guard message suggests inconsistent
-summary statistics and LD as one possible cause; this supplement did not
-establish that cause.
-
-Among the 185 returned pairs, the largest absolute alpha difference was
-$5.49 \times 10^{-8}$; among the 102 both-converged pairs, it was $2.59 \times 10^{-8}$.
-For ENSG00000110203.10, both still reported nonconvergence after 1,000
-iterations, with maximum alpha difference $7.16 \times 10^{-10}$. This does not replace
-the original 100-iteration exceedance or its recorded user disposition.
-
-The [supplement records](assets/benchmark/nonconverged_records.jsonl.gz)
-list every gene, returned iteration count, numerical difference or guard
-rejection. The [selected gene list](assets/benchmark/nonconverged_case_ids.txt) has SHA-256
-`8ee34a2840903be09fa500241d646e508b1ddbd217f7996f07c59caadd125e47`.

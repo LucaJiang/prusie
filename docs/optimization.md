@@ -13,14 +13,14 @@ agreement with susieR is assessed numerically; see
 [Performance](performance.md) reports runtimes and memory for the inputs,
 settings and hardware measured there.
 
-The current [benchmark measurements](performance.md#runtime) compare prusie
-and susieR 0.16.6 on 200 FinnGen T2D GWAS loci and 14,157 GTEx Whole_Blood
-eQTL genes, with three retained complete calls per case on exclusive EPYC
-7742 nodes. Across-case within-case R/prusie median-time ratios are 49.2×
-complete-call and 55.4× fitting-stage on GWAS, and 26.6× and 29.8× on eQTL;
-prusie was faster than susieR in every case on both panels. These are paired
-runtime results; the per-panel memory and thread-scaling comparisons on the
-performance page record their own gains and limitations.
+The [benchmark measurements](performance.md#runtime) compare prusie and
+susieR 0.16.6 on 200 FinnGen T2D GWAS loci and 14,157 GTEx Whole_Blood eQTL
+genes, with three retained complete calls per case on exclusive EPYC 7742
+nodes. For these evaluated cases, the cumulative runtime of susieR was 49.2
+times that of prusie for GWAS and 26.6 times for eQTL (55.4 and 29.8 for the
+fitting stage), and prusie was faster in every case. Ratios for other regions
+and references may differ. The performance page also reports memory and
+thread scaling.
 
 ## Principles
 
@@ -42,8 +42,8 @@ Equivalent formulas can have different floating-point results when they
 regroup products or sums. Numerical validation compares the complete final
 `alpha` matrix with pinned susieR under matched inputs and fitting settings,
 in the original component and variant order. The
-[computational compatibility criterion](model.md#computational-compatibility)
-defines the tolerance; [numerical accuracy](numerical_accuracy.md) reports the
+[computational compatibility](model.md#computational-compatibility) section
+defines the comparison; [numerical accuracy](numerical_accuracy.md) reports the
 tested configurations and results.
 
 ## Where the time and memory go
@@ -500,6 +500,6 @@ prusie does not guarantee R's accumulation order or bitwise equality with
 susieR or across platforms. Regrouped operations and math-library
 implementations can change results. Numerical agreement is assessed on the
 complete final `alpha` matrix under matched inputs and fitting settings.
-The [computational compatibility criterion](model.md#computational-compatibility)
+The [computational compatibility](model.md#computational-compatibility) section
 defines the comparison, and [numerical accuracy](numerical_accuracy.md)
 reports the tested configurations.

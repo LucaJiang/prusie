@@ -1,4 +1,4 @@
-"""Max |Δalpha| vs iterations figure from the published benchmark records.
+"""Max |Δalpha| against IBSS iterations from the published benchmark records.
 
 Reads docs/assets/benchmark/benchmark_records.jsonl.gz and writes
 docs/assets/benchmark/v030_alpha_vs_iterations.{svg,pdf}.
@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import gzip
 import json
-import math
 from pathlib import Path
 
 import matplotlib
@@ -16,22 +15,25 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.ticker import FixedLocator, FuncFormatter
+from matplotlib.lines import Line2D
+from v030_plots import (
+    CASE_POINT,
+    FLOOR,
+    HIGHLIGHT,
+    INK2,
+    PANELS,
+    TITLES,
+    ZERO_ROW,
+    density_scatter,
+    error_axis,
+    grid,
+    note,
+    save,
+    sci,
+    style,
+)
 
-COLORS = {"converged": "#0072B2", "nonconverged": "#D55E00"}
-PANELS = ("GWAS", "eQTL")
 MAX_ITER = 100
-ALPHA_GATE = 1e-5
-
-
-def median(values):
-    values = sorted(values)
-    n = len(values)
-    if n == 0:
-        return math.nan
-    if n % 2:
-        return float(values[n // 2])
-    return 0.5 * (values[n // 2 - 1] + values[n // 2])
 
 
 def load(path):
@@ -41,14 +43,11 @@ def load(path):
             record = json.loads(line)
             if record["kind"] != "primary":
                 continue
-            prusie_iters = median(record["prusie"]["niter"])
-            r_iters = median(record["R"]["niter"])
+            iterations = max(np.median(record["prusie"]["niter"]), np.median(record["R"]["niter"]))
             rows.append(
                 {
                     "panel": record["panel"],
-                    "iter_prusie": prusie_iters,
-                    "iter_r": r_iters,
-                    "iter_max": max(prusie_iters, r_iters),
+                    "iter_max": float(iterations),
                     "alpha_error": float(record["max_abs_alpha_error"]),
                     "both_at_limit": bool(record["both_nonconverged_at_limit"]),
                 }
@@ -56,94 +55,81 @@ def load(path):
     return rows
 
 
-def panel_counts(rows):
-    at_limit = sum(1 for row in rows if row["both_at_limit"])
-    exceedance = sum(1 for row in rows if row["alpha_error"] > ALPHA_GATE)
-    return len(rows), at_limit, exceedance
-
-
-def plot(rows, output):
-    plt.rcParams.update(
-        {
-            "font.family": "DejaVu Sans",
-            "font.size": 10,
-            "axes.spines.top": False,
-            "axes.spines.right": False,
-            "svg.hashsalt": "prusie-v030-alpha-vs-iterations",
-            "pdf.fonttype": 42,
-            "figure.facecolor": "white",
-            "savefig.facecolor": "white",
-        }
-    )
-    output = Path(output)
+def plot(assets_dir, output_dir):
+    """Render the figure from `assets_dir`/benchmark_records.jsonl.gz into `output_dir`."""
+    rows = load(Path(assets_dir) / "benchmark_records.jsonl.gz")
+    style("prusie-v030-alpha-vs-iterations")
+    output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
-
-    fig, axes = plt.subplots(1, 2, figsize=(9, 3.8), layout="constrained")
+    rng = np.random.default_rng(5)
+    fig, axes = plt.subplots(
+        1, 2, figsize=(8.0, 3.3), layout="constrained", gridspec_kw={"width_ratios": [1, 1.5]}
+    )
     for ax, panel in zip(axes, PANELS, strict=True):
-        panel_rows = [row for row in rows if row["panel"] == panel]
-        converged = [row for row in panel_rows if not row["both_at_limit"]]
-        at_limit = [row for row in panel_rows if row["both_at_limit"]]
-
-        maximum = max((row["alpha_error"] for row in panel_rows), default=0.0)
-        ax.scatter(
-            [row["iter_max"] for row in converged],
-            [row["alpha_error"] for row in converged],
-            s=9,
-            alpha=0.35,
-            rasterized=True,
-            color=COLORS["converged"],
-            label="At least one backend converged",
-        )
-        if at_limit:
+        selected = [row for row in rows if row["panel"] == panel]
+        x = np.array([row["iter_max"] for row in selected])
+        e = np.array([row["alpha_error"] for row in selected])
+        limit = np.array([row["both_at_limit"] for row in selected])
+        zero = e == 0
+        y = np.where(zero, ZERO_ROW * 10 ** rng.uniform(-0.25, 0.25, e.size), np.maximum(e, FLOOR))
+        x_shown = x + rng.uniform(-0.3, 0.3, x.size)
+        if panel == "GWAS":
+            ax.scatter(x_shown[~limit], y[~limit], s=9, color=CASE_POINT, alpha=0.55, linewidths=0)
+        else:
+            density_scatter(ax, np.maximum(x_shown[~limit], 0.7), y[~limit], CASE_POINT, light=0.8)
+        if limit.any():
             ax.scatter(
-                [row["iter_max"] for row in at_limit],
-                [row["alpha_error"] for row in at_limit],
-                s=22,
+                MAX_ITER + rng.uniform(-1.2, 1.2, limit.sum()),
+                y[limit],
+                s=12,
                 marker="D",
-                alpha=0.85,
-                color=COLORS["nonconverged"],
-                label=f"Both at iteration limit (n={len(at_limit)})",
+                facecolor="white",
+                edgecolor=HIGHLIGHT,
+                linewidth=0.7,
+                zorder=5,
             )
-
-        ax.axhline(
-            ALPHA_GATE,
-            color="#444",
-            linestyle="--",
-            linewidth=0.8,
-            label=f"Alpha gate: {ALPHA_GATE:g}",
-        )
-        total, _, exceedance = panel_counts(panel_rows)
-        ax.set(
-            title=f"{panel} (n={total:,}; exceedances={exceedance})",
-            xlabel="Median IBSS iterations per case (max of prusie / R)",
-            ylabel="Maximum absolute alpha difference",
-            yscale="symlog",
-        )
-        ax.set_yscale("symlog", linthresh=1e-14)
-        upper = max(3 * maximum, 1e-13, 3 * ALPHA_GATE)
-        ax.set_ylim(0, upper)
-        ax.yaxis.set_major_locator(FixedLocator((0, 1e-12, 1e-10, 1e-8, 1e-6, 1e-5, 1e-4)))
-        ax.yaxis.set_major_formatter(
-            FuncFormatter(
-                lambda value, _: "0" if value == 0 else f"$10^{{{int(np.log10(value))}}}$"
-            )
-        )
-        ax.set_xlim(0, MAX_ITER + 2)
-        ax.grid(alpha=0.15)
-        ax.legend(frameon=False, fontsize=8, loc="upper left")
-
-    for ext in ("svg", "pdf"):
-        metadata = {"Date": None} if ext == "svg" else {"CreationDate": None, "ModDate": None}
-        fig.savefig(
-            output / f"v030_alpha_vs_iterations.{ext}", bbox_inches="tight", metadata=metadata
-        )
-    plt.close(fig)
+        median = float(np.median(e))
+        ax.axhline(median, color=INK2, lw=0.7, ls=(0, (1, 1.5)), zorder=3)
+        note(ax, f"median {sci(median)}\nexact 0: {int(zero.sum()):,}", x=0.06, y=0.26)
+        error_axis(ax)
+        ax.set_xscale("linear")
+        ax.set_xlim(0, MAX_ITER + 4)
+        ax.set_xticks((1, 20, 40, 60, 80, 100))
+        ax.set_title(f"{TITLES[panel]}")
+        ax.set_xlabel("IBSS iterations (larger of the two programs)")
+        grid(ax, "x")
+    axes[0].set_ylabel("Max |Δα|")
+    handles = [
+        Line2D(
+            [],
+            [],
+            ls="",
+            marker="o",
+            ms=4,
+            mfc=CASE_POINT,
+            mec="none",
+            label="At least one program converged",
+        ),
+        Line2D(
+            [],
+            [],
+            ls="",
+            marker="D",
+            ms=4,
+            mfc="white",
+            mec=HIGHLIGHT,
+            mew=0.9,
+            label="Neither program converged (100 iterations)",
+        ),
+        Line2D([], [], color=INK2, lw=0.7, ls=(0, (1, 1.5)), label="Panel median"),
+    ]
+    fig.legend(handles=handles, loc="outside upper center", ncol=3, columnspacing=1.8)
+    save(fig, output, "v030_alpha_vs_iterations")
 
 
 def main():
     docs_assets = Path(__file__).resolve().parents[3] / "docs" / "assets" / "benchmark"
-    rows = load(docs_assets / "benchmark_records.jsonl.gz")
-    plot(rows, docs_assets)
+    plot(docs_assets, docs_assets)
 
 
 if __name__ == "__main__":

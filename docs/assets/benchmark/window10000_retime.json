@@ -1,0 +1,44 @@
+{
+  "case_key": "window_10000",
+  "p": 10000,
+  "backend": "R",
+  "replaces": "The R side of the window_10000 primary record (three retained calls 71.07, 70.62, 1576.39 s).",
+  "protocol": "Dedicated exclusive-node replay on cpunode-029 with the same L3 pin, pinned susieR 0.16.6 and fitting-stage instrumentation: two fresh R processes, 1 warm-up + 3 and 1 warm-up + 7 retained calls; all 10 retained calls pooled.",
+  "retained_complete_seconds": [
+    59.4961668308824,
+    59.2891748249531,
+    59.2591926157475,
+    59.4882935313508,
+    59.2781079653651,
+    59.2448210641742,
+    59.1943706972525,
+    59.1574411066249,
+    59.2244694754481,
+    59.2920477185398
+  ],
+  "retained_fitting_seconds": [
+    58.0277150776237,
+    58.0421563368291,
+    58.0113661373034,
+    58.0190824838355,
+    58.028237927705,
+    57.9975880878046,
+    57.9496261263266,
+    57.9076351579279,
+    57.9760489622131,
+    58.041687740013
+  ],
+  "complete_median": 59.2686502905563,
+  "complete_q1": 59.22955737262963,
+  "complete_q3": 59.291329495143124,
+  "fitting_median": 58.01522431056945,
+  "fitting_q1": 57.98143374361098,
+  "fitting_q3": 58.028107215184676,
+  "niter": 17,
+  "converged": true,
+  "peak_rss_bytes": 5694676992,
+  "source_sha256": {
+    "pass1.json": "3f12b12f8eb4286ec352898cbffe1f4a80746700d121fe757b0756c1f7b39ba4",
+    "pass2.json": "892993b329518f970326d88fb9ccb2a5f931f6f85831b86be9de3b8b243729d2"
+  }
+}

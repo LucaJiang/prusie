@@ -1,0 +1,109 @@
+{
+  "description": "Release numerical qualification of prusie 0.3.0 against fixed susieR 0.16.6 references on 184 RSS cases (87 primary, 80 confirmation, 17 large-p), each with n_threads 1, 2, 4 and 8 and overwrite_ld False and True; every setting fitted twice from reloaded inputs.",
+  "code_commit": "6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7",
+  "wheel_sha256": "85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59",
+  "native_sha256": "a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e",
+  "numerical_qualified_commit": "3decc836dda8b56d27cb79a5bb112bff84dc5fe0",
+  "numerical_report_sha256": "72205975ec1bd38670bff73e0e6a78c565ed000a85c07efa3f2d26972df8d5dd",
+  "completed_cells": 1472,
+  "measured_fit_calls": 2944,
+  "panel_counts": {
+    "panel": 87,
+    "fresh_panel": 80,
+    "largep": 17
+  },
+  "counts": [
+    {
+      "n_threads": 1,
+      "overwrite_ld": false,
+      "cases": 184,
+      "passed": 184,
+      "max_R_alpha_error": 9.647254395339644e-08,
+      "undefined_R_alpha_errors": 0,
+      "all_parent_alpha_bitwise": true,
+      "all_deterministic": true
+    },
+    {
+      "n_threads": 2,
+      "overwrite_ld": false,
+      "cases": 184,
+      "passed": 184,
+      "max_R_alpha_error": 9.647254395339644e-08,
+      "undefined_R_alpha_errors": 0,
+      "all_parent_alpha_bitwise": true,
+      "all_deterministic": true
+    },
+    {
+      "n_threads": 4,
+      "overwrite_ld": false,
+      "cases": 184,
+      "passed": 184,
+      "max_R_alpha_error": 9.647254395339644e-08,
+      "undefined_R_alpha_errors": 0,
+      "all_parent_alpha_bitwise": true,
+      "all_deterministic": true
+    },
+    {
+      "n_threads": 8,
+      "overwrite_ld": false,
+      "cases": 184,
+      "passed": 184,
+      "max_R_alpha_error": 9.647254395339644e-08,
+      "undefined_R_alpha_errors": 0,
+      "all_parent_alpha_bitwise": true,
+      "all_deterministic": true
+    },
+    {
+      "n_threads": 1,
+      "overwrite_ld": true,
+      "cases": 184,
+      "passed": 184,
+      "max_R_alpha_error": 9.647254395339644e-08,
+      "undefined_R_alpha_errors": 0,
+      "all_parent_alpha_bitwise": true,
+      "all_deterministic": true
+    },
+    {
+      "n_threads": 2,
+      "overwrite_ld": true,
+      "cases": 184,
+      "passed": 184,
+      "max_R_alpha_error": 9.647254395339644e-08,
+      "undefined_R_alpha_errors": 0,
+      "all_parent_alpha_bitwise": true,
+      "all_deterministic": true
+    },
+    {
+      "n_threads": 4,
+      "overwrite_ld": true,
+      "cases": 184,
+      "passed": 184,
+      "max_R_alpha_error": 9.647254395339644e-08,
+      "undefined_R_alpha_errors": 0,
+      "all_parent_alpha_bitwise": true,
+      "all_deterministic": true
+    },
+    {
+      "n_threads": 8,
+      "overwrite_ld": true,
+      "cases": 184,
+      "passed": 184,
+      "max_R_alpha_error": 9.647254395339644e-08,
+      "undefined_R_alpha_errors": 0,
+      "all_parent_alpha_bitwise": true,
+      "all_deterministic": true
+    }
+  ],
+  "max_R_alpha_error": 9.647254395339644e-08,
+  "R_alpha_atol": 1e-05,
+  "R_alpha_rtol": 0,
+  "original_component_and_SNP_order": true,
+  "parent_oracle": {
+    "certificate_sha256": "9e3a85dfb0607cefd112d3dcc35e46c162a2db45e097773e1537ba4478ea96d2",
+    "production_commit": "3e2f5194088fa61b75377a742d1fe39334c02ace",
+    "saved_array_campaign": "PREP01",
+    "saved_array_commit": "4e6371d1cbfd2d87115d0c0947d631ceca9b4d62",
+    "identical_production_members": 40,
+    "new_ENG01_fits": 0
+  }
+}

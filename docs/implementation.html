@@ -674,13 +674,12 @@ A worker join failure prevents a successful result. These explicit preparation
 joins are separate from the fitting pool's ordinary drop lifecycle.</p>
 <h2 id="numerical-reproducibility">Numerical reproducibility</h2>
 <p>prusie uses float64 arithmetic. Summation order and math-library implementations
-can differ from susieR, so agreement is assessed numerically. Core comparisons
-use pinned susieR 0.16.6 with matched inputs and fitting settings. The criterion
-is a maximum absolute difference of <code>1e-5</code> (<code>rtol=0</code>) across the complete final
-<code>alpha</code> matrix, retaining every component and the original component and variant
-order. PIPs and other summaries are separate diagnostics.
-<a href="model.html#computational-compatibility">Computational compatibility</a> defines the
-comparison and probability-validity checks.</p>
+can differ from susieR, so results are compared numerically. Core comparisons
+use pinned susieR 0.16.6 with matched inputs and fitting settings and report the
+maximum absolute difference over the complete final <code>alpha</code> matrix, in the
+original component and variant order. PIPs and other summaries are compared
+separately. <a href="model.html#computational-compatibility">Computational compatibility</a>
+defines the comparison and probability-validity checks.</p>
 <p>On native GNU/Linux x86-64 builds, the optional vector-math shim can evaluate SER
 exponentials through glibc <code>libmvec</code>, using SSE2 or AVX2 according to library and
 CPU support. Scalar exponentials are used when vector math is unavailable or

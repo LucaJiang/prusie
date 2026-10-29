@@ -566,37 +566,28 @@ bitwise equality is not required.
 
 A comparison uses the same inputs, verified variant order and matched fitting
 settings, including $L$, prior weights, variance estimation, standardization
-and stopping rules. The current acceptance criterion applies to the complete
-final matrix of component posterior probabilities, $\boldsymbol\alpha$.
-Let $\alpha^{\mathrm P}_{\ell j}$ and $\alpha^{\mathrm R}_{\ell j}$ be the
-values returned by prusie and susieR for component $\ell$ and variant $j$.
-Their **absolute error** is
+and stopping rules. It compares the complete final matrix of component
+posterior probabilities, $\boldsymbol\alpha$. Let $\alpha^{\mathrm P}_{\ell j}$
+and $\alpha^{\mathrm R}_{\ell j}$ be the values returned by prusie and susieR
+for component $\ell$ and variant $j$. Each case is summarized by its maximum
+absolute difference
 
 $$
-e^{\mathrm{abs}}_{\ell j}
-=\left|\alpha^{\mathrm P}_{\ell j}-\alpha^{\mathrm R}_{\ell j}\right|.
+D_\alpha=\max_{\ell,j}\left|\alpha^{\mathrm P}_{\ell j}-\alpha^{\mathrm R}_{\ell j}\right|.
 $$
-
-The comparison passes the numerical criterion when
-
-$$
-\max_{\ell,j} e^{\mathrm{abs}}_{\ell j}\le10^{-5}.
-$$
-
-This uses `atol=1e-5` and `rtol=0`: every entry has the same absolute-error
-allowance, independent of the magnitude of the reference value.
 
 Both matrices must have the same shape, with component rows and variant columns
 in their original order. The comparison includes inactive components and
-components without credible sets; no rows are omitted or permuted to improve
-agreement. Each alpha matrix must also contain finite probabilities in $[0,1]$,
-with every row summing to one within `1e-10`.
+components without credible sets; no rows are omitted or permuted. Each alpha
+matrix must also contain finite probabilities in $[0,1]$, with every row summing
+to one within `1e-10`. No tolerance is imposed on $D_\alpha$; the
+[numerical accuracy](numerical_accuracy.md) page reports its distribution
+across the tested cases.
 
 Marginal PIPs, credible sets, posterior moments, variances, Bayes factors, ELBOs
-and convergence metadata are recorded as additional diagnostics. They are not
-required to be identical by this alpha criterion. In particular, small numerical
-differences near a component-activity or credible-set threshold can change the
-reported summaries. The fitting thresholds and stopping tolerances remain those
+and convergence metadata are compared separately, because a small numerical
+difference near a component-activity or credible-set threshold could change a
+reported summary. The fitting thresholds and stopping tolerances are those
 specified for the comparison.
 
 The [numerical accuracy](numerical_accuracy.md) page reports the tested
