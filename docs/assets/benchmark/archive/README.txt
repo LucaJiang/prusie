@@ -4,9 +4,19 @@ These files preserve the executed 2026-10-28 protocol and run-local timing
 instrumentation. They are archival source with cluster-specific paths, not a
 portable installer. They do not alter the installed package or ship genotype,
 association or LD matrices. The `.txt` suffix keeps archived execution code
-separate from public tooling. [checksums.json](checksums.json) authenticates
-these copies; the [frozen protocol](../benchmark_protocol.json) authenticates
-the original runtime scripts and inputs.
+separate from public tooling. [checksums.json](checksums.json) records the
+SHA-256 of each copy as executed; the [frozen protocol](../benchmark_protocol.json)
+authenticates the original runtime scripts and inputs.
+
+After the campaign, host names were removed from eight copies: README.txt,
+m2_native.py.diff, m2_reference.R.diff, native_boundaries.txt,
+summarize.py.txt, v1_protocol.json, v1_scripts/control.py.txt and
+v1_scripts/summarize.py.txt, plus ../benchmark_protocol.json. Their hashes
+no longer match; checksums.json and the protocol SHA-256 keep the
+values of the bytes that actually ran. The edits replace the cluster name
+in file names, labels and comments and redact one login host; no logic or
+parameter changed. The original bytes are in Git history before commit
+8dcb5a7.
 
 - [campaign.py.txt](campaign.py.txt): topology, staging, admission, paired case
   execution, atomic claims and result provenance.

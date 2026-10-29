@@ -94,7 +94,7 @@
     "rtol": 0,
     "user_exception": "runs/20261026_prusie_v030/status/USER_DISPOSITION_C3_L17_M2_NONCONVERGED.md: exceedances where BOTH backends stop at max_iter without convergence are accepted and listed individually; any exceedance where either backend converged must be reported"
   },
-  "published_memory": "Unchanged v030 local local workstation fresh-process RSS; current HWM diagnostic only",
+  "published_memory": "Unchanged v030 local workstation fresh-process RSS; current HWM diagnostic only",
   "dropped_experiments": [
     "M2 thread series (controlled thread results come from v030 M1 C4 on the AMD EPYC 7742 nodes)",
     "M2 overwrite_ld series and separate fresh-process memory runs (CPU contention does not affect RSS; v030 local M2 memory is reused and labeled)",

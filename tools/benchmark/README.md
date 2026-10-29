@@ -8,7 +8,7 @@ jsonlite; retain package source provenance as well as its version.
 
 The current runtime comparison includes all 200 FinnGen R13 T2D loci,
 14,157 GTEx v11 Whole_Blood genes and six nested windows. It runs on exclusive
-exclusive AMD EPYC 7742 nodes with one numerical thread, one pinned core per L3
+AMD EPYC 7742 nodes with one numerical thread, one pinned core per L3
 domain and NUMA-local memory. Each fresh backend process makes one warmup and
 three retained calls. Complete-call and fitting-stage times describe the same
 fits; backends run sequentially within each case in a seeded balanced order.

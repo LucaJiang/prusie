@@ -611,7 +611,7 @@ inputs; the displayed memory results retain the earlier local inputs and host.</
 <li>Frozen release code: <code>6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7</code></li>
 <li>Original release wheel SHA-256: <code>85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59</code></li>
 <li>Original native extension SHA-256: <code>a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e</code></li>
-<li>Benchmark protocol SHA-256: <code>3893ec7f92fc042f15eade88a4c27a452835bf3285dfda037d6133c55fc56825</code></li>
+<li>Benchmark protocol SHA-256: <code>3893ec7f92fc042f15eade88a4c27a452835bf3285dfda037d6133c55fc56825</code> (hash of the protocol file as executed; the published copy was later edited only to remove host names, so its bytes differ)</li>
 <li>Statistical reference: R 4.4.0; susieR 0.16.6, <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>.</li>
 </ul>
 <p>Both runtime metrics use run-local timing instrumentation derived from these frozen artifacts. The native binary differs from the release binary; the original wheel is preserved. The instrumentation patch, derived binary hashes, source boundaries and qualification results are in the <a href="reproducibility.html#benchmark-protocol">measurement archive</a>. Earlier local memory measurements retain their original measured build identity.</p>

@@ -10,6 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent / "_internal"))
 
+from v030_alpha_vs_iterations import load as load_alpha_rows  # noqa: E402
+from v030_alpha_vs_iterations import plot as plot_alpha  # noqa: E402
 from v030_plots import plot  # noqa: E402
 from v030_records import bind_release, export, load_public  # noqa: E402
 from v030_tables import render  # noqa: E402
@@ -41,7 +43,9 @@ def main():
         print("Qualified, separately untimed release:", release["code_commit"])
     elif args.action == "figures":
         summary, m1, records = load_public(args.assets)
-        plot(summary, m1, records, args.output_dir or args.assets)
+        output = args.output_dir or args.assets
+        plot(summary, m1, records, output)
+        plot_alpha(load_alpha_rows(args.assets / "benchmark_records.jsonl.gz"), output)
         print("Rendered SVG/PDF figure pairs from retained measurements")
     else:
         assert args.assets.resolve() == (ROOT / "docs/assets/benchmark").resolve(), (
