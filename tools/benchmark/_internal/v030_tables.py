@@ -318,8 +318,9 @@ def render(root, pages=None, check=False):
             ],
             gate_rows,
         )
-        + "\nThese are earlier controlled measurements on the same AMD EPYC 7742 nodes. Cumulative totals do not replace "
-        "the fixed-panel majority, stratified non-regression check and robustness criteria. "
+        + "\nThese are earlier controlled measurements on the same AMD EPYC 7742 nodes. "
+        "Cumulative totals do not replace the fixed-panel majority, "
+        "stratified non-regression check and robustness criteria. "
         "The v10 runtime count uses the median of paired-round time ratios; the additional "
         "case-median count compares the two within-case median times. These can differ. "
         "Memory counts compare within-case medians of incremental peaks. "

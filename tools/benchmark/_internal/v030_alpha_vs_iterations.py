@@ -134,7 +134,9 @@ def plot(rows, output):
 
     for ext in ("svg", "pdf"):
         metadata = {"Date": None} if ext == "svg" else {"CreationDate": None, "ModDate": None}
-        fig.savefig(output / f"v030_alpha_vs_iterations.{ext}", bbox_inches="tight", metadata=metadata)
+        fig.savefig(
+            output / f"v030_alpha_vs_iterations.{ext}", bbox_inches="tight", metadata=metadata
+        )
     plt.close(fig)
 
 

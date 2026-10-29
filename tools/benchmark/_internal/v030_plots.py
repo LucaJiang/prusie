@@ -56,7 +56,11 @@ def plot(summary, m1, records, output):
     primary = [r for r in records if r["kind"] == "primary"]
     for key, ylabel, filename in (
         ("runtime", "Complete-call median (s), EPYC 7742", "v030_runtime_by_variants"),
-        ("fitting_runtime", "Fitting-stage median (s), EPYC 7742 nodes", "benchmark_fitting_by_variants"),
+        (
+            "fitting_runtime",
+            "Fitting-stage median (s), EPYC 7742 nodes",
+            "benchmark_fitting_by_variants",
+        ),
         ("memory", "Peak RSS (MiB), earlier local workstation", "v030_memory_by_variants"),
     ):
         fig, axes = plt.subplots(1, 2, figsize=(9, 3.6), layout="constrained")
