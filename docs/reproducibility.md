@@ -38,6 +38,7 @@ The records in `docs/assets/benchmark/` are:
 | [benchmark_records.jsonl.gz](assets/benchmark/benchmark_records.jsonl.gz) | All 14,363 cases: three retained complete-call and fitting-stage times per backend, timestamps, peak memory, iteration and convergence outcomes and numerical differences. |
 | [benchmark_summary.json](assets/benchmark/benchmark_summary.json) | Panel summaries, variant-count quintiles and repeat variability. |
 | [benchmark_protocol.json](assets/benchmark/benchmark_protocol.json) | Measurement protocol and artifact hashes. |
+| [cs_membership.tsv.gz](assets/benchmark/cs_membership.tsv.gz) | Per-case credible sets of both implementations, derived from the saved final alpha with the susieR 0.16.6 rule (coverage 0.95, minimum absolute LD correlation 0.5), and whether their members agree. |
 | [window10000_retime.json](assets/benchmark/window10000_retime.json) | Dedicated susieR replay for the 10,000-variant nested window. |
 | [benchmark_overwrite_records.jsonl.gz](assets/benchmark/benchmark_overwrite_records.jsonl.gz) | Paired single-call peak memory with `overwrite_ld` disabled and enabled for 200 GWAS loci. |
 | [thread_scaling.json](assets/benchmark/thread_scaling.json) | Paired runtimes with `n_threads` 2, 4 and 8 against one thread for 87 cases. |

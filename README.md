@@ -10,7 +10,7 @@
 </p>
 
 prusie fits SuSiE fine-mapping models in Python with a Rust solver. It returns
-component-level posterior probabilities, marginal inclusion probabilities (PIPs)
+component inclusion probabilities (`alpha`), posterior inclusion probabilities (PIPs)
 and credible sets from association summaries, sufficient statistics or
 individual-level data. See [numerical accuracy](docs/numerical_accuracy.md) for
 validation against susieR 0.16.6 and [the model](docs/model.md) for assumptions.

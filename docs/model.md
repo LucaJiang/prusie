@@ -2,7 +2,7 @@
 
 Fine-mapping aims to identify variants that affect a trait, but linkage
 disequilibrium (LD) can make several nearby variants consistent with the same
-association signal. prusie uses SuSiE (Sum of Single Effects) to model multiple
+association signal. prusie uses the sum of single effects (SuSiE) model to represent multiple
 effects while quantifying uncertainty about which variants carry them.
 
 SuSiE is a Bayesian variable selection model for linear regression with Gaussian
@@ -120,13 +120,13 @@ M^{(2)}_{\ell j}&=\mathbb E_q[a_\ell^2\mid\gamma_\ell=j]
 \end{aligned}
 $$
 
-The result arrays `alpha`, `mu` and `mu2` store the inclusion probabilities,
+The result arrays `alpha`, `mu` and `mu2` store the component inclusion probabilities,
 conditional posterior means and conditional posterior second moments defined
 above. Rows correspond to single-effect components and columns to variants;
 $\tau_{\ell j}^2$ denotes the conditional posterior variance.
 
 The posterior mean contribution of component $\ell$ is obtained by weighting
-its conditional means by the inclusion probabilities:
+its conditional means by the component inclusion probabilities:
 $\mathbf m_\ell=\boldsymbol\alpha_\ell\odot\boldsymbol\mu_\ell$, where
 $\odot$ denotes elementwise multiplication. Summing over components gives the
 total posterior mean $\mathbf m=\sum_\ell\mathbf m_\ell$. The `coef` property
@@ -567,7 +567,7 @@ bitwise equality is not required.
 A comparison uses the same inputs, verified variant order and matched fitting
 settings, including $L$, prior weights, variance estimation, standardization
 and stopping rules. It compares the complete final matrix of component
-posterior probabilities, $\boldsymbol\alpha$. Let $\alpha^{\mathrm P}_{\ell j}$
+inclusion probabilities, $\boldsymbol\alpha$. Let $\alpha^{\mathrm P}_{\ell j}$
 and $\alpha^{\mathrm R}_{\ell j}$ be the values returned by prusie and susieR
 for component $\ell$ and variant $j$. Each case is summarized by its maximum
 absolute difference

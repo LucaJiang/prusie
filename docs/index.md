@@ -5,11 +5,11 @@
 </div>
 
 Fine-mapping seeks to identify variants that affect a trait despite uncertainty
-from linkage disequilibrium (LD). prusie fits SuSiE (Sum of Single Effects)
-models in Python with a Rust solver, allowing multiple effects within a region.
+from linkage disequilibrium (LD). prusie fits the sum of single effects (SuSiE)
+model in Python with a Rust solver, allowing multiple effects within a region.
 
 Fits accept association summary statistics with signed LD, centered sufficient
-statistics, or individual-level data. Results include component posterior
+statistics, or individual-level data. Results include component inclusion
 probabilities (`alpha`), marginal posterior inclusion probabilities (PIPs) and
 credible sets. See [the statistical model](model.md) for assumptions and
 [numerical accuracy](numerical_accuracy.md) for comparisons with susieR 0.16.6.

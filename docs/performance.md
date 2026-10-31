@@ -123,7 +123,7 @@ model validity.
 prusie was faster than susieR in every evaluated case. The ratios describe these
 panels: they vary with region size and convergence, and other traits, tissues
 or LD references may give different values. Totals add one median call per
-case and exclude data preparation and disk I/O; they are not the elapsed time
+case and exclude data ingestion and I/O overhead; they are not the elapsed time
 of a parallel campaign. The [per-case records](#reproducibility) keep every call,
 its timestamp, iteration count, convergence flag and credible-set count.
 
@@ -204,7 +204,7 @@ with each setting, on the same nodes and reconstructed LD.
 Peak memory did not change. These LD matrices are exactly symmetric, so the
 default path already reuses an aligned, C-contiguous float64 matrix without a
 second dense copy. Overwriting can save memory only when the input needs repair
-or a layout conversion. Final component probabilities were identical between
+or a layout conversion. Final component inclusion probabilities were identical between
 the two settings.
 
 The option may consume the caller's LD array even if the call later fails;

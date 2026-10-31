@@ -154,7 +154,7 @@ singleton, _, singleton_data = plot_signal(
 )
 ```
 
-The compact views retain all CS members, show component probabilities and full
+The compact views retain all CS members, show component inclusion probabilities and full
 posterior cumulative mass, and display within-CS r². `variant_id="90"` can
 instead select the retained component with the highest alpha for that variant.
 The [plotting API](api.md#figures-and-local-style) describes local styles and

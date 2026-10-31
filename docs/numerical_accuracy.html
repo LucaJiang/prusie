@@ -36,7 +36,7 @@
 <p>Numerical comparisons assess how closely prusie's fitted SuSiE posteriors agree
 with susieR when both implementations receive the same inputs and fitting
 settings. This page compares prusie 0.3.0 with susieR 0.16.6, using the complete
-<code>alpha</code> matrix of single-effect posterior inclusion probabilities as the
+<code>alpha</code> matrix of component inclusion probabilities as the
 <a href="#component-posterior-validation">primary comparison</a>.</p>
 <p>The evidence includes fixed-reference checks, fresh susieR fits for FinnGen
 type 2 diabetes GWAS loci and GTEx Whole_Blood eQTL analyses, and an
@@ -52,9 +52,10 @@ component rows and variant columns, including inactive components and
 components without credible sets. Every entry must be finite and in <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mn>0</mn><mo separator="true">,</mo><mn>1</mn><mo stretchy="false">]</mo></mrow><annotation encoding="application/x-tex">[0,1]</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">0</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord">1</span><span class="mclose">]</span></span></span></span></span>,
 and each row must sum to one within <code>1e-10</code>.</p>
 <p>Most per-case maximum differences fall near <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>10</mn><mrow><mo>−</mo><mn>9</mn></mrow></msup></mrow><annotation encoding="application/x-tex">10^{-9}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">9</span></span></span></span></span></span></span></span></span></span></span></span></span>, far below any
-probability that matters for interpretation. Credible-set counts were identical
-in every case, so these numerical differences do not affect statistical
-inference. Marginal posterior inclusion probabilities (PIPs), credible-set
+probability that matters for interpretation. Iteration counts and convergence
+status were identical in every case and every timed call, and every credible
+set contained exactly the same variants in both implementations, so these
+numerical differences do not affect statistical inference. Marginal posterior inclusion probabilities (PIPs), credible-set
 memberships, posterior moments, Bayes factors, ELBOs and convergence flags are
 compared separately. See <a href="model.html#computational-compatibility">Computational compatibility</a>
 for the floating-point assumptions.</p>
@@ -295,11 +296,12 @@ with target posterior mass <code>coverage=0.95</code> and minimum absolute LD co
 </tr>
 </tbody>
 </table></div>
-<p>Counts come from the first retained call. The full-panel comparison does not compare set members, coverage or purity; the packaged example and the regression tests check those.</p>
+<p>Counts come from the first retained call. Credible sets re-derived from the saved final alpha of both implementations with the susieR 0.16.6 rule contain the same variants in every case.</p>
 <!-- generated:cs:end -->
 
-<p>Matching aggregate counts do not establish agreement of individual sets.
-Credible-set presence also does not establish convergence. Interpret the counts
+<p>The <a href="assets/benchmark/cs_membership.tsv.gz">per-case membership table</a> lists
+the credible sets of both implementations and whether their members agree.
+Credible-set presence does not establish convergence. Interpret the sets
 alongside the <a href="assets/benchmark/benchmark_records.jsonl.gz">recorded convergence flags</a>
 and the <a href="results.html#credible-set-fields">credible-set fields</a>.</p>
 <h2 id="independent-toy-example">Independent toy example</h2>

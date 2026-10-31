@@ -187,7 +187,7 @@ For the returned fit's inner IBSS status, read
 `fit.converged`, which refinement can overwrite with its search outcome.
 Read `fit.refinement["status"]` separately.
 
-Component probabilities can move while marginal PIPs stay similar. For sweep
+Component inclusion probabilities can move while marginal PIPs stay similar. For sweep
 $t$, the maximum absolute changes are
 
 $$

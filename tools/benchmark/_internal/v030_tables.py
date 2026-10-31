@@ -417,9 +417,9 @@ def render(root, pages=None, check=False):
         "docs/numerical_accuracy.md",
         "cs",
         table(["Analysis", "Backend", "Credible sets", "Cases with no credible set"], cs)
-        + "\nCounts come from the first retained call. The full-panel comparison does not "
-        "compare set members, coverage or purity; the packaged example and the regression "
-        "tests check those.\n",
+        + "\nCounts come from the first retained call. Credible sets re-derived from the "
+        "saved final alpha of both implementations with the susieR 0.16.6 rule contain "
+        "the same variants in every case.\n",
     )
 
     toy = root / "docs/assets/toy_result.json"

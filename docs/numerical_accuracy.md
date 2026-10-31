@@ -3,7 +3,7 @@
 Numerical comparisons assess how closely prusie's fitted SuSiE posteriors agree
 with susieR when both implementations receive the same inputs and fitting
 settings. This page compares prusie 0.3.0 with susieR 0.16.6, using the complete
-`alpha` matrix of single-effect posterior inclusion probabilities as the
+`alpha` matrix of component inclusion probabilities as the
 [primary comparison](#component-posterior-validation).
 
 The evidence includes fixed-reference checks, fresh susieR fits for FinnGen
@@ -23,9 +23,10 @@ components without credible sets. Every entry must be finite and in $[0,1]$,
 and each row must sum to one within `1e-10`.
 
 Most per-case maximum differences fall near $10^{-9}$, far below any
-probability that matters for interpretation. Credible-set counts were identical
-in every case, so these numerical differences do not affect statistical
-inference. Marginal posterior inclusion probabilities (PIPs), credible-set
+probability that matters for interpretation. Iteration counts and convergence
+status were identical in every case and every timed call, and every credible
+set contained exactly the same variants in both implementations, so these
+numerical differences do not affect statistical inference. Marginal posterior inclusion probabilities (PIPs), credible-set
 memberships, posterior moments, Bayes factors, ELBOs and convergence flags are
 compared separately. See [Computational compatibility](model.md#computational-compatibility)
 for the floating-point assumptions.
@@ -149,11 +150,12 @@ with target posterior mass `coverage=0.95` and minimum absolute LD correlation
 | eQTL | prusie | 14,207 | 5,049 |
 | eQTL | susieR | 14,207 | 5,049 |
 
-Counts come from the first retained call. The full-panel comparison does not compare set members, coverage or purity; the packaged example and the regression tests check those.
+Counts come from the first retained call. Credible sets re-derived from the saved final alpha of both implementations with the susieR 0.16.6 rule contain the same variants in every case.
 <!-- generated:cs:end -->
 
-Matching aggregate counts do not establish agreement of individual sets.
-Credible-set presence also does not establish convergence. Interpret the counts
+The [per-case membership table](assets/benchmark/cs_membership.tsv.gz) lists
+the credible sets of both implementations and whether their members agree.
+Credible-set presence does not establish convergence. Interpret the sets
 alongside the [recorded convergence flags](assets/benchmark/benchmark_records.jsonl.gz)
 and the [credible-set fields](results.md#credible-set-fields).
 
