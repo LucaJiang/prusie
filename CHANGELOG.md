@@ -1,12 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 — 2026-11-01
 
 - Build one stable-ABI wheel per platform for CPython 3.10 and newer (GIL builds),
   with PyO3 0.30.1, rust-numpy 0.30.0 and maturin 1.15.0. Test the same wheel
   on CPython 3.10–3.15; free-threaded Python is not covered.
-- Prepare PyPI metadata and absolute README links; no PyPI publishing workflow
-  is included. Statistical code, defaults and package version are unchanged.
+- Publish the verified GitHub Release packages to PyPI with Trusted Publishing.
+  Include PyPI metadata, absolute README links and installation instructions.
+  Statistical code and defaults are unchanged.
+
+## 0.3.0 — 2026-10-26
 
 - Rename recorded fields whose `legacy` prefix was unclear:
   `fit.convergence["legacy_requested_config"]` is now
@@ -23,8 +26,6 @@
 - Documentation reports benchmark ratios for the evaluated cases only,
   describes alpha differences by their distribution, and drops comparisons
   with earlier development builds.
-
-## 0.3.0 — 2026-10-26
 
 - Add per-call `n_threads` to the main fitting functions, defaulting to 1.
   Counts from 1 to 32 use the integer-index protocol, including NumPy integers;

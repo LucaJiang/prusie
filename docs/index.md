@@ -16,22 +16,21 @@ credible sets. See [the statistical model](model.md) for assumptions and
 
 ## Installation
 
-From the prusie 0.3.0 source checkout, use CPython 3.10 and newer (GIL builds) and install the
-[build requirements](install.md#build-from-source), including the pinned Rust
-toolchain:
+**prusie 0.3.1** supports CPython 3.10 and newer (GIL builds). Install from PyPI:
 
 ```sh
-cd prusie
-python -m venv .venv
-. .venv/bin/activate
-python -m pip install '.[analysis]' --config-settings=build-args="--locked"
+pip install prusie
 ```
 
-NumPy is the only required Python dependency for core fitting. The optional
-`analysis` extra installed above adds SciPy for sparse inputs, LD diagnostics
-and advanced RSS models, and Matplotlib for plotting. Fitting does not require
-R. To install without Rust or a compiler, use a compatible
-[prebuilt wheel](install.md#use-a-prebuilt-wheel).
+Prebuilt stable-ABI (`abi3`) wheels cover Linux x86-64/ARM64, macOS Intel/Apple
+silicon and Windows x86-64. The same wheel is tested on CPython 3.10–3.15;
+free-threaded builds are not supported. Wheels need neither Rust nor a compiler.
+
+NumPy is the only required Python dependency for core fitting. Use
+`pip install 'prusie[analysis]'` to add SciPy for sparse input, advanced RSS models
+and posterior outcome configurations, and Matplotlib for plotting. Fitting does
+not require R. See the [installation guide](install.md) for platform requirements,
+local wheels and [building from source](install.md#build-from-source).
 
 ## Example
 

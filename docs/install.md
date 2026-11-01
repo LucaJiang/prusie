@@ -1,6 +1,13 @@
 # Installation
 
-Build prusie 0.3.0 [from source](#build-from-source) using CPython 3.10 and newer (GIL builds).
+Install prusie 0.3.1 from PyPI using CPython 3.10 and newer (GIL builds):
+
+```sh
+pip install prusie
+```
+
+Prebuilt wheels cover Linux x86-64/ARM64, macOS Intel/Apple silicon and Windows
+x86-64. See the platform requirements below, or [build from source](#build-from-source).
 NumPy (≥1.26, <3) is its only required Python dependency. Fitting uses a compiled
 Rust extension and does not require R.
 
@@ -40,13 +47,13 @@ bitwise identical results across platforms; see
 
 ## Use a prebuilt wheel
 
-The unreleased packaging configuration builds one wheel per platform for
+prusie 0.3.1 provides one wheel per platform for
 CPython 3.10 and newer (GIL builds), plus a source distribution. The same
 `cp310-abi3` wheel is tested on CPython 3.10–3.15. Free-threaded builds
 (3.13t, 3.14t and 3.15t) are not supported by these wheels.
 
 Check the actual assets on [GitHub Releases](https://github.com/LucaJiang/prusie/releases):
-previous releases have interpreter-specific wheels. The release workflow targets:
+0.3.0 has interpreter-specific wheels. The 0.3.1 wheels target:
 
 | Platform | Wheel tag |
 | --- | --- |
@@ -56,11 +63,11 @@ previous releases have interpreter-specific wheels. The release workflow targets
 | macOS Apple silicon | `macosx_*_arm64` |
 | Windows x86-64 | `win_amd64` |
 
-For a release containing abi3 wheels, download the wheel for your platform, check it against
+Download the wheel for your platform, check it against
 `SHA256SUMS.txt`, and install it from its directory, for example:
 
 ```sh
-python -m pip install ./prusie-0.3.0-cp310-abi3-manylinux_2_28_x86_64.whl
+python -m pip install ./prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
 ```
 
 A wheel contains the compiled extension, so it needs neither Rust nor a
@@ -74,12 +81,13 @@ validation commands.
 
 ## Optional analysis tools
 
-The `analysis` extra adds SciPy (≥1.11) and Matplotlib (≥3.7). From the same
-source checkout:
+The `analysis` extra adds SciPy (≥1.11) and Matplotlib (≥3.7):
 
 ```sh
-python -m pip install '.[analysis]' --config-settings=build-args="--locked"
+python -m pip install 'prusie[analysis]'
 ```
+
+For a source build, use `'.[analysis]'` in place of `.` in the build command above.
 
 If using `portable-math`, include `--features portable-math` in these build
 arguments.

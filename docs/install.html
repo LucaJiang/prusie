@@ -16,7 +16,7 @@
 <div class="site-shell">
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
-<div class="version"><span class="version-number">0.3.0</span><span class="version-badge">Stable</span></div>
+<div class="version"><span class="version-number">0.3.1</span><span class="version-badge">Stable</span></div>
 <details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html" aria-current="page">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
@@ -30,7 +30,12 @@
 </ul>
 </div>
 </details><h1 id="installation">Installation</h1>
-<p>Build prusie 0.3.0 <a href="#build-from-source">from source</a> using CPython 3.10 and newer (GIL builds).
+<p>Install prusie 0.3.1 from PyPI using CPython 3.10 and newer (GIL builds):</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>prusie
+</code></pre></div>
+
+<p>Prebuilt wheels cover Linux x86-64/ARM64, macOS Intel/Apple silicon and Windows
+x86-64. See the platform requirements below, or <a href="#build-from-source">build from source</a>.
 NumPy (≥1.26, &lt;3) is its only required Python dependency. Fitting uses a compiled
 Rust extension and does not require R.</p>
 <p>Install the <a href="#optional-analysis-tools">analysis extra</a> for sparse input, LD
@@ -59,12 +64,12 @@ not require BLAS development libraries.</p>
 bitwise identical results across platforms; see
 <a href="implementation.html#numerical-reproducibility">numerical reproducibility</a>.</p>
 <h2 id="use-a-prebuilt-wheel">Use a prebuilt wheel</h2>
-<p>The unreleased packaging configuration builds one wheel per platform for
+<p>prusie 0.3.1 provides one wheel per platform for
 CPython 3.10 and newer (GIL builds), plus a source distribution. The same
 <code>cp310-abi3</code> wheel is tested on CPython 3.10–3.15. Free-threaded builds
 (3.13t, 3.14t and 3.15t) are not supported by these wheels.</p>
 <p>Check the actual assets on <a href="https://github.com/LucaJiang/prusie/releases">GitHub Releases</a>:
-previous releases have interpreter-specific wheels. The release workflow targets:</p>
+0.3.0 has interpreter-specific wheels. The 0.3.1 wheels target:</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -95,9 +100,9 @@ previous releases have interpreter-specific wheels. The release workflow targets
 </tr>
 </tbody>
 </table></div>
-<p>For a release containing abi3 wheels, download the wheel for your platform, check it against
+<p>Download the wheel for your platform, check it against
 <code>SHA256SUMS.txt</code>, and install it from its directory, for example:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./prusie-0.3.0-cp310-abi3-manylinux_2_28_x86_64.whl
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
 </code></pre></div>
 
 <p>A wheel contains the compiled extension, so it needs neither Rust nor a
@@ -108,11 +113,11 @@ the other wheels use scalar exponentials, as with
 <p>See <a href="contributing.html#building-packages">contributing</a> for package-building and
 validation commands.</p>
 <h2 id="optional-analysis-tools">Optional analysis tools</h2>
-<p>The <code>analysis</code> extra adds SciPy (≥1.11) and Matplotlib (≥3.7). From the same
-source checkout:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;.[analysis]&#39;</span><span class="w"> </span>--config-settings<span class="o">=</span>build-args<span class="o">=</span><span class="s2">&quot;--locked&quot;</span>
+<p>The <code>analysis</code> extra adds SciPy (≥1.11) and Matplotlib (≥3.7):</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;prusie[analysis]&#39;</span>
 </code></pre></div>
 
+<p>For a source build, use <code>'.[analysis]'</code> in place of <code>.</code> in the build command above.</p>
 <p>If using <code>portable-math</code>, include <code>--features portable-math</code> in these build
 arguments.</p>
 <p>SciPy is used for sparse input, LD diagnostics, RSS models with reference
@@ -136,7 +141,7 @@ example can run from any directory without a source checkout, R or network
 access. It needs no optional analysis dependencies. Continue with the
 <a href="example.html">toy example tutorial</a> to interpret PIPs and credible sets and add
 figures and an offline report.</p></article>
-<footer><p>prusie 0.3.0 · Wenxin Jiang</p></footer>
+<footer><p>prusie 0.3.1 · Wenxin Jiang</p></footer>
 </main>
 </div>
 </body>

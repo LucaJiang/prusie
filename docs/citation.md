@@ -14,7 +14,7 @@ describes these methods.
   with the “Sum of Single Effects” model. *PLOS Genetics*, 18(7):e1010299.
   [DOI: 10.1371/journal.pgen.1010299](https://doi.org/10.1371/journal.pgen.1010299).
 
-Identify the software as **prusie 0.3.0**, by Wenxin Jiang, and record the source
+Identify the software as **prusie 0.3.1**, by Wenxin Jiang, and record the source
 revision and software environment used in your analysis.
 [CITATION.cff](https://github.com/LucaJiang/prusie/blob/main/CITATION.cff) contains
 machine-readable software citation metadata and the method references. It does

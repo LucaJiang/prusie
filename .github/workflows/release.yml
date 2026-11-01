@@ -169,3 +169,39 @@ jobs:
             || gh release create "$RELEASE_TAG" \
                  --title "prusie ${RELEASE_TAG#v}" --notes-from-tag --verify-tag $prerelease
           gh release upload "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+  pypi:
+    needs: publish
+    if: github.ref == 'refs/tags/v0.3.1' || inputs.release_tag == 'v0.3.1' || github.event.client_payload.release_tag == 'v0.3.1'
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/p/prusie
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          path: artifacts
+      - name: Collect exactly the six release packages
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          root = Path('artifacts')
+          wheels = list(root.rglob('*.whl'))
+          sdists = list(root.rglob('*.tar.gz'))
+          assert len(wheels) == 5, [str(p) for p in wheels]
+          assert len(sdists) == 1, [str(p) for p in sdists]
+          assert all(p.name.startswith('prusie-0.3.1-cp310-abi3-') for p in wheels)
+          assert sdists[0].name == 'prusie-0.3.1.tar.gz'
+          names = {p.name for p in wheels + sdists}
+          assert len(names) == 6, names
+          dist = Path('dist')
+          dist.mkdir()
+          for package in wheels + sdists:
+              shutil.copyfile(package, dist / package.name)
+          assert {p.name for p in dist.iterdir()} == names
+          PY
+      - name: Publish to PyPI with Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3

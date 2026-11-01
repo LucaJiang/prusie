@@ -157,7 +157,7 @@ dependencies = [
 
 [[package]]
 name = "prusie-core"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "libm",
  "ndarray",
@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "prusie-python"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "ndarray",
  "numpy",

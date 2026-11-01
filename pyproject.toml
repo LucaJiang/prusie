@@ -6,7 +6,7 @@ build-backend = "maturin"
 authors = [{name = "Wenxin Jiang"}]
 maintainers = [{name = "Wenxin Jiang"}]
 name = "prusie"
-version = "0.3.0"
+version = "0.3.1"
 description = "SuSiE fine-mapping with a Rust solver and Python API"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.26,<3"]

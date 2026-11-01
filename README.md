@@ -25,25 +25,21 @@ SuSiE-inf, SuSiE-ash and Mr.ASH are outside the supported model set.
 
 ## Installation
 
-This checkout contains **0.3.0** with unreleased packaging changes: one wheel per
-platform for CPython 3.10 and newer (GIL builds), using the stable ABI (`abi3`).
-CPython 3.10–3.15 are tested; free-threaded builds are not supported by these wheels.
-Building from source
-requires CPython 3.10 and newer (GIL builds), the Rust toolchain pinned in `rust-toolchain.toml`,
-a C compiler and archiver, and the Python development headers:
+**prusie 0.3.1** supports CPython 3.10 and newer (GIL builds). Install from PyPI:
 
 ```sh
-cd prusie  # source checkout for the version documented here
-python -m venv .venv
-. .venv/bin/activate
-python -m pip install '.[analysis]'
+pip install prusie
 ```
 
-Ordinary dense fitting requires only NumPy at run time. The optional `analysis`
-extra adds SciPy for sparse designs, advanced RSS models and posterior outcome
-configurations, and Matplotlib for figures. An installed package requires
-neither R nor Rust. The [installation guide](https://lucajiang.github.io/prusie/install.html) also
-describes installing a compatible local wheel without a Rust toolchain.
+Prebuilt stable-ABI (`abi3`) wheels cover Linux x86-64/ARM64, macOS Intel/Apple
+silicon and Windows x86-64. The same wheel is tested on CPython 3.10–3.15;
+free-threaded builds are not supported. Wheels need neither Rust nor a compiler.
+
+NumPy is the only required Python dependency for core fitting. Use
+`pip install 'prusie[analysis]'` to add SciPy for sparse input, advanced RSS models
+and posterior outcome configurations, and Matplotlib for plotting. Fitting does
+not require R. See the [installation guide](https://lucajiang.github.io/prusie/install.html) for platform requirements,
+local wheels and [building from source](https://lucajiang.github.io/prusie/install.html#build-from-source).
 
 ## Example
 

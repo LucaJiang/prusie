@@ -138,7 +138,7 @@ __all__ = [
     "univar_order",
     "univariate_regression",
 ]
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 from .configuration import susie_post_outcome_configuration
 from .rss_lambda import susie_rss_lambda
 from .ser import susie_ser
