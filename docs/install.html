@@ -30,7 +30,7 @@
 </ul>
 </div>
 </details><h1 id="installation">Installation</h1>
-<p>Build prusie 0.3.0 <a href="#build-from-source">from source</a> using CPython 3.10–3.13.
+<p>Build prusie 0.3.0 <a href="#build-from-source">from source</a> using CPython 3.10 and newer (GIL builds).
 NumPy (≥1.26, &lt;3) is its only required Python dependency. Fitting uses a compiled
 Rust extension and does not require R.</p>
 <p>Install the <a href="#optional-analysis-tools">analysis extra</a> for sparse input, LD
@@ -39,7 +39,7 @@ each analysis.</p>
 <h2 id="build-from-source">Build from source</h2>
 <p>Install the Rust toolchain pinned in <code>rust-toolchain.toml</code> (1.98.1) and your
 platform's linker tools. The default native GNU/Linux x86-64 build also uses a
-C compiler and <code>ar</code> for the vector-math helper. pip uses maturin 1.10.2, pinned in
+C compiler and <code>ar</code> for the vector-math helper. pip uses maturin 1.15.0, pinned in
 <code>pyproject.toml</code>, as the build backend.</p>
 <p>From the source checkout, run these commands in a POSIX shell:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
@@ -59,9 +59,12 @@ not require BLAS development libraries.</p>
 bitwise identical results across platforms; see
 <a href="implementation.html#numerical-reproducibility">numerical reproducibility</a>.</p>
 <h2 id="use-a-prebuilt-wheel">Use a prebuilt wheel</h2>
-<p>Each tagged <a href="https://github.com/LucaJiang/prusie/releases">GitHub Release</a>
-provides wheels for CPython 3.10–3.13 on these platforms, together with a
-source distribution and <code>SHA256SUMS.txt</code>:</p>
+<p>The unreleased packaging configuration builds one wheel per platform for
+CPython 3.10 and newer (GIL builds), plus a source distribution. The same
+<code>cp310-abi3</code> wheel is tested on CPython 3.10–3.15. Free-threaded builds
+(3.13t, 3.14t and 3.15t) are not supported by these wheels.</p>
+<p>Check the actual assets on <a href="https://github.com/LucaJiang/prusie/releases">GitHub Releases</a>:
+previous releases have interpreter-specific wheels. The release workflow targets:</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
 <tr>
@@ -92,9 +95,9 @@ source distribution and <code>SHA256SUMS.txt</code>:</p>
 </tr>
 </tbody>
 </table></div>
-<p>Download the wheel for your interpreter and platform, check it against
+<p>For a release containing abi3 wheels, download the wheel for your platform, check it against
 <code>SHA256SUMS.txt</code>, and install it from its directory, for example:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./prusie-0.3.0-cp312-cp312-manylinux_2_28_x86_64.whl
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>./prusie-0.3.0-cp310-abi3-manylinux_2_28_x86_64.whl
 </code></pre></div>
 
 <p>A wheel contains the compiled extension, so it needs neither Rust nor a

@@ -37,7 +37,7 @@ read the <a href="model.html">statistical model</a> and
 <a href="numerical_accuracy.html">numerical validation criteria</a>.</p>
 <h2 id="development-environment">Development environment</h2>
 <p>The pinned development dependencies in <code>requirements-dev.lock</code> target
-CPython 3.12 on Linux. prusie supports Python 3.10–3.13. Install the Rust
+CPython 3.12 on Linux. prusie supports Python 3.10 and newer (GIL builds). Install the Rust
 toolchain in <code>rust-toolchain.toml</code>, a C compiler and an archiver. Run the
 following from the repository root in a POSIX shell:</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python3.12<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
@@ -58,7 +58,7 @@ cargo<span class="w"> </span>fmt<span class="w"> </span>--all<span class="w"> </
 cargo<span class="w"> </span>clippy<span class="w"> </span>--locked<span class="w"> </span>--workspace<span class="w"> </span>--all-targets<span class="w"> </span>--<span class="w"> </span>-D<span class="w"> </span>warnings
 python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests
 python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tools/benchmark/_internal
-cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--locked<span class="w"> </span>-p<span class="w"> </span>prusie-core<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
+cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--locked<span class="w"> </span>--<span class="w"> </span>--test-threads<span class="o">=</span><span class="m">1</span>
 </code></pre></div>
 
 <p>Tests compare prusie with frozen susieR outputs, a restricted independent
@@ -97,25 +97,31 @@ numerical content.</p>
 <h2 id="building-packages">Building packages</h2>
 <p>From the repository root, build a release wheel and source distribution
 (sdist), then verify that the sdist builds into a wheel:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>maturin<span class="w"> </span>build<span class="w"> </span>--release<span class="w"> </span>--locked<span class="w"> </span>--out<span class="w"> </span>dist
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>maturin<span class="w"> </span>build<span class="w"> </span>--release<span class="w"> </span>--locked<span class="w"> </span>--out<span class="w"> </span>dist<span class="w"> </span>-i<span class="w"> </span>python3.10
 maturin<span class="w"> </span>sdist<span class="w"> </span>--out<span class="w"> </span>dist
 python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>wheel<span class="w"> </span>--no-deps<span class="w"> </span>dist/*.tar.gz<span class="w"> </span>-w<span class="w"> </span>sdist-wheel
 </code></pre></div>
 
-<p>Install the built wheel in a fresh virtual environment and run
+<p>PyO3 0.30 and maturin 1.15 select extension-module linking automatically;
+no <code>extension-module</code> Cargo feature is needed. <code>abi3-py310</code> sets the minimum
+stable ABI, without restricting later GIL-enabled CPython versions. Free-threaded
+Python needs a separate build and is not covered here.</p>
+<p>Install the same built wheel in fresh CPython 3.10–3.15 environments.
+Install the built wheel in a fresh virtual environment and run
 <code>python examples/quickstart.py</code> from the checkout. The sdist includes Python
 and Rust sources, tests and frozen test data; documentation, examples and
 benchmark tools remain in the checkout.</p>
 <p>Retain <code>LICENSE</code>, <code>THIRD_PARTY_NOTICES.md</code> and the
 notices in adapted source and frozen data when distributing packages.</p>
 <p>Pushing a tag <code>vX.Y.Z</code> runs <code>.github/workflows/release.yml</code>. It builds wheels
-for CPython 3.10–3.13 on Linux (x86-64 and ARM64, manylinux 2.28), macOS
+as one wheel per platform for CPython 3.10 and newer (GIL builds) on Linux (x86-64 and ARM64, manylinux 2.28), macOS
 (Intel and Apple silicon) and Windows x86-64, plus the sdist. It installs
 each wheel without a source build and runs the test suite on both the oldest
-and newest supported Python, then attaches the packages and <code>SHA256SUMS.txt</code>
+and newest tested Python (currently 3.15), then attaches the packages and <code>SHA256SUMS.txt</code>
 to the GitHub Release for that tag. Tags ending in <code>aN</code>, <code>bN</code> or <code>rcN</code> are
-marked as prereleases. Running the workflow by hand builds and tests the
-packages without publishing them.</p>
+marked as prereleases. Running the workflow by hand with an empty <code>release_tag</code> builds and tests
+without publishing; selecting an existing tag attaches the packages to that
+GitHub Release. This workflow does not upload to PyPI.</p>
 <h2 id="benchmark-scripts">Benchmark scripts</h2>
 <p><code>tools/benchmark/reproduce.py</code> runs new comparisons with pinned susieR;
 helper drivers live in <code>tools/benchmark/_internal/</code>. The

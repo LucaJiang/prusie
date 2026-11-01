@@ -8,7 +8,7 @@ the [quick-start tutorial](../docs/example.md) gives a complete Python workflow.
 With the analysis extra installed, execute both posterior-analysis examples:
 
 ```sh
-python examples/post_analysis.py --output-dir output/post-analysis --case both
+python examples/post_analysis.py --output-dir output/post-analysis --case official
 ```
 
 Each example saves summaries, fits, figures and an offline HTML report.

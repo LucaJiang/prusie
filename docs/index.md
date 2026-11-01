@@ -16,7 +16,7 @@ credible sets. See [the statistical model](model.md) for assumptions and
 
 ## Installation
 
-From the prusie 0.3.0 source checkout, use CPython 3.10–3.13 and install the
+From the prusie 0.3.0 source checkout, use CPython 3.10 and newer (GIL builds) and install the
 [build requirements](install.md#build-from-source), including the pinned Rust
 toolchain:
 

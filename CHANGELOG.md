@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Build one stable-ABI wheel per platform for CPython 3.10 and newer (GIL builds),
+  with PyO3 0.30.1, rust-numpy 0.30.0 and maturin 1.15.0. Test the same wheel
+  on CPython 3.10–3.15; free-threaded Python is not covered.
+- Prepare PyPI metadata and absolute README links; no PyPI publishing workflow
+  is included. Statistical code, defaults and package version are unchanged.
+
 - Rename recorded fields whose `legacy` prefix was unclear:
   `fit.convergence["legacy_requested_config"]` is now
   `fit.convergence["caller_convergence_config"]`; the convergence-resolution

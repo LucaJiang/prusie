@@ -1,6 +1,6 @@
 # Installation
 
-Build prusie 0.3.0 [from source](#build-from-source) using CPython 3.10–3.13.
+Build prusie 0.3.0 [from source](#build-from-source) using CPython 3.10 and newer (GIL builds).
 NumPy (≥1.26, <3) is its only required Python dependency. Fitting uses a compiled
 Rust extension and does not require R.
 
@@ -12,7 +12,7 @@ each analysis.
 
 Install the Rust toolchain pinned in `rust-toolchain.toml` (1.98.1) and your
 platform's linker tools. The default native GNU/Linux x86-64 build also uses a
-C compiler and `ar` for the vector-math helper. pip uses maturin 1.10.2, pinned in
+C compiler and `ar` for the vector-math helper. pip uses maturin 1.15.0, pinned in
 `pyproject.toml`, as the build backend.
 
 From the source checkout, run these commands in a POSIX shell:
@@ -40,9 +40,13 @@ bitwise identical results across platforms; see
 
 ## Use a prebuilt wheel
 
-Each tagged [GitHub Release](https://github.com/LucaJiang/prusie/releases)
-provides wheels for CPython 3.10–3.13 on these platforms, together with a
-source distribution and `SHA256SUMS.txt`:
+The unreleased packaging configuration builds one wheel per platform for
+CPython 3.10 and newer (GIL builds), plus a source distribution. The same
+`cp310-abi3` wheel is tested on CPython 3.10–3.15. Free-threaded builds
+(3.13t, 3.14t and 3.15t) are not supported by these wheels.
+
+Check the actual assets on [GitHub Releases](https://github.com/LucaJiang/prusie/releases):
+previous releases have interpreter-specific wheels. The release workflow targets:
 
 | Platform | Wheel tag |
 | --- | --- |
@@ -52,11 +56,11 @@ source distribution and `SHA256SUMS.txt`:
 | macOS Apple silicon | `macosx_*_arm64` |
 | Windows x86-64 | `win_amd64` |
 
-Download the wheel for your interpreter and platform, check it against
+For a release containing abi3 wheels, download the wheel for your platform, check it against
 `SHA256SUMS.txt`, and install it from its directory, for example:
 
 ```sh
-python -m pip install ./prusie-0.3.0-cp312-cp312-manylinux_2_28_x86_64.whl
+python -m pip install ./prusie-0.3.0-cp310-abi3-manylinux_2_28_x86_64.whl
 ```
 
 A wheel contains the compiled extension, so it needs neither Rust nor a

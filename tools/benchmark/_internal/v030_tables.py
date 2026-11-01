@@ -125,7 +125,11 @@ def render(root, pages=None, check=False):
         "and LD references may differ; see [performance](docs/performance.md).\n"
     )
     for page in ("README.md", "docs/index.md", "docs/performance.md"):
-        link = "docs/performance.md" if page == "README.md" else "performance.md"
+        link = (
+            "https://lucajiang.github.io/prusie/performance.html"
+            if page == "README.md"
+            else "performance.md"
+        )
         fragment(
             page,
             "highlights",
