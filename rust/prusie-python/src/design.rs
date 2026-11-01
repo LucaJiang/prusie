@@ -6,7 +6,7 @@ use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 pub(crate) fn vector<T: Element + Copy>(array: &Bound<'_, PyArray1<T>>) -> PyResult<Vec<T>> {
     // Recheck dtype and rank after all Python option conversions. Empty sparse
     // data are valid; avoid constructing a rust-numpy read borrow for them.
-    let array = array.as_any().downcast::<PyArray1<T>>().map_err(|_| {
+    let array = array.as_any().cast::<PyArray1<T>>().map_err(|_| {
         PyValueError::new_err("Native vector dtype or rank changed during option conversion")
     })?;
     if array.shape()[0] == 0 {

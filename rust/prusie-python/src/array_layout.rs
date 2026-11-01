@@ -9,7 +9,7 @@ pub(crate) fn ensure_layout<T: Element, D: Dimension>(
 ) -> PyResult<()> {
     // A Python numeric conversion of a later argument can change the dtype or
     // rank of this array, so the typed wrapper is checked again here.
-    let array = array.as_any().downcast::<PyArray<T, D>>().map_err(|_| {
+    let array = array.as_any().cast::<PyArray<T, D>>().map_err(|_| {
         PyValueError::new_err("Native array dtype or rank changed during argument conversion")
     })?;
     let item = std::mem::size_of::<T>() as isize;

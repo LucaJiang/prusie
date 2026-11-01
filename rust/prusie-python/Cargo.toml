@@ -11,8 +11,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 prusie-core = { path = "../prusie-core" }
-pyo3 = { version = "=0.23.5" }
-numpy = "=0.23.0"
+pyo3 = { version = "=0.30.1" }
+numpy = "=0.30.0"
 ndarray.workspace = true
 
 [features]

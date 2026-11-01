@@ -86,18 +86,18 @@ fn fit_impl<'py>(
 
     // A conversion callback can also change dtype or rank on the same NumPy
     // object. Recheck the complete typed-array contract after all extraction.
-    let xtx = xtx.as_any().downcast::<PyArray2<f64>>().map_err(|_| {
+    let xtx = xtx.as_any().cast::<PyArray2<f64>>().map_err(|_| {
         PyValueError::new_err(
             "Native XtX must remain a two-dimensional float64 array after option conversion",
         )
     })?;
-    let xty = xty.as_any().downcast::<PyArray1<f64>>().map_err(|_| {
+    let xty = xty.as_any().cast::<PyArray1<f64>>().map_err(|_| {
         PyValueError::new_err(
             "Native Xty must remain a one-dimensional float64 array after option conversion",
         )
     })?;
 
-    // rust-numpy 0.23 forms Rust references without validating byte alignment,
+    // rust-numpy forms Rust references without validating byte alignment,
     // and converts byte strides to element strides by integer division. Check
     // those preconditions before constructing any Rust array view or slice.
     let align = std::mem::align_of::<f64>();

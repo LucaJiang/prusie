@@ -738,7 +738,7 @@ fn validate_and_overwrite_rss<'py>(
     ensure_layout(&array)?;
     // Read the C-API writeability flag directly, without invoking Python hooks.
     // SAFETY: Bound<PyArray2<f64>> retains the live PyArrayObject under the GIL.
-    if unsafe { (*array.as_array_ptr()).flags & numpy::npyffi::NPY_ARRAY_WRITEABLE == 0 } {
+    if unsafe { (*array.as_array_ptr()).fields.flags & numpy::npyffi::NPY_ARRAY_WRITEABLE == 0 } {
         return Err(PyValueError::new_err("overwrite_ld requires writable R"));
     }
     if !array.is_c_contiguous() {

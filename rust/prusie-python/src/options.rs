@@ -4,24 +4,28 @@ use numpy::{PyArray1, PyArrayMethods, PyUntypedArrayMethods};
 use prusie_core as solver;
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict, PyTypeInfo};
 
-fn option<'py, T: FromPyObject<'py>>(options: &Bound<'py, PyDict>, name: &str) -> PyResult<T> {
+fn option<'py, T>(options: &Bound<'py, PyDict>, name: &str) -> PyResult<T>
+where
+    T: for<'a> FromPyObject<'a, 'py>,
+{
     options
         .get_item(name)?
         .ok_or_else(|| PyValueError::new_err(format!("Missing native option: {name}")))?
         .extract()
+        .map_err(Into::into)
 }
 
 pub(crate) fn vector_option(options: &Bound<'_, PyDict>, name: &str) -> PyResult<Vec<f64>> {
     let value = options
         .get_item(name)?
         .ok_or_else(|| PyValueError::new_err(format!("Missing native option: {name}")))?;
-    if let Ok(array) = value.downcast::<PyArray1<f64>>() {
+    if let Ok(array) = value.cast::<PyArray1<f64>>() {
         // Copy a contiguous float64 array immediately. The short read borrow
         // ends before any later Python conversion callback and before the
         // matrix is borrowed. Other inputs use element-wise extraction.
         if value
             .get_type()
-            .is(&PyArray1::<f64>::type_object(value.py()))
+            .is(PyArray1::<f64>::type_object(value.py()))
             && array.is_c_contiguous()
             && array_layout::ensure_layout(array).is_ok()
         {
@@ -139,7 +143,7 @@ pub(crate) fn parse(
     }
     if let Some(prior) = options.get_item("slot_prior")? {
         if !prior.is_none() {
-            let prior = prior.downcast::<PyDict>()?;
+            let prior = prior.cast::<PyDict>()?;
             let family_name: String = option(prior, "family")?;
             let family = match family_name.as_str() {
                 "betabinom" => solver::model::SlotPriorFamily::BetaBinomial {
