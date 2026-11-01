@@ -3,6 +3,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing v* tag to build and publish; leave empty for build only'
+        required: false
+        type: string
 permissions:
   contents: read
 defaults:
@@ -26,6 +31,8 @@ jobs:
             target: aarch64
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
       - uses: PyO3/maturin-action@v1
         with:
           maturin-version: '1.10.2'
@@ -42,12 +49,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-13
+          - runner: macos-15-intel
             target: x86_64
           - runner: macos-latest
             target: aarch64
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
       - uses: actions/setup-python@v6
         with:
           python-version: |
@@ -68,6 +77,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
       - uses: actions/setup-python@v6
         with:
           python-version: |
@@ -88,6 +99,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
       - uses: PyO3/maturin-action@v1
         with:
           maturin-version: '1.10.2'
@@ -103,20 +116,23 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15-intel, macos-latest, windows-latest]
+        python: ['3.10', '3.13']
         include:
           - os: ubuntu-24.04
             artifact: wheels-linux-x86_64
           - os: ubuntu-24.04-arm
             artifact: wheels-linux-aarch64
-          - os: macos-13
+          - os: macos-15-intel
             artifact: wheels-macos-x86_64
           - os: macos-latest
             artifact: wheels-macos-aarch64
           - os: windows-latest
             artifact: wheels-windows-x64
-        python: ['3.10', '3.13']
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
@@ -126,11 +142,11 @@ jobs:
           path: dist
       - name: Install the wheel without a source build and run the tests
         run: |
+          python -m pip install 'numpy>=1.26,<3' 'pytest>=8,<9' 'scipy>=1.11' 'matplotlib>=3.7'
           python -m pip install --only-binary=:all: --no-index --find-links dist prusie
-          python -m pip install 'pytest>=8,<9' 'scipy>=1.11' 'matplotlib>=3.7'
           python -m pytest tests -q
   publish:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(inputs.release_tag, 'v')
     needs: [smoke, sdist]
     runs-on: ubuntu-24.04
     permissions:
@@ -145,10 +161,11 @@ jobs:
       - name: Attach packages to the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           prerelease=""
-          if [[ "$GITHUB_REF_NAME" =~ (a|b|rc)[0-9]+$ ]]; then prerelease="--prerelease"; fi
-          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-                 --title "prusie ${GITHUB_REF_NAME#v}" --notes-from-tag --verify-tag $prerelease
-          gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          if [[ "$RELEASE_TAG" =~ (a|b|rc)[0-9]+$ ]]; then prerelease="--prerelease"; fi
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+                 --title "prusie ${RELEASE_TAG#v}" --notes-from-tag --verify-tag $prerelease
+          gh release upload "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
