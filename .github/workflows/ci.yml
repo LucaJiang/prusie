@@ -34,51 +34,80 @@ jobs:
       - run: ruff format --check
       - run: cargo fmt --all --check
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
-  test:
+  wheel:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+        variant: [default]
         include:
           - os: ubuntu-24.04
-            python: '3.10'
+            variant: portable-math
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - run: python -m pip install 'maturin==1.15.0'
+      - name: Build one stable-ABI wheel
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          args=()
+          if [[ "$VARIANT" == portable-math ]]; then args+=(--features portable-math); fi
+          maturin build --release --locked --out dist -i python "${args[@]}"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: abi3-${{ matrix.os }}-${{ matrix.variant }}
+          path: dist/*-cp310-abi3-*.whl
+          if-no-files-found: error
+  test:
+    needs: wheel
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+        python: ['3.10', '3.11', '3.12', '3.13', '3.14', '3.15']
+        variant: [default]
+        include:
+          - python: '3.10'
             numpy: '1.26.4'
-            features: extension-module
+          - python: '3.11'
+            numpy: '2.3.5'
+          - python: '3.12'
+            numpy: '2.5.4'
+          - python: '3.13'
+            numpy: '2.5.4'
+          - python: '3.14'
+            numpy: '2.5.4'
+          - python: '3.15'
+            numpy: '2.5.4'
           - os: ubuntu-24.04
             python: '3.12'
-            numpy: '2.5.3'
-            features: extension-module
-          - os: ubuntu-24.04
-            python: '3.13'
-            numpy: '2.5.3'
-            features: extension-module
-          - os: macos-latest
-            python: '3.12'
-            numpy: '2.5.3'
-            features: extension-module
-          - os: windows-latest
-            python: '3.12'
-            numpy: '2.5.3'
-            features: extension-module
-          - os: ubuntu-24.04
-            python: '3.12'
-            numpy: '2.5.3'
-            features: extension-module,portable-math
+            numpy: '2.5.4'
+            variant: portable-math
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install 'numpy==${{ matrix.numpy }}' 'pytest>=8,<9' 'scipy>=1.11' 'matplotlib>=3.7' 'maturin==1.10.2'
-      - run: maturin build --release --locked --features '${{ matrix.features }}' --out dist
-      - run: python -m pip install dist/*.whl
+      - uses: actions/download-artifact@v6
+        with:
+          name: abi3-${{ matrix.os }}-${{ matrix.variant }}
+          path: dist
+      - run: python -m pip install 'numpy==${{ matrix.numpy }}' 'pytest>=8,<9' 'scipy>=1.11' 'matplotlib>=3.7'
+      - run: |
+          python -m pip install --only-binary=:all: --no-index --find-links dist prusie
       - run: python -m pytest tests
-      - if: matrix.os == 'ubuntu-24.04' && matrix.python == '3.12' && matrix.features == 'extension-module'
+      - run: python examples/quickstart.py
+      - if: matrix.os == 'ubuntu-24.04' && matrix.python == '3.12' && matrix.variant == 'default'
         run: python -m pytest tools/benchmark/_internal
       - if: matrix.os == 'ubuntu-24.04' && matrix.python == '3.13'
-        run: |
-          cargo test --locked -p prusie-core -- --test-threads=1
+        run: cargo test --locked -- --test-threads=1
   coverage:
+    needs: wheel
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -87,9 +116,13 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - run: python -m pip install 'numpy==2.5.3' 'pytest>=8,<9' 'scipy>=1.11' 'matplotlib>=3.7' 'maturin==1.10.2' 'coverage[toml]>=7.6'
-      - run: maturin build --release --locked --out dist
-      - run: python -m pip install dist/*.whl
+      - run: python -m pip install 'numpy==2.5.4' 'pytest>=8,<9' 'scipy>=1.11' 'matplotlib>=3.7' 'maturin==1.15.0' 'coverage[toml]>=7.6'
+      - uses: actions/download-artifact@v6
+        with:
+          name: abi3-ubuntu-24.04-default
+          path: dist
+      - run: |
+          python -m pip install --only-binary=:all: --no-index --find-links dist prusie
       - name: Measure line coverage of the installed package
         run: |
           package=$(python -c 'import pathlib, prusie; print(pathlib.Path(prusie.__file__).parent)')
@@ -139,15 +172,22 @@ jobs:
       - name: Check frozen inputs and complete alpha matrices
         run: Rscript --vanilla tools/check_r_reference.R
   package:
+    needs: wheel
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
-      - run: python -m pip install -c requirements-dev.lock maturin==1.10.2
-      - run: maturin build --release --locked --out dist
+          python-version: '3.15'
+      - run: python -m pip install maturin==1.15.0
+      - uses: actions/download-artifact@v6
+        with:
+          name: abi3-ubuntu-24.04-default
+          path: dist
       - run: maturin sdist --out dist
+      - run: python -m pip install twine abi3audit
+      - run: python -m twine check --strict dist/*
+      - run: abi3audit --strict dist/*.whl
       - name: Install the wheel and fit with NumPy only
         run: |
           python -m venv "$RUNNER_TEMP/wheel-env"

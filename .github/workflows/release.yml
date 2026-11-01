@@ -37,14 +37,15 @@ jobs:
           ref: ${{ (inputs.release_tag || github.event.client_payload.release_tag) && format('refs/tags/{0}', inputs.release_tag || github.event.client_payload.release_tag) || github.ref }}
       - uses: PyO3/maturin-action@v1
         with:
-          maturin-version: '1.10.2'
+          maturin-version: '1.15.0'
           target: ${{ matrix.target }}
           manylinux: '2_28'
-          args: --release --locked --out dist -i python3.10 python3.11 python3.12 python3.13
+          args: --release --locked --out dist -i python3.10
       - uses: actions/upload-artifact@v5
         with:
           name: wheels-linux-${{ matrix.target }}
-          path: dist/*.whl
+          path: dist/*-cp310-abi3-*.whl
+          if-no-files-found: error
   macos:
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -61,20 +62,17 @@ jobs:
           ref: ${{ (inputs.release_tag || github.event.client_payload.release_tag) && format('refs/tags/{0}', inputs.release_tag || github.event.client_payload.release_tag) || github.ref }}
       - uses: actions/setup-python@v6
         with:
-          python-version: |
-            3.10
-            3.11
-            3.12
-            3.13
+          python-version: '3.10'
       - uses: PyO3/maturin-action@v1
         with:
-          maturin-version: '1.10.2'
+          maturin-version: '1.15.0'
           target: ${{ matrix.target }}
-          args: --release --locked --out dist -i python3.10 python3.11 python3.12 python3.13
+          args: --release --locked --out dist -i python
       - uses: actions/upload-artifact@v5
         with:
           name: wheels-macos-${{ matrix.target }}
-          path: dist/*.whl
+          path: dist/*-cp310-abi3-*.whl
+          if-no-files-found: error
   windows:
     runs-on: windows-latest
     steps:
@@ -83,20 +81,17 @@ jobs:
           ref: ${{ (inputs.release_tag || github.event.client_payload.release_tag) && format('refs/tags/{0}', inputs.release_tag || github.event.client_payload.release_tag) || github.ref }}
       - uses: actions/setup-python@v6
         with:
-          python-version: |
-            3.10
-            3.11
-            3.12
-            3.13
+          python-version: '3.10'
       - uses: PyO3/maturin-action@v1
         with:
-          maturin-version: '1.10.2'
+          maturin-version: '1.15.0'
           target: x64
-          args: --release --locked --out dist -i python3.10 python3.11 python3.12 python3.13
+          args: --release --locked --out dist -i python
       - uses: actions/upload-artifact@v5
         with:
           name: wheels-windows-x64
-          path: dist/*.whl
+          path: dist/*-cp310-abi3-*.whl
+          if-no-files-found: error
   sdist:
     runs-on: ubuntu-24.04
     steps:
@@ -105,7 +100,7 @@ jobs:
           ref: ${{ (inputs.release_tag || github.event.client_payload.release_tag) && format('refs/tags/{0}', inputs.release_tag || github.event.client_payload.release_tag) || github.ref }}
       - uses: PyO3/maturin-action@v1
         with:
-          maturin-version: '1.10.2'
+          maturin-version: '1.15.0'
           command: sdist
           args: --out dist
       - uses: actions/upload-artifact@v5
@@ -119,7 +114,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15-intel, macos-latest, windows-latest]
-        python: ['3.10', '3.13']
+        python: ['3.10', '3.15']
         include:
           - os: ubuntu-24.04
             artifact: wheels-linux-x86_64
