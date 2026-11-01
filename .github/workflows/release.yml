@@ -154,6 +154,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ (inputs.release_tag || github.event.client_payload.release_tag) && format('refs/tags/{0}', inputs.release_tag || github.event.client_payload.release_tag) || github.ref }}
       - uses: actions/download-artifact@v6
         with:
           path: dist
@@ -168,6 +171,6 @@ jobs:
           prerelease=""
           if [[ "$RELEASE_TAG" =~ (a|b|rc)[0-9]+$ ]]; then prerelease="--prerelease"; fi
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            || gh release create "$RELEASE_TAG" \
                  --title "prusie ${RELEASE_TAG#v}" --notes-from-tag --verify-tag $prerelease
           gh release upload "$RELEASE_TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
