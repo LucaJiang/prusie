@@ -25,21 +25,74 @@ SuSiE-inf, SuSiE-ash and Mr.ASH are outside the supported model set.
 
 ## Installation
 
-**prusie 0.3.1** supports CPython 3.10 and newer (GIL builds). Install from PyPI:
+**prusie 0.3.1** supports CPython 3.10 and newer (GIL builds). Its stable-ABI
+(`abi3`) wheels are tested on CPython 3.10–3.15; free-threaded builds are not
+supported. Wheels need neither Rust nor a compiler. NumPy is the only required
+Python dependency for core fitting, and R is not required.
+
+### PyPI
 
 ```sh
 pip install prusie
 ```
 
-Prebuilt stable-ABI (`abi3`) wheels cover Linux x86-64/ARM64, macOS Intel/Apple
-silicon and Windows x86-64. The same wheel is tested on CPython 3.10–3.15;
-free-threaded builds are not supported. Wheels need neither Rust nor a compiler.
+For SciPy (sparse input, advanced RSS models and posterior outcome configurations)
+and Matplotlib (plotting), install the optional `analysis` extra:
 
-NumPy is the only required Python dependency for core fitting. Use
-`pip install 'prusie[analysis]'` to add SciPy for sparse input, advanced RSS models
-and posterior outcome configurations, and Matplotlib for plotting. Fitting does
-not require R. See the [installation guide](https://lucajiang.github.io/prusie/install.html) for platform requirements,
-local wheels and [building from source](https://lucajiang.github.io/prusie/install.html#build-from-source).
+```sh
+pip install 'prusie[analysis]'
+```
+
+### GitHub Release wheel
+
+Download the wheel for your platform from [GitHub Release v0.3.1](https://github.com/LucaJiang/prusie/releases/tag/v0.3.1):
+
+| Platform | Wheel filename |
+| --- | --- |
+| Linux x86-64, glibc ≥2.28 | [`prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl) |
+| Linux ARM64, glibc ≥2.28 | [`prusie-0.3.1-cp310-abi3-manylinux_2_28_aarch64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-manylinux_2_28_aarch64.whl) |
+| macOS Intel | [`prusie-0.3.1-cp310-abi3-macosx_10_12_x86_64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-macosx_10_12_x86_64.whl) |
+| macOS Apple silicon | [`prusie-0.3.1-cp310-abi3-macosx_11_0_arm64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-macosx_11_0_arm64.whl) |
+| Windows x86-64 | [`prusie-0.3.1-cp310-abi3-win_amd64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-win_amd64.whl) |
+
+Download the attached [SHA256SUMS.txt](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/SHA256SUMS.txt) alongside the wheel
+and check its SHA256 before installing. For example, on Linux x86-64 with GNU
+`sha256sum`:
+
+```sh
+curl -fLO https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
+curl -fLO https://github.com/LucaJiang/prusie/releases/download/v0.3.1/SHA256SUMS.txt
+sha256sum --check --ignore-missing SHA256SUMS.txt
+pip install ./prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
+```
+
+The checksum command must report `OK` for the downloaded wheel. On macOS use
+`shasum -a 256 <wheel>`; in Windows PowerShell use `Get-FileHash <wheel> -Algorithm SHA256`,
+and compare the value with the matching entry in `SHA256SUMS.txt`.
+
+A direct-URL install is also available (Linux x86-64 example):
+
+```sh
+pip install https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
+```
+
+### From a clone
+
+```sh
+git clone https://github.com/LucaJiang/prusie.git
+cd prusie
+git checkout v0.3.1  # optional: pin the released version
+pip install .
+```
+
+Source installation needs the Rust toolchain pinned in `rust-toolchain.toml`
+(currently 1.98.1) and your platform's linker tools. With rustup installed and
+`cargo` on `PATH`, rustup selects and downloads the pinned toolchain automatically
+if it is missing. The default GNU/Linux x86-64 build also needs a C compiler and
+`ar` for the vector-math helper. pip installs the pinned maturin build backend.
+
+See the [installation guide](https://lucajiang.github.io/prusie/install.html) for
+platform requirements, optional dependencies and additional source-build options.
 
 ## Example
 

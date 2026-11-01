@@ -1,32 +1,85 @@
 # Installation
 
-Install prusie 0.3.1 from PyPI using CPython 3.10 and newer (GIL builds):
+prusie 0.3.1 supports CPython 3.10 and newer (GIL builds). NumPy (≥1.26, <3)
+is its only required Python dependency. Fitting uses a compiled Rust extension
+and does not require R. Record the package version and source revision with
+each analysis.
+
+## PyPI
 
 ```sh
 pip install prusie
 ```
 
-Prebuilt wheels cover Linux x86-64/ARM64, macOS Intel/Apple silicon and Windows
-x86-64. See the platform requirements below, or [build from source](#build-from-source).
-NumPy (≥1.26, <3) is its only required Python dependency. Fitting uses a compiled
-Rust extension and does not require R.
+For sparse input, LD diagnostics and plotting, add the [analysis extra](#optional-analysis-tools):
 
-Install the [analysis extra](#optional-analysis-tools) for sparse input, LD
-diagnostics and plotting. Record the package version and source revision with
-each analysis.
+```sh
+pip install 'prusie[analysis]'
+```
+
+## Use a prebuilt wheel
+
+The same `cp310-abi3` wheel is tested on CPython 3.10–3.15. Free-threaded builds
+(3.13t, 3.14t and 3.15t) are not supported by these wheels.
+
+Download the wheel for your platform from [GitHub Release v0.3.1](https://github.com/LucaJiang/prusie/releases/tag/v0.3.1):
+
+| Platform | Wheel filename |
+| --- | --- |
+| Linux x86-64, glibc ≥2.28 | [`prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl) |
+| Linux ARM64, glibc ≥2.28 | [`prusie-0.3.1-cp310-abi3-manylinux_2_28_aarch64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-manylinux_2_28_aarch64.whl) |
+| macOS Intel | [`prusie-0.3.1-cp310-abi3-macosx_10_12_x86_64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-macosx_10_12_x86_64.whl) |
+| macOS Apple silicon | [`prusie-0.3.1-cp310-abi3-macosx_11_0_arm64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-macosx_11_0_arm64.whl) |
+| Windows x86-64 | [`prusie-0.3.1-cp310-abi3-win_amd64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-win_amd64.whl) |
+
+Download the attached [SHA256SUMS.txt](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/SHA256SUMS.txt) alongside the wheel
+and check its SHA256 before installing. For example, on Linux x86-64 with GNU
+`sha256sum`:
+
+```sh
+curl -fLO https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
+curl -fLO https://github.com/LucaJiang/prusie/releases/download/v0.3.1/SHA256SUMS.txt
+sha256sum --check --ignore-missing SHA256SUMS.txt
+pip install ./prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
+```
+
+The checksum command must report `OK` for the downloaded wheel. On macOS use
+`shasum -a 256 <wheel>`; in Windows PowerShell use `Get-FileHash <wheel> -Algorithm SHA256`,
+and compare the value with the matching entry in `SHA256SUMS.txt`.
+
+A direct-URL install is also available (Linux x86-64 example):
+
+```sh
+pip install https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
+```
+
+A wheel contains the compiled extension, so it needs neither Rust nor a
+compiler. Only the Linux x86-64 wheel includes the optional vector-math helper;
+the other wheels use scalar exponentials, as with
+[`portable-math`](#build-from-source). A source distribution requires the
+[build toolchain](#build-from-source).
 
 ## Build from source
 
-Install the Rust toolchain pinned in `rust-toolchain.toml` (1.98.1) and your
-platform's linker tools. The default native GNU/Linux x86-64 build also uses a
-C compiler and `ar` for the vector-math helper. pip uses maturin 1.15.0, pinned in
-`pyproject.toml`, as the build backend.
+Source installation needs the Rust toolchain pinned in `rust-toolchain.toml`
+(currently 1.98.1) and your platform's linker tools. With rustup installed and
+`cargo` on `PATH`, rustup selects and downloads the pinned toolchain automatically
+if it is missing. The default GNU/Linux x86-64 build also needs a C compiler and
+`ar` for the vector-math helper. pip installs the pinned maturin build backend.
+The maturin version is 1.15.0, pinned in `pyproject.toml`.
 
-From the source checkout, run these commands in a POSIX shell:
+Clone the repository and install into your Python environment:
 
 ```sh
-python -m venv .venv
-. .venv/bin/activate
+git clone https://github.com/LucaJiang/prusie.git
+cd prusie
+git checkout v0.3.1  # optional: pin the released version
+pip install .
+```
+
+To require the exact Cargo dependency versions, install with:
+
+```sh
 python -m pip install . --config-settings=build-args="--locked"
 ```
 
@@ -44,37 +97,6 @@ This uses scalar exponentials and keeps RSS preparation sequential; see
 [native threading](implementation.md#native-threading). It does not guarantee
 bitwise identical results across platforms; see
 [numerical reproducibility](implementation.md#numerical-reproducibility).
-
-## Use a prebuilt wheel
-
-prusie 0.3.1 provides one wheel per platform for
-CPython 3.10 and newer (GIL builds), plus a source distribution. The same
-`cp310-abi3` wheel is tested on CPython 3.10–3.15. Free-threaded builds
-(3.13t, 3.14t and 3.15t) are not supported by these wheels.
-
-Check the actual assets on [GitHub Releases](https://github.com/LucaJiang/prusie/releases):
-0.3.0 has interpreter-specific wheels. The 0.3.1 wheels target:
-
-| Platform | Wheel tag |
-| --- | --- |
-| Linux x86-64, glibc ≥2.28 | `manylinux_2_28_x86_64` |
-| Linux ARM64, glibc ≥2.28 | `manylinux_2_28_aarch64` |
-| macOS Intel | `macosx_*_x86_64` |
-| macOS Apple silicon | `macosx_*_arm64` |
-| Windows x86-64 | `win_amd64` |
-
-Download the wheel for your platform, check it against
-`SHA256SUMS.txt`, and install it from its directory, for example:
-
-```sh
-python -m pip install ./prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
-```
-
-A wheel contains the compiled extension, so it needs neither Rust nor a
-compiler. Only the Linux x86-64 wheel includes the optional vector-math helper;
-the other wheels use scalar exponentials, as with
-[`portable-math`](#build-from-source). A source distribution requires the
-[build toolchain](#build-from-source).
 
 See [contributing](contributing.md#building-packages) for package-building and
 validation commands.
