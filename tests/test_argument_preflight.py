@@ -46,16 +46,27 @@ def test_multipanel_joint_fit_uses_zero_for_missing_z_scores():
     np.testing.assert_array_equal(fit.params["omega"], filled.params["omega"])
 
 
+# Both uncertain models share the same convergence preflight. Each nondefault
+# control is checked once, and both model selectors still reach that guard.
 @pytest.mark.parametrize(
-    "config",
+    "config,model",
     [
-        prusie.ConvergenceConfig(criterion="alpha_pip"),
-        prusie.ConvergenceConfig(criterion="joint"),
-        prusie.ConvergenceConfig(min_iter=3),
-        prusie.ConvergenceConfig(cycle_lag=3),
+        pytest.param(
+            prusie.ConvergenceConfig(criterion="alpha_pip"),
+            dict(R_mismatch="eb"),
+            id="alpha-pip-mismatch",
+        ),
+        pytest.param(
+            prusie.ConvergenceConfig(criterion="joint"), dict(R_finite=400.0), id="joint-finite"
+        ),
+        pytest.param(
+            prusie.ConvergenceConfig(min_iter=3), dict(R_mismatch="eb"), id="min-iter-mismatch"
+        ),
+        pytest.param(
+            prusie.ConvergenceConfig(cycle_lag=3), dict(R_finite=400.0), id="cycle-lag-finite"
+        ),
     ],
 )
-@pytest.mark.parametrize("model", [dict(R_mismatch="eb"), dict(R_finite=400.0)])
 def test_finite_and_mismatch_rss_reject_unimplemented_stopping_controls(monkeypatch, config, model):
     monkeypatch.setattr(prusie.rss, "_fit", pytest.fail)
     with pytest.raises(ValueError, match="support only the default"):
@@ -86,8 +97,18 @@ def test_explicit_elbo_rule_remains_available_for_mismatch_rss():
     assert np.isfinite(fit.alpha).all()
 
 
-@pytest.mark.parametrize("refine", ["yes", 1, None])
-@pytest.mark.parametrize("entry", ["suff_stat", "rss", "individual"])
+# All entry points use _request._fit's shared refinement type check. Exercise
+# every entry point and each invalid type without repeating their full product.
+@pytest.mark.parametrize(
+    "refine,entry",
+    [
+        pytest.param("yes", "suff_stat", id="string-suff-stat"),
+        pytest.param("yes", "rss", id="string-rss"),
+        pytest.param("yes", "individual", id="string-individual"),
+        pytest.param(1, "rss", id="integer-rss"),
+        pytest.param(None, "suff_stat", id="none-suff-stat"),
+    ],
+)
 def test_invalid_refine_is_rejected_before_fitting(monkeypatch, entry, refine):
     monkeypatch.setattr(getattr(prusie, entry), "_fit", pytest.fail)
     with pytest.raises(TypeError, match="refine must be False, True, or a RefinementConfig"):
