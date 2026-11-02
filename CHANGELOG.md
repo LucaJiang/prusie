@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Add post-hoc convergence assessment with tail ELBO estimates, PIP stability
+  and component movement.
+- Record refinement candidate credible sets, competing objectives and accepted
+  inner IBSS convergence separately from the outer search outcome.
+- Add fit-status and credible-set stability tables to comparisons, sample-size
+  sensitivity and a reusable starting sensitivity plan.
+- Add actionable offline-report flags, evidence tables and CSV exports,
+  explicit figure placement and automatic software provenance.
+
+
 ## 0.3.1 — 2026-11-01
 
 - Build one stable-ABI wheel per platform for CPython 3.10 and newer (GIL builds),

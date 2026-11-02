@@ -59,6 +59,33 @@ fallback is not inherited.
 
 Use `prusie.compare_fits` directly when all fits already exist.
 
+## Start with a compact plan
+
+`standard_sensitivity_plan` provides a starting point: halve and double $L$,
+check 90% and 99% CS coverage and a purity threshold of 0.8, and optionally
+refine. Coverage and purity changes reuse the baseline posterior.
+
+```python
+plan = prusie.standard_sensitivity_plan(L=fit.params["L"])
+sensitivity = prusie.run_sensitivity(example["inputs"], plan, baseline=fit)
+comparison = sensitivity["comparison"]
+for row in comparison["cs_stability_summary"]:
+    print(row["baseline_component"], row["recovered_in"], row["assessed_in"])
+```
+
+Choose alternatives that reflect uncertainty in your own analysis. When the
+baseline inputs include `n`, a single-factor item such as
+`{"name": "smaller_n", "changes": {"n": 900}}` fits the same data at that sample
+size; the baseline inputs remain unchanged and the cache distinguishes the new
+sample size.
+
+Read `comparison["fit_status"]` first to see which settings stopped successfully.
+`cs_stability_summary` counts the other settings that recover each baseline CS
+and how many were compared. Recovery uses the existing retained-CS matching
+rule; it does not require identical membership. For detail, `cs_stability`
+includes the relation, matched components, largest member Jaccard, representative
+agreement, PIP change over shared baseline members, and missing members.
+
 ## Plot and interpret the comparison
 
 A comparison can preserve the leading credible sets while changing support for

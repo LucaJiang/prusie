@@ -291,6 +291,13 @@ and `mu2` arrays for debugging. Dynamic RSS traces contain metrics only.
 susieR posterior rule. See [convergence diagnostics](post_analysis.md#convergence-diagnostics)
 for stopping conditions, cycles and nonfinite objectives.
 
+`assess_convergence(fit_or_summary, *, tail=5, pip_stability=1e-3)` reads
+recorded diagnostics and returns a status, an actionable message, ELBO-tail
+estimates, PIP/leading-variant stability and moving components. It needs no
+retained inputs and never refits. `tail` must be an integer of at least two;
+`pip_stability` must lie strictly between zero and one. See the
+[assessment example](post_analysis.md#assess-the-last-few-sweeps).
+
 The following helpers use retained working inputs:
 
 | Function | Behavior |
@@ -330,7 +337,7 @@ overridden, independently of runtime fallback. `continue_fit` with `tol=None`
 inherits the fitting tolerance. `RefinementConfig` separates search thresholds
 and budgets from candidate IBSS controls (`inner_tol`, `max_iter`). On the
 returned result, refinement can overwrite `converged`; read
-`convergence["ibss_converged"]` for IBSS status and `refinement["status"]` for
+`convergence["inner_ibss_converged"]` after refinement for IBSS status and `refinement["status"]` for
 the search outcome. Reuse that result for plots and comparisons. See the
 [convergence and refinement guide](post_analysis.md) for algorithms, costs,
 warm-start validation and examples.
@@ -346,15 +353,26 @@ pass the resulting mapping to the text or report helpers.
 | `summary_text` | Short string for `print`; no fitting, eigendecomposition or plotting |
 | `compare_fits` | Compare named existing fits by variant ID, using `mode="union"` (default) or `"common"` |
 | `run_sensitivity` | Execute a finite named plan: one-factor model changes, alternative inputs, posterior-only reports or continuation |
+| `standard_sensitivity_plan` | Starting plan for $L$, CS coverage/purity and optional refinement; accepted directly by `run_sensitivity` |
 | `diagnose_ld` | Conditional z/LD diagnostics and possible allele-mismatch flags; no automatic flips or filtering |
 | `write_report` | Offline HTML, text, CSV tables and full-precision evidence exports; include only supplied figures |
 
 Supply optional `ld=` and `comparison=` records to `summary_text` or
 `write_report`; neither function runs LD diagnostics or refits a model.
 `write_report` returns artifact paths and checksums. Keep the report directory
-together so its local links remain valid.
+together so its local links remain valid. The report begins with actionable
+flags, then separates convergence assessment, before/after refinement and
+sensitivity stability tables. `analysis_summary(..., competing_elbo_gap=1.0)`
+and `write_report(..., competing_elbo_gap=1.0)` flag different-CS candidates
+within this many nats of their round's best ELBO. This is a review threshold,
+not a calibrated probability of an alternative solution.
 
-The first five functions are available from `prusie`. Import `write_report`
+`write_report(..., figure_sections={"my plot": "fit"})` places a supplied
+figure explicitly; section values are `locus`, `fit`, `variance`, `signal`,
+`sensitivity` or `ld`. Otherwise labels determine placement. Software versions
+are filled automatically in provenance unless supplied by the caller.
+
+The summary, comparison, sensitivity and LD helpers are available from `prusie`. Import `write_report`
 and the compact `analysis_summary` helper from `prusie.report`, which also
 provides [`save_analysis` and `load_analysis`](results.md#metadata-and-persistence)
 for JSON/NPZ persistence.

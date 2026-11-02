@@ -98,6 +98,28 @@ not independent evidence for additional effects. See the
 [prior conventions](inputs.md#priors-and-zero-information-columns) and
 [sensitivity guide](sensitivity.md#variant-alignment-and-prior-weights).
 
+## Share an offline assessment
+
+The offline report opens with **What to check first**: unfinished IBSS fits,
+ELBO decreases, changed credible sets after refinement, competing refinement
+solutions, sensitivity settings that lose a CS, and LD flags. Start with those
+items, then use the linked evidence and the convergence and sensitivity tables.
+A check with missing saved records is shown as not evaluated.
+
+```python
+from prusie.report import write_report
+
+summary = prusie.summarize(fit, example["inputs"]["R"])
+report = write_report(summary, "analysis-report", title="Toy example")
+print(report["html"])
+```
+
+Supply `comparison=` and `ld=` to include their checks and `figures=` to include
+plots already made. The report exports flags, convergence assessment,
+before/after credible sets, competing candidates and sensitivity stability as
+CSV alongside the full records. `prusie.summary_text` includes one line for
+each attention flag. Keep the output directory together for offline viewing.
+
 ## Result object
 
 After fitting, the fitting entry points return a mutable `SusieResult`

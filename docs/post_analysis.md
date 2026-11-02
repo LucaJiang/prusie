@@ -41,6 +41,27 @@ absolute changes in component inclusion probabilities (`alpha`) and marginal
 PIPs between successive sweeps. `layout="variance"` shows the component prior
 variances and residual variance; `layout="full"` combines both views.
 
+## Assess the last few sweeps
+
+Use `assess_convergence` to decide what to inspect next: steady but slow ELBO
+gains suggest more sweeps, whereas decreases or cycling call for a closer look
+at the trajectory. It reads the saved diagnostics and works on a fit or a
+`summarize` result.
+
+```python
+assessment = prusie.assess_convergence(fit, tail=5, pip_stability=1e-3)
+print(assessment["message"])
+print(assessment["inference_stability"])
+```
+
+The assessment compares leading variants among components active throughout the
+tail and reports the largest recorded sweep-to-sweep PIP change. The
+`pip_stability` cutoff describes the display; it does not change the fitting
+rule. Without a trace, a recorded successful stop can still be recognized,
+but movement cannot be assessed. For steadily shrinking positive ELBO gains,
+the assessment estimates the remaining gain and extra sweeps from the median
+successive gain ratio; these estimates assume the same decay continues.
+
 ## Continue first, then consider refinement
 
 If a fit reaches its iteration limit, more IBSS sweeps may be enough to satisfy
@@ -166,6 +187,16 @@ gains use the last logged ELBO under the original prior. The compact layout
 displays selected variants; `candidates_only=False` shows all variants.
 `layout="full"` adds credible-set memberships and attempt records.
 
+Each history row also saves the stage-B candidate's credible sets as variant
+IDs (`candidate_cs`) and their original component IDs (`candidate_cs_index`).
+`competing_candidates` compares every evaluated candidate with the incumbent
+and the retained solution in its round, and gives its ELBO gap from the round
+best. Credible-set equality ignores set order while preserving member identity.
+Use these records to spot similar objectives with different fine-mapping
+conclusions. `accepted_inner_ibss_converged` records the last accepted candidate's inner
+status, or is `None` when no candidate was accepted, separately from the outer
+search outcome.
+
 Read `accepted`, `reason` and `stages` in `refined.refinement["history"]` to
 distinguish selection from inner IBSS convergence. Refinement defaults to
 `track_fit=False`; enable it explicitly to save candidate trajectories. It
@@ -183,7 +214,8 @@ records the requested and effective criteria, thresholds and stop reason;
 `fit.trace` holds the per-sweep records when tracking is enabled.
 
 For the returned fit's inner IBSS status, read
-`fit.convergence["ibss_converged"]`. The property `fit.ibss_converged` aliases
+`fit.convergence["inner_ibss_converged"]` after refinement
+(or `ibss_converged` on the original fit). The property `fit.ibss_converged` aliases
 `fit.converged`, which refinement can overwrite with its search outcome.
 Read `fit.refinement["status"]` separately.
 

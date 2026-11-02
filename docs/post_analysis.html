@@ -24,6 +24,7 @@
 <article><details class="on-this-page"><summary>On this page</summary><div class="toc">
 <ul>
 <li><a href="#start-with-a-tracked-fit">Start with a tracked fit</a></li>
+<li><a href="#assess-the-last-few-sweeps">Assess the last few sweeps</a></li>
 <li><a href="#continue-first-then-consider-refinement">Continue first, then consider refinement</a></li>
 <li><a href="#refinement-compared-with-susier">Refinement compared with susieR</a></li>
 <li><a href="#compare-before-and-after">Compare before and after</a></li>
@@ -65,6 +66,23 @@ validated inputs for continuation and refinement.</p>
 absolute changes in component inclusion probabilities (<code>alpha</code>) and marginal
 PIPs between successive sweeps. <code>layout="variance"</code> shows the component prior
 variances and residual variance; <code>layout="full"</code> combines both views.</p>
+<h2 id="assess-the-last-few-sweeps">Assess the last few sweeps</h2>
+<p>Use <code>assess_convergence</code> to decide what to inspect next: steady but slow ELBO
+gains suggest more sweeps, whereas decreases or cycling call for a closer look
+at the trajectory. It reads the saved diagnostics and works on a fit or a
+<code>summarize</code> result.</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">assessment</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">assess_convergence</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">tail</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">pip_stability</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">assessment</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">assessment</span><span class="p">[</span><span class="s2">&quot;inference_stability&quot;</span><span class="p">])</span>
+</code></pre></div>
+
+<p>The assessment compares leading variants among components active throughout the
+tail and reports the largest recorded sweep-to-sweep PIP change. The
+<code>pip_stability</code> cutoff describes the display; it does not change the fitting
+rule. Without a trace, a recorded successful stop can still be recognized,
+but movement cannot be assessed. For steadily shrinking positive ELBO gains,
+the assessment estimates the remaining gain and extra sweeps from the median
+successive gain ratio; these estimates assume the same decay continues.</p>
 <h2 id="continue-first-then-consider-refinement">Continue first, then consider refinement</h2>
 <p>If a fit reaches its iteration limit, more IBSS sweeps may be enough to satisfy
 its stopping rule. <code>continue_fit</code> starts from the saved posterior:</p>
@@ -212,6 +230,15 @@ the best fit at the start of its round, and the sequence of best ELBOs. These
 gains use the last logged ELBO under the original prior. The compact layout
 displays selected variants; <code>candidates_only=False</code> shows all variants.
 <code>layout="full"</code> adds credible-set memberships and attempt records.</p>
+<p>Each history row also saves the stage-B candidate's credible sets as variant
+IDs (<code>candidate_cs</code>) and their original component IDs (<code>candidate_cs_index</code>).
+<code>competing_candidates</code> compares every evaluated candidate with the incumbent
+and the retained solution in its round, and gives its ELBO gap from the round
+best. Credible-set equality ignores set order while preserving member identity.
+Use these records to spot similar objectives with different fine-mapping
+conclusions. <code>accepted_inner_ibss_converged</code> records the last accepted candidate's inner
+status, or is <code>None</code> when no candidate was accepted, separately from the outer
+search outcome.</p>
 <p>Read <code>accepted</code>, <code>reason</code> and <code>stages</code> in <code>refined.refinement["history"]</code> to
 distinguish selection from inner IBSS convergence. Refinement defaults to
 <code>track_fit=False</code>; enable it explicitly to save candidate trajectories. It
@@ -225,7 +252,8 @@ records the requested and effective criteria, thresholds and stop reason;
 <code>fit.convergence["last"]</code> holds the final sweep's metrics and events.
 <code>fit.trace</code> holds the per-sweep records when tracking is enabled.</p>
 <p>For the returned fit's inner IBSS status, read
-<code>fit.convergence["ibss_converged"]</code>. The property <code>fit.ibss_converged</code> aliases
+<code>fit.convergence["inner_ibss_converged"]</code> after refinement
+(or <code>ibss_converged</code> on the original fit). The property <code>fit.ibss_converged</code> aliases
 <code>fit.converged</code>, which refinement can overwrite with its search outcome.
 Read <code>fit.refinement["status"]</code> separately.</p>
 <p>Component inclusion probabilities can move while marginal PIPs stay similar. For sweep
