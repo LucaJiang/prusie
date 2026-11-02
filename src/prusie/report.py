@@ -750,6 +750,20 @@ def analysis_summary(
     from .diagnostics import assess_convergence
 
     fit_state["assessment"] = assess_convergence(summary)
+    inner = fit_state["assessment"]["inner_ibss_converged"]
+    outer = fit_state["assessment"]["refinement_converged"]
+    fit_state["convergence_note"] = None
+    if outer is not None and inner is not None:
+        # After refinement, fit.converged reports the outer search, as in susieR.
+        fit_state["convergence_note"] = (
+            f"fit.converged is {bool(outer)} because it reports the refinement search, "
+            "as in susieR. The returned fit's own IBSS run "
+            + (
+                "converged."
+                if inner
+                else f"did not converge (stop reason: {fit_state['assessment']['stop_reason']})."
+            )
+        )
     fit_state["pending"] = (
         "No stopping rule was recorded."
         if not control
@@ -1028,6 +1042,8 @@ def summary_text(
         f"iterations {_display(fit.get('niter'))}"
         f"."
     )
+    if fit.get("convergence_note"):
+        lines.append(fit["convergence_note"])
     if search["status"] == "not_requested" or search["stop_reason"] == "not_requested":
         lines.append("Refinement: not requested.")
     else:
@@ -1494,6 +1510,8 @@ def write_report(
     if assessment["moving_components"]:
         details("Components still moving in the recorded tail", assessment["moving_components"])
     sections.append("<h3>IBSS stopping</h3><p>" + escape(control["pending"]) + "</p>")
+    if control.get("convergence_note"):
+        sections.append("<p><strong>" + escape(control["convergence_note"]) + "</strong></p>")
     table(
         [
             _select(
