@@ -20,7 +20,7 @@ from .control import (
     susie_rss_control,
 )
 from .datasets import load_convergence_example, load_example
-from .diagnostics import ConvergenceConfig, diagnose_convergence
+from .diagnostics import ConvergenceConfig, assess_convergence, diagnose_convergence
 from .getters import (
     coef,
     get_cs_correlation,
@@ -86,6 +86,7 @@ __all__ = [
     "SusieInputs",
     "SusieResult",
     "absolute_order",
+    "assess_convergence",
     "block_coordinate_ascent",
     "calc_z",
     "coef",

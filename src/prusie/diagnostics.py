@@ -5,6 +5,9 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
+from itertools import pairwise
+from numbers import Integral, Real
+from statistics import median
 from typing import Any
 
 from .result import SusieResult
@@ -187,6 +190,7 @@ def convergence_summary(
         pip_excludes_null=True,
         online_component_entropy_includes_null=True,
         online_top_variant_uses_internal_indices=True,
+        null_index=options.get("null_index"),
         cs_activity_threshold=1e-9,
         pip_activity_threshold=options["prior_tol"],
         bbar_scale="standardized working predictor scale",
@@ -225,3 +229,251 @@ def diagnose_convergence(fit: SusieResult) -> dict[str, Any]:
             warnings=["Exact online convergence metrics were not recorded."],
         )
     return copy.deepcopy(fit.convergence)
+
+
+def _finite_metric(value: Any) -> float | None:
+    if isinstance(value, Real) and math.isfinite(value):
+        return float(value)
+    return None
+
+
+def _tail_stability(
+    rows: list[Mapping[str, Any]], ids: Mapping[int, str], null_index: int | None, threshold: float
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Read component movement and the recorded sweep-to-sweep PIP distances."""
+    unchanged, maximum, moving = None, None, []
+    distances = [_finite_metric(row.get("max_abs_delta_pip")) for row in rows]
+    # The initial sweep has no predecessor and hence no recorded distance.
+    if rows and rows[0].get("iteration") == 1 and rows[0].get("max_abs_delta_pip") is None:
+        distances = distances[1:]
+    if distances and all(x is not None and x >= 0 for x in distances):
+        maximum = max(distances)
+    if len(rows) >= 2 and all(row.get("active") is not None for row in rows):
+        sizes = [len(row["active"]) for row in rows]
+        if len(set(sizes)) == 1:
+            unchanged = True
+            for component in range(sizes[0]):
+                active = [row["active"][component] for row in rows]
+                if any(value is None for value in active):
+                    if unchanged is not False:
+                        unchanged = None
+                    continue
+                if not all(active):
+                    continue
+                tops = [row.get("top_variant", []) for row in rows]
+                tops = [
+                    value[component] if value is not None and len(value) > component else None
+                    for value in tops
+                ]
+                changes = None
+                if any(value is None for value in tops):
+                    if unchanged is not False:
+                        unchanged = None
+                else:
+                    changes = sum(a != b for a, b in pairwise(tops))
+                if changes:
+                    unchanged = False
+                entropy = [row.get("entropy", []) for row in (rows[0], rows[-1])]
+                entropy = [
+                    _finite_metric(value[component])
+                    if value is not None and len(value) > component
+                    else None
+                    for value in entropy
+                ]
+                change = entropy[1] - entropy[0] if None not in entropy else None
+                if changes or (change is not None and abs(change) > 1e-6):
+                    index = tops[-1]
+                    variant = None
+                    if index is not None and index != null_index:
+                        index -= int(null_index is not None and index > null_index)
+                        variant = ids.get(index)
+                    moving.append(
+                        dict(
+                            component_id=component,
+                            top_variant_changes=changes,
+                            last_top_variant=variant,
+                            entropy_change=change,
+                        )
+                    )
+    stable = None
+    if unchanged is False or (maximum is not None and maximum >= threshold):
+        stable = False
+    elif unchanged is True and maximum is not None:
+        stable = True
+    moving.sort(
+        key=lambda row: (
+            -(row["top_variant_changes"] or 0),
+            -abs(row["entropy_change"] or 0.0),
+            row["component_id"],
+        )
+    )
+    return dict(
+        top_variants_unchanged=unchanged,
+        max_abs_delta_pip_tail=maximum,
+        stable=stable,
+        pip_stability=threshold,
+    ), moving
+
+
+def assess_convergence(
+    fit_or_summary: SusieResult | Mapping[str, Any], *, tail: int = 5, pip_stability: float = 1e-3
+) -> dict[str, Any]:
+    """Describe the end of a fit using its recorded convergence diagnostics.
+
+    Read ``status`` to decide whether to continue IBSS, inspect changing
+    components, or check input and LD consistency. The input may be a
+    :class:`SusieResult` or the dictionary returned by :func:`prusie.summarize`.
+    No fitting is performed and the fit's ``converged`` flag is unchanged.
+
+    ``tail`` selects at most that many recorded sweeps and must be an integer
+    of at least two. ``pip_stability`` must lie in (0, 1); it is a descriptive
+    display threshold, not a fitted stopping rule or a correctness tolerance.
+    PIP stability uses the largest recorded between-sweep PIP distance in the
+    tail, including the distance from the sweep immediately preceding it.
+    Missing distances leave stability unevaluated unless movement is known.
+
+    Component comparisons use original component IDs and require activity in
+    every selected sweep. ``entropy_change`` is the last entropy minus the
+    first; ``last_top_variant`` is a variant ID, or None for the null column
+    or an unavailable ID. Older summaries without ``null_index`` use the
+    public fitter's convention of appending the null column after all variants.
+    The geometric ELBO extrapolation describes the recorded tail only.
+    """
+    if isinstance(tail, bool) or not isinstance(tail, Integral) or tail < 2:
+        raise ValueError("tail must be an integer >= 2")
+    if (
+        isinstance(pip_stability, bool)
+        or not isinstance(pip_stability, Real)
+        or not math.isfinite(pip_stability)
+        or not 0 < pip_stability < 1
+    ):
+        raise ValueError("pip_stability must lie in (0, 1)")
+    if isinstance(fit_or_summary, SusieResult):
+        fit = fit_or_summary
+        convergence = fit.convergence or {}
+        trace = fit.trace or []
+        niter, tol = fit.niter, convergence.get("tol", fit.params.get("tol"))
+        inner = convergence.get("inner_ibss_converged", fit.converged)
+        ids = dict(enumerate(map(str, fit.variant_ids)))
+        null_index = fit.null_index
+    elif isinstance(fit_or_summary, Mapping):
+        summary = fit_or_summary
+        convergence = summary.get("convergence") or {}
+        trace = summary.get("trace") or []
+        niter = convergence.get("niter", summary.get("niter"))
+        tol = convergence.get("tol")
+        inner = convergence.get(
+            "inner_ibss_converged", convergence.get("ibss_converged", summary.get("converged"))
+        )
+        ids = {
+            row["index"]: str(row["variant_id"])
+            for row in summary.get("variants", [])
+            if "index" in row and "variant_id" in row
+        }
+        null_index = summary.get("null_index", convergence.get("null_index"))
+    else:
+        raise TypeError("fit_or_summary must be a SusieResult or a summary mapping")
+
+    rows = list(trace[-int(tail) :])
+    stop_reason = convergence.get("stop_reason", "not_available")
+    last = (trace[-1] if trace else convergence.get("last")) or {}
+    averaged = "alpha_pip_cycle_averaged" in (last.get("events") or [])
+    events = [set(row.get("events") or []) for row in rows]
+    decreases = sum("elbo_decreased" in row for row in events)
+    nonfinite = sum(
+        "nonfinite_elbo" in event
+        or (isinstance(row.get("elbo"), Real) and not math.isfinite(row["elbo"]))
+        for row, event in zip(rows, events, strict=True)
+    )
+    deltas = [_finite_metric(row.get("delta_elbo")) for row in rows]
+    if rows and rows[0].get("iteration") == 1 and rows[0].get("delta_elbo") is None:
+        deltas = deltas[1:]
+    sign_changes, previous = 0, None
+    for value in deltas:
+        if value is None:
+            previous = None
+        elif value != 0:
+            sign = value > 0
+            sign_changes += previous is not None and previous != sign
+            previous = sign
+
+    trend = dict(ratio=None, extrapolated_remaining_gain=None, estimated_extra_sweeps=None)
+    if len(deltas) >= 2 and all(value is not None and value > 0 for value in deltas):
+        ratios = [b / a for a, b in pairwise(deltas)]
+        if all(0 < value < 1 for value in ratios):
+            ratio, delta = median(ratios), deltas[-1]
+            trend["ratio"] = ratio
+            gain = delta * ratio / (1 - ratio)
+            trend["extrapolated_remaining_gain"] = gain if math.isfinite(gain) else None
+            tolerance = _finite_metric(tol)
+            if tolerance is not None and tolerance > 0:
+                trend["estimated_extra_sweeps"] = (
+                    max(0, math.ceil((math.log(tolerance) - math.log(delta)) / math.log(ratio)))
+                    if delta > tolerance
+                    else 0
+                )
+    if inner or stop_reason == "criterion_satisfied" or averaged:
+        status = "converged"
+    elif not rows:
+        status = "not_assessable"
+    elif any("numerical_failure" in event for event in events):
+        status = "numerical_failure"
+    elif decreases:
+        status = "elbo_decreasing"
+    elif sign_changes >= 2 or any(
+        row.get("cycle_lag") is not None or any("cycle" in event for event in event_set)
+        for row, event_set in zip(rows, events, strict=True)
+    ):
+        status = "oscillating"
+    elif trend["ratio"] is not None:
+        status = "slow_monotone"
+    else:
+        status = "unclassified"
+    messages = {
+        "converged": (
+            "The inner IBSS stopping rule was satisfied; review posterior stability "
+            "alongside the credible sets."
+        ),
+        "not_assessable": (
+            "No sweep trace was recorded; use track_fit=True on a future fit "
+            "to assess its convergence pattern."
+        ),
+        "numerical_failure": (
+            "The trace records a numerical failure; check summary statistics "
+            "and LD consistency before using this fit."
+        ),
+        "elbo_decreasing": (
+            "The ELBO decreased in the selected tail; inspect the trace "
+            "and check summary statistics and LD consistency."
+        ),
+        "oscillating": (
+            "The selected tail shows repeated or oscillating states; inspect "
+            "the moving components and LD consistency."
+        ),
+        "slow_monotone": (
+            "The ELBO gains are shrinking steadily; consider more iterations "
+            "and inspect posterior stability."
+        ),
+        "unclassified": (
+            "The recorded tail has no clear convergence pattern; inspect "
+            "the trace and moving components."
+        ),
+    }
+    stability, moving = _tail_stability(rows, ids, null_index, float(pip_stability))
+    return dict(
+        schema_version="prusie.convergence_assessment.v1",
+        status=status,
+        stop_reason=stop_reason,
+        niter=niter,
+        tol=tol,
+        inner_ibss_converged=inner,
+        refinement_converged=convergence.get("refinement_converged"),
+        trace_available=bool(rows),
+        tail=len(rows),
+        elbo_tail=trend,
+        inference_stability=stability,
+        moving_components=moving,
+        elbo_decrease_count=decreases,
+        nonfinite_elbo_count=nonfinite,
+        message=messages[status],
+    )
