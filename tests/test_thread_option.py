@@ -38,19 +38,11 @@ def fit_small(name, **options):
     raise AssertionError(name)
 
 
-@pytest.mark.parametrize(
-    "name,count",
-    [
-        pytest.param("susie", 1, id="individual-default"),
-        pytest.param("susie", np.int64(4), id="individual-numpy-integer"),
-        pytest.param("susie_suff_stat", 1, id="sufficient-default"),
-        pytest.param("susie_suff_stat", 8, id="sufficient-eight"),
-        pytest.param("susie_rss", 1, id="rss-default"),
-        pytest.param("susie_rss", 32, id="rss-upper-bound"),
-        pytest.param("susie_rss_lambda", 1, id="lambda-default"),
-        pytest.param("susie_rss_lambda", 32, id="lambda-upper-bound"),
-    ],
-)
+FITTERS = ["susie", "susie_suff_stat", "susie_rss", "susie_rss_lambda"]
+
+
+@pytest.mark.parametrize("name", FITTERS)
+@pytest.mark.parametrize("count", [1, np.int64(4), 8, 32])
 def test_thread_count_is_explicit_and_recorded_for_every_fitter(name, count):
     assert inspect.signature(getattr(prusie, name)).parameters["n_threads"].default == 1
     with warnings.catch_warnings():
