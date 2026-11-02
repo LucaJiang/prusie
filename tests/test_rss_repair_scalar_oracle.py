@@ -82,22 +82,31 @@ def layout(a, order):
     return b[::2, ::2]
 
 
-# Sizes on either side of the 32-wide validation blocks and small SIMD widths.
-@pytest.mark.parametrize("n", [4, 7, 8, 9, 16, 17, 31, 32, 33, 63, 64, 65])
-@pytest.mark.parametrize("order", ["C", "F", "strided", "negative"])
+# Keep every size/layout interaction: C/F use 4×4 SIMD pairs from n=4,
+# while strided/negative inputs use the scalar 32-wide traversal. All scales
+# also cross a 32-wide boundary in every layout; repeating them at every size
+# does not select another arithmetic or validation path.
 @pytest.mark.parametrize(
-    "scale",
+    "n,order,scale",
     [
-        0.0,
-        -0.0,
-        1.0,
-        -1.0,
-        99.0,
-        np.finfo(float).max,
-        np.finfo(float).tiny,
-        np.nextafter(0.0, 1.0),
-        np.inf,
-        np.nan,
+        pytest.param(n, order, 1.0, id=f"{order}-n{n}-unit")
+        for n in [3, 4, 5, 7, 8, 9, 16, 17, 31, 32, 33, 63, 64, 65]
+        for order in ["C", "F", "strided", "negative"]
+    ]
+    + [
+        pytest.param(33, order, scale, id=f"{order}-n33-{label}")
+        for label, scale in [
+            ("zero", 0.0),
+            ("negative-zero", -0.0),
+            ("negative", -1.0),
+            ("ordinary", 99.0),
+            ("maximum", np.finfo(float).max),
+            ("minimum-normal", np.finfo(float).tiny),
+            ("subnormal", np.nextafter(0.0, 1.0)),
+            ("infinity", np.inf),
+            ("nan", np.nan),
+        ]
+        for order in ["C", "F", "strided", "negative"]
     ],
 )
 def test_flags_repair_bits_and_input_invariance_match_reference(n, order, scale):
@@ -112,10 +121,30 @@ def test_flags_repair_bits_and_input_invariance_match_reference(n, order, scale)
     np.testing.assert_array_equal(a.view(np.uint64), original)
 
 
-@pytest.mark.parametrize("order", ["C", "F"])
-# Corners, diagonal, first row/column and interior cells of a 9×9 matrix.
-@pytest.mark.parametrize("position", [0, 1, 8, 9, 10, 40, 44, 72, 79, 80])
-@pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf, -1.0, -0.0, np.finfo(float).max])
+# NaN checks every original location in both physical orders. Other encodings
+# retain diagonal, scalar off-diagonal and both sides of a complete SIMD tile.
+# Positions 4=(0,4) and 36=(4,0) exercise the native 4×4 pair loads, unlike the
+# diagonal-block and ninth-row/column scalar tails in the original locations.
+@pytest.mark.parametrize(
+    "position,value,order",
+    [
+        pytest.param(position, np.nan, order, id=f"{order}-p{position}-nan")
+        for position in [0, 1, 4, 8, 9, 10, 36, 40, 44, 72, 79, 80]
+        for order in ["C", "F"]
+    ]
+    + [
+        pytest.param(position, value, order, id=f"{order}-p{position}-{label}")
+        for position in [0, 1, 4, 36, 80]
+        for label, value in [
+            ("positive-infinity", np.inf),
+            ("negative-infinity", -np.inf),
+            ("negative", -1.0),
+            ("negative-zero", -0.0),
+            ("maximum", np.finfo(float).max),
+        ]
+        for order in ["C", "F"]
+    ],
+)
 def test_each_position_error_priority(position, value, order):
     a = np.array(np.eye(9), order=order)
     a.flat[position] = value

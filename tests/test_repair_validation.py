@@ -15,9 +15,22 @@ def reference_repair(values, name, scale):
     return np.ascontiguousarray(repaired)
 
 
-@pytest.mark.parametrize("p", [1, 2, 31, 32, 33, 65])
-@pytest.mark.parametrize("layout", ["C", "F", "reverse", "stride"])
-@pytest.mark.parametrize("scale", [1.0, 486018.0, 1e-200])
+# The checked helper has the same layout/tile interaction as the unchecked
+# helper. Exercise every size/layout pair and every scale/layout pair without
+# repeating elementwise scaling at every tile size.
+@pytest.mark.parametrize(
+    "p,layout,scale",
+    [
+        pytest.param(p, layout, 1.0, id=f"{layout}-n{p}-unit")
+        for p in [1, 2, 31, 32, 33, 65]
+        for layout in ["C", "F", "reverse", "stride"]
+    ]
+    + [
+        pytest.param(33, layout, scale, id=f"{layout}-n33-{label}")
+        for label, scale in [("large-n", 486018.0), ("small", 1e-200)]
+        for layout in ["C", "F", "reverse", "stride"]
+    ],
+)
 def test_checked_repair_preserves_finite_bits_and_input(p, layout, scale):
     values = np.arange(p * p, dtype=float).reshape(p, p) / max(1, p * p)
     np.fill_diagonal(values, 1.0)

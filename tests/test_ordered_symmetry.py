@@ -7,9 +7,26 @@ from prusie import _native
 from prusie._validation import _symmetrize_matrix
 
 
-@pytest.mark.parametrize("p", [1, 2, 31, 32, 33, 65])
-@pytest.mark.parametrize("scale", [1.0, 799.0, 486018.0, 1e-200, 1e200])
-@pytest.mark.parametrize("layout", ["C", "F", "reversed", "stride"])
+# Layout and tile boundaries interact in indexing; scaling is elementwise.
+# Keep all size/layout pairs and both scale branches for every layout at n=33.
+@pytest.mark.parametrize(
+    "p,scale,layout",
+    [
+        pytest.param(p, 1.0, layout, id=f"{layout}-n{p}-unit")
+        for p in [1, 2, 31, 32, 33, 65]
+        for layout in ["C", "F", "reversed", "stride"]
+    ]
+    + [
+        pytest.param(33, scale, layout, id=f"{layout}-n33-{label}")
+        for label, scale in [
+            ("ordinary", 799.0),
+            ("large-n", 486018.0),
+            ("small", 1e-200),
+            ("large", 1e200),
+        ]
+        for layout in ["C", "F", "reversed", "stride"]
+    ],
+)
 def test_average_matches_numpy_bits_for_tiles_scales_and_layouts(p, scale, layout):
     values = np.arange(p * p, dtype=float).reshape(p, p) / max(p * p, 1)
     values = np.nextafter(values - 0.5, np.inf)
