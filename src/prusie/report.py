@@ -224,6 +224,7 @@ def evidence_bundle(
                 "objective_definition",
                 "accepted_inner_ibss_converged",
                 "competing_candidates",
+                "relative_stop",
                 "signal_comparison",
             )
             if k in refinement
@@ -531,6 +532,27 @@ def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
         "Refinement kept a candidate whose own IBSS fit had not converged, "
         "so the improvement may not be final.",
         "/summary/refinement/accepted_inner_ibss_converged",
+    )
+    relative_stop = refinement.get("relative_stop") or {}
+    stopped_by_relative = refinement.get("stop_reason") == "relative_improvement_threshold"
+    if relative_stop:
+        relative_message = (
+            "Refinement stopped after an accepted round that gained "
+            f"{relative_stop['last_accepted_gain']:.3g} nats, below the relative threshold of "
+            f"{relative_stop['threshold']:.3g} nats (relative_tol × |ELBO|). "
+        )
+    else:
+        relative_message = "Refinement stopped at its relative improvement threshold. "
+    check(
+        "refinement_stopped_by_relative_threshold",
+        bool(refinement) and refinement.get("status") not in (None, "not_executed"),
+        stopped_by_relative,
+        "info",
+        relative_message
+        + "This rule matches susieR, but |ELBO| grows with sample size, so in large GWAS "
+        "the search can end while further rounds would still improve the fit. "
+        "Rerun refinement with relative_tol=None to check.",
+        "/summary/refinement/relative_stop",
     )
     competing = []
     for index, row in enumerate(_records(refinement.get("competing_candidates"))):
@@ -1081,7 +1103,8 @@ def summary_text(
                 + (" (outside candidate view)." if not row["in_candidate_view"] else ".")
             )
     lines.extend(
-        "Check: " + flag["message"] for flag in compact["flags"] if flag["severity"] == "attention"
+        ("Check: " if flag["severity"] == "attention" else "Note: ") + flag["message"]
+        for flag in compact["flags"]
     )
     return "\n".join(lines)
 
@@ -1929,6 +1952,7 @@ def write_report(
         "elbo_decreased": "ELBO decreases",
         "refinement_changed_cs": "Credible-set changes after refinement",
         "refinement_accepted_inner_not_converged": "Accepted candidate's inner convergence",
+        "refinement_stopped_by_relative_threshold": "Refinement stopped by the relative rule",
         "competing_refinement_solution": "Competing refinement candidates",
         "sensitivity_cs_not_recovered": "Credible-set recovery across settings",
         "sensitivity_fit_not_converged": "Sensitivity fit convergence",

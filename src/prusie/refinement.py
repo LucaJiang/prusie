@@ -746,7 +746,13 @@ def refine_fit(
     IBSS status is in ``convergence['inner_ibss_converged']``. An exclusion
     leaving no prior support ends that round, matching susieR's ``break``.
     ``accepted_inner_ibss_converged`` records the last accepted candidate's
-    inner status, or None if no candidate was accepted.
+    inner status, or None if no candidate was accepted. When the relative
+    rule ends the search, ``relative_stop`` records the last accepted gain and
+    the threshold it missed, both in nats (relative_tol × max(1, |ELBO|)).
+    Because |ELBO| grows roughly in proportion to the sample size, that
+    threshold can exceed typical refinement gains in large GWAS; pass a config
+    with ``relative_tol=None`` to search until no candidate improves by more
+    than ``absolute_tol``.
     """
     level = tracking_level(track_fit)
     if config is None:
@@ -776,6 +782,7 @@ def refine_fit(
         objective_definition="last_logged_elbo; original prior; susieR refinement",
         accepted_inner_ibss_converged=None,
         competing_candidates=[],
+        relative_stop=None,
     )
     best.refinement = record
 
@@ -988,6 +995,14 @@ def refine_fit(
                     config.relative_tol is not None
                     and (obj - incumbent_obj) / max(1.0, abs(obj)) < config.relative_tol
                 ):
+                    # |ELBO| grows with n, so the same relative_tol is a larger
+                    # absolute threshold in large samples; record it in nats.
+                    record["relative_stop"] = dict(
+                        relative_tol=config.relative_tol,
+                        last_accepted_gain=obj - incumbent_obj,
+                        objective=obj,
+                        threshold=config.relative_tol * max(1.0, abs(obj)),
+                    )
                     return finish("completed", "relative_improvement_threshold")
                 continue
             for _, _, row in candidates:

@@ -5,7 +5,10 @@
 - New `assess_convergence` explains how a fit ended (converged, slowly rising,
   oscillating, ELBO decreasing) and whether its credible sets are still moving.
 - Refinement keeps the credible sets of every candidate it tried and flags
-  candidates that fit almost as well with different credible sets.
+  candidates that fit almost as well with different credible sets. When the
+  relative rule ends the search, the record and the report give the threshold in
+  nats; the docs explain why it is large in big GWAS and how to rerun with
+  `relative_tol=None`. The default stays compatible with susieR.
 - `compare_fits` reports per-setting convergence and how often each baseline
   credible set is recovered; `run_sensitivity` accepts a sample-size change, and
   `standard_sensitivity_plan` provides a first-pass plan.

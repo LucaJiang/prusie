@@ -175,6 +175,43 @@ The [Toy example](worked_examples.md) documents this official fixture with its
 software versions and settings. Read its outcome separately from the
 [comparison of fits without refinement](numerical_accuracy.md).
 
+### The relative stop in large samples
+
+After an accepted round, the default search stops if the gain is below
+`tol × max(1, |ELBO|)`, the same rule as susieR. The threshold is relative to
+the size of the ELBO, and that size is mostly the constant term
+$-\tfrac{n}{2}\log(2\pi\sigma^2)$ plus the expected residual sum of squares,
+so it grows with the sample size rather than with the evidence. For z-score RSS
+with $\sigma^2 = 1$, $|\text{ELBO}| \approx 1.42\,n$. With $n = 500{,}000$
+the threshold is about 70 nats at the default `tol=1e-4` and about 700 nats at
+`tol=1e-3`, while an accepted refinement round typically gains tens of nats. In
+a large GWAS the default search therefore stops after the first accepted round.
+Usually a further round would find nothing, but occasionally it finds a better
+solution with different credible sets.
+
+When this happens, `refined.refinement["stop_reason"]` is
+`relative_improvement_threshold`, `refined.refinement["relative_stop"]` records
+the last gain and the threshold in nats, and the offline report adds a note. To
+check whether further rounds matter, rerun the search with the same settings
+and the relative rule turned off:
+
+```python
+tol = fit.params["tol"]
+no_relative = prusie.RefinementConfig(
+    max_rounds=100,
+    absolute_tol=tol,
+    relative_tol=None,
+    max_iter=fit.params["max_iter"],
+    inner_tol=tol,
+)
+refined_further = prusie.refine_fit(fit, no_relative)
+```
+
+These are the default search settings except for `relative_tol`. The search
+then continues until no candidate improves the ELBO by more than `tol`, which
+usually costs one more round. Compare the two results with `compare_fits`. The
+default stays as it is so that `refine=True` matches susieR.
+
 ## Compare before and after
 
 Compare changes in variant support alongside the objective gains that led to

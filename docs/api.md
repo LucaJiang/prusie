@@ -338,7 +338,9 @@ inherits the fitting tolerance. `RefinementConfig` separates search thresholds
 and budgets from candidate IBSS controls (`inner_tol`, `max_iter`). On the
 returned result, `converged` describes the refinement search, as in susieR;
 read `convergence["inner_ibss_converged"]` for the fit's own IBSS status and
-`refinement["status"]` for the search outcome. Reuse that result for plots and comparisons. See the
+`refinement["status"]` for the search outcome. If the relative rule ended the
+search, `refinement["relative_stop"]` gives the last gain and the threshold in
+nats; see [the relative stop in large samples](post_analysis.md#the-relative-stop-in-large-samples). Reuse that result for plots and comparisons. See the
 [convergence and refinement guide](post_analysis.md) for algorithms, costs,
 warm-start validation and examples.
 

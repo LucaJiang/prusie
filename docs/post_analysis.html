@@ -26,7 +26,10 @@
 <li><a href="#start-with-a-tracked-fit">Start with a tracked fit</a></li>
 <li><a href="#assess-the-last-few-sweeps">Assess the last few sweeps</a></li>
 <li><a href="#continue-first-then-consider-refinement">Continue first, then consider refinement</a></li>
-<li><a href="#refinement-compared-with-susier">Refinement compared with susieR</a></li>
+<li><a href="#refinement-compared-with-susier">Refinement compared with susieR</a><ul>
+<li><a href="#the-relative-stop-in-large-samples">The relative stop in large samples</a></li>
+</ul>
+</li>
 <li><a href="#compare-before-and-after">Compare before and after</a></li>
 <li><a href="#convergence-diagnostics">Convergence diagnostics</a></li>
 <li><a href="#technical-details">Technical details</a></li>
@@ -223,6 +226,38 @@ and <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9c
 The <a href="worked_examples.html">Toy example</a> documents this official fixture with its
 software versions and settings. Read its outcome separately from the
 <a href="numerical_accuracy.html">comparison of fits without refinement</a>.</p>
+<h3 id="the-relative-stop-in-large-samples">The relative stop in large samples</h3>
+<p>After an accepted round, the default search stops if the gain is below
+<code>tol × max(1, |ELBO|)</code>, the same rule as susieR. The threshold is relative to
+the size of the ELBO, and that size is mostly the constant term
+<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>−</mo><mfrac><mi>n</mi><mn>2</mn></mfrac><mi>log</mi><mo>⁡</mo><mo stretchy="false">(</mo><mn>2</mn><mi>π</mi><msup><mi>σ</mi><mn>2</mn></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">-\tfrac{n}{2}\log(2\pi\sigma^2)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.1591em;vertical-align:-0.345em;"></span><span class="mord">−</span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.6954em;"><span style="top:-2.655em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">2</span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.394em;"><span class="pstrut" style="height:3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">lo<span style="margin-right:0.01389em;">g</span></span><span class="mopen">(</span><span class="mord">2</span><span class="mord mathnormal" style="margin-right:0.03588em;">π</span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">σ</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span> plus the expected residual sum of squares,
+so it grows with the sample size rather than with the evidence. For z-score RSS
+with <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>σ</mi><mn>2</mn></msup><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\sigma^2 = 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03588em;">σ</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></span>, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">∣</mi><mtext>ELBO</mtext><mi mathvariant="normal">∣</mi><mo>≈</mo><mn>1.42</mn><mtext> </mtext><mi>n</mi></mrow><annotation encoding="application/x-tex">|\text{ELBO}| \approx 1.42\,n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord text"><span class="mord">ELBO</span></span><span class="mord">∣</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1.42</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">n</span></span></span></span></span>. With <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>500,000</mn></mrow><annotation encoding="application/x-tex">n = 500{,}000</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8389em;vertical-align:-0.1944em;"></span><span class="mord">500</span><span class="mord"><span class="mpunct">,</span></span><span class="mord">000</span></span></span></span></span>
+the threshold is about 70 nats at the default <code>tol=1e-4</code> and about 700 nats at
+<code>tol=1e-3</code>, while an accepted refinement round typically gains tens of nats. In
+a large GWAS the default search therefore stops after the first accepted round.
+Usually a further round would find nothing, but occasionally it finds a better
+solution with different credible sets.</p>
+<p>When this happens, <code>refined.refinement["stop_reason"]</code> is
+<code>relative_improvement_threshold</code>, <code>refined.refinement["relative_stop"]</code> records
+the last gain and the threshold in nats, and the offline report adds a note. To
+check whether further rounds matter, rerun the search with the same settings
+and the relative rule turned off:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">tol</span> <span class="o">=</span> <span class="n">fit</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;tol&quot;</span><span class="p">]</span>
+<span class="n">no_relative</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">RefinementConfig</span><span class="p">(</span>
+    <span class="n">max_rounds</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">absolute_tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span>
+    <span class="n">relative_tol</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">max_iter</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;max_iter&quot;</span><span class="p">],</span>
+    <span class="n">inner_tol</span><span class="o">=</span><span class="n">tol</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">refined_further</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">refine_fit</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">no_relative</span><span class="p">)</span>
+</code></pre></div>
+
+<p>These are the default search settings except for <code>relative_tol</code>. The search
+then continues until no candidate improves the ELBO by more than <code>tol</code>, which
+usually costs one more round. Compare the two results with <code>compare_fits</code>. The
+default stays as it is so that <code>refine=True</code> matches susieR.</p>
 <h2 id="compare-before-and-after">Compare before and after</h2>
 <p>Compare changes in variant support alongside the objective gains that led to
 acceptance. Reuse <code>fit_for_search</code> and <code>refined</code> from above; these plotting calls
