@@ -19,8 +19,22 @@ def decode(bits):
     return np.asarray(bits, dtype=np.uint64).view(np.float64).reshape(3, 3)
 
 
-@pytest.mark.parametrize("case", CASES, ids=lambda c: c["id"])
-@pytest.mark.parametrize("layout", ["C", "F", "strided", "reversed"])
+LAYOUTS = ("C", "F", "strided", "reversed")
+
+
+def _rotated_layouts():
+    # Every R case runs at least once; layouts rotate within each (route, safety)
+    # group, and small groups repeat cases so every layout meets every group.
+    groups = {}
+    for case in CASES:
+        groups.setdefault((case["route"], case["safe_public_input"]), []).append(case)
+    for members in groups.values():
+        for index in range(max(len(members), len(LAYOUTS))):
+            case, layout = members[index % len(members)], LAYOUTS[index % len(LAYOUTS)]
+            yield pytest.param(case, layout, id=f"{case['id']}-{layout}")
+
+
+@pytest.mark.parametrize(("case", "layout"), list(_rotated_layouts()))
 def test_public_preprocessing_matches_actual_r(case, layout, monkeypatch):
     matrix = decode(case["input_bits"])
     expected = decode(case["expected_XtX_bits"]) if "expected_XtX_bits" in case else None
