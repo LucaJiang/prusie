@@ -470,7 +470,8 @@ class RefinementConfig:
         than this amount.
     relative_tol : float, optional
         If set, stop after an accepted round whose gain divided by
-        max(1, |incumbent objective|) is below this value.
+        max(1, |candidate objective|) is below this value, as in susieR's
+        ``block_coordinate_ascent``.
     max_iter : int, default 100
         IBSS sweep limit of each candidate fit.
     inner_tol : float, default 1e-4
@@ -667,6 +668,24 @@ def _brief(fit, objective=None):
     )
 
 
+def _cs_members(fit):
+    """Member IDs in the credible sets' returned order, including null offsets."""
+    ids = fit.variant_ids
+    return [
+        [
+            str(ids[int(j) - int(fit.null_index is not None and j > fit.null_index)])
+            for j in members
+            if j != fit.null_index
+        ]
+        for members in fit.sets["cs"]
+    ]
+
+
+def _cs_identity(member_lists):
+    """Compare sets of member sets; credible-set and member order are immaterial."""
+    return frozenset(frozenset(members) for members in member_lists)
+
+
 def refine_fit(
     fit: SusieResult,
     config: RefinementConfig | None = None,
@@ -707,7 +726,14 @@ def refine_fit(
     SusieResult
         The best solution found, which is a copy of ``fit`` if no candidate
         is accepted. ``refinement`` records the status, stop reason, every
-        attempt and the objective before and after the search.
+        attempt and the objective before and after the search. Completed
+        stage-B attempts include ``candidate_cs`` (member IDs in returned
+        order) and ``candidate_cs_index``, even if objective validation then
+        fails. ``competing_candidates`` records all returned stage-B
+        candidates relative to their round's best valid objective and the
+        solution retained after that round. Invalid candidates have None
+        for objective and gap; CS equality compares sets of member sets,
+        ignoring CS order.
 
     Notes
     -----
@@ -715,6 +741,12 @@ def refine_fit(
     found by this search, not that the solution is a global optimum.
     Unsupported inputs (no retained data or an invalid baseline)
     are reported in ``refinement['status']`` rather than raised.
+    After an executed search, ``converged`` describes the outer refinement
+    search, as susieR sets ``model$converged``; the returned fit's inner
+    IBSS status is in ``convergence['inner_ibss_converged']``. An exclusion
+    leaving no prior support ends that round, matching susieR's ``break``.
+    ``accepted_inner_ibss_converged`` records the last accepted candidate's
+    inner status, or None if no candidate was accepted.
     """
     level = tracking_level(track_fit)
     if config is None:
@@ -742,6 +774,8 @@ def refine_fit(
         requested_convergence=control.options(),
         convergence_resolution=resolution,
         objective_definition="last_logged_elbo; original prior; susieR refinement",
+        accepted_inner_ibss_converged=None,
+        competing_candidates=[],
     )
     best.refinement = record
 
@@ -790,6 +824,7 @@ def refine_fit(
         incumbent = best
         incumbent_obj = current
         candidates = []
+        evaluated_stage_b = []
         failures = 0
         evaluated = 0
         budget_exhausted = False
@@ -808,6 +843,8 @@ def refine_fit(
                 accepted=False,
                 reason=None,
                 incumbent_objective=incumbent_obj,
+                candidate_cs=None,
+                candidate_cs_index=None,
             )
             history.append(row)
             weights = original.copy()
@@ -852,6 +889,11 @@ def refine_fit(
                             track_fit=track_fit,
                             convergence=control,
                         )
+                        row.update(
+                            candidate_cs=_cs_members(candidate),
+                            candidate_cs_index=[int(i) for i in candidate.sets["cs_index"]],
+                        )
+                        evaluated_stage_b.append(row)
                     # Both stages share one resolved stopping rule; passing it on
                     # internally is not a user override, so keep its recorded source.
                     candidate.params["convergence_resolution"] = copy.deepcopy(resolution)
@@ -901,12 +943,34 @@ def refine_fit(
                     row.update(stages=stages, reason=phase + ": " + str(e))
                     failures += 1
                     break
+        if evaluated_stage_b:
+            round_best = max((value for value, _, _ in candidates), default=None)
+            incumbent_cs = _cs_identity(_cs_members(incumbent))
+            accepted_cs = (
+                _cs_identity(max(candidates, key=lambda x: x[0])[2]["candidate_cs"])
+                if round_best is not None and round_best - current > config.absolute_tol
+                else incumbent_cs
+            )
+            record["competing_candidates"].extend(
+                dict(
+                    round=round_id,
+                    component=other["component"],
+                    objective=other.get("objective"),
+                    gap_to_round_best=round_best - other["objective"]
+                    if round_best is not None and "objective" in other
+                    else None,
+                    same_cs_as_incumbent=_cs_identity(other["candidate_cs"]) == incumbent_cs,
+                    same_cs_as_accepted=_cs_identity(other["candidate_cs"]) == accepted_cs,
+                )
+                for other in evaluated_stage_b
+            )
         if candidates:
             obj, candidate, row = max(candidates, key=lambda x: x[0])
             if obj - current > config.absolute_tol:
                 best = candidate
                 current = obj
                 accepted_any = True
+                record["accepted_inner_ibss_converged"] = bool(candidate.converged)
                 row["accepted"] = True
                 row["reason"] = "accepted_best_original_objective"
                 record["best_objective"] = current

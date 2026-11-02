@@ -294,6 +294,70 @@ def comparison_relations(
     return _baseline_first(rows, comparison.get("baseline")) if baseline_only else rows
 
 
+def _cs_stability(names, baseline, signals, maps, relations):
+    """Summarize existing signal relations without introducing matching thresholds."""
+    rows, summaries = [], []
+    for signal in signals[baseline]:
+        if not signal["cs_retained"]:
+            continue
+        recovered = 0
+        for name in names:
+            if name == baseline:
+                continue
+            edges = [
+                row
+                for row in relations
+                if row["setting_b"] == name and row.get("component_a") == signal["component_id"]
+            ]
+            matched = sorted({row["component_b"] for row in edges if row.get("cs_retained_b")})
+            candidates = [s for s in signals[name] if s["component_id"] in matched]
+            statuses = {row["status"] for row in edges if row.get("cs_retained_b")}
+            relation = next(
+                (
+                    status
+                    for status in ("ambiguous", "split", "merge", "matched")
+                    if status in statuses
+                ),
+                "unresolved"
+                if any(row["status"] == "unresolved" for row in edges)
+                else "unmatched",
+            )
+            observed = signal["cs"] & maps[name].keys()
+            rows.append(
+                dict(
+                    baseline_component=signal["component_id"],
+                    representative=signal["top"],
+                    setting=name,
+                    relation=relation,
+                    matched_components=matched,
+                    jaccard=max(
+                        (
+                            len(signal["cs"] & other["cs"]) / len(signal["cs"] | other["cs"])
+                            for other in candidates
+                        ),
+                        default=None,
+                    ),
+                    same_representative=any(s["top"] == signal["top"] for s in candidates)
+                    if candidates
+                    else None,
+                    sum_abs_delta_pip=math.fsum(
+                        abs(maps[baseline][x] - maps[name][x]) for x in sorted(observed)
+                    ),
+                    missing_members=sorted(signal["cs"] - maps[name].keys()),
+                )
+            )
+            recovered += bool(matched)
+        summaries.append(
+            dict(
+                baseline_component=signal["component_id"],
+                representative=signal["top"],
+                recovered_in=recovered,
+                assessed_in=len(names) - 1,
+            )
+        )
+    return rows, summaries
+
+
 def compare_fits(
     fits: Mapping[str, SusieResult],
     *,
@@ -338,7 +402,10 @@ def compare_fits(
         between retained credible sets and their posterior-overlap relations
         to unresolved effects; ``component_relations`` for all active or
         CS-retained effects; pairwise PIP summaries, allele alignment,
-        thresholds, definitions and limitations.
+        thresholds, definitions and limitations. ``fit_status`` records each
+        fit's convergence and retained-CS count. ``cs_stability`` compares
+        every baseline CS with each other setting, and
+        ``cs_stability_summary`` counts recovery among those settings.
 
     Notes
     -----
@@ -356,6 +423,13 @@ def compare_fits(
     describe overlap of posterior support; they are not evidence that
     effects have split or merged, and LD alone does not promote an effect
     without a credible set to a signal.
+    CS recovery uses those same retained-CS relations, without additional
+    matching thresholds. If one baseline CS has several relation labels,
+    its summary uses ambiguous, split, merge, then matched, in that order.
+    Jaccard compares the original member sets of retained matches;
+    ``same_representative`` is None when none match. PIP differences sum
+    over baseline CS members present in both fits, even in common mode;
+    ``missing_members`` lists IDs absent from the other fit.
     """
     if not fits or any(not isinstance(name, str) or not name for name in fits):
         raise ValueError("fits must be a nonempty mapping with nonempty string names")
@@ -628,6 +702,25 @@ def compare_fits(
                 used_a.add(edge["component_a"])
                 used_b.add(edge["component_b"])
     primary = _baseline_first(relations, baseline)
+    cs_stability, cs_stability_summary = _cs_stability(names, baseline, signals, maps, primary)
+    fit_status = []
+    for name in names:
+        fit = fits[name]
+        convergence = getattr(fit, "convergence", {}) or {}
+        converged = getattr(fit, "converged", None)
+        fit_status.append(
+            dict(
+                setting=name,
+                converged=bool(converged) if converged is not None else None,
+                inner_ibss_converged=convergence.get("inner_ibss_converged", converged),
+                refinement_status=(getattr(fit, "refinement", {}) or {}).get(
+                    "status", "not_executed"
+                ),
+                niter=getattr(fit, "niter", None),
+                stop_reason=convergence.get("stop_reason"),
+                cs_count=len(fit.sets["cs"]),
+            )
+        )
     return dict(
         schema_version="prusie.comparison.v2",
         settings=names,
@@ -646,6 +739,9 @@ def compare_fits(
             global_common_ids=universe if mode == "common" else None,
         ),
         fit_settings={name: copy.deepcopy(fits[name].params) for name in names},
+        fit_status=fit_status,
+        cs_stability=cs_stability,
+        cs_stability_summary=cs_stability_summary,
         variants=variants,
         components={name: [dict(s, cs=sorted(s["cs"])) for s in signals[name]] for name in names},
         signal_relations=relations,
@@ -973,7 +1069,8 @@ def run_sensitivity(
     plan : sequence of dict
         Items with a unique ``name`` and exactly one of ``changes`` (one of L,
         prior_weights, scaled_prior_variance or prior_variance, and
-        estimate_prior_variance, or refine), ``inputs`` (a complete
+        estimate_prior_variance, refine, or n when the baseline has a sample
+        size), ``inputs`` (a complete
         alternative set of summary statistics and LD, for example another
         window or filter), ``report`` (coverage and/or min_abs_corr, applied
         to the baseline posterior without refitting) or ``continuation``
@@ -1172,6 +1269,7 @@ def run_sensitivity(
         "prior_variance",
         "estimate_prior_variance",
         "refine",
+        "n",
     }
     resolved = {}
     for item in plan:
@@ -1193,13 +1291,23 @@ def run_sensitivity(
             )
             if not keys or keys - allowed or (len(keys) > 1 and not variance_pair):
                 raise ValueError("changes must describe a single supported factor")
+            data = inputs
+            model_changes = changes
+            if "n" in keys:
+                if inputs.get("n") is None:
+                    raise ValueError("an n change requires baseline inputs with n")
+                from ._validation import _scalar
+
+                _scalar(changes["n"], "n", lower=1.0, strict=True)
+                data = dict(inputs, n=changes["n"])
+                model_changes = {}
             variance_key = "prior_variance" if inputs.get("n") is None else "scaled_prior_variance"
             wrong_key = (
                 "scaled_prior_variance" if variance_key == "prior_variance" else "prior_variance"
             )
             if wrong_key in keys:
                 raise ValueError(f"this RSS sample-size mode uses {variance_key}, not {wrong_key}")
-            options = dict(settings, **changes)
+            options = dict(settings, **model_changes)
             options["prior_weights"], prior_resolution = _sensitivity_prior(
                 options.get("prior_weights"),
                 baseline_ids,
@@ -1208,7 +1316,7 @@ def run_sensitivity(
                 if "prior_weights" in changes
                 else "unchanged_baseline_weights",
             )
-            resolved[item["name"]] = (inputs, options, prior_resolution, None)
+            resolved[item["name"]] = (data, options, prior_resolution, None)
         if "report" in item and (
             not item["report"] or set(item["report"]) - {"coverage", "min_abs_corr"}
         ):
@@ -1385,6 +1493,8 @@ def run_sensitivity(
                 )
             elif "inputs" in item:
                 records[-1]["analysis"] = "explicit_LD_or_window_or_filter_change"
+            elif "n" in changes:
+                records[-1]["analysis"] = "sample_size_change"
     saved_plan = copy.deepcopy(plan)
     for item in saved_plan:
         if isinstance(item.get("continuation", {}).get("convergence"), ConvergenceConfig):
@@ -1406,3 +1516,27 @@ def run_sensitivity(
             "statistics and LD; no variants are invented."
         ),
     )
+
+
+def standard_sensitivity_plan(L: int = 10, *, refine: bool = True) -> list[dict[str, Any]]:
+    """Return a starting point for sensitivity analysis, tailored by the caller.
+
+    It halves and doubles the effect budget, re-extracts credible sets at
+    coverage 0.90 and 0.99 and at minimum absolute correlation 0.8 without
+    refitting, and optionally adds a fresh fit with refinement enabled.
+    Pass the returned list unchanged to :func:`run_sensitivity`.
+    """
+    if isinstance(L, bool) or not isinstance(L, (int, np.integer)) or L < 1:
+        raise ValueError("L must be a positive integer")
+    if not isinstance(refine, (bool, np.bool_)):
+        raise ValueError("refine must be bool")
+    plan = [
+        dict(name="L_half", changes={"L": max(1, int(L) // 2)}),
+        dict(name="L_double", changes={"L": 2 * int(L)}),
+        dict(name="coverage_0.90", report={"coverage": 0.90}),
+        dict(name="coverage_0.99", report={"coverage": 0.99}),
+        dict(name="purity_0.8", report={"min_abs_corr": 0.8}),
+    ]
+    if refine:
+        plan.append(dict(name="refine", changes={"refine": True}))
+    return plan

@@ -69,6 +69,7 @@ if TYPE_CHECKING:
     from .analysis import summarize as summarize
     from .comparison import compare_fits as compare_fits
     from .comparison import run_sensitivity as run_sensitivity
+    from .comparison import standard_sensitivity_plan as standard_sensitivity_plan
     from .ld import diagnose_ld as diagnose_ld
     from .ld import estimate_s_rss as estimate_s_rss
     from .ld import kriging_rss as kriging_rss
@@ -110,6 +111,7 @@ __all__ = [
     "run_sensitivity",
     "slot_prior_betabinom",
     "slot_prior_poisson",
+    "standard_sensitivity_plan",
     "summarize",
     "summary",
     "summary_text",
@@ -156,6 +158,7 @@ _OPTIONAL_EXPORTS = {
     "summarize": "analysis",
     "compare_fits": "comparison",
     "run_sensitivity": "comparison",
+    "standard_sensitivity_plan": "comparison",
     "diagnose_ld": "ld",
     "estimate_s_rss": "ld",
     "kriging_rss": "ld",
