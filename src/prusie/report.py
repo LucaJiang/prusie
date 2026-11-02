@@ -13,6 +13,7 @@ import hashlib
 import html
 import json
 import math
+import platform
 import struct
 from collections.abc import Mapping
 from pathlib import Path
@@ -221,6 +222,9 @@ def evidence_bundle(
                 "requested_convergence",
                 "convergence_resolution",
                 "objective_definition",
+                "accepted_inner_ibss_converged",
+                "competing_candidates",
+                "signal_comparison",
             )
             if k in refinement
         }
@@ -242,6 +246,8 @@ def evidence_bundle(
                         "improvement",
                         "relative_improvement",
                         "incumbent_objective",
+                        "candidate_cs",
+                        "candidate_cs_index",
                     )
                 }
                 if "stages" in attempt:
@@ -391,6 +397,205 @@ def _select(record, keys):
     return {key: _plain(record[key]) for key in keys if key in record}
 
 
+def _refinement_cs_rows(refinement):
+    """Read before/after member IDs and relations from the saved comparison."""
+    from .comparison import comparison_relations
+
+    comparison = refinement.get("signal_comparison")
+    if not isinstance(comparison, Mapping):
+        return None, None
+    components = comparison.get("components")
+    if not isinstance(components, Mapping) or not all(
+        name in components for name in ("before", "after")
+    ):
+        return None, None
+    retained = {
+        name: {
+            row["component_id"]: row
+            for row in _records(components[name])
+            if row.get("cs_retained") is True
+        }
+        for name in ("before", "after")
+    }
+    member_sets = {
+        name: {frozenset(row.get("cs", [])) for row in rows.values()}
+        for name, rows in retained.items()
+    }
+    rows, seen = [], {name: set() for name in retained}
+
+    def append(before_id, after_id, relation):
+        before = retained["before"].get(before_id)
+        after = retained["after"].get(after_id)
+        if before is None and after is None:
+            return
+        rows.append(
+            dict(
+                before_component=before_id if before is not None else None,
+                before_representative=before.get("top") if before is not None else None,
+                before_members=before.get("cs", []) if before is not None else [],
+                relation=relation,
+                after_component=after_id if after is not None else None,
+                after_representative=after.get("top") if after is not None else None,
+                after_members=after.get("cs", []) if after is not None else [],
+            )
+        )
+        if before is not None:
+            seen["before"].add(before_id)
+        if after is not None:
+            seen["after"].add(after_id)
+
+    for relation in comparison_relations(comparison, baseline_only=True):
+        a, b = relation.get("setting_a"), relation.get("setting_b")
+        if {a, b} != {"before", "after"}:
+            continue
+        before_side, after_side = ("a", "b") if a == "before" else ("b", "a")
+        append(
+            relation.get(f"component_{before_side}"),
+            relation.get(f"component_{after_side}"),
+            relation.get("status"),
+        )
+    for name in retained:
+        for component in retained[name]:
+            if component not in seen[name]:
+                append(
+                    component if name == "before" else None,
+                    component if name == "after" else None,
+                    "unmatched",
+                )
+    return rows, member_sets["before"] != member_sets["after"]
+
+
+def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
+    """Describe recorded concerns, keeping unavailable checks explicit."""
+    flags, checks = [], []
+
+    def check(code, available, raised, severity, message, pointer):
+        checks.append(
+            dict(
+                code=code,
+                status="not evaluated" if not available else "raised" if raised else "not raised",
+                evidence_pointer=pointer,
+            )
+        )
+        if available and raised:
+            flags.append(
+                dict(code=code, severity=severity, message=message, evidence_pointer=pointer)
+            )
+
+    assessment = compact["fit"]["assessment"]
+    control = summary.get("convergence") or {}
+    inner = assessment["inner_ibss_converged"]
+    known_stop = assessment["stop_reason"] not in (None, "not_assessed", "not_available")
+    if inner is None and known_stop:
+        inner = assessment["status"] == "converged"
+    check(
+        "ibss_not_converged",
+        inner is not None,
+        inner is not None and not inner,
+        "attention",
+        "The returned fit did not satisfy its inner IBSS stopping rule; review the trajectory "
+        "and consider a longer fit after checking the inputs.",
+        "/summary/convergence",
+    )
+    decrease_count = max(
+        control.get("elbo_decrease_count") or 0, assessment["elbo_decrease_count"] or 0
+    )
+    check(
+        "elbo_decreased",
+        "elbo_decrease_count" in control or assessment["trace_available"],
+        bool(decrease_count),
+        "attention",
+        "ELBO decreased during recorded fitting; inspect the affected sweeps and LD compatibility.",
+        "/summary/convergence/elbo_decrease_count"
+        if "elbo_decrease_count" in control
+        else "/summary/convergence",
+    )
+    refinement = summary.get("refinement") or {}
+    search = compact["refinement"]
+    check(
+        "refinement_changed_cs",
+        search["changed_cs"] is not None,
+        search["changed_cs"],
+        "info",
+        "Refinement changed credible-set membership; compare the before and after candidate sets.",
+        "/summary/refinement/signal_comparison/components",
+    )
+    accepted_inner = refinement.get("accepted_inner_ibss_converged")
+    check(
+        "refinement_accepted_inner_not_converged",
+        accepted_inner is not None,
+        accepted_inner is not None and not accepted_inner,
+        "attention",
+        "Refinement accepted a candidate before its inner IBSS fit converged; inspect the "
+        "accepted fit's stopping record before interpreting the change.",
+        "/summary/refinement/accepted_inner_ibss_converged",
+    )
+    competing = []
+    for index, row in enumerate(_records(refinement.get("competing_candidates"))):
+        gap = row.get("gap_to_round_best")
+        if (
+            isinstance(gap, (int, float, np.number))
+            and math.isfinite(gap)
+            and 0 <= gap <= competing_elbo_gap
+            and row.get("same_cs_as_accepted") is False
+        ):
+            competing.append(index)
+    check(
+        "competing_refinement_solution",
+        bool(_records(refinement.get("competing_candidates"))),
+        bool(competing),
+        "attention",
+        f"Refinement found {len(competing)} candidate(s) with different credible sets from the "
+        f"retained solution within {competing_elbo_gap:g} nats of their round's best ELBO; "
+        "compare their candidate memberships.",
+        f"/summary/refinement/competing_candidates/{competing[0]}"
+        if competing
+        else "/summary/refinement/competing_candidates",
+    )
+    stability = _records((comparison or {}).get("cs_stability_summary"))
+    lost = [
+        row
+        for row in stability
+        if row.get("recovered_in") is not None
+        and row.get("assessed_in") is not None
+        and row["recovered_in"] < row["assessed_in"]
+    ]
+    check(
+        "sensitivity_cs_not_recovered",
+        "cs_stability_summary" in (comparison or {}),
+        bool(lost),
+        "attention",
+        f"{len(lost)} baseline credible set(s) were not recovered in every sensitivity setting; "
+        "review the settings and member-level changes.",
+        "/comparison/cs_stability_summary",
+    )
+    fit_status = _records((comparison or {}).get("fit_status"))
+    unfinished = [
+        row
+        for row in fit_status
+        if row.get("converged") is False or row.get("inner_ibss_converged") is False
+    ]
+    check(
+        "sensitivity_fit_not_converged",
+        bool(fit_status) and all(row.get("converged") is not None for row in fit_status),
+        bool(unfinished),
+        "attention",
+        f"{len(unfinished)} sensitivity fit(s) did not converge; inspect their stopping records "
+        "alongside the posterior comparisons.",
+        "/comparison/fit_status",
+    )
+    check(
+        "ld_flagged",
+        compact["ld"]["assessed"] > 0,
+        compact["ld"]["flagged"] > 0,
+        "attention",
+        f"LD diagnostics flagged {compact['ld']['flagged']} variant(s); check their alleles, "
+        "summary statistics and LD reference before refitting.",
+        "/ld_diagnostics/variants",
+    )
+    return flags, checks
+
+
 def analysis_summary(
     summary: Mapping,
     *,
@@ -398,6 +603,7 @@ def analysis_summary(
     comparison: Mapping[str, Any] | None = None,
     candidate_pip: float = 0.1,
     top_candidates: int = 10,
+    competing_elbo_gap: float = 1.0,
 ) -> dict:
     """Return a compact summary of results, convergence, refinement, LD and sensitivity.
 
@@ -413,6 +619,9 @@ def analysis_summary(
         Variants with PIP ≥ candidate_pip are listed as candidates.
     top_candidates : int, default 10
         Number of leading variants by PIP listed as candidates.
+    competing_elbo_gap : float, default 1.0
+        Flag distinct refinement candidates within this many nats of their
+        round's best ELBO. This is a display threshold, not a search control.
 
     Returns
     -------
@@ -425,6 +634,13 @@ def analysis_summary(
     """
     if not 0 <= candidate_pip <= 1:
         raise ValueError("candidate_pip must lie in [0, 1]")
+    if (
+        isinstance(competing_elbo_gap, (bool, np.bool_))
+        or not isinstance(competing_elbo_gap, (int, float, np.number))
+        or not math.isfinite(competing_elbo_gap)
+        or competing_elbo_gap < 0
+    ):
+        raise ValueError("competing_elbo_gap must be finite and nonnegative")
     if (
         isinstance(top_candidates, bool)
         or not isinstance(top_candidates, int)
@@ -529,6 +745,9 @@ def analysis_summary(
         ),
     )
     fit_state["trajectory_available"] = bool(summary.get("trace"))
+    from .diagnostics import assess_convergence
+
+    fit_state["assessment"] = assess_convergence(summary)
     fit_state["pending"] = (
         "No stopping rule was recorded."
         if not control
@@ -566,7 +785,11 @@ def analysis_summary(
         before_logged_elbo=before.get("logged_elbo"),
         after_logged_elbo=after.get("logged_elbo"),
         config=_plain(refinement.get("config", {})),
+        accepted_inner_ibss_converged=refinement.get("accepted_inner_ibss_converged"),
+        competing_candidates=_plain(refinement.get("competing_candidates")),
+        competing_elbo_gap=float(competing_elbo_gap),
     )
+    search["credible_set_changes"], search["changed_cs"] = _refinement_cs_rows(refinement)
     if ld is not None:
         from .ld import diagnostic_counts
 
@@ -625,6 +848,8 @@ def analysis_summary(
             mode=comparison.get("mode"),
             support=_plain(comparison.get("support", {})),
             regional_maxima=[],
+            fit_status=_plain(comparison.get("fit_status")),
+            cs_stability_summary=_plain(comparison.get("cs_stability_summary")),
         )
         # Read the saved comparison support. In union mode a pair uses only rows
         # observed in both settings; common-mode tables already contain only the
@@ -660,6 +885,10 @@ def analysis_summary(
                         support_scope=pair.get("support_scope", "recorded shared variant table"),
                     )
                 )
+    compact = dict(fit=fit_state, refinement=search, ld=ld_state, sensitivity=sensitivity)
+    flags, checks = _report_flags(
+        summary, compact, comparison, competing_elbo_gap=competing_elbo_gap
+    )
     return _plain(
         dict(
             schema_version="prusie.analysis_summary.v1",
@@ -686,6 +915,8 @@ def analysis_summary(
             refinement=search,
             ld=ld_state,
             sensitivity=sensitivity,
+            flags=flags,
+            flag_checks=checks,
         )
     )
 
@@ -714,6 +945,7 @@ def summary_text(
     *,
     ld: Mapping[str, Any] | None = None,
     comparison: Mapping[str, Any] | None = None,
+    competing_elbo_gap: float = 1.0,
 ) -> str:
     """Return a short plain-text summary of an analysis.
 
@@ -726,6 +958,8 @@ def summary_text(
     comparison : dict, optional
         Output of :func:`prusie.compare_fits` or the ``comparison`` entry of
         :func:`prusie.run_sensitivity`.
+    competing_elbo_gap : float, default 1.0
+        Display threshold for competing refinement candidates, in nats.
 
     Returns
     -------
@@ -744,7 +978,9 @@ def summary_text(
     --------
     >>> print(summary_text(summarize(fit)))  # doctest: +SKIP
     """
-    compact = analysis_summary(summary, ld=ld, comparison=comparison)
+    compact = analysis_summary(
+        summary, ld=ld, comparison=comparison, competing_elbo_gap=competing_elbo_gap
+    )
     results, fit, search = (compact[key] for key in ("results", "fit", "refinement"))
     lines = [
         (
@@ -826,6 +1062,9 @@ def summary_text(
                 )
                 + (" (outside candidate view)." if not row["in_candidate_view"] else ".")
             )
+    lines.extend(
+        "Check: " + flag["message"] for flag in compact["flags"] if flag["severity"] == "attention"
+    )
     return "\n".join(lines)
 
 
@@ -834,11 +1073,13 @@ def write_report(
     directory: str | Path,
     *,
     figures: Mapping[str, Any] | None = None,
+    figure_sections: Mapping[str, str] | None = None,
     ld: Mapping[str, Any] | None = None,
     comparison: Mapping[str, Any] | None = None,
     provenance: Mapping[str, Any] | None = None,
     annotations: Mapping[str, Any] | None = None,
     title: str = "prusie analysis",
+    competing_elbo_gap: float = 1.0,
 ) -> dict:
     """Write an offline HTML report with full-precision exports.
 
@@ -851,15 +1092,22 @@ def write_report(
     figures : mapping, optional
         Labels mapped to Matplotlib figures or to the tuples returned by the
         functions in :mod:`prusie.viz`.
+    figure_sections : mapping, optional
+        Figure labels mapped to ``locus``, ``fit``, ``variance``, ``signal``,
+        ``sensitivity`` or ``ld``. Overrides grouping by label for these figures.
     ld, comparison : dict, optional
         LD diagnostics and a comparison of fits.
     provenance : mapping, optional
         Data checksums, harmonization, parameters and software versions.
-        Fields not supplied are recorded as 'not_assessed'.
+        Without ``software_versions``, record the current prusie, NumPy,
+        Python and platform versions automatically. Supplied values take
+        precedence; other missing provenance fields remain unassessed.
     annotations : mapping, optional
         Additional caller-supplied facts for the evidence export.
     title : str, default 'prusie analysis'
         Report title.
+    competing_elbo_gap : float, default 1.0
+        Display threshold for competing refinement candidates, in nats.
 
     Returns
     -------
@@ -879,6 +1127,15 @@ def write_report(
     """
     from ._style import REPORT_CSS
 
+    groups = {"locus", "fit", "variance", "signal", "sensitivity", "ld"}
+    for name, section in (figure_sections or {}).items():
+        if not isinstance(section, str) or section not in groups:
+            raise ValueError(f"Unknown figure section {section!r} for {name!r}")
+        if name not in (figures or {}):
+            raise ValueError(f"Unknown figure label {name!r} in figure_sections")
+    compact = analysis_summary(
+        summary, ld=ld, comparison=comparison, competing_elbo_gap=competing_elbo_gap
+    )
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     required = (
@@ -894,10 +1151,19 @@ def write_report(
     )
     recorded = {key: "not_assessed" for key in required}
     recorded.update(provenance or {})
+    if "software_versions" not in (provenance or {}):
+        from . import __version__
+
+        recorded["software_versions"] = dict(
+            prusie=__version__,
+            numpy=np.__version__,
+            python=platform.python_version(),
+            platform=platform.platform(),
+            source="auto",
+        )
     evidence = evidence_bundle(
         summary, ld=ld, comparison=comparison, provenance=recorded, annotations=annotations
     )
-    compact = analysis_summary(summary, ld=ld, comparison=comparison)
     compact["evidence_sha256"] = evidence["sha256"]
     compact["files"] = {
         "evidence": "evidence.json",
@@ -922,10 +1188,16 @@ def write_report(
             json.dumps(value, ensure_ascii=False, allow_nan=False, indent=2), encoding="utf-8"
         )
     (directory / "summary.txt").write_text(
-        summary_text(summary, ld=ld, comparison=comparison) + "\n", encoding="utf-8"
+        summary_text(summary, ld=ld, comparison=comparison, competing_elbo_gap=competing_elbo_gap)
+        + "\n",
+        encoding="utf-8",
     )
     tables = export_tables(summary, directory / "tables")
-    extra_tables = {}
+    extra_tables = {
+        "convergence_assessment": [compact["fit"]["assessment"]],
+        "flags": compact["flags"],
+        "flag_checks": compact["flag_checks"],
+    }
     if comparison is not None:
         from .comparison import comparison_relations
 
@@ -935,6 +1207,9 @@ def write_report(
             component_relations=comparison_relations(
                 comparison, layer="components", baseline_only=False
             ),
+            fit_status=comparison.get("fit_status", []),
+            cs_stability=comparison.get("cs_stability", []),
+            cs_stability_summary=comparison.get("cs_stability_summary", []),
         )
     if ld is not None:
         extra_tables["ld_variants"] = ld.get("variants", [])
@@ -951,6 +1226,8 @@ def write_report(
                 "incumbent_objective",
                 "objective",
                 "improvement",
+                "candidate_cs",
+                "candidate_cs_index",
             ),
         )
         for phase, stage in row.get("stages", {}).items():
@@ -970,6 +1247,8 @@ def write_report(
         attempts.append(attempt)
     extra_tables["refinement_attempts"] = attempts
     extra_tables["refinement_stages"] = stages
+    extra_tables["refinement_credible_sets"] = compact["refinement"]["credible_set_changes"]
+    extra_tables["competing_candidates"] = compact["refinement"]["competing_candidates"]
     tables.extend(export_tables(extra_tables, directory / "tables"))
 
     def escape(value):
@@ -989,7 +1268,36 @@ def write_report(
         "the fitted solution, search and input "
         "compatibility.</p></header>"
     )
+    sections.append(
+        '<section class="first-checks" aria-labelledby="first-checks">'
+        '<h2 id="first-checks">What to check first</h2>'
+    )
+    if compact["flags"]:
+        sections.append('<ul class="check-list">')
+        for flag in compact["flags"]:
+            sections.append(
+                '<li class="check-'
+                + flag["severity"]
+                + '" data-flag="'
+                + flag["code"]
+                + '"><strong>'
+                + ("Check" if flag["severity"] == "attention" else "Note")
+                + ":</strong> "
+                + escape(flag["message"])
+                + "</li>"
+            )
+        sections.append("</ul>")
+    else:
+        sections.append("<p>No flags were raised by the checks with recorded evidence.</p>")
+    unavailable = sum(row["status"] == "not evaluated" for row in compact["flag_checks"])
+    if unavailable:
+        sections.append(
+            f'<p class="caption">{unavailable} checks could not be evaluated from the '
+            'available records; see <a href="#flag-availability">check availability</a>.</p>'
+        )
+    sections.append("</section>")
     navigation = (
+        ("first-checks", "What to check first"),
         ("main-results", "Candidates & resolution"),
         ("fit-status", "Analysis status"),
         ("figures", "Figures"),
@@ -1025,6 +1333,19 @@ def write_report(
         "max_abs_delta_pip": "Maximum |ΔPIP|",
         "before_objective": "ELBO before refinement",
         "after_objective": "ELBO after refinement",
+        "status": "Status",
+        "inner_ibss_converged": "Inner IBSS converged",
+        "refinement_converged": "Refinement search converged",
+        "estimated_extra_sweeps": "Estimated extra sweeps",
+        "extrapolated_remaining_gain": "Extrapolated ELBO gain",
+        "max_abs_delta_pip_tail": "Largest |ΔPIP| in tail",
+        "top_variants_unchanged": "Leading variants unchanged",
+        "baseline_component": "Baseline component",
+        "recovered_in": "Settings recovering this CS",
+        "assessed_in": "Settings compared",
+        "same_cs_as_accepted": "Same CS as retained solution",
+        "same_cs_as_incumbent": "Same CS as round incumbent",
+        "gap_to_round_best": "ELBO gap to round best (nats)",
     }
 
     def cell(value, key):
@@ -1141,6 +1462,30 @@ def write_report(
     sections.append(
         '</section><section aria-labelledby="fit-status"><h2 id="fit-status">Analysis status</h2>'
     )
+    assessment = control["assessment"]
+    sections.append("<h3>Convergence assessment</h3><p>" + escape(assessment["message"]) + "</p>")
+    table(
+        [
+            dict(
+                _select(
+                    assessment,
+                    (
+                        "status",
+                        "inner_ibss_converged",
+                        "refinement_converged",
+                        "tail",
+                        "elbo_decrease_count",
+                        "nonfinite_elbo_count",
+                    ),
+                ),
+                **assessment["elbo_tail"],
+                **assessment["inference_stability"],
+            )
+        ],
+        caption="Recorded convergence and posterior stability",
+    )
+    if assessment["moving_components"]:
+        details("Components still moving in the recorded tail", assessment["moving_components"])
     sections.append("<h3>IBSS stopping</h3><p>" + escape(control["pending"]) + "</p>")
     table(
         [
@@ -1206,6 +1551,24 @@ def write_report(
             "regressed. Recomputed post-finalization ELBO is a separate diagnostic; "
             "it can differ from the logged objective used to rank candidates.</p>"
         )
+        sections.append("<h3>Credible sets before and after refinement</h3>")
+        if search["credible_set_changes"] is None:
+            sections.append(
+                "<p>Not evaluated: this record has no before/after signal comparison.</p>"
+            )
+        else:
+            table(search["credible_set_changes"], caption="Refinement credible-set membership")
+        sections.append("<h3>Competing refinement candidates</h3>")
+        sections.append(
+            "<p>The display flags different credible sets within "
+            + escape(_display(search["competing_elbo_gap"]))
+            + " nats of the best candidate in each round. Full recorded refinement details "
+            'are in <a href="evidence.json">the evidence export</a>.</p>'
+        )
+        if search["competing_candidates"] is None:
+            sections.append("<p>Not evaluated: competing candidates were not recorded.</p>")
+        else:
+            table(search["competing_candidates"], caption="Candidates compared within each round")
     sensitivity, counts = compact["sensitivity"], compact["ld"]
     sections.append("<h3>Sensitivity</h3>")
     if comparison is None:
@@ -1221,6 +1584,16 @@ def write_report(
             + ". "
             "Each fit or summary setting is shown separately.</p>"
         )
+        sections.append("<h3>Fit status across settings</h3>")
+        if sensitivity.get("fit_status") is None:
+            sections.append("<p>Not evaluated: per-setting fit status was not recorded.</p>")
+        else:
+            table(sensitivity["fit_status"], caption="Sensitivity fit status")
+        sections.append("<h3>Credible-set recovery across settings</h3>")
+        if sensitivity.get("cs_stability_summary") is None:
+            sections.append("<p>Not evaluated: per-set recovery was not recorded.</p>")
+        else:
+            table(sensitivity["cs_stability_summary"], caption="Baseline credible-set recovery")
         table(
             sensitivity.get("regional_maxima", []),
             ("setting_b", "variant_id", "max_abs_delta_pip", "in_candidate_view"),
@@ -1291,6 +1664,7 @@ def write_report(
             if any(term in lower for term in ("signal", "prior"))
             else "locus"
         )
+        group = (figure_sections or {}).get(name, group)
         import matplotlib as mpl
 
         # SVG serialization happens after plotting's local style context exits.
@@ -1515,6 +1889,23 @@ def write_report(
     sections.append(
         '</section><section aria-labelledby="details"><h2 '
         'id="details">Complete records and provenance</h2>'
+    )
+    sections.append('<h3 id="flag-availability">Check availability</h3>')
+    check_names = {
+        "ibss_not_converged": "Inner IBSS convergence",
+        "elbo_decreased": "ELBO decreases",
+        "refinement_changed_cs": "Credible-set changes after refinement",
+        "refinement_accepted_inner_not_converged": "Accepted candidate's inner convergence",
+        "competing_refinement_solution": "Competing refinement candidates",
+        "sensitivity_cs_not_recovered": "Credible-set recovery across settings",
+        "sensitivity_fit_not_converged": "Sensitivity fit convergence",
+        "ld_flagged": "LD compatibility flags",
+    }
+    table(
+        [
+            dict(check=check_names[row["code"]], status=row["status"])
+            for row in compact["flag_checks"]
+        ]
     )
     details("Complete stopping controls and finalization", control)
     if search_requested:

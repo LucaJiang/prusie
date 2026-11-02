@@ -159,6 +159,10 @@ REPORT_CSS = """
  details[open]>summary{margin-bottom:.6rem}.status-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
  gap:12px;list-style:none;padding:0}.status-list li{padding:10px 12px;border-left:3px solid var(--line)}
  .status-label{font-weight:600;display:block}.exact-value{cursor:help;text-decoration:underline dotted var(--muted)}
+ .first-checks{background:var(--panel);padding:16px 20px;border:1px solid var(--line);border-radius:6px}
+ .first-checks h2{margin-top:0}.check-list{list-style:none;padding:0;margin:.6rem 0}
+ .check-list li{padding:8px 12px;margin:.5rem 0;background:white;border-left:3px solid var(--before)}
+ .check-list .check-attention{border-left-color:var(--flagged)}
  @media(max-width:800px){body{padding:16px;font-size:16px}h1{font-size:1.6rem}h2{font-size:1.25rem}
  figure{margin:1.2rem -6px}.table-scroll{max-width:100%}th,td{padding:7px 8px}nav a{margin-right:12px}}
  @media print{body{max-width:none;padding:0;font-size:10pt;color:black}nav{display:none}h2{break-after:avoid}
