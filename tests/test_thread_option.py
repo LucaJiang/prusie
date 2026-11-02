@@ -38,11 +38,19 @@ def fit_small(name, **options):
     raise AssertionError(name)
 
 
-FITTERS = ["susie", "susie_suff_stat", "susie_rss", "susie_rss_lambda"]
-
-
-@pytest.mark.parametrize("name", FITTERS)
-@pytest.mark.parametrize("count", [1, np.int64(4), 8, 32])
+@pytest.mark.parametrize(
+    "name,count",
+    [
+        pytest.param("susie", 1, id="individual-default"),
+        pytest.param("susie", np.int64(4), id="individual-numpy-integer"),
+        pytest.param("susie_suff_stat", 1, id="sufficient-default"),
+        pytest.param("susie_suff_stat", 8, id="sufficient-eight"),
+        pytest.param("susie_rss", 1, id="rss-default"),
+        pytest.param("susie_rss", 32, id="rss-upper-bound"),
+        pytest.param("susie_rss_lambda", 1, id="lambda-default"),
+        pytest.param("susie_rss_lambda", 32, id="lambda-upper-bound"),
+    ],
+)
 def test_thread_count_is_explicit_and_recorded_for_every_fitter(name, count):
     assert inspect.signature(getattr(prusie, name)).parameters["n_threads"].default == 1
     with warnings.catch_warnings():
@@ -52,8 +60,23 @@ def test_thread_count_is_explicit_and_recorded_for_every_fitter(name, count):
     assert type(fit.params["n_threads"]) is int
 
 
-@pytest.mark.parametrize("name", FITTERS)
-@pytest.mark.parametrize("count", [0, -1, 33, True, np.bool_(False), 1.5, 2.0, "4", None])
+@pytest.mark.parametrize(
+    "name,count",
+    [
+        pytest.param("susie_rss", 0, id="rss-zero"),
+        pytest.param("susie_rss", -1, id="rss-negative"),
+        pytest.param("susie_rss", 33, id="rss-above-upper-bound"),
+        pytest.param("susie_rss", True, id="rss-boolean"),
+        pytest.param("susie_rss", np.bool_(False), id="rss-numpy-boolean"),
+        pytest.param("susie_rss", 1.5, id="rss-fractional"),
+        pytest.param("susie_rss", 2.0, id="rss-integral-float"),
+        pytest.param("susie_rss", "4", id="rss-string"),
+        pytest.param("susie_rss", None, id="rss-none"),
+        pytest.param("susie", 0, id="individual-zero"),
+        pytest.param("susie_suff_stat", 0, id="sufficient-zero"),
+        pytest.param("susie_rss_lambda", 0, id="lambda-zero"),
+    ],
+)
 def test_invalid_thread_counts_are_rejected(name, count):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")

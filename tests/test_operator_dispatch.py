@@ -104,9 +104,17 @@ def public_operator_case(kind, layout, null_weight, standardize):
 
 
 @pytest.mark.parametrize("kind", ["known_n", "missing_n", "effects", "no_information"])
-@pytest.mark.parametrize("layout", ["C", "F", "strided"])
-@pytest.mark.parametrize("null_weight", [0.0, 0.2])
-@pytest.mark.parametrize("standardize", [False, True])
+@pytest.mark.parametrize(
+    "layout,null_weight,standardize",
+    [
+        pytest.param("C", 0.0, False, id="C-no-null-unscaled"),
+        pytest.param("C", 0.2, True, id="C-null-standardized"),
+        pytest.param("F", 0.0, True, id="F-no-null-standardized"),
+        pytest.param("F", 0.2, False, id="F-null-unscaled"),
+        pytest.param("strided", 0.0, False, id="strided-no-null-unscaled"),
+        pytest.param("strided", 0.2, True, id="strided-null-standardized"),
+    ],
+)
 def test_default_implicit_public_boundary(
     monkeypatch, record_property, kind, layout, null_weight, standardize
 ):

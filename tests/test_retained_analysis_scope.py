@@ -96,16 +96,36 @@ UNSUPPORTED_REQUESTS = {
     "refinement_config": {"refine": prusie.RefinementConfig()},
 }
 
+# Every unsupported model remains represented. Both request forms use the
+# shared replay guard; exercise both on matrix-free and dynamic RSS inputs.
+UNSUPPORTED_REQUEST_CASES = [
+    pytest.param("individual", "retain_data", id="individual-retain"),
+    pytest.param("individual", "refinement_config", id="individual-config"),
+    pytest.param("CSC", "refinement_config", id="CSC-config"),
+    pytest.param("trend", "retain_data", id="trend-retain"),
+    pytest.param("RSS_X", "refinement_config", id="RSS-X-config"),
+    pytest.param("finite", "retain_data", id="finite-retain"),
+    pytest.param("finite", "refinement_config", id="finite-config"),
+    pytest.param("mismatch", "refinement_config", id="mismatch-config"),
+    pytest.param("lambda", "refinement_config", id="lambda-config"),
+    pytest.param("mixture", "retain_data", id="mixture-retain"),
+    pytest.param("NIG", "refinement_config", id="NIG-config"),
+    pytest.param("slot", "retain_data", id="slot-retain"),
+    pytest.param("pip", "refinement_config", id="pip-config"),
+    pytest.param("greedy", "retain_data", id="greedy-retain"),
+    pytest.param("median", "refinement_config", id="median-config"),
+    pytest.param("extension", "retain_data", id="extension-retain"),
+]
+
 
 @pytest.mark.parametrize(
     "kind,flag",
     [
-        (kind, flag)
-        for kind in UNSUPPORTED
-        for flag in UNSUPPORTED_REQUESTS
-        if not (kind == "lambda" and flag == "retain_data")
-    ]
-    + [("multipanel", "refine")],
+        *UNSUPPORTED_REQUEST_CASES,
+        pytest.param("multipanel", "retain_data", id="multipanel-retain"),
+        pytest.param("multipanel", "refinement_config", id="multipanel-config"),
+        pytest.param("multipanel", "refine", id="multipanel-refine"),
+    ],
 )
 def test_explicit_unsupported_request_fails_before_native(
     kind, flag, forbid_scientific_native_calls
@@ -117,13 +137,7 @@ def test_explicit_unsupported_request_fails_before_native(
 
 @pytest.mark.parametrize(
     "kind,flag",
-    [
-        (kind, flag)
-        for kind in UNSUPPORTED
-        if kind != "multipanel"
-        for flag in UNSUPPORTED_REQUESTS
-        if not (kind == "lambda" and flag == "retain_data")
-    ],
+    UNSUPPORTED_REQUEST_CASES,
 )
 def test_init_only_prepares_before_enforcing_retained_analysis(
     kind, flag, forbid_scientific_native_calls

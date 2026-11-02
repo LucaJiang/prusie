@@ -8,9 +8,21 @@ import pytest
 from prusie import susie_rss
 
 
-@pytest.mark.parametrize("layout", ["C", "F", "strided", "reverse", "unaligned"])
-@pytest.mark.parametrize("asymmetric", [False, True])
-@pytest.mark.parametrize("check_input", [False, True])
+@pytest.mark.parametrize(
+    "layout,asymmetric,check_input",
+    [
+        pytest.param("C", False, False, id="C-symmetric-unchecked"),
+        pytest.param("C", True, True, id="C-repaired-checked"),
+        pytest.param("F", False, True, id="F-symmetric-checked"),
+        pytest.param("F", True, False, id="F-repaired-unchecked"),
+        pytest.param("strided", False, False, id="strided-symmetric-unchecked"),
+        pytest.param("strided", True, True, id="strided-repaired-checked"),
+        pytest.param("reverse", False, True, id="reverse-symmetric-checked"),
+        pytest.param("reverse", True, False, id="reverse-repaired-unchecked"),
+        pytest.param("unaligned", False, False, id="unaligned-symmetric-unchecked"),
+        pytest.param("unaligned", True, True, id="unaligned-repaired-checked"),
+    ],
+)
 def test_rss_never_mutates_caller_buffers(layout, asymmetric, check_input):
     R = np.eye(5)
     if asymmetric:

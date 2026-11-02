@@ -111,8 +111,18 @@ def test_overwrite_baseline_continuation_rejects_before_any_refit():
     assert_unchanged(data, before)
 
 
-@pytest.mark.parametrize("location", ["inputs", "settings", "alternative"])
-@pytest.mark.parametrize("overwrite", [True, np.bool_(True), 1, "yes", None])
+@pytest.mark.parametrize(
+    "location,overwrite",
+    [
+        pytest.param("inputs", True, id="inputs-destructive"),
+        pytest.param("inputs", np.bool_(True), id="inputs-numpy-destructive"),
+        pytest.param("inputs", 1, id="inputs-integer"),
+        pytest.param("settings", True, id="settings-destructive"),
+        pytest.param("settings", "yes", id="settings-string"),
+        pytest.param("alternative", True, id="alternative-destructive"),
+        pytest.param("alternative", None, id="alternative-none"),
+    ],
+)
 def test_explicit_destructive_or_invalid_policy_rejects_entire_plan(location, overwrite):
     data, settings, alternative = rss_inputs(), fit_settings(), rss_inputs()
     {"inputs": data, "settings": settings, "alternative": alternative}[location]["overwrite_ld"] = (

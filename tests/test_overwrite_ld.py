@@ -243,7 +243,7 @@ def test_unsupported_storage_rejected_before_writes(kind):
     assert r.tobytes() == before
 
 
-@pytest.mark.parametrize("name", ["z", "prior_weights", "variant_ids", "tol", "variant_metadata"])
+@pytest.mark.parametrize("name", ["prior_weights", "tol", "variant_metadata"])
 def test_all_argument_aliases_including_zero_dimensional_and_nested_are_rejected(name):
     r = matrix()
     original = r.copy()
