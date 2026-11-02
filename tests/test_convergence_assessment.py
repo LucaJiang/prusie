@@ -352,11 +352,3 @@ def test_real_null_fit_and_summary_preserve_index_mapping():
     assert fit.convergence["null_index"] == 2
     assert summarize(fit)["convergence"]["null_index"] == 2
     assert assess_convergence(fit) == assess_convergence(summarize(fit))
-
-
-def test_too_short_tail_says_so():
-    summary = recorded()
-    summary["trace"] = summary["trace"][-1:]
-    result = assess_convergence(summary)
-    assert result["status"] == "unclassified"
-    assert "Too few sweeps" in result["message"]

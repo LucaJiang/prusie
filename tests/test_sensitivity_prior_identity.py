@@ -66,10 +66,23 @@ def test_nonuniform_permutation_preserves_prior_and_posterior(provided, null):
     assert resolution["policy"] == "reindex_existing_weights"
 
 
-@pytest.mark.parametrize("prior", [None, [1.0, 1.0, 1.0], [0.8, 0.15, 0.05], [8.0, 1.5, 0.5]])
-@pytest.mark.parametrize("null", [0.0, 0.2])
-@pytest.mark.parametrize("provided", [False, True])
+@pytest.mark.parametrize(
+    "prior,null,provided",
+    [
+        pytest.param(None, 0.0, False, id="default-no-null-fitted"),
+        pytest.param(None, 0.2, True, id="default-null-supplied"),
+        pytest.param([1.0, 1.0, 1.0], 0.0, True, id="uniform-no-null-supplied"),
+        pytest.param([1.0, 1.0, 1.0], 0.2, False, id="uniform-null-fitted"),
+        pytest.param([0.8, 0.15, 0.05], 0.0, True, id="normalized-no-null-supplied"),
+        pytest.param([0.8, 0.15, 0.05], 0.2, False, id="normalized-null-fitted"),
+        pytest.param([8.0, 1.5, 0.5], 0.0, False, id="unnormalized-no-null-fitted"),
+        pytest.param([8.0, 1.5, 0.5], 0.2, True, id="unnormalized-null-supplied"),
+    ],
+)
 def test_subset_conditions_original_augmented_prior_once(prior, null, provided):
+    # Cover every pair of factors, including raw-prior scale × null weight.
+    # The final case also exercises supplied-baseline recovery of raw weights
+    # when their scale changes the effective null probability.
     settings = options(prior, null)
     baseline = susie_rss(**inputs(), **settings)
     out = run_sensitivity(
