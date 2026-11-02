@@ -730,10 +730,10 @@ def refine_fit(
         stage-B attempts include ``candidate_cs`` (member IDs in returned
         order) and ``candidate_cs_index``, even if objective validation then
         fails. ``competing_candidates`` records all returned stage-B
-        candidates relative to their round's best valid objective and the
-        solution retained after that round. Invalid candidates have None
-        for objective and gap; CS equality compares sets of member sets,
-        ignoring CS order.
+        candidates with their ELBO gap to the round's best candidate and to
+        the solution retained after that round (``gap_to_retained``). Invalid
+        candidates have None for objective and gaps; CS equality compares
+        sets of member sets, ignoring CS order.
 
     Notes
     -----
@@ -945,10 +945,12 @@ def refine_fit(
                     break
         if evaluated_stage_b:
             round_best = max((value for value, _, _ in candidates), default=None)
+            improved = round_best is not None and round_best - current > config.absolute_tol
+            retained_objective = round_best if improved else current
             incumbent_cs = _cs_identity(_cs_members(incumbent))
             accepted_cs = (
                 _cs_identity(max(candidates, key=lambda x: x[0])[2]["candidate_cs"])
-                if round_best is not None and round_best - current > config.absolute_tol
+                if improved
                 else incumbent_cs
             )
             record["competing_candidates"].extend(
@@ -958,6 +960,9 @@ def refine_fit(
                     objective=other.get("objective"),
                     gap_to_round_best=round_best - other["objective"]
                     if round_best is not None and "objective" in other
+                    else None,
+                    gap_to_retained=retained_objective - other["objective"]
+                    if "objective" in other
                     else None,
                     same_cs_as_incumbent=_cs_identity(other["candidate_cs"]) == incumbent_cs,
                     same_cs_as_accepted=_cs_identity(other["candidate_cs"]) == accepted_cs,

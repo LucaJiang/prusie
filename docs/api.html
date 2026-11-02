@@ -458,12 +458,12 @@ and <code>mu2</code> arrays for debugging. Dynamic RSS traces contain metrics on
 <code>"joint"</code> where supported. The separate <code>convergence_method="pip"</code> uses the
 susieR posterior rule. See <a href="post_analysis.html#convergence-diagnostics">convergence diagnostics</a>
 for stopping conditions, cycles and nonfinite objectives.</p>
-<p><code>assess_convergence(fit_or_summary, *, tail=5, pip_stability=1e-3)</code> reads
-recorded diagnostics and returns a status, an actionable message, ELBO-tail
-estimates, PIP/leading-variant stability and moving components. It needs no
-retained inputs and never refits. <code>tail</code> must be an integer of at least two;
-<code>pip_stability</code> must lie strictly between zero and one. See the
-<a href="post_analysis.html#assess-the-last-few-sweeps">assessment example</a>.</p>
+<p><code>assess_convergence(fit_or_summary, *, tail=5, pip_stability=1e-3)</code> classifies
+how a fit ended (converged, slowly rising, oscillating, ELBO decreasing, …) from
+its recorded trace, estimates how many more sweeps a slowly rising fit needs, and
+says whether the leading variants and PIPs are still moving. It works on a fit or
+a <code>summarize</code> result and never refits. See
+<a href="post_analysis.html#assess-the-last-few-sweeps">assessing the last few sweeps</a>.</p>
 <p>The following helpers use retained working inputs:</p>
 <div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
 <thead>
@@ -514,9 +514,9 @@ inputs, <code>continue_fit</code> and <code>evaluate_objective</code> raise <cod
 overridden, independently of runtime fallback. <code>continue_fit</code> with <code>tol=None</code>
 inherits the fitting tolerance. <code>RefinementConfig</code> separates search thresholds
 and budgets from candidate IBSS controls (<code>inner_tol</code>, <code>max_iter</code>). On the
-returned result, refinement can overwrite <code>converged</code>; read
-<code>convergence["inner_ibss_converged"]</code> after refinement for IBSS status and <code>refinement["status"]</code> for
-the search outcome. Reuse that result for plots and comparisons. See the
+returned result, <code>converged</code> describes the refinement search, as in susieR;
+read <code>convergence["inner_ibss_converged"]</code> for the fit's own IBSS status and
+<code>refinement["status"]</code> for the search outcome. Reuse that result for plots and comparisons. See the
 <a href="post_analysis.html">convergence and refinement guide</a> for algorithms, costs,
 warm-start validation and examples.</p>
 <h2 id="summaries-comparisons-and-reports">Summaries, comparisons and reports</h2>
@@ -548,7 +548,7 @@ pass the resulting mapping to the text or report helpers.</p>
 </tr>
 <tr>
 <td><code>standard_sensitivity_plan</code></td>
-<td>Starting plan for <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span></span></span></span></span>, CS coverage/purity and optional refinement; accepted directly by <code>run_sensitivity</code></td>
+<td>A first-pass plan (half and double <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span></span></span></span></span>, CS coverage and purity, refinement) to pass to <code>run_sensitivity</code></td>
 </tr>
 <tr>
 <td><code>diagnose_ld</code></td>
@@ -563,17 +563,18 @@ pass the resulting mapping to the text or report helpers.</p>
 <p>Supply optional <code>ld=</code> and <code>comparison=</code> records to <code>summary_text</code> or
 <code>write_report</code>; neither function runs LD diagnostics or refits a model.
 <code>write_report</code> returns artifact paths and checksums. Keep the report directory
-together so its local links remain valid. The report begins with actionable
-flags, then separates convergence assessment, before/after refinement and
-sensitivity stability tables. <code>analysis_summary(..., competing_elbo_gap=1.0)</code>
-and <code>write_report(..., competing_elbo_gap=1.0)</code> flag different-CS candidates
-within this many nats of their round's best ELBO. This is a review threshold,
-not a calibrated probability of an alternative solution.</p>
-<p><code>write_report(..., figure_sections={"my plot": "fit"})</code> places a supplied
-figure explicitly; section values are <code>locus</code>, <code>fit</code>, <code>variance</code>, <code>signal</code>,
-<code>sensitivity</code> or <code>ld</code>. Otherwise labels determine placement. Software versions
-are filled automatically in provenance unless supplied by the caller.</p>
-<p>The summary, comparison, sensitivity and LD helpers are available from <code>prusie</code>. Import <code>write_report</code>
+together so its local links remain valid. The report opens with a short list
+of things to check, followed by the convergence assessment, credible sets before
+and after refinement, and sensitivity tables.</p>
+<p><code>competing_elbo_gap</code> (default 1.0 nat; also accepted by <code>analysis_summary</code> and
+<code>summary_text</code>) sets how close to the kept solution a refinement candidate with
+different credible sets must be to get flagged. It is a reading aid, not a
+calibrated probability. <code>figure_sections={"my plot": "fit"}</code> places a figure in
+a chosen section (<code>locus</code>, <code>fit</code>, <code>variance</code>, <code>signal</code>, <code>sensitivity</code> or <code>ld</code>)
+instead of guessing from its label. Software versions are recorded
+automatically unless you pass your own in <code>provenance</code>.</p>
+<p>The summary, comparison, sensitivity and LD helpers are available from
+<code>prusie</code>. Import <code>write_report</code>
 and the compact <code>analysis_summary</code> helper from <code>prusie.report</code>, which also
 provides <a href="results.html#metadata-and-persistence"><code>save_analysis</code> and <code>load_analysis</code></a>
 for JSON/NPZ persistence.

@@ -420,8 +420,9 @@ def assess_convergence(
         status = "numerical_failure"
     elif decreases:
         status = "elbo_decreasing"
+    # A lag-1 repeat is a fixed point, not an oscillation.
     elif sign_changes >= 2 or any(
-        row.get("cycle_lag") is not None or any("cycle" in event for event in event_set)
+        (row.get("cycle_lag") or 0) >= 2 or "cycle_detected" in event_set
         for row, event_set in zip(rows, events, strict=True)
     ):
         status = "oscillating"
@@ -430,36 +431,43 @@ def assess_convergence(
     else:
         status = "unclassified"
     messages = {
-        "converged": (
-            "The inner IBSS stopping rule was satisfied; review posterior stability "
-            "alongside the credible sets."
-        ),
+        "converged": "IBSS met its stopping rule.",
         "not_assessable": (
-            "No sweep trace was recorded; use track_fit=True on a future fit "
-            "to assess its convergence pattern."
+            "No sweep trace was recorded, so the stopping pattern cannot be read. "
+            "Refit with track_fit=True to see it."
         ),
         "numerical_failure": (
-            "The trace records a numerical failure; check summary statistics "
-            "and LD consistency before using this fit."
+            "A sweep hit a numerical failure. Check the summary statistics and LD "
+            "before using this fit."
         ),
         "elbo_decreasing": (
-            "The ELBO decreased in the selected tail; inspect the trace "
-            "and check summary statistics and LD consistency."
+            "The ELBO went down in the last sweeps. That points to disagreement between "
+            "the z-scores and the LD matrix, or another numerical problem; check the inputs."
         ),
         "oscillating": (
-            "The selected tail shows repeated or oscillating states; inspect "
-            "the moving components and LD consistency."
+            "The posterior is cycling between states instead of settling. Look at the "
+            "moving components and check LD consistency."
         ),
         "slow_monotone": (
-            "The ELBO gains are shrinking steadily; consider more iterations "
-            "and inspect posterior stability."
+            "The ELBO is still rising, by less each sweep; more iterations should finish the fit."
         ),
         "unclassified": (
-            "The recorded tail has no clear convergence pattern; inspect "
-            "the trace and moving components."
+            "The last sweeps show no clear pattern. Look at the trace and the moving components."
         ),
     }
+    message = messages[status]
+    if status == "unclassified" and len(deltas) < 2:
+        message = "Too few sweeps were recorded to tell why the fit stopped; continue the fit."
+    sweeps = trend["estimated_extra_sweeps"]
+    if status == "slow_monotone" and sweeps:
+        message += f" About {sweeps} more sweeps should reach the tolerance."
     stability, moving = _tail_stability(rows, ids, null_index, float(pip_stability))
+    if status != "converged" and stability["stable"]:
+        message += (
+            f" Over the last {len(rows)} sweeps the leading variants did not change and "
+            f"no PIP moved by {pip_stability:g} or more, so the credible sets are unlikely "
+            "to change."
+        )
     return dict(
         schema_version="prusie.convergence_assessment.v1",
         status=status,
@@ -475,5 +483,5 @@ def assess_convergence(
         moving_components=moving,
         elbo_decrease_count=decreases,
         nonfinite_elbo_count=nonfinite,
-        message=messages[status],
+        message=message,
     )

@@ -43,24 +43,37 @@ variances and residual variance; `layout="full"` combines both views.
 
 ## Assess the last few sweeps
 
-Use `assess_convergence` to decide what to inspect next: steady but slow ELBO
-gains suggest more sweeps, whereas decreases or cycling call for a closer look
-at the trajectory. It reads the saved diagnostics and works on a fit or a
-`summarize` result.
+When a fit stops at its iteration limit, two questions matter: why it did not
+converge, and whether that changes your credible sets. `assess_convergence`
+reads the per-sweep trace and answers both. It works on a fit or on a
+`summarize` result and never refits.
 
 ```python
-assessment = prusie.assess_convergence(fit, tail=5, pip_stability=1e-3)
+assessment = prusie.assess_convergence(fit)
+print(assessment["status"])
 print(assessment["message"])
-print(assessment["inference_stability"])
 ```
 
-The assessment compares leading variants among components active throughout the
-tail and reports the largest recorded sweep-to-sweep PIP change. The
-`pip_stability` cutoff describes the display; it does not change the fitting
-rule. Without a trace, a recorded successful stop can still be recognized,
-but movement cannot be assessed. For steadily shrinking positive ELBO gains,
-the assessment estimates the remaining gain and extra sweeps from the median
-successive gain ratio; these estimates assume the same decay continues.
+The `status` is one of:
+
+- `converged`: the stopping rule was met.
+- `slow_monotone`: the ELBO is still rising, by less each sweep. More sweeps
+  usually finish the fit; `assessment["elbo_tail"]["estimated_extra_sweeps"]`
+  estimates how many, assuming the recent rate of slowdown continues.
+- `oscillating`: the posterior keeps returning to earlier states. More sweeps
+  rarely help; look at the components listed in `moving_components`.
+- `elbo_decreasing`: the objective went down, which often means the z-scores
+  and the LD matrix disagree. Run [`diagnose_ld`](sensitivity.md#diagnose-consistency-of-z-and-ld) next.
+- `numerical_failure`, `unclassified`, or `not_assessable` when no trace was
+  recorded. Fit with `track_fit=True` to get a trace.
+
+`assessment["inference_stability"]` says whether the conclusions are still
+moving. It checks that every active component kept the same leading variant over
+the last `tail` sweeps (default 5) and reports the largest PIP change in that
+window. If the leading variants held and no PIP moved by `pip_stability`
+(default 0.001) or more, a few more sweeps are unlikely to change the credible
+sets, even though the fit has not formally converged. The threshold only shapes
+this summary; it does not touch the fitting rule.
 
 ## Continue first, then consider refinement
 
@@ -187,15 +200,15 @@ gains use the last logged ELBO under the original prior. The compact layout
 displays selected variants; `candidates_only=False` shows all variants.
 `layout="full"` adds credible-set memberships and attempt records.
 
-Each history row also saves the stage-B candidate's credible sets as variant
-IDs (`candidate_cs`) and their original component IDs (`candidate_cs_index`).
-`competing_candidates` compares every evaluated candidate with the incumbent
-and the retained solution in its round, and gives its ELBO gap from the round
-best. Credible-set equality ignores set order while preserving member identity.
-Use these records to spot similar objectives with different fine-mapping
-conclusions. `accepted_inner_ibss_converged` records the last accepted candidate's inner
-status, or is `None` when no candidate was accepted, separately from the outer
-search outcome.
+Refinement also keeps every candidate it tried. Each history row stores that
+candidate's credible sets as variant IDs (`candidate_cs`), and
+`refined.refinement["competing_candidates"]` lists every candidate with its
+ELBO gap to the solution that was kept (`gap_to_retained`) and whether its
+credible sets match it (`same_cs_as_accepted`; the order of the sets does not
+matter). A candidate with different credible sets only a nat or so below the
+kept solution means the data support two configurations almost equally well;
+the offline report flags these. `accepted_inner_ibss_converged` says whether the
+accepted candidate's own IBSS fit converged.
 
 Read `accepted`, `reason` and `stages` in `refined.refinement["history"]` to
 distinguish selection from inner IBSS convergence. Refinement defaults to
@@ -213,11 +226,11 @@ records the requested and effective criteria, thresholds and stop reason;
 `fit.convergence["last"]` holds the final sweep's metrics and events.
 `fit.trace` holds the per-sweep records when tracking is enabled.
 
-For the returned fit's inner IBSS status, read
-`fit.convergence["inner_ibss_converged"]` after refinement
-(or `ibss_converged` on the original fit). The property `fit.ibss_converged` aliases
-`fit.converged`, which refinement can overwrite with its search outcome.
-Read `fit.refinement["status"]` separately.
+After refinement, `fit.converged` (and its alias `fit.ibss_converged`)
+describes the refinement search, as `model$converged` does in susieR. The
+returned fit's own IBSS status is `fit.convergence["inner_ibss_converged"]`;
+on a fit that was not refined it is `fit.convergence["ibss_converged"]`. The
+search outcome is `fit.refinement["status"]`.
 
 Component inclusion probabilities can move while marginal PIPs stay similar. For sweep
 $t$, the maximum absolute changes are

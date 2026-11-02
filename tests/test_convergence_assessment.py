@@ -126,11 +126,18 @@ def test_status_precedence_and_tail_event_counts():
     assert assess_convergence(summary)["status"] == "converged"
 
 
-@pytest.mark.parametrize("lag", [1, 2, 5])
+@pytest.mark.parametrize("lag", [2, 5])
 def test_recorded_cycle_lag_is_respected(lag):
     summary = recorded()
     summary["trace"][-1]["cycle_lag"] = lag
     assert assess_convergence(summary)["status"] == "oscillating"
+
+
+def test_lag_one_fixed_point_is_not_oscillation():
+    summary = recorded()
+    summary["trace"][-1]["cycle_lag"] = 1
+    summary["trace"][-1]["events"] = ["fixed_point"]
+    assert assess_convergence(summary)["status"] == "slow_monotone"
 
 
 @pytest.mark.parametrize("with_trace", [False, True])
@@ -345,3 +352,11 @@ def test_real_null_fit_and_summary_preserve_index_mapping():
     assert fit.convergence["null_index"] == 2
     assert summarize(fit)["convergence"]["null_index"] == 2
     assert assess_convergence(fit) == assess_convergence(summarize(fit))
+
+
+def test_too_short_tail_says_so():
+    summary = recorded()
+    summary["trace"] = summary["trace"][-1:]
+    result = assess_convergence(summary)
+    assert result["status"] == "unclassified"
+    assert "Too few sweeps" in result["message"]

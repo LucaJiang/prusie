@@ -41,6 +41,11 @@ def test_toy_candidate_records_describe_original_stage_b(refined_toy):
         round_best = max(r["objective"] for r in evaluated if r["round"] == row["round"])
         assert competing["objective"] == row["objective"]
         assert competing["gap_to_round_best"] == round_best - row["objective"]
+        same_round = [r for r in evaluated if r["round"] == row["round"]]
+        retained = (
+            round_best if any(r["accepted"] for r in same_round) else row["incumbent_objective"]
+        )
+        assert competing["gap_to_retained"] == retained - row["objective"]
         assert isinstance(competing["same_cs_as_incumbent"], bool)
         assert isinstance(competing["same_cs_as_accepted"], bool)
     assert baseline.refinement["status"] == "not_executed"
@@ -170,5 +175,6 @@ def test_failed_stage_b_preserves_available_cs_without_entering_selection(monkey
         assert row["candidate_cs"] is not None and row["candidate_cs_index"] is not None
         competing = result.refinement["competing_candidates"][0]
         assert competing["objective"] is None and competing["gap_to_round_best"] is None
+        assert competing["gap_to_retained"] is None
     for name in ("alpha", "mu", "mu2", "V", "pip", "elbo", "KL", "XtXr"):
         assert getattr(fit, name).tobytes() == getattr(result, name).tobytes()

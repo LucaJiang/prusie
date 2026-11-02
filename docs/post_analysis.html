@@ -67,22 +67,35 @@ absolute changes in component inclusion probabilities (<code>alpha</code>) and m
 PIPs between successive sweeps. <code>layout="variance"</code> shows the component prior
 variances and residual variance; <code>layout="full"</code> combines both views.</p>
 <h2 id="assess-the-last-few-sweeps">Assess the last few sweeps</h2>
-<p>Use <code>assess_convergence</code> to decide what to inspect next: steady but slow ELBO
-gains suggest more sweeps, whereas decreases or cycling call for a closer look
-at the trajectory. It reads the saved diagnostics and works on a fit or a
-<code>summarize</code> result.</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">assessment</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">assess_convergence</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">tail</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">pip_stability</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">)</span>
+<p>When a fit stops at its iteration limit, two questions matter: why it did not
+converge, and whether that changes your credible sets. <code>assess_convergence</code>
+reads the per-sweep trace and answers both. It works on a fit or on a
+<code>summarize</code> result and never refits.</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">assessment</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">assess_convergence</span><span class="p">(</span><span class="n">fit</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">assessment</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">assessment</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">assessment</span><span class="p">[</span><span class="s2">&quot;inference_stability&quot;</span><span class="p">])</span>
 </code></pre></div>
 
-<p>The assessment compares leading variants among components active throughout the
-tail and reports the largest recorded sweep-to-sweep PIP change. The
-<code>pip_stability</code> cutoff describes the display; it does not change the fitting
-rule. Without a trace, a recorded successful stop can still be recognized,
-but movement cannot be assessed. For steadily shrinking positive ELBO gains,
-the assessment estimates the remaining gain and extra sweeps from the median
-successive gain ratio; these estimates assume the same decay continues.</p>
+<p>The <code>status</code> is one of:</p>
+<ul>
+<li><code>converged</code>: the stopping rule was met.</li>
+<li><code>slow_monotone</code>: the ELBO is still rising, by less each sweep. More sweeps
+  usually finish the fit; <code>assessment["elbo_tail"]["estimated_extra_sweeps"]</code>
+  estimates how many, assuming the recent rate of slowdown continues.</li>
+<li><code>oscillating</code>: the posterior keeps returning to earlier states. More sweeps
+  rarely help; look at the components listed in <code>moving_components</code>.</li>
+<li><code>elbo_decreasing</code>: the objective went down, which often means the z-scores
+  and the LD matrix disagree. Run <a href="sensitivity.html#diagnose-consistency-of-z-and-ld"><code>diagnose_ld</code></a> next.</li>
+<li><code>numerical_failure</code>, <code>unclassified</code>, or <code>not_assessable</code> when no trace was
+  recorded. Fit with <code>track_fit=True</code> to get a trace.</li>
+</ul>
+<p><code>assessment["inference_stability"]</code> says whether the conclusions are still
+moving. It checks that every active component kept the same leading variant over
+the last <code>tail</code> sweeps (default 5) and reports the largest PIP change in that
+window. If the leading variants held and no PIP moved by <code>pip_stability</code>
+(default 0.001) or more, a few more sweeps are unlikely to change the credible
+sets, even though the fit has not formally converged. The threshold only shapes
+this summary; it does not touch the fitting rule.</p>
 <h2 id="continue-first-then-consider-refinement">Continue first, then consider refinement</h2>
 <p>If a fit reaches its iteration limit, more IBSS sweeps may be enough to satisfy
 its stopping rule. <code>continue_fit</code> starts from the saved posterior:</p>
@@ -230,15 +243,15 @@ the best fit at the start of its round, and the sequence of best ELBOs. These
 gains use the last logged ELBO under the original prior. The compact layout
 displays selected variants; <code>candidates_only=False</code> shows all variants.
 <code>layout="full"</code> adds credible-set memberships and attempt records.</p>
-<p>Each history row also saves the stage-B candidate's credible sets as variant
-IDs (<code>candidate_cs</code>) and their original component IDs (<code>candidate_cs_index</code>).
-<code>competing_candidates</code> compares every evaluated candidate with the incumbent
-and the retained solution in its round, and gives its ELBO gap from the round
-best. Credible-set equality ignores set order while preserving member identity.
-Use these records to spot similar objectives with different fine-mapping
-conclusions. <code>accepted_inner_ibss_converged</code> records the last accepted candidate's inner
-status, or is <code>None</code> when no candidate was accepted, separately from the outer
-search outcome.</p>
+<p>Refinement also keeps every candidate it tried. Each history row stores that
+candidate's credible sets as variant IDs (<code>candidate_cs</code>), and
+<code>refined.refinement["competing_candidates"]</code> lists every candidate with its
+ELBO gap to the solution that was kept (<code>gap_to_retained</code>) and whether its
+credible sets match it (<code>same_cs_as_accepted</code>; the order of the sets does not
+matter). A candidate with different credible sets only a nat or so below the
+kept solution means the data support two configurations almost equally well;
+the offline report flags these. <code>accepted_inner_ibss_converged</code> says whether the
+accepted candidate's own IBSS fit converged.</p>
 <p>Read <code>accepted</code>, <code>reason</code> and <code>stages</code> in <code>refined.refinement["history"]</code> to
 distinguish selection from inner IBSS convergence. Refinement defaults to
 <code>track_fit=False</code>; enable it explicitly to save candidate trajectories. It
@@ -251,11 +264,11 @@ stopping rule. Its own record defines the ELBO comparison used there.</p>
 records the requested and effective criteria, thresholds and stop reason;
 <code>fit.convergence["last"]</code> holds the final sweep's metrics and events.
 <code>fit.trace</code> holds the per-sweep records when tracking is enabled.</p>
-<p>For the returned fit's inner IBSS status, read
-<code>fit.convergence["inner_ibss_converged"]</code> after refinement
-(or <code>ibss_converged</code> on the original fit). The property <code>fit.ibss_converged</code> aliases
-<code>fit.converged</code>, which refinement can overwrite with its search outcome.
-Read <code>fit.refinement["status"]</code> separately.</p>
+<p>After refinement, <code>fit.converged</code> (and its alias <code>fit.ibss_converged</code>)
+describes the refinement search, as <code>model$converged</code> does in susieR. The
+returned fit's own IBSS status is <code>fit.convergence["inner_ibss_converged"]</code>;
+on a fit that was not refined it is <code>fit.convergence["ibss_converged"]</code>. The
+search outcome is <code>fit.refinement["status"]</code>.</p>
 <p>Component inclusion probabilities can move while marginal PIPs stay similar. For sweep
 <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi></mrow><annotation encoding="application/x-tex">t</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord mathnormal">t</span></span></span></span></span>, the maximum absolute changes are</p>
 <div aria-label="Mathematical formula; scroll horizontally if needed" class="arithmatex" role="region" tabindex="0"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi mathvariant="normal">Δ</mi><mi>α</mi></msub><mo>=</mo><munder><mrow><mi>max</mi><mo>⁡</mo></mrow><mrow><mi mathvariant="normal">ℓ</mi><mo separator="true">,</mo><mi>j</mi></mrow></munder><mi mathvariant="normal">∣</mi><msubsup><mi>α</mi><mrow><mi mathvariant="normal">ℓ</mi><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>−</mo><msubsup><mi>α</mi><mrow><mi mathvariant="normal">ℓ</mi><mi>j</mi></mrow><mrow><mo stretchy="false">(</mo><mi>t</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msubsup><mi mathvariant="normal">∣</mi><mo separator="true">,</mo><mspace width="2em"/><msub><mi mathvariant="normal">Δ</mi><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow></msub><mo>=</mo><munder><mrow><mi>max</mi><mo>⁡</mo></mrow><mi>j</mi></munder><mi mathvariant="normal">∣</mi><msubsup><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow><mi>j</mi><mrow><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></mrow></msubsup><mo>−</mo><msubsup><mrow><mi mathvariant="normal">P</mi><mi mathvariant="normal">I</mi><mi mathvariant="normal">P</mi></mrow><mi>j</mi><mrow><mo stretchy="false">(</mo><mi>t</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></msubsup><mi mathvariant="normal">∣</mi><mi mathvariant="normal">.</mi></mrow><annotation encoding="application/x-tex">

@@ -61,30 +61,37 @@ Use `prusie.compare_fits` directly when all fits already exist.
 
 ## Start with a compact plan
 
-`standard_sensitivity_plan` provides a starting point: halve and double $L$,
-check 90% and 99% CS coverage and a purity threshold of 0.8, and optionally
-refine. Coverage and purity changes reuse the baseline posterior.
+If you are not sure which settings to vary, `standard_sensitivity_plan` gives a
+reasonable first pass: half and double the number of effects $L$, credible sets
+at 90% and 99% coverage, a stricter purity of 0.8, and a refined fit. The
+coverage and purity items reuse the baseline posterior, so they cost nothing.
 
 ```python
-plan = prusie.standard_sensitivity_plan(L=fit.params["L"])
+plan = prusie.standard_sensitivity_plan(L=example["parameters"]["L"])
 sensitivity = prusie.run_sensitivity(example["inputs"], plan, baseline=fit)
 comparison = sensitivity["comparison"]
 for row in comparison["cs_stability_summary"]:
-    print(row["baseline_component"], row["recovered_in"], row["assessed_in"])
+    print(row["representative"], f"{row['recovered_in']}/{row['assessed_in']}")
 ```
 
-Choose alternatives that reflect uncertainty in your own analysis. When the
-baseline inputs include `n`, a single-factor item such as
-`{"name": "smaller_n", "changes": {"n": 900}}` fits the same data at that sample
-size; the baseline inputs remain unchanged and the cache distinguishes the new
-sample size.
+Treat it as a starting point and add the alternatives that matter for your
+study, such as a different LD panel or window. If the GWAS sample size is
+uncertain, for example in a meta-analysis with varying per-variant N, add a
+sample-size item; it needs `n` in the baseline inputs:
 
-Read `comparison["fit_status"]` first to see which settings stopped successfully.
-`cs_stability_summary` counts the other settings that recover each baseline CS
-and how many were compared. Recovery uses the existing retained-CS matching
-rule; it does not require identical membership. For detail, `cs_stability`
-includes the relation, matched components, largest member Jaccard, representative
-agreement, PIP change over shared baseline members, and missing members.
+```python
+plan.append({"name": "smaller_n", "changes": {"n": 900}})
+```
+
+Two tables summarize the result. `comparison["fit_status"]` shows whether each
+setting converged; differences from an unfinished fit may just mean it stopped
+early. `comparison["cs_stability_summary"]` counts, for each baseline credible
+set, how many of the other settings recover it, using the same CS matching as
+the rest of the comparison (membership does not have to be identical).
+`comparison["cs_stability"]` has the detail per setting: the matched
+components, member overlap (Jaccard), whether the representative variant is the
+same, the summed PIP change over the set's members, and members missing from
+the other fit.
 
 ## Plot and interpret the comparison
 

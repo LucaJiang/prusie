@@ -473,7 +473,7 @@ def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
         checks.append(
             dict(
                 code=code,
-                status="not evaluated" if not available else "raised" if raised else "not raised",
+                status="skipped" if not available else "raised" if raised else "not raised",
                 evidence_pointer=pointer,
             )
         )
@@ -493,8 +493,8 @@ def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
         inner is not None,
         inner is not None and not inner,
         "attention",
-        "The returned fit did not satisfy its inner IBSS stopping rule; review the trajectory "
-        "and consider a longer fit after checking the inputs.",
+        f"IBSS stopped after {assessment['niter']} sweeps without converging. "
+        + assessment["message"],
         "/summary/convergence",
     )
     decrease_count = max(
@@ -505,7 +505,8 @@ def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
         "elbo_decrease_count" in control or assessment["trace_available"],
         bool(decrease_count),
         "attention",
-        "ELBO decreased during recorded fitting; inspect the affected sweeps and LD compatibility.",
+        "The ELBO went down during fitting, which points to a mismatch between the z-scores "
+        "and the LD matrix. Check the affected sweeps and the LD diagnostics.",
         "/summary/convergence/elbo_decrease_count"
         if "elbo_decrease_count" in control
         else "/summary/convergence",
@@ -517,7 +518,8 @@ def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
         search["changed_cs"] is not None,
         search["changed_cs"],
         "info",
-        "Refinement changed credible-set membership; compare the before and after candidate sets.",
+        "Refinement found a better solution with different credible sets. "
+        "Compare the before and after sets below.",
         "/summary/refinement/signal_comparison/components",
     )
     accepted_inner = refinement.get("accepted_inner_ibss_converged")
@@ -526,13 +528,13 @@ def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
         accepted_inner is not None,
         accepted_inner is not None and not accepted_inner,
         "attention",
-        "Refinement accepted a candidate before its inner IBSS fit converged; inspect the "
-        "accepted fit's stopping record before interpreting the change.",
+        "Refinement kept a candidate whose own IBSS fit had not converged, "
+        "so the improvement may not be final.",
         "/summary/refinement/accepted_inner_ibss_converged",
     )
     competing = []
     for index, row in enumerate(_records(refinement.get("competing_candidates"))):
-        gap = row.get("gap_to_round_best")
+        gap = row.get("gap_to_retained")
         if (
             isinstance(gap, (int, float, np.number))
             and math.isfinite(gap)
@@ -545,9 +547,9 @@ def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
         bool(_records(refinement.get("competing_candidates"))),
         bool(competing),
         "attention",
-        f"Refinement found {len(competing)} candidate(s) with different credible sets from the "
-        f"retained solution within {competing_elbo_gap:g} nats of their round's best ELBO; "
-        "compare their candidate memberships.",
+        f"{len(competing)} refinement candidate(s) came within {competing_elbo_gap:g} nats of "
+        "the kept solution but with different credible sets. The data support more than one "
+        "configuration; compare the candidates before choosing a variant to follow up.",
         f"/summary/refinement/competing_candidates/{competing[0]}"
         if competing
         else "/summary/refinement/competing_candidates",
@@ -565,8 +567,8 @@ def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
         "cs_stability_summary" in (comparison or {}),
         bool(lost),
         "attention",
-        f"{len(lost)} baseline credible set(s) were not recovered in every sensitivity setting; "
-        "review the settings and member-level changes.",
+        f"{len(lost)} credible set(s) from the baseline disappeared in at least one "
+        "sensitivity setting. See which settings lost them in the recovery table.",
         "/comparison/cs_stability_summary",
     )
     fit_status = _records((comparison or {}).get("fit_status"))
@@ -580,8 +582,8 @@ def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
         bool(fit_status) and all(row.get("converged") is not None for row in fit_status),
         bool(unfinished),
         "attention",
-        f"{len(unfinished)} sensitivity fit(s) did not converge; inspect their stopping records "
-        "alongside the posterior comparisons.",
+        f"{len(unfinished)} sensitivity fit(s) did not converge, so differences from the "
+        "baseline may partly reflect unfinished fits.",
         "/comparison/fit_status",
     )
     check(
@@ -589,8 +591,8 @@ def _report_flags(summary, compact, comparison, *, competing_elbo_gap):
         compact["ld"]["assessed"] > 0,
         compact["ld"]["flagged"] > 0,
         "attention",
-        f"LD diagnostics flagged {compact['ld']['flagged']} variant(s); check their alleles, "
-        "summary statistics and LD reference before refitting.",
+        f"LD diagnostics flagged {compact['ld']['flagged']} variant(s). Check their alleles "
+        "and the LD reference before refitting.",
         "/ld_diagnostics/variants",
     )
     return flags, checks
@@ -1288,12 +1290,13 @@ def write_report(
             )
         sections.append("</ul>")
     else:
-        sections.append("<p>No flags were raised by the checks with recorded evidence.</p>")
-    unavailable = sum(row["status"] == "not evaluated" for row in compact["flag_checks"])
-    if unavailable:
+        sections.append("<p>Nothing needs attention.</p>")
+    skipped = sum(row["status"] == "skipped" for row in compact["flag_checks"])
+    if skipped:
         sections.append(
-            f'<p class="caption">{unavailable} checks could not be evaluated from the '
-            'available records; see <a href="#flag-availability">check availability</a>.</p>'
+            f'<p class="caption">{skipped} checks were skipped because their inputs '
+            "(refinement, sensitivity or LD results) were not supplied; see "
+            '<a href="#flag-availability">which checks ran</a>.</p>'
         )
     sections.append("</section>")
     navigation = (
@@ -1346,6 +1349,10 @@ def write_report(
         "same_cs_as_accepted": "Same CS as retained solution",
         "same_cs_as_incumbent": "Same CS as round incumbent",
         "gap_to_round_best": "ELBO gap to round best (nats)",
+        "gap_to_retained": "ELBO below kept solution (nats)",
+        "round": "Round",
+        "component": "Excluded CS (component)",
+        "objective": "ELBO",
     }
 
     def cell(value, key):
@@ -1553,22 +1560,30 @@ def write_report(
         )
         sections.append("<h3>Credible sets before and after refinement</h3>")
         if search["credible_set_changes"] is None:
-            sections.append(
-                "<p>Not evaluated: this record has no before/after signal comparison.</p>"
-            )
+            sections.append("<p>This record has no before/after comparison.</p>")
         else:
             table(search["credible_set_changes"], caption="Refinement credible-set membership")
         sections.append("<h3>Competing refinement candidates</h3>")
         sections.append(
-            "<p>The display flags different credible sets within "
+            "<p>Each candidate is a refit after excluding one credible set. A candidate with "
+            "different credible sets within "
             + escape(_display(search["competing_elbo_gap"]))
-            + " nats of the best candidate in each round. Full recorded refinement details "
-            'are in <a href="evidence.json">the evidence export</a>.</p>'
+            + " nats of the kept solution is flagged: the data fit it almost as well.</p>"
         )
         if search["competing_candidates"] is None:
-            sections.append("<p>Not evaluated: competing candidates were not recorded.</p>")
+            sections.append("<p>Candidates were not recorded.</p>")
         else:
-            table(search["competing_candidates"], caption="Candidates compared within each round")
+            table(
+                search["competing_candidates"],
+                (
+                    "round",
+                    "component",
+                    "objective",
+                    "gap_to_retained",
+                    "same_cs_as_accepted",
+                ),
+                caption="Candidates compared within each round",
+            )
     sensitivity, counts = compact["sensitivity"], compact["ld"]
     sections.append("<h3>Sensitivity</h3>")
     if comparison is None:
@@ -1586,12 +1601,12 @@ def write_report(
         )
         sections.append("<h3>Fit status across settings</h3>")
         if sensitivity.get("fit_status") is None:
-            sections.append("<p>Not evaluated: per-setting fit status was not recorded.</p>")
+            sections.append("<p>Per-setting fit status was not recorded.</p>")
         else:
             table(sensitivity["fit_status"], caption="Sensitivity fit status")
         sections.append("<h3>Credible-set recovery across settings</h3>")
         if sensitivity.get("cs_stability_summary") is None:
-            sections.append("<p>Not evaluated: per-set recovery was not recorded.</p>")
+            sections.append("<p>Per-set recovery was not recorded.</p>")
         else:
             table(sensitivity["cs_stability_summary"], caption="Baseline credible-set recovery")
         table(
@@ -1890,7 +1905,7 @@ def write_report(
         '</section><section aria-labelledby="details"><h2 '
         'id="details">Complete records and provenance</h2>'
     )
-    sections.append('<h3 id="flag-availability">Check availability</h3>')
+    sections.append('<h3 id="flag-availability">Which checks ran</h3>')
     check_names = {
         "ibss_not_converged": "Inner IBSS convergence",
         "elbo_decreased": "ELBO decreases",

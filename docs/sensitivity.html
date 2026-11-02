@@ -81,27 +81,33 @@ the fitting function's default <a href="model.html#stopping-rules">stopping rule
 fallback is not inherited.</p>
 <p>Use <code>prusie.compare_fits</code> directly when all fits already exist.</p>
 <h2 id="start-with-a-compact-plan">Start with a compact plan</h2>
-<p><code>standard_sensitivity_plan</code> provides a starting point: halve and double <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span></span></span></span></span>,
-check 90% and 99% CS coverage and a purity threshold of 0.8, and optionally
-refine. Coverage and purity changes reuse the baseline posterior.</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">plan</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">standard_sensitivity_plan</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="n">fit</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;L&quot;</span><span class="p">])</span>
+<p>If you are not sure which settings to vary, <code>standard_sensitivity_plan</code> gives a
+reasonable first pass: half and double the number of effects <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi></mrow><annotation encoding="application/x-tex">L</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal">L</span></span></span></span></span>, credible sets
+at 90% and 99% coverage, a stricter purity of 0.8, and a refined fit. The
+coverage and purity items reuse the baseline posterior, so they cost nothing.</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">plan</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">standard_sensitivity_plan</span><span class="p">(</span><span class="n">L</span><span class="o">=</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">][</span><span class="s2">&quot;L&quot;</span><span class="p">])</span>
 <span class="n">sensitivity</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">run_sensitivity</span><span class="p">(</span><span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">],</span> <span class="n">plan</span><span class="p">,</span> <span class="n">baseline</span><span class="o">=</span><span class="n">fit</span><span class="p">)</span>
 <span class="n">comparison</span> <span class="o">=</span> <span class="n">sensitivity</span><span class="p">[</span><span class="s2">&quot;comparison&quot;</span><span class="p">]</span>
 <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">comparison</span><span class="p">[</span><span class="s2">&quot;cs_stability_summary&quot;</span><span class="p">]:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;baseline_component&quot;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;recovered_in&quot;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;assessed_in&quot;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="s2">&quot;representative&quot;</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;recovered_in&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;assessed_in&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </code></pre></div>
 
-<p>Choose alternatives that reflect uncertainty in your own analysis. When the
-baseline inputs include <code>n</code>, a single-factor item such as
-<code>{"name": "smaller_n", "changes": {"n": 900}}</code> fits the same data at that sample
-size; the baseline inputs remain unchanged and the cache distinguishes the new
-sample size.</p>
-<p>Read <code>comparison["fit_status"]</code> first to see which settings stopped successfully.
-<code>cs_stability_summary</code> counts the other settings that recover each baseline CS
-and how many were compared. Recovery uses the existing retained-CS matching
-rule; it does not require identical membership. For detail, <code>cs_stability</code>
-includes the relation, matched components, largest member Jaccard, representative
-agreement, PIP change over shared baseline members, and missing members.</p>
+<p>Treat it as a starting point and add the alternatives that matter for your
+study, such as a different LD panel or window. If the GWAS sample size is
+uncertain, for example in a meta-analysis with varying per-variant N, add a
+sample-size item; it needs <code>n</code> in the baseline inputs:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="n">plan</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;smaller_n&quot;</span><span class="p">,</span> <span class="s2">&quot;changes&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;n&quot;</span><span class="p">:</span> <span class="mi">900</span><span class="p">}})</span>
+</code></pre></div>
+
+<p>Two tables summarize the result. <code>comparison["fit_status"]</code> shows whether each
+setting converged; differences from an unfinished fit may just mean it stopped
+early. <code>comparison["cs_stability_summary"]</code> counts, for each baseline credible
+set, how many of the other settings recover it, using the same CS matching as
+the rest of the comparison (membership does not have to be identical).
+<code>comparison["cs_stability"]</code> has the detail per setting: the matched
+components, member overlap (Jaccard), whether the representative variant is the
+same, the summed PIP change over the set's members, and members missing from
+the other fit.</p>
 <h2 id="plot-and-interpret-the-comparison">Plot and interpret the comparison</h2>
 <p>A comparison can preserve the leading credible sets while changing support for
 other variants. Use the heatmap to compare candidate PIPs across settings:</p>

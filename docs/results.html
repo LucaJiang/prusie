@@ -143,11 +143,12 @@ not independent evidence for additional effects. See the
 <a href="inputs.html#priors-and-zero-information-columns">prior conventions</a> and
 <a href="sensitivity.html#variant-alignment-and-prior-weights">sensitivity guide</a>.</p>
 <h2 id="share-an-offline-assessment">Share an offline assessment</h2>
-<p>The offline report opens with <strong>What to check first</strong>: unfinished IBSS fits,
-ELBO decreases, changed credible sets after refinement, competing refinement
-solutions, sensitivity settings that lose a CS, and LD flags. Start with those
-items, then use the linked evidence and the convergence and sensitivity tables.
-A check with missing saved records is shown as not evaluated.</p>
+<p><code>write_report</code> writes a self-contained HTML report you can open offline or send
+to a collaborator. It starts with <strong>What to check first</strong>, a short list of
+anything that needs attention: a fit that did not converge, a falling ELBO,
+credible sets that changed under refinement, a competing refinement solution,
+credible sets lost in a sensitivity setting, or LD flags. If the list is empty,
+the report says so.</p>
 <div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">prusie.report</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_report</span>
 
 <span class="n">summary</span> <span class="o">=</span> <span class="n">prusie</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;inputs&quot;</span><span class="p">][</span><span class="s2">&quot;R&quot;</span><span class="p">])</span>
@@ -155,11 +156,11 @@ A check with missing saved records is shown as not evaluated.</p>
 <span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="p">[</span><span class="s2">&quot;html&quot;</span><span class="p">])</span>
 </code></pre></div>
 
-<p>Supply <code>comparison=</code> and <code>ld=</code> to include their checks and <code>figures=</code> to include
-plots already made. The report exports flags, convergence assessment,
-before/after credible sets, competing candidates and sensitivity stability as
-CSV alongside the full records. <code>prusie.summary_text</code> includes one line for
-each attention flag. Keep the output directory together for offline viewing.</p>
+<p>Pass <code>comparison=</code> (from <code>compare_fits</code> or <code>run_sensitivity</code>) and <code>ld=</code> (from
+<code>diagnose_ld</code>) to include those checks; checks without their input are listed
+as skipped. Pass <code>figures=</code> to embed plots you have already made. Every table
+in the report is also written as CSV, and <code>prusie.summary_text</code> prints the same
+flags as one line each. Keep the output directory together so the links work.</p>
 <h2 id="result-object">Result object</h2>
 <p>After fitting, the fitting entry points return a mutable <code>SusieResult</code>
 containing posterior arrays, credible sets and the fitting record. Variant and

@@ -2,15 +2,16 @@
 
 ## Unreleased
 
-- Add post-hoc convergence assessment with tail ELBO estimates, PIP stability
-  and component movement.
-- Record refinement candidate credible sets, competing objectives and accepted
-  inner IBSS convergence separately from the outer search outcome.
-- Add fit-status and credible-set stability tables to comparisons, sample-size
-  sensitivity and a reusable starting sensitivity plan.
-- Add actionable offline-report flags, evidence tables and CSV exports,
-  explicit figure placement and automatic software provenance.
-
+- New `assess_convergence` explains how a fit ended (converged, slowly rising,
+  oscillating, ELBO decreasing) and whether its credible sets are still moving.
+- Refinement keeps the credible sets of every candidate it tried and flags
+  candidates that fit almost as well with different credible sets.
+- `compare_fits` reports per-setting convergence and how often each baseline
+  credible set is recovered; `run_sensitivity` accepts a sample-size change, and
+  `standard_sensitivity_plan` provides a first-pass plan.
+- Offline reports open with a "What to check first" list, show credible sets
+  before and after refinement, accept explicit figure placement and record
+  software versions automatically.
 
 ## 0.3.1 — 2026-11-01
 

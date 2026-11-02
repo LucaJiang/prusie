@@ -100,11 +100,12 @@ not independent evidence for additional effects. See the
 
 ## Share an offline assessment
 
-The offline report opens with **What to check first**: unfinished IBSS fits,
-ELBO decreases, changed credible sets after refinement, competing refinement
-solutions, sensitivity settings that lose a CS, and LD flags. Start with those
-items, then use the linked evidence and the convergence and sensitivity tables.
-A check with missing saved records is shown as not evaluated.
+`write_report` writes a self-contained HTML report you can open offline or send
+to a collaborator. It starts with **What to check first**, a short list of
+anything that needs attention: a fit that did not converge, a falling ELBO,
+credible sets that changed under refinement, a competing refinement solution,
+credible sets lost in a sensitivity setting, or LD flags. If the list is empty,
+the report says so.
 
 ```python
 from prusie.report import write_report
@@ -114,11 +115,11 @@ report = write_report(summary, "analysis-report", title="Toy example")
 print(report["html"])
 ```
 
-Supply `comparison=` and `ld=` to include their checks and `figures=` to include
-plots already made. The report exports flags, convergence assessment,
-before/after credible sets, competing candidates and sensitivity stability as
-CSV alongside the full records. `prusie.summary_text` includes one line for
-each attention flag. Keep the output directory together for offline viewing.
+Pass `comparison=` (from `compare_fits` or `run_sensitivity`) and `ld=` (from
+`diagnose_ld`) to include those checks; checks without their input are listed
+as skipped. Pass `figures=` to embed plots you have already made. Every table
+in the report is also written as CSV, and `prusie.summary_text` prints the same
+flags as one line each. Keep the output directory together so the links work.
 
 ## Result object
 

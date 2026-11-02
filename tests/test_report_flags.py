@@ -85,6 +85,7 @@ def recorded_refinement():
                 component=3,
                 objective=-19.0,
                 gap_to_round_best=0.0,
+                gap_to_retained=0.0,
                 same_cs_as_incumbent=False,
                 same_cs_as_accepted=True,
             ),
@@ -93,6 +94,7 @@ def recorded_refinement():
                 component=7,
                 objective=-19.5,
                 gap_to_round_best=0.5,
+                gap_to_retained=0.5,
                 same_cs_as_incumbent=True,
                 same_cs_as_accepted=False,
             ),
@@ -183,12 +185,12 @@ def test_old_records_leave_new_checks_unevaluated(tmp_path):
         "sensitivity_cs_not_recovered",
         "sensitivity_fit_not_converged",
     ):
-        assert checks[code] == "not evaluated"
+        assert checks[code] == "skipped"
     receipt = write_report(summary, tmp_path, comparison=comparison)
     page = Path(receipt["html"]).read_text(encoding="utf-8")
-    assert "No flags were raised by the checks with recorded evidence." in page
-    assert "Not evaluated: competing candidates were not recorded." in page
-    assert "not evaluated" in page
+    assert "Nothing needs attention." in page
+    assert "Candidates were not recorded." in page
+    assert "skipped" in page
 
 
 @pytest.mark.parametrize("gap,raised", [(0.0, False), (0.49, False), (0.5, True), (1.0, True)])
@@ -334,7 +336,7 @@ def test_real_toy_report_with_refinement_sensitivity_and_ld(tmp_path):
     assert len(compact["sensitivity"]["fit_status"]) == 2
     assert compact["sensitivity"]["cs_stability_summary"]
     checks = {row["code"]: row["status"] for row in compact["flag_checks"]}
-    assert checks["sensitivity_cs_not_recovered"] != "not evaluated"
-    assert checks["sensitivity_fit_not_converged"] != "not evaluated"
-    assert (checks["ld_flagged"] != "not evaluated") == (compact["ld"]["assessed"] > 0)
+    assert checks["sensitivity_cs_not_recovered"] != "skipped"
+    assert checks["sensitivity_fit_not_converged"] != "skipped"
+    assert (checks["ld_flagged"] != "skipped") == (compact["ld"]["assessed"] > 0)
     assert (tmp_path / "tables/competing_candidates.csv").exists()
