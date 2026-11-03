@@ -264,7 +264,7 @@ coloc contributors, with frozen susieR outputs, source identities and
 checksums. Preserve their upstream GPL declaration and included GPL-3 license
 text.
 
-The [convergence and refinement example](worked_examples.md#sources-and-reproducibility)
+The [convergence and refinement example](toy_examples.md#sources-and-reproducibility)
 uses the official susieR `FinemappingConvergence` data under BSD-3-Clause.
 Its guide describes the source, attribution and license, with commands to
 repeat the fit or render saved posterior results.

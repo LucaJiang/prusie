@@ -446,7 +446,7 @@ may omit cell annotations. See the
 
 Within-CS LD cells are square. Small matrices distinguish near-unit correlations
 from exact identity in their labels. Compact singleton views retain the matrix
-and CS purity. See the [Toy example](worked_examples.md#resolution).
+and CS purity. See the [toy example](toy_examples.md#resolution).
 
 ### Other display controls
 

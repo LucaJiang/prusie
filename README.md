@@ -145,7 +145,7 @@ The performance report identifies the measured software, hardware, data and prot
 [Convergence and refinement](https://lucajiang.github.io/prusie/post_analysis.html) ·
 [Sensitivity and LD](https://lucajiang.github.io/prusie/sensitivity.html) · [API](https://lucajiang.github.io/prusie/api.html)
 
-The official susieR [Toy example](https://lucajiang.github.io/prusie/worked_examples.html) shows how credible sets
+The official susieR [toy example](https://lucajiang.github.io/prusie/toy_examples.html) shows how credible sets
 and PIPs change under refinement. Browse the
 [documentation site](https://lucajiang.github.io/prusie/) for the deployed version.
 

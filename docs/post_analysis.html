@@ -17,7 +17,7 @@
 <aside class="sidebar" aria-label="Documentation sidebar">
 <a class="brand" href="index.html" aria-label="prusie documentation home"><img class="brand-mark" src="assets/logos/prusie-mark-96.png" alt="" width="96" height="96"><span>prusie<small>SuSiE fine-mapping in Python</small></span></a>
 <div class="version"><span class="version-number">0.3.1</span><span class="version-badge">Stable</span></div>
-<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="worked_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html" aria-current="page">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
+<details class="site-nav" open><summary>Browse documentation</summary><nav aria-label="Documentation"><div class="nav-group"><p class="nav-label">START HERE</p><a href="index.html">Overview</a><a href="install.html">Installation</a><a href="example.html">Quick start</a><a href="toy_examples.html">Toy example</a></div><div class="nav-group"><p class="nav-label">User guide</p><a href="inputs.html">Inputs and priors</a><a href="results.html">Reading results</a><a href="post_analysis.html" aria-current="page">Convergence and refinement</a><a href="sensitivity.html">Sensitivity and LD diagnostics</a></div><div class="nav-group"><p class="nav-label">Reference</p><a href="api.html">Python API</a><a href="model.html">Statistical model</a><a href="implementation.html">Implementation</a><a href="optimization.html">Speed and memory optimization</a></div><div class="nav-group"><p class="nav-label">Validation</p><a href="numerical_accuracy.html">Numerical accuracy</a><a href="performance.html">Performance</a><a href="reproducibility.html">Reproducibility</a></div><div class="nav-group"><p class="nav-label">Project</p><a href="contributing.html">Contributing</a><a href="citation.html">Citation and license</a><a href="https://github.com/LucaJiang/prusie">GitHub</a></div></nav></details>
 </aside>
 <main id="main" tabindex="-1">
 <div class="page-meta"><span>Fine-mapping · Python + Rust</span><a class="repo-link" href="https://github.com/LucaJiang/prusie"><img src="assets/github-mark.png" alt="" width="20" height="20"><span>LucaJiang/prusie</span></a></div>
@@ -223,7 +223,7 @@ definitions, see the
 <a href="https://github.com/LucaJiang/prusie/blob/main/src/prusie/refinement.py">prusie implementation</a>,
 <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/refinement.R">pinned R search</a>
 and <a href="https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/susie_get_functions.R">pinned R objective accessor</a>.
-The <a href="worked_examples.html">Toy example</a> documents this official fixture with its
+The <a href="toy_examples.html">toy example</a> documents this official fixture with its
 software versions and settings. Read its outcome separately from the
 <a href="numerical_accuracy.html">comparison of fits without refinement</a>.</p>
 <h3 id="the-relative-stop-in-large-samples">The relative stop in large samples</h3>
@@ -291,7 +291,7 @@ accepted candidate's own IBSS fit converged.</p>
 distinguish selection from inner IBSS convergence. Refinement defaults to
 <code>track_fit=False</code>; enable it explicitly to save candidate trajectories. It
 does not reconstruct a trajectory for an already fitted result.</p>
-<p>The <a href="worked_examples.html#a-stopped-fit-improved-by-refinement">saved Toy example</a>
+<p>The <a href="toy_examples.html#a-stopped-fit-improved-by-refinement">saved toy example</a>
 shows changed PIPs and credible sets after the initial fit satisfies its
 stopping rule. Its own record defines the ELBO comparison used there.</p>
 <h2 id="convergence-diagnostics">Convergence diagnostics</h2>

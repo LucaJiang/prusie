@@ -84,7 +84,7 @@ and convergence diagnostics.
 
 ## Sensitivity and refinement
 
-The official susieR [toy example](worked_examples.md) shows a fit that meets its
+The official susieR [toy example](toy_examples.md) shows a fit that meets its
 stopping rule before refinement finds a higher evidence lower bound (ELBO).
 Refinement changes the singleton credible sets, while a set of strongly
 correlated variants remains unresolved.
@@ -100,7 +100,7 @@ credible set and separate LD panels for each set's top variant.
 
 <div class="start-links" markdown="1">
 
-[Quick start](example.md) [Reading results](results.md) [Toy example](worked_examples.md)
+[Quick start](example.md) [Reading results](results.md) [Toy example](toy_examples.md)
 
 </div>
 

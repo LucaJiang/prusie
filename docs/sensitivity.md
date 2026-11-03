@@ -110,7 +110,7 @@ sensitivity_view = plot_sensitivity(
 figure, axes, plotted_data = sensitivity_view
 ```
 
-The official [Toy example](worked_examples.md#sensitivity-and-ld-compatibility)
+The official [toy example](toy_examples.md#sensitivity-and-ld-compatibility)
 provides an executed comparison of a baseline fit, refinement and an increase
 from `L=10` to `L=12`:
 

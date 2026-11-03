@@ -175,7 +175,7 @@ inputs and fitting options with `s_init=restored`; see
 and scale checks.
 
 Continue with [reading results](results.md), [convergence and refinement](post_analysis.md),
-[sensitivity and LD](sensitivity.md) or the [Toy example](worked_examples.md).
+[sensitivity and LD](sensitivity.md) or the [toy example](toy_examples.md).
 
 ## Advanced export and example provenance
 

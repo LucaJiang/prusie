@@ -171,7 +171,7 @@ definitions, see the
 [prusie implementation](https://github.com/LucaJiang/prusie/blob/main/src/prusie/refinement.py),
 [pinned R search](https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/refinement.R)
 and [pinned R objective accessor](https://github.com/stephenslab/susieR/blob/8e56a8e038e989856d106d9ca5175cc664fea9d2/R/susie_get_functions.R).
-The [Toy example](worked_examples.md) documents this official fixture with its
+The [toy example](toy_examples.md) documents this official fixture with its
 software versions and settings. Read its outcome separately from the
 [comparison of fits without refinement](numerical_accuracy.md).
 
@@ -252,7 +252,7 @@ distinguish selection from inner IBSS convergence. Refinement defaults to
 `track_fit=False`; enable it explicitly to save candidate trajectories. It
 does not reconstruct a trajectory for an already fitted result.
 
-The [saved Toy example](worked_examples.md#a-stopped-fit-improved-by-refinement)
+The [saved toy example](toy_examples.md#a-stopped-fit-improved-by-refinement)
 shows changed PIPs and credible sets after the initial fit satisfies its
 stopping rule. Its own record defines the ELBO comparison used there.
 

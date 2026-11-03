@@ -51,7 +51,7 @@ about which member carries the effect can remain. When evaluated, singleton
 purity is 1 by convention and says nothing about LD with neighboring variants.
 
 The [quick start](example.md#summarize-the-fitted-posterior) shows how to obtain
-the summary tables. The [Toy example](worked_examples.md#resolution)
+the summary tables. The [toy example](toy_examples.md#resolution)
 illustrates a retained CS whose members remain difficult to resolve.
 
 ## Posterior summaries
@@ -361,5 +361,5 @@ fit, supply the original inputs and fitting options with `s_init=restored`; see
 [warm-start validation](post_analysis.md#technical-details).
 
 Keep input provenance and a full software environment record alongside saved fits.
-The [Toy example provenance](worked_examples.md#sources-and-reproducibility)
+The [toy example provenance](toy_examples.md#sources-and-reproducibility)
 distinguishes the software that produced saved results from the current renderer.
