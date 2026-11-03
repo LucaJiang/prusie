@@ -73,7 +73,7 @@ one numerical thread on exclusive AMD EPYC 7742 nodes.</p>
 <p>The cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see <a href="performance.html">performance</a>.</p>
 <!-- current:highlights:end -->
 
-<p>The <a href="https://github.com/LucaJiang/prusie-analysis">protocol</a> records the timing
+<p>The <a href="https://github.com/LucaJiang/prusie-analysis/blob/main/02_benchmark/protocol.json">protocol</a> records the timing
 boundaries and software identities; <a href="#reproducibility">reproducibility</a>
 identifies the release and its timing-instrumented copy.
 <a href="numerical_accuracy.html">Numerical accuracy</a> reports agreement with susieR
@@ -284,7 +284,7 @@ took more than twice their case medians and account for 15.2% of the cumulative
 susieR GWAS time. Replacing each by its case median changes the cumulative GWAS
 ratio from 49.2× to 43.0×. Both calls are kept and listed with their
 timestamps in the
-<a href="https://github.com/LucaJiang/prusie-analysis">archive</a>.</p>
+<a href="https://github.com/LucaJiang/prusie-analysis/blob/main/02_benchmark/archive/extreme_retained_calls.json">archive</a>.</p>
 <h3 id="memory">Memory</h3>
 <!-- current:memory:start -->
 
@@ -529,7 +529,7 @@ paths, not independent loci or a complexity law.</p>
 monotonically with the number of variants. The susieR runtime and peak-memory
 values at 10,000 variants come from a dedicated replay on the same node and
 core, because one of the original retained calls stalled outside the solver; see
-<a href="https://github.com/LucaJiang/prusie-analysis">window10000_retime.json</a>.</p>
+<a href="https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/window10000_retime.json">window10000_retime.json</a>.</p>
 <h2 id="reproducibility">Reproducibility</h2>
 <!-- current:identity:start -->
 <ul>
@@ -542,12 +542,12 @@ core, because one of the original retained calls stalled outside the solver; see
 <p>Both runtime metrics use timing-instrumented copies of these release artifacts; the instrumented native binary is not byte-identical to the release wheel. The patch, derived binary hashes and timing boundaries are in the <a href="https://github.com/LucaJiang/prusie-analysis/tree/main/02_benchmark/archive">measurement archive</a>.</p>
 <!-- current:identity:end -->
 
-<p>The <a href="https://github.com/LucaJiang/prusie-analysis">benchmark summary</a> and
-<a href="https://github.com/LucaJiang/prusie-analysis">per-case records</a> keep both timing
+<p>The <a href="https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/benchmark_summary.json">benchmark summary</a> and
+<a href="https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/benchmark_records.jsonl.gz">per-case records</a> keep both timing
 metrics, call timestamps, peak memory, iteration and convergence outcomes and
-numerical differences. The <a href="https://github.com/LucaJiang/prusie/blob/50ce5117163113e55d2c35bd5826bd62d467d9d2/docs/assets/benchmark/benchmark_overwrite_records.jsonl.gz">historical LD-overwrite records</a>
-and <a href="https://github.com/LucaJiang/prusie/blob/50ce5117163113e55d2c35bd5826bd62d467d9d2/docs/assets/benchmark/thread_scaling.json">historical package thread-scaling records</a> hold the two
-supplementary experiments. The <a href="https://github.com/LucaJiang/prusie-analysis">protocol</a>
+numerical differences. The <a href="https://github.com/LucaJiang/prusie/blob/57cf21fcfafce1fe5e908dc4c567a8bc1a52f271/docs/assets/benchmark/benchmark_overwrite_records.jsonl.gz">historical LD-overwrite records</a>
+and <a href="https://github.com/LucaJiang/prusie/blob/57cf21fcfafce1fe5e908dc4c567a8bc1a52f271/docs/assets/benchmark/thread_scaling.json">historical package thread-scaling records</a> hold the two
+supplementary experiments. The <a href="https://github.com/LucaJiang/prusie-analysis/blob/main/02_benchmark/protocol.json">protocol</a>
 and <a href="reproducibility.html#benchmark-protocol">archive guide</a> document how the
 measurements were made.</p>
 <p>These records keep locus and gene identifiers but omit association statistics,

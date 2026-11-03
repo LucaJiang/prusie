@@ -45,7 +45,7 @@ component-activity PIP discrepancy are described in
 
 ## Real GWAS and eQTL inputs
 
-Level B in [prusie-analysis](https://github.com/LucaJiang/prusie-analysis)
+Level B in [prusie-analysis](https://github.com/LucaJiang/prusie-analysis/tree/main/01_inputs)
 provides the input preparation, strict SNP QC, allele alignment and PLINK LD
 reconstruction for FinnGen R13 T2D and GTEx v11 Whole Blood, with 1000 Genomes
 reference genotypes. It lists the exact data releases, access terms and which

@@ -16,7 +16,7 @@ Measured **prusie 0.3.0** against **susieR 0.16.6** on the same inputs.
 The cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](performance.md).
 <!-- current:highlights:end -->
 
-The [protocol](https://github.com/LucaJiang/prusie-analysis) records the timing
+The [protocol](https://github.com/LucaJiang/prusie-analysis/blob/main/02_benchmark/protocol.json) records the timing
 boundaries and software identities; [reproducibility](#reproducibility)
 identifies the release and its timing-instrumented copy.
 [Numerical accuracy](numerical_accuracy.md) reports agreement with susieR
@@ -147,7 +147,7 @@ took more than twice their case medians and account for 15.2% of the cumulative
 susieR GWAS time. Replacing each by its case median changes the cumulative GWAS
 ratio from 49.2× to 43.0×. Both calls are kept and listed with their
 timestamps in the
-[archive](https://github.com/LucaJiang/prusie-analysis).
+[archive](https://github.com/LucaJiang/prusie-analysis/blob/main/02_benchmark/archive/extreme_retained_calls.json).
 
 ### Memory
 
@@ -244,7 +244,7 @@ Iteration counts change with window size, so runtime need not grow
 monotonically with the number of variants. The susieR runtime and peak-memory
 values at 10,000 variants come from a dedicated replay on the same node and
 core, because one of the original retained calls stalled outside the solver; see
-[window10000_retime.json](https://github.com/LucaJiang/prusie-analysis).
+[window10000_retime.json](https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/window10000_retime.json).
 
 ## Reproducibility
 
@@ -258,12 +258,12 @@ core, because one of the original retained calls stalled outside the solver; see
 Both runtime metrics use timing-instrumented copies of these release artifacts; the instrumented native binary is not byte-identical to the release wheel. The patch, derived binary hashes and timing boundaries are in the [measurement archive](https://github.com/LucaJiang/prusie-analysis/tree/main/02_benchmark/archive).
 <!-- current:identity:end -->
 
-The [benchmark summary](https://github.com/LucaJiang/prusie-analysis) and
-[per-case records](https://github.com/LucaJiang/prusie-analysis) keep both timing
+The [benchmark summary](https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/benchmark_summary.json) and
+[per-case records](https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/benchmark_records.jsonl.gz) keep both timing
 metrics, call timestamps, peak memory, iteration and convergence outcomes and
-numerical differences. The [historical LD-overwrite records](https://github.com/LucaJiang/prusie/blob/50ce5117163113e55d2c35bd5826bd62d467d9d2/docs/assets/benchmark/benchmark_overwrite_records.jsonl.gz)
-and [historical package thread-scaling records](https://github.com/LucaJiang/prusie/blob/50ce5117163113e55d2c35bd5826bd62d467d9d2/docs/assets/benchmark/thread_scaling.json) hold the two
-supplementary experiments. The [protocol](https://github.com/LucaJiang/prusie-analysis)
+numerical differences. The [historical LD-overwrite records](https://github.com/LucaJiang/prusie/blob/57cf21fcfafce1fe5e908dc4c567a8bc1a52f271/docs/assets/benchmark/benchmark_overwrite_records.jsonl.gz)
+and [historical package thread-scaling records](https://github.com/LucaJiang/prusie/blob/57cf21fcfafce1fe5e908dc4c567a8bc1a52f271/docs/assets/benchmark/thread_scaling.json) hold the two
+supplementary experiments. The [protocol](https://github.com/LucaJiang/prusie-analysis/blob/main/02_benchmark/protocol.json)
 and [archive guide](reproducibility.md#benchmark-protocol) document how the
 measurements were made.
 

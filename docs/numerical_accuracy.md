@@ -67,7 +67,7 @@ matched summary statistics, LD and model settings; see the
 
 Each case contributes its maximum absolute difference over the complete
 returned arrays; the table summarizes these maxima across cases. The
-[per-case records](https://github.com/LucaJiang/prusie-analysis) give the
+[per-case records](https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/benchmark_records.jsonl.gz) give the
 differences for every case.
 
 ![Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, for GWAS and eQTL, with nonconverged cases marked.](assets/benchmark/v030_numerical_agreement.svg)
@@ -153,10 +153,10 @@ with target posterior mass `coverage=0.95` and minimum absolute LD correlation
 Counts come from the first retained call. Credible sets re-derived from the saved final alpha of both implementations with the susieR 0.16.6 rule contain the same variants in every case.
 <!-- generated:cs:end -->
 
-The [per-case membership table](https://github.com/LucaJiang/prusie-analysis) lists
+The [per-case membership table](https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/cs_membership.tsv) lists
 the credible sets of both implementations and whether their members agree.
 Credible-set presence does not establish convergence. Interpret the sets
-alongside the [recorded convergence flags](https://github.com/LucaJiang/prusie-analysis)
+alongside the [recorded convergence flags](https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/benchmark_records.jsonl.gz)
 and the [credible-set fields](results.md#credible-set-fields).
 
 ## Independent toy example
@@ -178,8 +178,8 @@ for the simulation method, fitting options and packaged reference, and the
 
 ## Reproduce the comparisons
 
-The [benchmark summary](https://github.com/LucaJiang/prusie-analysis) and
-[full per-case records](https://github.com/LucaJiang/prusie-analysis) provide
+The [benchmark summary](https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/benchmark_summary.json) and
+[full per-case records](https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/benchmark_records.jsonl.gz) provide
 numerical errors and convergence diagnostics. The compared arrays come from the
 last retained call of each case (call seven for the 24 cases run under the
 earlier seven-call schedule, call three otherwise). Follow the

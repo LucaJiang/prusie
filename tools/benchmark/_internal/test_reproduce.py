@@ -49,7 +49,9 @@ def test_missing_rscript_fails_before_creating_output(reproduce, monkeypatch, tm
 
 def test_existing_output_is_not_overwritten(reproduce, monkeypatch, tmp_path):
     monkeypatch.setattr(
-        reproduce.sys, "argv", ["reproduce.py", "--rscript", "Rscript", "--output-dir", str(tmp_path)]
+        reproduce.sys,
+        "argv",
+        ["reproduce.py", "--rscript", "Rscript", "--output-dir", str(tmp_path)],
     )
     with pytest.raises(FileExistsError):
         reproduce.main()
