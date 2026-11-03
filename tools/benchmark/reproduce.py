@@ -21,30 +21,13 @@ def main() -> int:
     inputs = parser.add_mutually_exclusive_group()
     inputs.add_argument("--panel", choices=("toy", "regression", "scaling"), default="toy")
     inputs.add_argument("--case-manifest", type=Path, help="Frozen list of case_path records")
-    inputs.add_argument(
-        "--render-records", action="store_true", help="Plot retained records without running fits"
-    )
-    parser.add_argument("--assets", type=Path, default=ROOT / "docs/assets/benchmark")
     parser.add_argument("--validation-only", action="store_true")
     parser.add_argument("--sample-rss", action="store_true")
     args = parser.parse_args()
-    if not args.render_records and args.rscript is None:
-        parser.error("--rscript is required unless --render-records is selected")
+    if args.rscript is None:
+        parser.error("--rscript is required")
     out = args.output_dir.resolve()
     out.mkdir(parents=True, exist_ok=False)
-    if args.render_records:
-        return subprocess.run(
-            [
-                sys.executable,
-                str(HERE.parent / "v030.py"),
-                "figures",
-                "--assets",
-                str(args.assets.resolve()),
-                "--output-dir",
-                str(out),
-            ],
-            check=False,
-        ).returncode
     command = [
         sys.executable,
         str(HERE / "compare_r.py"),

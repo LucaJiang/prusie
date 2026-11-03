@@ -16,7 +16,7 @@ Measured **prusie 0.3.0** against **susieR 0.16.6** on the same inputs.
 The cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](performance.md).
 <!-- current:highlights:end -->
 
-The [protocol](assets/benchmark/benchmark_protocol.json) records the timing
+The [protocol](https://github.com/LucaJiang/prusie-analysis) records the timing
 boundaries and software identities; [reproducibility](#reproducibility)
 identifies the release and its timing-instrumented copy.
 [Numerical accuracy](numerical_accuracy.md) reports agreement with susieR
@@ -147,7 +147,7 @@ took more than twice their case medians and account for 15.2% of the cumulative
 susieR GWAS time. Replacing each by its case median changes the cumulative GWAS
 ratio from 49.2× to 43.0×. Both calls are kept and listed with their
 timestamps in the
-[archive](assets/benchmark/archive/extreme_retained_calls.json).
+[archive](https://github.com/LucaJiang/prusie-analysis).
 
 ### Memory
 
@@ -244,7 +244,7 @@ Iteration counts change with window size, so runtime need not grow
 monotonically with the number of variants. The susieR runtime and peak-memory
 values at 10,000 variants come from a dedicated replay on the same node and
 core, because one of the original retained calls stalled outside the solver; see
-[window10000_retime.json](assets/benchmark/window10000_retime.json).
+[window10000_retime.json](https://github.com/LucaJiang/prusie-analysis).
 
 ## Reproducibility
 
@@ -255,15 +255,15 @@ core, because one of the original retained calls stalled outside the solver; see
 - Benchmark protocol SHA-256: `3893ec7f92fc042f15eade88a4c27a452835bf3285dfda037d6133c55fc56825` (hash of the protocol file as executed; the published copy was later edited only to remove host names, so its bytes differ)
 - Statistical reference: R 4.4.0; susieR 0.16.6, `8e56a8e038e989856d106d9ca5175cc664fea9d2`.
 
-Both runtime metrics use timing-instrumented copies of these release artifacts; the instrumented native binary is not byte-identical to the release wheel. The patch, derived binary hashes and timing boundaries are in the [measurement archive](reproducibility.md#benchmark-protocol).
+Both runtime metrics use timing-instrumented copies of these release artifacts; the instrumented native binary is not byte-identical to the release wheel. The patch, derived binary hashes and timing boundaries are in the [measurement archive](https://github.com/LucaJiang/prusie-analysis/tree/main/02_benchmark/archive).
 <!-- current:identity:end -->
 
-The [benchmark summary](assets/benchmark/benchmark_summary.json) and
-[per-case records](assets/benchmark/benchmark_records.jsonl.gz) keep both timing
+The [benchmark summary](https://github.com/LucaJiang/prusie-analysis) and
+[per-case records](https://github.com/LucaJiang/prusie-analysis) keep both timing
 metrics, call timestamps, peak memory, iteration and convergence outcomes and
-numerical differences. The [LD-overwrite records](assets/benchmark/benchmark_overwrite_records.jsonl.gz)
-and [thread-scaling records](assets/benchmark/thread_scaling.json) hold the two
-supplementary experiments. The [protocol](assets/benchmark/benchmark_protocol.json)
+numerical differences. The [historical LD-overwrite records](https://github.com/LucaJiang/prusie/blob/50ce5117163113e55d2c35bd5826bd62d467d9d2/docs/assets/benchmark/benchmark_overwrite_records.jsonl.gz)
+and [historical package thread-scaling records](https://github.com/LucaJiang/prusie/blob/50ce5117163113e55d2c35bd5826bd62d467d9d2/docs/assets/benchmark/thread_scaling.json) hold the two
+supplementary experiments. The [protocol](https://github.com/LucaJiang/prusie-analysis)
 and [archive guide](reproducibility.md#benchmark-protocol) document how the
 measurements were made.
 
@@ -272,15 +272,13 @@ LD matrices and individual genotypes. Repeating the fits requires the aligned
 inputs and settings described in [Methods](#methods) and the
 [real-input guide](reproducibility.md#real-gwas-and-eqtl-inputs).
 
-From the repository root, redraw the figures and regenerate this page's tables
-from the published records:
+The [analysis repository](https://github.com/LucaJiang/prusie-analysis) regenerates
+manuscript tables and figures from published records without R or association
+inputs. The package keeps the figures displayed here and a compact
+[documentation summary](assets/benchmark/documentation_summary.json).
+
+From this package checkout, verify the retained tables with:
 
 ```sh
-python tools/benchmark/v030.py figures
-python tools/generate_results.py --pages docs/performance.md
+python tools/generate_results.py --check
 ```
-
-These commands need neither R nor association inputs and run no fits. Add
-`--check` to the second command to verify the generated text without rewriting
-it. The [reproducibility guide](reproducibility.md#tables-and-figures) lists the
-dependencies and the full documentation build.

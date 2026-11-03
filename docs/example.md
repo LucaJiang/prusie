@@ -253,7 +253,7 @@ spaced 1000 units apart.
 metadata with the packaged data, allowing documented bounds on floating-point
 rounding error. `load_example()` separately verifies SHA-256 hashes of the
 packaged inputs and metadata. See the
-[regeneration checks](reproducibility.md#regeneration-checks).
+[regeneration checks](reproducibility.md#tables-and-figures).
 
 The packaged reference was fitted separately with susieR 0.16.6 using matching
 inputs and fitting options. Input and reference-array hashes, parameters,

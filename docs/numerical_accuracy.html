@@ -120,7 +120,7 @@ matched summary statistics, LD and model settings; see the
 
 <p>Each case contributes its maximum absolute difference over the complete
 returned arrays; the table summarizes these maxima across cases. The
-<a href="assets/benchmark/benchmark_records.jsonl.gz">per-case records</a> give the
+<a href="https://github.com/LucaJiang/prusie-analysis">per-case records</a> give the
 differences for every case.</p>
 <figure class="doc-figure"><div class="figure-wrap" role="region" aria-label="Scientific figure" tabindex="0" data-scroll-label="Scroll horizontally to inspect the full figure."><img alt="Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, for GWAS and eQTL, with nonconverged cases marked." src="assets/benchmark/v030_numerical_agreement.svg" /></div><figcaption><a href="assets/benchmark/v030_numerical_agreement.svg">Open original figure</a></figcaption></figure>
 <p>The vertical axes are logarithmic. Exact zeros appear in a separate band at
@@ -299,10 +299,10 @@ with target posterior mass <code>coverage=0.95</code> and minimum absolute LD co
 <p>Counts come from the first retained call. Credible sets re-derived from the saved final alpha of both implementations with the susieR 0.16.6 rule contain the same variants in every case.</p>
 <!-- generated:cs:end -->
 
-<p>The <a href="assets/benchmark/cs_membership.tsv.gz">per-case membership table</a> lists
+<p>The <a href="https://github.com/LucaJiang/prusie-analysis">per-case membership table</a> lists
 the credible sets of both implementations and whether their members agree.
 Credible-set presence does not establish convergence. Interpret the sets
-alongside the <a href="assets/benchmark/benchmark_records.jsonl.gz">recorded convergence flags</a>
+alongside the <a href="https://github.com/LucaJiang/prusie-analysis">recorded convergence flags</a>
 and the <a href="results.html#credible-set-fields">credible-set fields</a>.</p>
 <h2 id="independent-toy-example">Independent toy example</h2>
 <p>The packaged toy example checks numerical agreement on a single simulated
@@ -318,15 +318,15 @@ also match the R reference for this example. See the <a href="example.html">toy 
 for the simulation method, fitting options and packaged reference, and the
 <a href="assets/toy_fit.pdf">vector PDF</a>.</p>
 <h2 id="reproduce-the-comparisons">Reproduce the comparisons</h2>
-<p>The <a href="assets/benchmark/benchmark_summary.json">benchmark summary</a> and
-<a href="assets/benchmark/benchmark_records.jsonl.gz">full per-case records</a> provide
+<p>The <a href="https://github.com/LucaJiang/prusie-analysis">benchmark summary</a> and
+<a href="https://github.com/LucaJiang/prusie-analysis">full per-case records</a> provide
 numerical errors and convergence diagnostics. The compared arrays come from the
 last retained call of each case (call seven for the 24 cases run under the
 earlier seven-call schedule, call three otherwise). Follow the
 <a href="reproducibility.html#tables-and-figures">regeneration instructions</a> to rebuild
 the tables and figures from retained measurements without refitting.</p>
-<p>The <a href="reproducibility.html#toy-example">offline toy checks</a> compare a prusie fit
-with the packaged R reference. The <a href="reproducibility.html#r-comparison">fresh susieR comparison</a>
+<p>The <a href="reproducibility.html#toy-r-comparison">offline toy checks</a> compare a prusie fit
+with the packaged R reference. The <a href="reproducibility.html#toy-r-comparison">fresh susieR comparison</a>
 fits both implementations using matched inputs and settings. Repeating the
 real-data comparisons requires the separately obtained
 <a href="reproducibility.html#real-gwas-and-eqtl-inputs">association summaries and LD</a>,

@@ -1,0 +1,97 @@
+{
+  "source_records_sha256": "ab6eb6e424c06b9ce734aadbf2e58176750a6bc4e0b7ffce171a2796f51f3f9c",
+  "analysis_repository": "https://github.com/LucaJiang/prusie-analysis",
+  "description": "Compact rendered numerical summaries for package documentation. Full observations and numerical regeneration are maintained in the analysis repository.",
+  "blocks": [
+    {
+      "page": "README.md",
+      "prefix": "current",
+      "key": "highlights",
+      "text": "Measured **prusie 0.3.0** against **susieR 0.16.6** on the same inputs.\n\n| Evaluated cases | Cases | Cumulative runtime ratio | Cumulative fitting-stage ratio | Median peak-memory ratio |\n| --- | --- | --- | --- | --- |\n| GWAS | 200 | 49.2\u00d7 | 55.4\u00d7 | 5.11\u00d7 |\n| eQTL | 14,157 | 26.6\u00d7 | 29.8\u00d7 | 4.60\u00d7 |\n\nThe cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](https://lucajiang.github.io/prusie/performance.html)."
+    },
+    {
+      "page": "docs/index.md",
+      "prefix": "current",
+      "key": "highlights",
+      "text": "Measured **prusie 0.3.0** against **susieR 0.16.6** on the same inputs.\n\n| Evaluated cases | Cases | Cumulative runtime ratio | Cumulative fitting-stage ratio | Median peak-memory ratio |\n| --- | --- | --- | --- | --- |\n| GWAS | 200 | 49.2\u00d7 | 55.4\u00d7 | 5.11\u00d7 |\n| eQTL | 14,157 | 26.6\u00d7 | 29.8\u00d7 | 4.60\u00d7 |\n\nThe cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](performance.md)."
+    },
+    {
+      "page": "docs/performance.md",
+      "prefix": "current",
+      "key": "highlights",
+      "text": "Measured **prusie 0.3.0** against **susieR 0.16.6** on the same inputs.\n\n| Evaluated cases | Cases | Cumulative runtime ratio | Cumulative fitting-stage ratio | Median peak-memory ratio |\n| --- | --- | --- | --- | --- |\n| GWAS | 200 | 49.2\u00d7 | 55.4\u00d7 | 5.11\u00d7 |\n| eQTL | 14,157 | 26.6\u00d7 | 29.8\u00d7 | 4.60\u00d7 |\n\nThe cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](performance.md)."
+    },
+    {
+      "page": "docs/performance.md",
+      "prefix": "generated",
+      "key": "panel",
+      "text": "The fixed panel contains **200 FinnGen R13 type 2 diabetes GWAS loci** (n = 486,019; 89,727 cases and 396,292 controls) and **14,157 GTEx v11 Whole_Blood genes** (n = 800). GWAS is fitted with the Gaussian RSS approximation. Every case is included, including iteration-limit fits and cases with no credible set. Gene windows and study participants overlap, so cases are not independent biological replicates.\n\n| Analysis | Cases | Variants per case | Cases where neither program converged |\n| --- | --- | --- | --- |\n| GWAS | 200 | 1,575 to 19,221 | 0 |\n| eQTL | 14,157 | 7 to 6,862 | 224 |"
+    },
+    {
+      "page": "docs/performance.md",
+      "prefix": "current",
+      "key": "runtime",
+      "text": "\n| Analysis | Metric | Cumulative susieR/prusie ratio | Per-case ratio, median [IQR] | prusie total | susieR total | Cases faster with prusie |\n| --- | --- | --- | --- | --- | --- | --- |\n| GWAS | Complete call | 49.2\u00d7 | 47.7\u00d7 [38.0-58.8] | 2.7 min | 1.91 h | 200 / 200 |\n| GWAS | Fitting stage | 55.4\u00d7 | 57.3\u00d7 [42.4-74.5] | 2.3 min | 1.86 h | 200 / 200 |\n| eQTL | Complete call | 26.6\u00d7 | 27.5\u00d7 [23.3-32.6] | 48.0 min | 21.28 h | 14,157 / 14,157 |\n| eQTL | Fitting stage | 29.8\u00d7 | 35.2\u00d7 [26.9-47.0] | 41.1 min | 20.39 h | 14,157 / 14,157 |"
+    },
+    {
+      "page": "docs/performance.md",
+      "prefix": "current",
+      "key": "variability",
+      "text": "\n| Analysis | Backend | Median repeat IQR/median | Cases with a call >2\u00d7 its case median | Share of total time in those calls |\n| --- | --- | --- | --- | --- |\n| GWAS | prusie | 0.0128 | 0 | 0% |\n| GWAS | susieR | 0.00668 | 2 | 15.2% |\n| eQTL | prusie | 0.0231 | 0 | 0% |\n| eQTL | susieR | 0.021 | 0 | 0% |"
+    },
+    {
+      "page": "docs/performance.md",
+      "prefix": "current",
+      "key": "memory",
+      "text": "\n| Analysis | Backend | Peak RSS, median across cases (MiB) | Cases |\n| --- | --- | --- | --- |\n| GWAS | prusie | 335 | 200 |\n| GWAS | susieR | 1.79e+03 | 200 |\n| eQTL | prusie | 198 | 14,157 |\n| eQTL | susieR | 880 | 14,157 |"
+    },
+    {
+      "page": "docs/performance.md",
+      "prefix": "current",
+      "key": "threads",
+      "text": "\n| Threads | Median time / one-thread time | Faster / tied / slower, out of 87 |\n| --- | --- | --- |\n| 2 | 0.799 | 87 / 0 / 0 |\n| 4 | 0.735 | 87 / 0 / 0 |\n| 8 | 0.783 | 79 / 0 / 8 |"
+    },
+    {
+      "page": "docs/performance.md",
+      "prefix": "current",
+      "key": "overwrite",
+      "text": "\n| Loci | Equal peaks | Lower with overwrite | Higher with overwrite | Largest gap |\n| --- | --- | --- | --- | --- |\n| 200 | 198 | 0 | 2 | 12 KiB |"
+    },
+    {
+      "page": "docs/performance.md",
+      "prefix": "current",
+      "key": "scaling",
+      "text": "\n| Leading variants | Backend | Complete-call median (s) | Fitting-stage median (s) | Iterations | Peak RSS (MiB) |\n| --- | --- | --- | --- | --- | --- |\n| 500 | prusie | 0.0105 | 0.00966 | 14 | 132 |\n| 500 | susieR | 0.463 | 0.46 | 14 | 285 |\n| 1,000 | prusie | 0.0231 | 0.0206 | 15 | 132 |\n| 1,000 | susieR | 1.29 | 1.28 | 15 | 354 |\n| 2,000 | prusie | 0.0403 | 0.0298 | 5 | 147 |\n| 2,000 | susieR | 1.26 | 1.22 | 5 | 505 |\n| 4,000 | prusie | 0.169 | 0.127 | 11 | 251 |\n| 4,000 | susieR | 10.2 | 9.94 | 11 | 1.33e+03 |\n| 10,000 | prusie | 1.02 | 0.795 | 17 | 915 |\n| 10,000 | susieR | 59.3 | 58 | 17 | 5.43e+03 |\n| 19,221 | prusie | 5.84 | 4.92 | 28 | 3.09e+03 |\n| 19,221 | susieR | 415 | 408 | 28 | 1.94e+04 |"
+    },
+    {
+      "page": "docs/performance.md",
+      "prefix": "current",
+      "key": "identity",
+      "text": "- Release code: `6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7`\n- Release wheel SHA-256: `85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59`\n- Release native extension SHA-256: `a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e`\n- Benchmark protocol SHA-256: `3893ec7f92fc042f15eade88a4c27a452835bf3285dfda037d6133c55fc56825` (hash of the protocol file as executed; the published copy was later edited only to remove host names, so its bytes differ)\n- Statistical reference: R 4.4.0; susieR 0.16.6, `8e56a8e038e989856d106d9ca5175cc664fea9d2`.\n\nBoth runtime metrics use timing-instrumented copies of these release artifacts; the instrumented native binary is not byte-identical to the release wheel. The patch, derived binary hashes and timing boundaries are in the [measurement archive](https://github.com/LucaJiang/prusie-analysis/tree/main/02_benchmark/archive)."
+    },
+    {
+      "page": "docs/numerical_accuracy.md",
+      "prefix": "generated",
+      "key": "maxima",
+      "text": "\n| Analysis | Cases | Per-case max &#124;\u0394alpha&#124;, median [IQR] | Cases \u2264 1e-8 | Largest | Per-case max &#124;\u0394PIP&#124;, median | Largest |\n| --- | --- | --- | --- | --- | --- | --- |\n| GWAS | 200 | 8.7e-10 [3.36e-10, 1.9e-09] | 96.5% | 4.05e-08 | 7.5e-10 | 4.05e-08 |\n| eQTL | 14,157 | 7.29e-10 [2.41e-10, 1.61e-09] | 98.8% | 4.35e-05 | 4.95e-10 | 0.000243 |"
+    },
+    {
+      "page": "docs/numerical_accuracy.md",
+      "prefix": "generated",
+      "key": "limits",
+      "text": "\n| Analysis | prusie nonconverged | susieR nonconverged |\n| --- | --- | --- |\n| GWAS | 0 | 0 |\n| eQTL | 224 | 224 |\n\nNonconverged fits stopped at `max_iter=100`. They remain in every runtime and memory summary."
+    },
+    {
+      "page": "docs/numerical_accuracy.md",
+      "prefix": "generated",
+      "key": "errors",
+      "text": "\n| Case | Variants | Max &#124;\u0394alpha&#124; | Max &#124;\u0394PIP&#124; | Iterations (prusie / susieR) | Converged | Credible sets (prusie / susieR) |\n| --- | --- | --- | --- | --- | --- | --- |\n| ENSG00000110203.10 | 3,042 | 4.35e-05 | 4.35e-05 | 100 / 100 | neither | 9 / 9 |\n| ENSG00000164741.15 | 6,644 | 1.59e-05 | 1.59e-05 | 100 / 100 | neither | 8 / 8 |\n| ENSG00000131238.18 | 2,967 | 2.94e-06 | 9.47e-08 | 100 / 100 | neither | 10 / 10 |\n| ENSG00000243264.3 | 1,031 | 2.45e-06 | 2.45e-06 | 100 / 100 | neither | 7 / 7 |\n| ENSG00000293517.2 | 2,387 | 2.25e-06 | 8.61e-07 | 100 / 100 | neither | 7 / 7 |\n| ENSG00000242371.1 | 1,590 | 1.4e-06 | 1.17e-06 | 100 / 100 | neither | 9 / 9 |"
+    },
+    {
+      "page": "docs/numerical_accuracy.md",
+      "prefix": "generated",
+      "key": "cs",
+      "text": "\n| Analysis | Backend | Credible sets | Cases with no credible set |\n| --- | --- | --- | --- |\n| GWAS | prusie | 1,139 | 7 |\n| GWAS | susieR | 1,139 | 7 |\n| eQTL | prusie | 14,207 | 5,049 |\n| eQTL | susieR | 14,207 | 5,049 |\n\nCounts come from the first retained call. Credible sets re-derived from the saved final alpha of both implementations with the susieR 0.16.6 rule contain the same variants in every case."
+    }
+  ]
+}

@@ -73,7 +73,7 @@ one numerical thread on exclusive AMD EPYC 7742 nodes.</p>
 <p>The cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see <a href="performance.html">performance</a>.</p>
 <!-- current:highlights:end -->
 
-<p>The <a href="assets/benchmark/benchmark_protocol.json">protocol</a> records the timing
+<p>The <a href="https://github.com/LucaJiang/prusie-analysis">protocol</a> records the timing
 boundaries and software identities; <a href="#reproducibility">reproducibility</a>
 identifies the release and its timing-instrumented copy.
 <a href="numerical_accuracy.html">Numerical accuracy</a> reports agreement with susieR
@@ -284,7 +284,7 @@ took more than twice their case medians and account for 15.2% of the cumulative
 susieR GWAS time. Replacing each by its case median changes the cumulative GWAS
 ratio from 49.2× to 43.0×. Both calls are kept and listed with their
 timestamps in the
-<a href="assets/benchmark/archive/extreme_retained_calls.json">archive</a>.</p>
+<a href="https://github.com/LucaJiang/prusie-analysis">archive</a>.</p>
 <h3 id="memory">Memory</h3>
 <!-- current:memory:start -->
 
@@ -529,7 +529,7 @@ paths, not independent loci or a complexity law.</p>
 monotonically with the number of variants. The susieR runtime and peak-memory
 values at 10,000 variants come from a dedicated replay on the same node and
 core, because one of the original retained calls stalled outside the solver; see
-<a href="assets/benchmark/window10000_retime.json">window10000_retime.json</a>.</p>
+<a href="https://github.com/LucaJiang/prusie-analysis">window10000_retime.json</a>.</p>
 <h2 id="reproducibility">Reproducibility</h2>
 <!-- current:identity:start -->
 <ul>
@@ -539,31 +539,28 @@ core, because one of the original retained calls stalled outside the solver; see
 <li>Benchmark protocol SHA-256: <code>3893ec7f92fc042f15eade88a4c27a452835bf3285dfda037d6133c55fc56825</code> (hash of the protocol file as executed; the published copy was later edited only to remove host names, so its bytes differ)</li>
 <li>Statistical reference: R 4.4.0; susieR 0.16.6, <code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>.</li>
 </ul>
-<p>Both runtime metrics use timing-instrumented copies of these release artifacts; the instrumented native binary is not byte-identical to the release wheel. The patch, derived binary hashes and timing boundaries are in the <a href="reproducibility.html#benchmark-protocol">measurement archive</a>.</p>
+<p>Both runtime metrics use timing-instrumented copies of these release artifacts; the instrumented native binary is not byte-identical to the release wheel. The patch, derived binary hashes and timing boundaries are in the <a href="https://github.com/LucaJiang/prusie-analysis/tree/main/02_benchmark/archive">measurement archive</a>.</p>
 <!-- current:identity:end -->
 
-<p>The <a href="assets/benchmark/benchmark_summary.json">benchmark summary</a> and
-<a href="assets/benchmark/benchmark_records.jsonl.gz">per-case records</a> keep both timing
+<p>The <a href="https://github.com/LucaJiang/prusie-analysis">benchmark summary</a> and
+<a href="https://github.com/LucaJiang/prusie-analysis">per-case records</a> keep both timing
 metrics, call timestamps, peak memory, iteration and convergence outcomes and
-numerical differences. The <a href="assets/benchmark/benchmark_overwrite_records.jsonl.gz">LD-overwrite records</a>
-and <a href="assets/benchmark/thread_scaling.json">thread-scaling records</a> hold the two
-supplementary experiments. The <a href="assets/benchmark/benchmark_protocol.json">protocol</a>
+numerical differences. The <a href="https://github.com/LucaJiang/prusie/blob/50ce5117163113e55d2c35bd5826bd62d467d9d2/docs/assets/benchmark/benchmark_overwrite_records.jsonl.gz">historical LD-overwrite records</a>
+and <a href="https://github.com/LucaJiang/prusie/blob/50ce5117163113e55d2c35bd5826bd62d467d9d2/docs/assets/benchmark/thread_scaling.json">historical package thread-scaling records</a> hold the two
+supplementary experiments. The <a href="https://github.com/LucaJiang/prusie-analysis">protocol</a>
 and <a href="reproducibility.html#benchmark-protocol">archive guide</a> document how the
 measurements were made.</p>
 <p>These records keep locus and gene identifiers but omit association statistics,
 LD matrices and individual genotypes. Repeating the fits requires the aligned
 inputs and settings described in <a href="#methods">Methods</a> and the
 <a href="reproducibility.html#real-gwas-and-eqtl-inputs">real-input guide</a>.</p>
-<p>From the repository root, redraw the figures and regenerate this page's tables
-from the published records:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/benchmark/v030.py<span class="w"> </span>figures
-python<span class="w"> </span>tools/generate_results.py<span class="w"> </span>--pages<span class="w"> </span>docs/performance.md
-</code></pre></div>
-
-<p>These commands need neither R nor association inputs and run no fits. Add
-<code>--check</code> to the second command to verify the generated text without rewriting
-it. The <a href="reproducibility.html#tables-and-figures">reproducibility guide</a> lists the
-dependencies and the full documentation build.</p></article>
+<p>The <a href="https://github.com/LucaJiang/prusie-analysis">analysis repository</a> regenerates
+manuscript tables and figures from published records without R or association
+inputs. The package keeps the figures displayed here and a compact
+<a href="assets/benchmark/documentation_summary.json">documentation summary</a>.</p>
+<p>From this package checkout, verify the retained tables with:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/generate_results.py<span class="w"> </span>--check
+</code></pre></div></article>
 <footer><p>prusie 0.3.1 · Wenxin Jiang</p></footer>
 </main>
 </div>

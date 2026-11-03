@@ -67,7 +67,7 @@ matched summary statistics, LD and model settings; see the
 
 Each case contributes its maximum absolute difference over the complete
 returned arrays; the table summarizes these maxima across cases. The
-[per-case records](assets/benchmark/benchmark_records.jsonl.gz) give the
+[per-case records](https://github.com/LucaJiang/prusie-analysis) give the
 differences for every case.
 
 ![Each case's maximum absolute alpha difference (top) and PIP difference (bottom) against variant count, for GWAS and eQTL, with nonconverged cases marked.](assets/benchmark/v030_numerical_agreement.svg)
@@ -153,10 +153,10 @@ with target posterior mass `coverage=0.95` and minimum absolute LD correlation
 Counts come from the first retained call. Credible sets re-derived from the saved final alpha of both implementations with the susieR 0.16.6 rule contain the same variants in every case.
 <!-- generated:cs:end -->
 
-The [per-case membership table](assets/benchmark/cs_membership.tsv.gz) lists
+The [per-case membership table](https://github.com/LucaJiang/prusie-analysis) lists
 the credible sets of both implementations and whether their members agree.
 Credible-set presence does not establish convergence. Interpret the sets
-alongside the [recorded convergence flags](assets/benchmark/benchmark_records.jsonl.gz)
+alongside the [recorded convergence flags](https://github.com/LucaJiang/prusie-analysis)
 and the [credible-set fields](results.md#credible-set-fields).
 
 ## Independent toy example
@@ -178,16 +178,16 @@ for the simulation method, fitting options and packaged reference, and the
 
 ## Reproduce the comparisons
 
-The [benchmark summary](assets/benchmark/benchmark_summary.json) and
-[full per-case records](assets/benchmark/benchmark_records.jsonl.gz) provide
+The [benchmark summary](https://github.com/LucaJiang/prusie-analysis) and
+[full per-case records](https://github.com/LucaJiang/prusie-analysis) provide
 numerical errors and convergence diagnostics. The compared arrays come from the
 last retained call of each case (call seven for the 24 cases run under the
 earlier seven-call schedule, call three otherwise). Follow the
 [regeneration instructions](reproducibility.md#tables-and-figures) to rebuild
 the tables and figures from retained measurements without refitting.
 
-The [offline toy checks](reproducibility.md#toy-example) compare a prusie fit
-with the packaged R reference. The [fresh susieR comparison](reproducibility.md#r-comparison)
+The [offline toy checks](reproducibility.md#toy-r-comparison) compare a prusie fit
+with the packaged R reference. The [fresh susieR comparison](reproducibility.md#toy-r-comparison)
 fits both implementations using matched inputs and settings. Repeating the
 real-data comparisons requires the separately obtained
 [association summaries and LD](reproducibility.md#real-gwas-and-eqtl-inputs),

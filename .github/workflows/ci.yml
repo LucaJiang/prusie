@@ -103,6 +103,7 @@ jobs:
       - run: python -m pytest tests
       - run: python examples/quickstart.py
       - if: matrix.os == 'ubuntu-24.04' && matrix.python == '3.12' && matrix.variant == 'default'
+        name: Check retained toy comparison helpers
         run: python -m pytest tools/benchmark/_internal
       - if: matrix.os == 'ubuntu-24.04' && matrix.python == '3.13'
         run: cargo test --locked -- --test-threads=1

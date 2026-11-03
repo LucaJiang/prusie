@@ -118,12 +118,12 @@ GitHub Release. This workflow does not upload to PyPI.
 
 ## Benchmark scripts
 
-`tools/benchmark/reproduce.py` runs new comparisons with pinned susieR;
-helper drivers live in `tools/benchmark/_internal/`. The
-[comparison guide](https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md)
-describes inputs and options. Use `python tools/benchmark/v030.py figures`
-to redraw the 0.3.0 figures from retained records without fitting; see
-[reproducibility](reproducibility.md).
+`tools/benchmark/reproduce.py` runs the toy comparison against pinned susieR.
+See its [guide](https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md).
+Manuscript inputs, measurements and figure regeneration live in
+[prusie-analysis](https://github.com/LucaJiang/prusie-analysis).
+Package documentation tables use `docs/assets/benchmark/documentation_summary.json`;
+check them with `python tools/generate_results.py --check`.
 
 Before measuring an optimization against its immediate parent, freeze its
 case panel, applicability rule, fitting settings and hardware. Require

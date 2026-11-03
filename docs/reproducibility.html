@@ -25,334 +25,63 @@
 <ul>
 <li><a href="#tables-and-figures">Tables and figures</a></li>
 <li><a href="#benchmark-protocol">Benchmark protocol</a></li>
-<li><a href="#toy-example">Toy example</a><ul>
-<li><a href="#regeneration-checks">Regeneration checks</a></li>
-<li><a href="#r-comparison">R comparison</a></li>
-</ul>
-</li>
 <li><a href="#real-gwas-and-eqtl-inputs">Real GWAS and eQTL inputs</a></li>
-<li><a href="#software-and-references">Software and references</a></li>
+<li><a href="#toy-r-comparison">Toy R comparison</a></li>
 </ul>
 </div>
 </details><h1 id="reproducibility">Reproducibility</h1>
-<p>Reproducing a fine-mapping fit from summary statistics requires the same
-aligned association summaries, LD matrix, variant order and fitting settings.
-The <a href="#real-gwas-and-eqtl-inputs">real GWAS and eQTL inputs</a> must be obtained
-separately from their sources.</p>
-<p>The repository includes <a href="#tables-and-figures">measurement records</a> for
-regenerating the published benchmark tables and figures, and a
-<a href="#toy-example">packaged toy example</a> that runs offline.</p>
+<p>The <a href="https://github.com/LucaJiang/prusie-analysis">prusie-analysis repository</a>
+contains the manuscript input-preparation code, benchmark harness, exact archived
+scripts, published measurements and figure/table generators.</p>
 <h2 id="tables-and-figures">Tables and figures</h2>
-<p>The published benchmark tables and figures can be regenerated from retained
-measurements without R or the association inputs. From the repository root,
-with Node.js available for
-<a href="contributing.html#editing-and-building-documentation">documentation rendering</a>,
-run:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>tools/docs-requirements.txt
-python<span class="w"> </span>tools/model_examples.py
-python<span class="w"> </span>tools/benchmark/v030.py<span class="w"> </span>figures
-python<span class="w"> </span>tools/generate_results.py
+<p>Level A in the analysis repository regenerates the manuscript outputs from
+published records alone, without R, association data or refitting:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/LucaJiang/prusie-analysis.git
+<span class="nb">cd</span><span class="w"> </span>prusie-analysis
+python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>environment/requirements-level-a.txt
+make<span class="w"> </span>all
+</code></pre></div>
+
+<p>This package retains the figures displayed in its documentation and a compact
+<a href="assets/benchmark/documentation_summary.json">documentation summary</a>. From the
+package checkout, verify the tables and render the site with:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/generate_results.py<span class="w"> </span>--check
 python<span class="w"> </span>tools/build_docs.py
 </code></pre></div>
 
-<p><code>tools/model_examples.py</code> updates the explanatory calculations. The figure
-command writes SVG and PDF files to <code>docs/assets/benchmark/</code>.
-<code>tools/generate_results.py</code> updates the generated measurement tables and text.
-Add <code>--check</code> to <code>tools/model_examples.py</code> or
-<code>tools/generate_results.py</code> to check its generated Markdown without rewriting it.</p>
-<p>The records in <code>docs/assets/benchmark/</code> are:</p>
-<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
-<thead>
-<tr>
-<th>File</th>
-<th>Contents</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="assets/benchmark/benchmark_records.jsonl.gz">benchmark_records.jsonl.gz</a></td>
-<td>All 14,363 cases: three retained complete-call and fitting-stage times per backend, timestamps, peak memory, iteration and convergence outcomes and numerical differences.</td>
-</tr>
-<tr>
-<td><a href="assets/benchmark/benchmark_summary.json">benchmark_summary.json</a></td>
-<td>Panel summaries, variant-count quintiles and repeat variability.</td>
-</tr>
-<tr>
-<td><a href="assets/benchmark/benchmark_protocol.json">benchmark_protocol.json</a></td>
-<td>Measurement protocol and artifact hashes.</td>
-</tr>
-<tr>
-<td><a href="assets/benchmark/cs_membership.tsv.gz">cs_membership.tsv.gz</a></td>
-<td>Per-case credible sets of both implementations, derived from the saved final alpha with the susieR 0.16.6 rule (coverage 0.95, minimum absolute LD correlation 0.5), and whether their members agree.</td>
-</tr>
-<tr>
-<td><a href="assets/benchmark/window10000_retime.json">window10000_retime.json</a></td>
-<td>Dedicated susieR replay for the 10,000-variant nested window.</td>
-</tr>
-<tr>
-<td><a href="assets/benchmark/benchmark_overwrite_records.jsonl.gz">benchmark_overwrite_records.jsonl.gz</a></td>
-<td>Paired single-call peak memory with <code>overwrite_ld</code> disabled and enabled for 200 GWAS loci.</td>
-</tr>
-<tr>
-<td><a href="assets/benchmark/thread_scaling.json">thread_scaling.json</a></td>
-<td>Paired runtimes with <code>n_threads</code> 2, 4 and 8 against one thread for 87 cases.</td>
-</tr>
-<tr>
-<td><a href="assets/benchmark/release_qualification.json">release_qualification.json</a></td>
-<td>Release numerical checks against fixed susieR references on 184 cases.</td>
-</tr>
-</tbody>
-</table></div>
-<p>These records contain case identifiers and measurements; association
-statistics, LD matrices and individual genotypes are not included.</p>
 <h2 id="benchmark-protocol">Benchmark protocol</h2>
-<p>The full panel is 200 GWAS loci, 14,157 eQTL genes and six nested windows of one
-GWAS locus. Each backend starts a fresh process, loads inputs untimed, makes
-one warmup and three retained calls, and records both timing metrics from each
-call. Backends run sequentially on one pinned physical core, with seeded,
-balanced order. Exclusive nodes use AMD EPYC 7742 processors. One lane per L3
-domain leaves the other cores in that domain idle; a separate domain serves
-the coordinator. NUMA binding, topology, node identity, host samples and
-per-call timestamps are retained. One numerical thread is enforced in both
-backends, and the R BLAS probe verifies one thread.
-The measured nodes were cpunode-011, cpunode-015 and cpunode-029, with 31 timing
-lanes each. All lane probes used NUMA memory binding. Frequency and governor
-sysfs readings were unavailable, so no fixed-frequency claim is made.</p>
-<p>The signed LD is built on the compute node with PLINK 1.9.0 (27 September
-2026), <code>--r square bin</code>, <code>--threads 1</code>, frozen variants/order and counted
-alleles. The reference has no missing genotypes for the selected samples.
-The EUR sample list contains one nonfounder; <code>--make-founders</code> includes all
-525 selected samples in this calculation. Genotype/reference receipts are
-verified before staging. The 24-case fidelity sample checks signs and the
-maximum absolute difference from the prepared LD; its observed maximum is
-<span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.15</mn><mo>×</mo><msup><mn>10</mn><mrow><mo>−</mo><mn>14</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.15\times10^{-14}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">2.15</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord">1</span><span class="mord"><span class="mord">0</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight">14</span></span></span></span></span></span></span></span></span></span></span></span></span>. This establishes rounding-level agreement on the
-sample, not bitwise equality or an unmeasured full-panel LD comparison.</p>
-<p>Complete-call timing includes validation and preparation. Fitting-stage
-measurement starts after input/LD preparation and includes initialization,
-IBSS/SER, convergence/ELBO, and final posterior/credible-set construction.
-R measures from immediately before <code>susie_workhorse</code> to the final public
-return. Native timing combines directly measured initialization/solver,
-output-export and Python-finalization spans. It includes implicit Gram
-scaling during matrix-vector products; R constructs its scaled Gram matrix
-in preparation. Minor scalar checks and final-CS submatrix normalization
-remain in the fitting stage. Small transitions between native spans are
-omitted. No separately measured cost is subtracted.</p>
-<p>The <a href="assets/benchmark/archive/README.txt">archived harness and instrumentation</a>
-include exact frozen scripts, patches, hashes and boundary notes. They retain
-cluster paths and are an execution archive, not a portable cluster installer.
-The original release artifacts remain unchanged. Eight representative cases
-were compared against the original artifacts before formal timing; final
-alpha/PIP arrays were bitwise unchanged, with matching recorded iterations,
-convergence and CS counts. Complete-call timing shifts are reported in
-<a href="performance.html#methods">Methods</a>; negligible overhead is not assumed.</p>
-<p>Protocol v1 initially retained seven calls. At the repeat-count amendment,
-24 completed cases were preserved and contribute their first three retained
-times. Their saved final alpha/PIP arrays are from retained repeat seven;
-other cases save retained repeat three. Thirty-one in-flight cases were
-aborted and restarted under v2 solely because of this amendment. Completed
-raw outputs and claims were preserved; some unarchived node-local partial
-outputs from those aborted cases could not be recovered. The archive records
-that limitation and does not treat those cases as outcome-based reruns.</p>
-<p>Only operational failures permit a whole-case retry with identical settings.
-The 19,221-variant nested window required one retry after R was killed by a
-NUMA-local out-of-memory event. The failed attempt is preserved; the whole
-case completed on another node with the same protocol. Node-wide memory
-admission did not guarantee enough free memory within each NUMA domain.
-Every fixed case remains in the summaries. Peak memory comes from the
-high-water marks of these same backend processes.</p>
-<p>One retained susieR call for the 10,000-variant nested window took 1,576 s,
-while its fitting stage took 70 s. The published susieR runtime and peak-memory
-values for that window come from a dedicated replay on the same node and core: two fresh R processes
-with one warm-up and three, then seven, retained calls; all ten agreed within
-0.6%. <a href="assets/benchmark/window10000_retime.json">window10000_retime.json</a>
-records the replay.</p>
-<h2 id="toy-example">Toy example</h2>
-<p>Use the packaged synthetic toy example to repeat a small fit offline. The
-wheel includes inputs, metadata, checksums and a separate susieR reference
-under <code>prusie/data/toy</code>. The <a href="example.html">toy example tutorial</a> describes the
-data and analysis.</p>
-<p><code>prusie.load_example()</code> verifies the SHA-256 hashes of <code>inputs.npz</code> and
-<code>metadata.json</code>, then returns inputs, fitting parameters and generation
-metadata. Inspect the reference metadata separately:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">importlib.resources</span><span class="w"> </span><span class="kn">import</span> <span class="n">files</span>
-
-<span class="n">resources</span> <span class="o">=</span> <span class="n">files</span><span class="p">(</span><span class="s2">&quot;prusie&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;data/toy&quot;</span><span class="p">)</span>
-<span class="n">reference</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">resources</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;reference.json&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">reference</span><span class="p">[</span><span class="s2">&quot;susieR_version&quot;</span><span class="p">],</span> <span class="n">reference</span><span class="p">[</span><span class="s2">&quot;susieR_commit&quot;</span><span class="p">])</span>
-</code></pre></div>
-
-<p>From a checkout with prusie and pytest installed:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>examples/quickstart.py
-python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_packaged_example.py
-python<span class="w"> </span>tools/generate_example.py<span class="w"> </span>--check
-</code></pre></div>
-
-<p>These commands need no R installation.</p>
-<h3 id="regeneration-checks">Regeneration checks</h3>
-<p><code>tools/generate_example.py --check</code> regenerates the checkout's arrays in memory
-and checks their names, shapes, dtypes, finiteness and values. It uses zero
-relative tolerance and the following absolute tolerances:</p>
-<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
-<thead>
-<tr>
-<th>Array</th>
-<th>Absolute tolerance</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>z-scores (<code>z</code>)</td>
-<td><code>8e-14</code></td>
-</tr>
-<tr>
-<td>LD correlations (<code>R</code>)</td>
-<td><code>5e-15</code></td>
-</tr>
-<tr>
-<td>Marginal effects (<code>bhat</code>)</td>
-<td><code>3e-15</code></td>
-</tr>
-<tr>
-<td>Standard errors (<code>shat</code>)</td>
-<td><code>1e-16</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>True effects (<code>true_beta</code>) and synthetic coordinates (<code>position</code>) must match
-exactly. Generation metadata must also match, apart from the running NumPy
-version. The frozen metadata records NumPy 2.2.6 and is left unchanged.</p>
-<p>To regenerate the inputs in a separate directory, run:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/generate_example.py<span class="w"> </span>--output-dir<span class="w"> </span>new-toy-inputs
-</code></pre></div>
-
-<p>New metadata records the NumPy version used. The check compares array content
-independently of compressed archive encoding. Preserve the original inputs
-and reference files.</p>
-<h3 id="r-comparison">R comparison</h3>
-<p>For a fresh comparison, install jsonlite and susieR 0.16.6 at the commit
-recorded in <code>reference.json</code>. Verify both the package version and source
-commit, then choose a new output directory:</p>
-<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/benchmark/reproduce.py<span class="w"> </span>--rscript<span class="w"> </span>Rscript<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--validation-only<span class="w"> </span>--output-dir<span class="w"> </span>new-reference-comparison
-</code></pre></div>
-
-<p><code>--validation-only</code> fits both implementations on the toy inputs and writes
-results and numerical comparisons below the new directory. It omits the
-timing and memory series and requires no BLAS-probe compilation. It reports the
-<a href="model.html#computational-compatibility">complete-alpha comparison</a>; PIP and
-credible-set differences are reported separately. The
-<a href="https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md">comparison guide</a>
-describes the output records, timing and memory protocols, and portable input
-format.</p>
+<p>The measurements compare prusie 0.3.0 with susieR 0.16.6 at commit
+<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>. Complete-call timing accepts loaded
+arrays through returned results; imports, input reads, LD construction and
+serialization are excluded. Fitting-stage timers were added to both implementations.
+The instrumented native binary differs from the release wheel.</p>
+<p>The <a href="https://github.com/LucaJiang/prusie-analysis/tree/main/02_benchmark">protocol and exact scripts</a>
+record the timing boundaries, numerical settings, repetition counts and artifact
+identities. The analysis repository distinguishes the original nested-window
+measurements from the dedicated ten-call R replay at 10,000 variants.</p>
+<p>Runtime ratios and process-memory boundaries are described in
+<a href="performance.html">Performance</a>. Numerical differences, nonconverged fits and the
+component-activity PIP discrepancy are described in
+<a href="numerical_accuracy.html">Numerical accuracy</a>.</p>
 <h2 id="real-gwas-and-eqtl-inputs">Real GWAS and eQTL inputs</h2>
-<p>The primary real-data comparison uses the following association summaries on
-GRCh38. Here <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span></span> is the study sample size, separate from the LD reference
-sample count.</p>
-<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
-<thead>
-<tr>
-<th>Association source</th>
-<th>Analyses</th>
-<th>Study <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span></span></th>
-<th>LD reference samples</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="https://finngen.gitbook.io/documentation/data-download">FinnGen R13</a>, type 2 diabetes (<code>T2D</code>)</td>
-<td>200 loci</td>
-<td>486,019</td>
-<td>99 Finnish (FIN)</td>
-</tr>
-<tr>
-<td><a href="https://gtexportal.org/home/downloads/adult-gtex/qtl">GTEx v11</a>, Whole_Blood</td>
-<td>14,157 genes</td>
-<td>800</td>
-<td>525 European (EUR)</td>
-</tr>
-</tbody>
-</table></div>
-<p>For the binary GWAS, <span class="arithmatex"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span></span> is the total number of cases and controls, and RSS
-uses a Gaussian approximation. The GTEx inputs use the released all-pairs
-nominal cis-eQTL associations for each selected gene before variant QC.</p>
-<p>LD was computed from the
-<a href="https://www.internationalgenome.org/data-portal/data-collection/1000genomes_30x/">IGSR high-coverage collection</a>,
-release <code>20220422_3202_phased_SNV_INDEL_SV</code>, after excluding first- and
-second-degree relatives using the release-specific sample exclusion list.
-EUR describes the LD reference; the GTEx association cohort was not restricted
-to European ancestry. External LD can differ from study LD. Gene windows and
-study participants overlap, so cases are not independent biological replications.</p>
-<p>Preparation retained nonpalindromic SNPs with minor allele frequency at least
-0.05 in both study and reference, reference missingness at most 0.02 and
-reference Hardy–Weinberg mid-p value at least <code>1e-6</code>, together with sequence,
-allele and duplicate checks. Signed effect estimates divided by their standard
-errors were aligned to the reference counted ALT allele to form <code>z</code>.
-<a href="inputs.html#variant-order-and-alleles">Variant order and alleles</a> describes the
-alignment required by the fitting API.</p>
-<p>To repeat a fit, preserve the source release, genome build, sample selection,
-variant filters, allele orientation, ordered variant IDs, input hashes and
-fitting parameters. The
-<a href="https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md#portable-single-case-format">portable case format</a>
-records signed summaries, LD and ordered IDs with explicit fitting settings.
-Downloaded revisions or newly constructed LD panels define different inputs.</p>
-<h2 id="software-and-references">Software and references</h2>
-<p>The AMD EPYC 7742 runtime environment uses CPython 3.12.4, NumPy 1.26.4 and R
-4.4.0. NumPy loads OpenBLAS 0.3.23.dev; R uses OpenBLAS 0.3.20, with the
-loaded library identities and thread probes recorded in the archive.</p>
-<div class="table-wrap" role="region" aria-label="Data table" tabindex="0" data-scroll-label="Scroll horizontally to view all columns."><table>
-<thead>
-<tr>
-<th>Runtime artifact</th>
-<th>SHA-256</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Original frozen 0.3.0 wheel, code <code>6d60d5e5723461c3e1fc5a46fd0a0e7b6378cfa7</code></td>
-<td><code>85285c26c1f6ae3caaed99c4d7766ede7f0083ea98eb2d26b7763d8654840b59</code></td>
-</tr>
-<tr>
-<td>Timing-instrumented wheel derived from that release</td>
-<td><code>ea54f79bae02240370811345ac34d751b6c58f4affd54477b31d649f90fd0af8</code></td>
-</tr>
-<tr>
-<td>Timing-instrumented native extension</td>
-<td><code>95b764e5c99c4c1c851c0c8b5d1aa9a4577201a826ad2db6eb436bae635df577</code></td>
-</tr>
-<tr>
-<td>Native timing patch</td>
-<td><code>f558de65c0eb3a6d7047f30a2c0f9a84e944616a42e921a51a2d5387df8ec8c2</code></td>
-</tr>
-<tr>
-<td>R timing helper</td>
-<td><code>7e688f6cb146befe3f37ce2bd95a966c2f811e11180cdadd25515420a9158e6a</code></td>
-</tr>
-<tr>
-<td>PLINK binary</td>
-<td><code>47ce3069a1349128bdc5193aa8af33ec20dc99ece920843c80453c34eea1a062</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>All formal fits use <code>refine=False</code>. The release native extension has SHA-256
-<code>a9d377e45583b654ddfbe8323a783e32a61bf042c755cb26c3873f2065ed0b3e</code>; the
-timing-instrumented binary is distinct. See
-<a href="numerical_accuracy.html">numerical accuracy</a> for the release qualification and
-the full-panel comparison.</p>
-<p>The numerical reference is susieR 0.16.6 at commit
-<code>8e56a8e038e989856d106d9ca5175cc664fea9d2</code>; the
-<a href="model.html#computational-compatibility">model page</a> defines the comparison
-criterion. The <a href="#toy-example">packaged toy reference</a> records this R source
-and SHA-256 hashes for the raw reference record and reference arrays.</p>
-<p>The <a href="https://github.com/LucaJiang/prusie/blob/main/tests/fixtures/susier_regression/README.md">regression fixtures</a>
-retain synthetic inputs from coloc 6.0.3, attributed to Chris Wallace and the
-coloc contributors, with frozen susieR outputs, source identities and
-checksums. Preserve their upstream GPL declaration and included GPL-3 license
-text.</p>
-<p>The <a href="toy_examples.html#sources-and-reproducibility">convergence and refinement example</a>
-uses the official susieR <code>FinemappingConvergence</code> data under BSD-3-Clause.
-Its guide describes the source, attribution and license, with commands to
-repeat the fit or render saved posterior results.</p></article>
+<p>Level B in <a href="https://github.com/LucaJiang/prusie-analysis">prusie-analysis</a>
+provides the input preparation, strict SNP QC, allele alignment and PLINK LD
+reconstruction for FinnGen R13 T2D and GTEx v11 Whole Blood, with 1000 Genomes
+reference genotypes. It lists the exact data releases, access terms and which
+steps were re-executed locally. Raw association statistics, genotypes and LD
+matrices are not distributed here.</p>
+<p>The GWAS analysis sample size is 486,019; its external LD reference has 99 FIN
+individuals. These benchmarks measure computation and agreement between software
+implementations; they are not biological fine-mapping conclusions.</p>
+<h2 id="toy-r-comparison">Toy R comparison</h2>
+<p>The package keeps a separate, small comparison tool:</p>
+<div class="highlight"><pre tabindex="0" aria-label="Code example; scroll horizontally if needed"><span></span><code>python<span class="w"> </span>tools/benchmark/reproduce.py<span class="w"> </span>--rscript<span class="w"> </span>Rscript<span class="w"> </span>--validation-only<span class="w"> </span>--output-dir<span class="w"> </span>toy-comparison
+</code></pre></div>
+
+<p>Use pinned susieR 0.16.6 and jsonlite in the selected R library. See the
+<a href="https://github.com/LucaJiang/prusie/blob/main/tools/benchmark/README.md">comparison guide</a>
+for timing and BLAS-probe options. This tool is independent of the manuscript
+campaign and requires a new output directory.</p></article>
 <footer><p>prusie 0.3.1 · Wenxin Jiang</p></footer>
 </main>
 </div>
