@@ -16,8 +16,8 @@ settings and hardware measured there.
 The [benchmark measurements](performance.md#runtime) compare prusie and
 susieR 0.16.6 on 200 FinnGen T2D GWAS loci and 14,157 GTEx Whole_Blood eQTL
 genes, with three retained complete calls per case on exclusive EPYC 7742
-nodes. For these evaluated cases, the cumulative runtime of susieR was 49.2
-times that of prusie for GWAS and 26.6 times for eQTL (55.4 and 29.8 for the
+nodes. For these evaluated cases, the summed median runtime of susieR was 42.9
+times that of prusie for GWAS and 26.6 times for eQTL (48.1 and 29.8 for the
 fitting stage), and prusie was faster in every case. Ratios for other regions
 and references may differ. The performance page also reports memory and
 thread scaling.

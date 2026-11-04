@@ -48,8 +48,8 @@ one numerical thread on exclusive AMD EPYC 7742 nodes.</p>
 <tr>
 <th>Evaluated cases</th>
 <th>Cases</th>
-<th>Cumulative runtime ratio</th>
-<th>Cumulative fitting-stage ratio</th>
+<th>Runtime ratio</th>
+<th>Fitting-stage ratio</th>
 <th>Median peak-memory ratio</th>
 </tr>
 </thead>
@@ -57,8 +57,8 @@ one numerical thread on exclusive AMD EPYC 7742 nodes.</p>
 <tr>
 <td>GWAS</td>
 <td>200</td>
-<td>49.2×</td>
-<td>55.4×</td>
+<td>42.9×</td>
+<td>48.1×</td>
 <td>5.11×</td>
 </tr>
 <tr>
@@ -70,7 +70,7 @@ one numerical thread on exclusive AMD EPYC 7742 nodes.</p>
 </tr>
 </tbody>
 </table></div>
-<p>The cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see <a href="performance.html">performance</a>.</p>
+<p>The runtime ratios divide the summed susieR time by the summed prusie time, using each case's median of three retained complete calls, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see <a href="performance.html">performance</a>.</p>
 <!-- current:highlights:end -->
 
 <p>The <a href="https://github.com/LucaJiang/prusie-analysis/blob/main/02_benchmark/protocol.json">protocol</a> records the timing
@@ -146,11 +146,13 @@ and PIP arrays and the same iteration counts, convergence flags and credible-set
 counts as the release; timer overhead was not isolated. The
 <a href="reproducibility.html#benchmark-protocol">measurement archive</a> documents the exact
 boundaries.</p>
-<p>The cumulative ratio divides the sum of all retained susieR times by the
-sum of all retained prusie times over the evaluated cases. As a per-case
-summary, each backend's median over its three calls gives a susieR/prusie
-ratio for every case; tables report the median and interquartile range (IQR)
-of these ratios. Totals add one median call per case.</p>
+<p>The primary runtime ratio takes each backend's median over its three retained
+calls for every case, sums these medians over the evaluated cases and divides
+the susieR sum by the prusie sum. The all-call cumulative ratio instead divides
+the sum of all retained susieR times by the sum of all retained prusie times, so
+unusually slow calls carry their full weight. As a per-case summary, the two
+medians of each case give a susieR/prusie ratio; tables report the median and
+interquartile range (IQR) of these ratios. Totals add one median call per case.</p>
 <p>Peak memory is the resident-set high-water mark of each backend process,
 recorded after its final call: <code>VmHWM</code> for R and <code>ru_maxrss</code> for Python. It
 includes the interpreter, libraries, loaded inputs, the warm-up and the
@@ -176,7 +178,8 @@ model validity.</p>
 <tr>
 <th>Analysis</th>
 <th>Metric</th>
-<th>Cumulative susieR/prusie ratio</th>
+<th>Summed-median susieR/prusie ratio</th>
+<th>All-call cumulative ratio</th>
 <th>Per-case ratio, median [IQR]</th>
 <th>prusie total</th>
 <th>susieR total</th>
@@ -187,6 +190,7 @@ model validity.</p>
 <tr>
 <td>GWAS</td>
 <td>Complete call</td>
+<td>42.9×</td>
 <td>49.2×</td>
 <td>47.7× [38.0-58.8]</td>
 <td>2.7 min</td>
@@ -196,6 +200,7 @@ model validity.</p>
 <tr>
 <td>GWAS</td>
 <td>Fitting stage</td>
+<td>48.1×</td>
 <td>55.4×</td>
 <td>57.3× [42.4-74.5]</td>
 <td>2.3 min</td>
@@ -206,6 +211,7 @@ model validity.</p>
 <td>eQTL</td>
 <td>Complete call</td>
 <td>26.6×</td>
+<td>26.6×</td>
 <td>27.5× [23.3-32.6]</td>
 <td>48.0 min</td>
 <td>21.28 h</td>
@@ -214,6 +220,7 @@ model validity.</p>
 <tr>
 <td>eQTL</td>
 <td>Fitting stage</td>
+<td>29.8×</td>
 <td>29.8×</td>
 <td>35.2× [26.9-47.0]</td>
 <td>41.1 min</td>
@@ -279,9 +286,11 @@ its timestamp, iteration count, convergence flag and credible-set count.</p>
 
 <p>Repeat IQR/median is computed within each case and summarized across cases.
 Exclusive nodes kept repeat variability around 1–2%, but two susieR GWAS calls
-took more than twice their case medians and account for 15.2% of the cumulative
-susieR GWAS time. Replacing each by its case median changes the cumulative GWAS
-ratio from 49.2× to 43.0×. Both calls are kept and listed with their
+took more than twice their case medians and account for 15.2% of the all-call
+susieR GWAS time. Replacing each by its case median changes the all-call
+cumulative GWAS ratio from 49.2× to 43.0×, close to the summed-median ratio of
+42.9×, which uses case medians and is unaffected by these calls. Both calls are
+kept and listed with their
 timestamps in the
 <a href="https://github.com/LucaJiang/prusie-analysis/blob/main/02_benchmark/archive/extreme_retained_calls.json">archive</a>.</p>
 <h3 id="memory">Memory</h3>

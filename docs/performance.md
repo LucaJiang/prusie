@@ -8,12 +8,12 @@ one numerical thread on exclusive AMD EPYC 7742 nodes.
 <!-- current:highlights:start -->
 Measured **prusie 0.3.0** against **susieR 0.16.6** on the same inputs.
 
-| Evaluated cases | Cases | Cumulative runtime ratio | Cumulative fitting-stage ratio | Median peak-memory ratio |
+| Evaluated cases | Cases | Runtime ratio | Fitting-stage ratio | Median peak-memory ratio |
 | --- | --- | --- | --- | --- |
-| GWAS | 200 | 49.2× | 55.4× | 5.11× |
+| GWAS | 200 | 42.9× | 48.1× | 5.11× |
 | eQTL | 14,157 | 26.6× | 29.8× | 4.60× |
 
-The cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](performance.md).
+The runtime ratios divide the summed susieR time by the summed prusie time, using each case's median of three retained complete calls, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](performance.md).
 <!-- current:highlights:end -->
 
 The [protocol](https://github.com/LucaJiang/prusie-analysis/blob/main/02_benchmark/protocol.json) records the timing
@@ -80,11 +80,13 @@ counts as the release; timer overhead was not isolated. The
 [measurement archive](reproducibility.md#benchmark-protocol) documents the exact
 boundaries.
 
-The cumulative ratio divides the sum of all retained susieR times by the
-sum of all retained prusie times over the evaluated cases. As a per-case
-summary, each backend's median over its three calls gives a susieR/prusie
-ratio for every case; tables report the median and interquartile range (IQR)
-of these ratios. Totals add one median call per case.
+The primary runtime ratio takes each backend's median over its three retained
+calls for every case, sums these medians over the evaluated cases and divides
+the susieR sum by the prusie sum. The all-call cumulative ratio instead divides
+the sum of all retained susieR times by the sum of all retained prusie times, so
+unusually slow calls carry their full weight. As a per-case summary, the two
+medians of each case give a susieR/prusie ratio; tables report the median and
+interquartile range (IQR) of these ratios. Totals add one median call per case.
 
 Peak memory is the resident-set high-water mark of each backend process,
 recorded after its final call: `VmHWM` for R and `ru_maxrss` for Python. It
@@ -111,12 +113,12 @@ model validity.
 
 <!-- current:runtime:start -->
 
-| Analysis | Metric | Cumulative susieR/prusie ratio | Per-case ratio, median [IQR] | prusie total | susieR total | Cases faster with prusie |
-| --- | --- | --- | --- | --- | --- | --- |
-| GWAS | Complete call | 49.2× | 47.7× [38.0-58.8] | 2.7 min | 1.91 h | 200 / 200 |
-| GWAS | Fitting stage | 55.4× | 57.3× [42.4-74.5] | 2.3 min | 1.86 h | 200 / 200 |
-| eQTL | Complete call | 26.6× | 27.5× [23.3-32.6] | 48.0 min | 21.28 h | 14,157 / 14,157 |
-| eQTL | Fitting stage | 29.8× | 35.2× [26.9-47.0] | 41.1 min | 20.39 h | 14,157 / 14,157 |
+| Analysis | Metric | Summed-median susieR/prusie ratio | All-call cumulative ratio | Per-case ratio, median [IQR] | prusie total | susieR total | Cases faster with prusie |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| GWAS | Complete call | 42.9× | 49.2× | 47.7× [38.0-58.8] | 2.7 min | 1.91 h | 200 / 200 |
+| GWAS | Fitting stage | 48.1× | 55.4× | 57.3× [42.4-74.5] | 2.3 min | 1.86 h | 200 / 200 |
+| eQTL | Complete call | 26.6× | 26.6× | 27.5× [23.3-32.6] | 48.0 min | 21.28 h | 14,157 / 14,157 |
+| eQTL | Fitting stage | 29.8× | 29.8× | 35.2× [26.9-47.0] | 41.1 min | 20.39 h | 14,157 / 14,157 |
 <!-- current:runtime:end -->
 
 prusie was faster than susieR in every evaluated case. The ratios describe these
@@ -142,9 +144,11 @@ its timestamp, iteration count, convergence flag and credible-set count.
 
 Repeat IQR/median is computed within each case and summarized across cases.
 Exclusive nodes kept repeat variability around 1–2%, but two susieR GWAS calls
-took more than twice their case medians and account for 15.2% of the cumulative
-susieR GWAS time. Replacing each by its case median changes the cumulative GWAS
-ratio from 49.2× to 43.0×. Both calls are kept and listed with their
+took more than twice their case medians and account for 15.2% of the all-call
+susieR GWAS time. Replacing each by its case median changes the all-call
+cumulative GWAS ratio from 49.2× to 43.0×, close to the summed-median ratio of
+42.9×, which uses case medians and is unaffected by these calls. Both calls are
+kept and listed with their
 timestamps in the
 [archive](https://github.com/LucaJiang/prusie-analysis/blob/main/02_benchmark/archive/extreme_retained_calls.json).
 

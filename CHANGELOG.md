@@ -15,6 +15,9 @@
 - Offline reports open with a "What to check first" list, show credible sets
   before and after refinement, accept explicit figure placement and record
   software versions automatically.
+- The documented headline runtime ratio is now the ratio of summed per-case
+  median times (GWAS 42.9×, eQTL 26.6×), matching the manuscript; the
+  all-call cumulative ratio remains in the performance tables.
 
 ## 0.3.1 — 2026-11-01
 

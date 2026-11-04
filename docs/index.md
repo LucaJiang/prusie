@@ -70,12 +70,12 @@ susieR divided by prusie.
 <!-- current:highlights:start -->
 Measured **prusie 0.3.0** against **susieR 0.16.6** on the same inputs.
 
-| Evaluated cases | Cases | Cumulative runtime ratio | Cumulative fitting-stage ratio | Median peak-memory ratio |
+| Evaluated cases | Cases | Runtime ratio | Fitting-stage ratio | Median peak-memory ratio |
 | --- | --- | --- | --- | --- |
-| GWAS | 200 | 49.2× | 55.4× | 5.11× |
+| GWAS | 200 | 42.9× | 48.1× | 5.11× |
 | eQTL | 14,157 | 26.6× | 29.8× | 4.60× |
 
-The cumulative ratios divide the summed susieR time by the summed prusie time over three retained complete calls of every evaluated case, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](performance.md).
+The runtime ratios divide the summed susieR time by the summed prusie time, using each case's median of three retained complete calls, with one numerical thread; the fitting stage excludes input and LD preparation. The memory ratio is the median of paired susieR/prusie ratios of peak backend-process memory. All measurements are from exclusive AMD EPYC 7742 nodes. Ratios for other traits, tissues, region sizes and LD references may differ; see [performance](performance.md).
 <!-- current:highlights:end -->
 
 See [performance](performance.md) for methods and software identities, and
