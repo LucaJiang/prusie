@@ -9,26 +9,28 @@
   <a href="https://raw.githubusercontent.com/LucaJiang/prusie/main/docs/assets/logos/logo_title.jpeg"><img src="https://raw.githubusercontent.com/LucaJiang/prusie/main/docs/assets/logos/prusie-banner-1792.jpg" alt="prusie — Python and Rust software for SuSiE fine-mapping" width="960"></a>
 </p>
 
-prusie fits SuSiE fine-mapping models in Python with a Rust solver. It returns
-component inclusion probabilities (`alpha`), posterior inclusion probabilities (PIPs)
-and credible sets from association summaries, sufficient statistics or
-individual-level data. See [numerical accuracy](https://lucajiang.github.io/prusie/numerical_accuracy.html) for
-validation against susieR 0.16.6 and [the model](https://lucajiang.github.io/prusie/model.html) for assumptions.
+prusie fits SuSiE fine-mapping models in Python with a Rust solver. It returns component inclusion probabilities (`alpha`), posterior inclusion probabilities (PIPs) and credible sets from association summaries, sufficient statistics or individual-level data. See [numerical accuracy](https://lucajiang.github.io/prusie/numerical_accuracy.html) for validation against susieR 0.16.6.
 
-- Dense and sparse individual data, summary statistics, sufficient statistics,
-  regularized RSS, single-effect regression and trend filtering.
-- Gaussian or fixed mixture priors, conjugate NIG residual inference, slot
-  activity models and automatic or greedy effect counts.
-- Posterior accessors, credible-set controls, prediction and model summaries.
+## Features
+
+- **Input formats:** Dense and sparse individual-level data, centered sufficient statistics, and summary statistics (z-scores or effect estimates with standard errors), with LD matrices or reference genotypes.
+- **Fitting methods:** Standard SuSiE, single-effect regression, regularized RSS, multi-panel RSS, and trend filtering.
+- **RSS extensions:** Finite-reference LD modeling, empirical-Bayes LD mismatch adjustment, and configurable Wald or score-statistic likelihoods.
+- **Prior models:** Gaussian and fixed Gaussian-mixture effect priors, conjugate Normal–Inverse-Gamma (NIG) residual inference, beta-binomial and Poisson effect-activity priors, variant-specific prior weights, and null effects.
+- **Effect selection:** Fixed, automatically increasing, or greedy numbers of single-effect components, with configurable prior-variance estimation and residual-variance updates.
+- **Inference and convergence:** Iterative Bayesian stepwise selection (IBSS), ELBO- and posterior-based stopping rules, convergence tracking, warm starts, continuation, and refinement.
+- **Fine-mapping results:** Component inclusion probabilities, posterior inclusion probabilities (PIPs), credible sets with configurable coverage and LD purity, correlated-variant extensions, and attainable credible-set assessment.
+- **Posterior utilities:** Effect estimates, posterior means and standard deviations, local false-sign rates, posterior sampling, prediction, Bayes factors, and model summaries.
+- **Diagnostics and downstream analysis:** Input validation, LD consistency and allele-mismatch diagnostics, sensitivity analysis, fit comparisons, and posterior outcome-configuration analysis.
+- **Visualization and reporting:** Locus, signal, convergence, refinement, sensitivity and LD diagnostic plots; offline HTML reports, tabular exports, and result serialization.
+
+Core fitting uses a CPU-based Rust backend with float64 arithmetic and configurable native threading.
 
 SuSiE-inf, SuSiE-ash and Mr.ASH are outside the supported model set.
 
 ## Installation
 
-**prusie 0.3.1** supports CPython 3.10 and newer (GIL builds). Its stable-ABI
-(`abi3`) wheels are tested on CPython 3.10–3.15; free-threaded builds are not
-supported. Wheels need neither Rust nor a compiler. NumPy is the only required
-Python dependency for core fitting, and R is not required.
+**prusie 0.3.1** supports CPython 3.10 and newer (GIL builds). Its stable-ABI (`abi3`) wheels are tested on CPython 3.10–3.15; free-threaded builds are not supported. Wheels need neither Rust nor a compiler. NumPy is the only required Python dependency for core fitting, and R is not required.
 
 ### PyPI
 
@@ -36,8 +38,7 @@ Python dependency for core fitting, and R is not required.
 pip install prusie
 ```
 
-For SciPy (sparse input, advanced RSS models and posterior outcome configurations)
-and Matplotlib (plotting), install the optional `analysis` extra:
+For SciPy (sparse input, advanced RSS models and posterior outcome configurations) and Matplotlib (plotting), install the optional `analysis` extra:
 
 ```sh
 pip install 'prusie[analysis]'
@@ -55,27 +56,6 @@ Download the wheel for your platform from [GitHub Release v0.3.1](https://github
 | macOS Apple silicon | [`prusie-0.3.1-cp310-abi3-macosx_11_0_arm64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-macosx_11_0_arm64.whl) |
 | Windows x86-64 | [`prusie-0.3.1-cp310-abi3-win_amd64.whl`](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-win_amd64.whl) |
 
-Download the attached [SHA256SUMS.txt](https://github.com/LucaJiang/prusie/releases/download/v0.3.1/SHA256SUMS.txt) alongside the wheel
-and check its SHA256 before installing. For example, on Linux x86-64 with GNU
-`sha256sum`:
-
-```sh
-curl -fLO https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
-curl -fLO https://github.com/LucaJiang/prusie/releases/download/v0.3.1/SHA256SUMS.txt
-sha256sum --check --ignore-missing SHA256SUMS.txt
-pip install ./prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
-```
-
-The checksum command must report `OK` for the downloaded wheel. On macOS use
-`shasum -a 256 <wheel>`; in Windows PowerShell use `Get-FileHash <wheel> -Algorithm SHA256`,
-and compare the value with the matching entry in `SHA256SUMS.txt`.
-
-A direct-URL install is also available (Linux x86-64 example):
-
-```sh
-pip install https://github.com/LucaJiang/prusie/releases/download/v0.3.1/prusie-0.3.1-cp310-abi3-manylinux_2_28_x86_64.whl
-```
-
 ### From a clone
 
 ```sh
@@ -85,14 +65,9 @@ git checkout v0.3.1  # optional: pin the released version
 pip install .
 ```
 
-Source installation needs the Rust toolchain pinned in `rust-toolchain.toml`
-(currently 1.98.1) and your platform's linker tools. With rustup installed and
-`cargo` on `PATH`, rustup selects and downloads the pinned toolchain automatically
-if it is missing. The default GNU/Linux x86-64 build also needs a C compiler and
-`ar` for the vector-math helper. pip installs the pinned maturin build backend.
+Source installation needs the Rust toolchain pinned in `rust-toolchain.toml` (currently 1.98.1) and your platform's linker tools. With rustup installed and `cargo` on `PATH`, rustup selects and downloads the pinned toolchain automatically if it is missing. The default GNU/Linux x86-64 build also needs a C compiler and `ar` for the vector-math helper. pip installs the pinned maturin build backend.
 
-See the [installation guide](https://lucajiang.github.io/prusie/install.html) for
-platform requirements, optional dependencies and additional source-build options.
+See the [installation guide](https://lucajiang.github.io/prusie/install.html) for platform requirements, optional dependencies and additional source-build options.
 
 ## Example
 
@@ -145,9 +120,9 @@ The performance report identifies the measured software, hardware, data and prot
 [Convergence and refinement](https://lucajiang.github.io/prusie/post_analysis.html) ·
 [Sensitivity and LD](https://lucajiang.github.io/prusie/sensitivity.html) · [API](https://lucajiang.github.io/prusie/api.html)
 
-The official susieR [toy example](https://lucajiang.github.io/prusie/toy_examples.html) shows how credible sets
-and PIPs change under refinement. Browse the
-[documentation site](https://lucajiang.github.io/prusie/) for the deployed version.
+The official susieR [toy example](https://lucajiang.github.io/prusie/toy_examples.html) shows how credible sets and PIPs change under refinement. Browse the [documentation site](https://lucajiang.github.io/prusie/) for the deployed version.
+
+The [prusie-analysis repository](https://github.com/LucaJiang/prusie-analysis) provides benchmark records, numerical agreement results, and scripts to reproduce the manuscript figures and tables.
 
 ## Citation and license
 
