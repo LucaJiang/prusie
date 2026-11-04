@@ -128,8 +128,7 @@ outside both clocks.</p>
 <p>Each case and backend runs in a fresh process that loads its inputs untimed,
 then makes <strong>one warm-up and three retained calls</strong>. The two backends run one
 after the other on the same pinned core, in a seeded, balanced order. Calls use
-<code>n_threads=1</code> and <code>overwrite_ld=False</code>. Twenty-four cases had already completed
-seven retained calls under an earlier schedule; their first three are used.</p>
+<code>n_threads=1</code> and <code>overwrite_ld=False</code>.</p>
 <p>Each timing lane uses one physical core in its own L3 cache domain, with the
 other cores and SMT siblings of that domain idle. Memory is bound to the lane's
 NUMA node where supported. Admission reserves at most 90% of node memory, using

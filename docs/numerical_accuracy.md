@@ -181,8 +181,7 @@ for the simulation method, fitting options and packaged reference, and the
 The [benchmark summary](https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/benchmark_summary.json) and
 [full per-case records](https://github.com/LucaJiang/prusie-analysis/blob/main/03_results/benchmark_records.jsonl.gz) provide
 numerical errors and convergence diagnostics. The compared arrays come from the
-last retained call of each case (call seven for the 24 cases run under the
-earlier seven-call schedule, call three otherwise). Follow the
+last timed call of each case. Follow the
 [regeneration instructions](reproducibility.md#tables-and-figures) to rebuild
 the tables and figures from retained measurements without refitting.
 
